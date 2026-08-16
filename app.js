@@ -272,19 +272,37 @@ function pisteItem(p,actions=true){
 }
 function bindOperationalActivityCards(container){
  if(!container)return;
- container.querySelectorAll('.activity-open[data-activity-type="operational"]').forEach(card=>{
-   const open=()=>showActivityStats(card.dataset.activityId,'operational',card.dataset.origin||'historyPage');
-   card.onclick=e=>{if(e.target.closest('button'))return;open()};
-   card.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();open()}};
- });
+ container.onclick=e=>{
+   const statsBtn=e.target.closest('.showPisteStats');
+   if(statsBtn){
+     e.preventDefault();e.stopPropagation();
+     showActivityStats(statsBtn.dataset.id,'operational','historyPage');
+     return;
+   }
+   const trackBtn=e.target.closest('.showTrack');
+   if(trackBtn){
+     e.preventDefault();e.stopPropagation();
+     showTrack(trackBtn.dataset.id);
+     return;
+   }
+   const deleteBtn=e.target.closest('.deletePiste');
+   if(deleteBtn)return;
+   const card=e.target.closest('.activity-open[data-activity-type="operational"]');
+   if(card)showActivityStats(card.dataset.activityId,'operational',card.dataset.origin||'historyPage');
+ };
+ container.onkeydown=e=>{
+   const card=e.target.closest('.activity-open[data-activity-type="operational"]');
+   if(card&&(e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){
+     e.preventDefault();
+     showActivityStats(card.dataset.activityId,'operational',card.dataset.origin||'historyPage');
+   }
+ };
 }
 
 function renderHistory(){
  if(!$('historyList'))return;
  $('historyList').innerHTML=mine.length?mine.map(p=>pisteItem(p,true)).join(""):'<p class="muted">Aucun pistage opérationnel.</p>';
  bindOperationalActivityCards($('historyList'));
- document.querySelectorAll('.showPisteStats').forEach(b=>b.onclick=()=>showActivityStats(b.dataset.id,'operational','historyPage'));
- document.querySelectorAll('.showTrack').forEach(b=>b.onclick=()=>showTrack(b.dataset.id));
  document.querySelectorAll('.deletePiste').forEach(b=>b.onclick=async()=>{
    if(!confirm("Supprimer ce pistage opérationnel ?"))return;
    const {error}=await supabase.from('pistes').delete().eq('id',b.dataset.id);
