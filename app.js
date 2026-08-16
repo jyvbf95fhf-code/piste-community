@@ -1123,19 +1123,79 @@ async function loadStats(scope='mine'){
  currentStatsScope=scope||'mine';
  const content=$('statsContent'),advanced=$('advancedStats'),errBox=$('statsError');
  if(!content||!advanced)return;
+
  if(errBox){errBox.classList.add('hidden');errBox.textContent=''}
  advanced.innerHTML='';
  document.querySelectorAll('[data-stats-scope]').forEach(b=>b.classList.toggle('active',b.dataset.statsScope===currentStatsScope));
+
  try{
    if(currentStatsScope==='community'){
      content.innerHTML='<p class="muted">Chargement des statistiques communautaires…</p>';
      const {data=[],error}=await supabase.rpc('get_community_stats');
      if(error)throw error;
-     content.innerHTML=data.length?data.map(x=>`<div class="stat-card"><b>${x.annee||''}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??'—')}</strong></div>`).join('')}</div>`).join(''):'<p class="muted">Aucune donnée communautaire.</p>';
+     content.innerHTML=data.length
+       ?data.map(x=>`<div class="stat-card"><b>${x.annee||''}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??'—')}</strong></div>`).join('')}</div>`).join('')
+       :'<p class="muted">Aucune donnée communautaire.</p>';
      return;
    }
-   const rows=currentStatsScope==='training'?trainings:mine;
-   content.innerHTML=rows.length?safeStatsDashboard(rows,currentStatsScope):`<p class="muted">Aucune activité enregistrée dans cette catégorie.</p>`;
+
+   content.innerHTML='<div class="safe-stats-title"><small>STATISTIQUES PERSONNELLES</small><h2>Préparation des données…</h2><p>Lecture de tes activités enregistrées.</p></div>';
+
+   const table=currentStatsScope==='training'?'entrainements':'pistes';
+   const type=currentStatsScope==='training'?'training':'mine';
+   const {data=[],error}=await supabase
+     .from(table)
+     .select('*')
+     .eq('owner_id',session.user.id)
+     .order('created_at',{ascending:false});
+
+   if(error)throw error;
+
+   const rows=data||[];
+   if(currentStatsScope==='training')trainings=rows; else mine=rows;
+
+   if(!rows.length){
+     content.innerHTML=`<p class="muted">Aucune activité enregistrée dans cette catégorie.</p>`;
+     return;
+   }
+
+   // Render the dashboard first so one malformed historical activity cannot leave the page blank.
+   let dashboard='';
+   try{
+     const withoutListHTML=safeStatsDashboard(rows,currentStatsScope).replace(
+       /<div class="stats-individual-title">[\s\S]*$/,
+       ''
+     );
+     dashboard=withoutListHTML;
+   }catch(renderError){
+     console.warn('Dashboard avancé partiel',renderError);
+     const km=safeTotal(rows,'distance_km'),hours=safeTotal(rows,'duree_h');
+     dashboard=`<div class="safe-stats-title"><small>STATISTIQUES PERSONNELLES</small><h2>${currentStatsScope==='training'?'Entraînements':'Pistages opérationnels'}</h2><p>${rows.length} activité(s)</p></div>
+     <div class="stats-summary-grid">
+       <div><span>Activités</span><b>${rows.length}</b></div>
+       <div><span>Distance totale</span><b>${fmt(km,1)} km</b></div>
+       <div><span>Temps total</span><b>${fmt(hours,1)} h</b></div>
+       <div><span>Résultats utiles</span><b>${fmt(safeUsefulRate(rows),0)}%</b></div>
+     </div>`;
+   }
+
+   content.innerHTML=dashboard;
+
+   const title=currentStatsScope==='training'?'🐾 Analyse entraînement par entraînement':'📍 Analyse piste par piste';
+   const list=document.createElement('div');
+   list.innerHTML=`<div class="stats-individual-title"><h3>${title}</h3><p>Touche une activité pour ouvrir sa fiche complète.</p></div><div class="safe-activity-list"></div>`;
+   content.appendChild(list);
+   const listBox=list.querySelector('.safe-activity-list');
+
+   rows.forEach(r=>{
+     try{
+       listBox.insertAdjacentHTML('beforeend',currentStatsScope==='training'?trainingItem(r):pisteItem(r,true));
+     }catch(rowError){
+       console.warn('Activité ignorée dans les statistiques',r?.id,rowError);
+       listBox.insertAdjacentHTML('beforeend',`<div class="item"><b>${esc(r?.date||'Activité')}</b><div class="small muted">Cette activité contient une donnée historique illisible, mais les autres statistiques restent disponibles.</div></div>`);
+     }
+   });
+
  }catch(error){
    console.error('Erreur statistiques',error);
    content.innerHTML='';
