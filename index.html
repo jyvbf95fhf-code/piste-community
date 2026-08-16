@@ -321,9 +321,10 @@
 
   <section id="statsPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Statistiques</h2></div>
-    <div class="segmented stats-tabs">
-      <button data-scope="mine" class="active">Pistage opérationnel</button>
-      <button data-scope="community">Communauté</button>
+    <div class="segmented stats-tabs" id="mainStatsTabs">
+      <button type="button" data-stats-scope="mine" class="active">Pistage opérationnel</button>
+      <button type="button" data-stats-scope="training">Entraînements</button>
+      <button type="button" data-stats-scope="community">Communauté</button>
     </div>
     <div class="card">
       <div id="statsContent"></div>

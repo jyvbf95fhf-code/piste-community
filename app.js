@@ -4,6 +4,7 @@ const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
+let currentStatsScope='mine';
 let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannedLiveLine=null;
 let wakeLock=null;
 let plannerPoints=[];
@@ -57,7 +58,7 @@ function showPage(id){
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
  target.classList.add('active');
  if(id==='feedPage')loadFeed();
- if(id==='statsPage')loadStats(currentStatsScope);
+ if(id==='statsPage')loadStats(currentStatsScope||'mine');
  if(id==='friendsPage')loadFriends();
  if(id==='historyPage')renderHistory();
  if(id==='mapPage')renderGlobalMap();
@@ -82,6 +83,13 @@ document.addEventListener('click',e=>{
  showPage(page);
 },true);
 if($('homeStatsBtn'))$('homeStatsBtn').onclick=e=>{e.preventDefault();currentStatsScope='mine';showPage('statsPage');};
+
+if($('mainStatsTabs'))$('mainStatsTabs').onclick=e=>{
+ const b=e.target.closest('[data-stats-scope]');if(!b)return;
+ e.preventDefault();
+ loadStats(b.dataset.statsScope);
+};
+
 if($('trackBackBtn'))$('trackBackBtn').onclick=()=>showPage($('trackBackBtn').dataset.page);
 if($('activityDetailBack'))$('activityDetailBack').onclick=()=>showPage($('activityDetailBack').dataset.page);
 $('newPisteBtn').onclick=()=>beginNewPiste('piste');
@@ -1057,23 +1065,49 @@ function renderAdvancedStats(rows,targetId,label){
  ${barList('Résultat',groupCount(rows,x=>x.resultat),rows.length)}
  ${barList('Répartition mensuelle',months,rows.length)}</div>`;
 }
-async function loadStats(scope){
- $('statsContent').innerHTML='<p class="muted">Chargement…</p>';
- if(scope==='community'){
+async function loadStats(scope='mine'){
+ currentStatsScope=scope||'mine';
+
+ document.querySelectorAll('[data-stats-scope]').forEach(b=>{
+   b.classList.toggle('active',b.dataset.statsScope===currentStatsScope);
+ });
+
+ const content=$('statsContent'),advanced=$('advancedStats');
+ if(!content||!advanced)return;
+ content.innerHTML='<p class="muted">Chargement…</p>';
+ advanced.innerHTML='';
+
+ if(currentStatsScope==='community'){
    const {data=[],error}=await supabase.rpc('get_community_stats');
-   $('advancedStats').innerHTML='<div class="privacy-banner">Les statistiques communautaires détaillées restent volontairement agrégées pour ne pas exposer les interventions individuelles.</div>';
-   if(error){$('statsContent').innerHTML=`<p>${esc(error.message)}</p>`;return}
-   $('statsContent').innerHTML=data.length?data.map(x=>`<div class="stat-card"><b>${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join(""):'<p class="muted">Aucune donnée communautaire pour le moment.</p>';
+   advanced.innerHTML='<div class="privacy-banner">Les statistiques communautaires détaillées restent volontairement agrégées pour ne pas exposer les interventions individuelles.</div>';
+   if(error){content.innerHTML=`<p>${esc(error.message)}</p>`;return}
+   content.innerHTML=data.length
+     ?data.map(x=>`<div class="stat-card"><b>${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join("")
+     :'<p class="muted">Aucune donnée communautaire pour le moment.</p>';
    return;
  }
- await refreshMine();
- $('statsContent').innerHTML=mine.length?localStatsSummary(mine,'operational')+dogStatsHTML(mine):'<p class="muted">Aucun pistage opérationnel.</p>';
- renderAdvancedStats(mine,'advancedStats','Pistages opérationnels');
- if(mine.length)$('advancedStats').insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>📍 Analyse piste par piste</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`);
- bindOperationalActivityCards($('advancedStats'));
- bindOperationalActivityCards($('statsContent'));
-}
 
+ if(currentStatsScope==='training'){
+   await refreshTrainings();
+   content.innerHTML=trainings.length
+     ?localStatsSummary(trainings,'training')+dogStatsHTML(trainings)
+     :'<p class="muted">Aucun entraînement enregistré.</p>';
+   renderAdvancedStats(trainings,'advancedStats','Entraînements');
+   if(trainings.length){
+     advanced.insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>🐾 Analyse entraînement par entraînement</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${trainings.map(trainingItem).join('')}`);
+   }
+   return;
+ }
+
+ await refreshMine();
+ content.innerHTML=mine.length
+   ?localStatsSummary(mine,'operational')+dogStatsHTML(mine)
+   :'<p class="muted">Aucun pistage opérationnel.</p>';
+ renderAdvancedStats(mine,'advancedStats','Pistages opérationnels');
+ if(mine.length){
+   advanced.insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>📍 Analyse piste par piste</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`);
+ }
+}
 function showTrack(id){
  $('trackBackBtn').dataset.page='historyPage';$('trackBackBtn').textContent='‹ Mes pistages opérationnels';$('trackTitle').textContent='Tracé';
  const p=mine.find(x=>x.id===id);if(!p||!Array.isArray(p.track)||p.track.length<2)return;
