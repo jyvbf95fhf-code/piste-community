@@ -164,6 +164,29 @@ function applySelectedTrainingRoute(){
  }
 }
 
+
+async function signedDogPhoto(path){
+ if(!path)return '';
+ const {data,error}=await supabase.storage.from('dog-photos').createSignedUrl(path,3600);
+ return error?'':(data?.signedUrl||'');
+}
+function ownDog(id){return id?dogs.find(d=>d.id===id):null}
+function dogDisplay(id){return ownDog(id)?.alias||'Chien non renseigné'}
+async function uploadDogPhoto(dogId,file){
+ if(!file)return;
+ if(file.size>5*1024*1024){alert('La photo doit faire moins de 5 Mo.');return}
+ const dog=dogs.find(d=>d.id===dogId);if(!dog)return;
+ const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+ const path=`${session.user.id}/${dogId}-${Date.now()}.${ext}`;
+ const {error:upErr}=await supabase.storage.from('dog-photos').upload(path,file,{upsert:false,contentType:file.type||undefined});
+ if(upErr){alert('Impossible d’envoyer la photo : '+upErr.message);return}
+ const old=dog.photo_path;
+ const {error}=await supabase.from('dogs').update({photo_path:path}).eq('id',dogId);
+ if(error){await supabase.storage.from('dog-photos').remove([path]);alert(error.message);return}
+ if(old)await supabase.storage.from('dog-photos').remove([old]);
+ await loadProfileV8();updateV8Home();
+}
+
 async function loadDogs(){
  if(!session)return;
  const {data=[]}=await supabase.from('dogs').select('*').eq('owner_id',session.user.id).order('created_at',{ascending:true});
@@ -250,7 +273,7 @@ function showActivityStats(id,type,origin){
  const list=type==='training'?trainings:mine,p=list.find(x=>x.id===id);if(!p)return;
  $('activityDetailBack').dataset.page=origin||(type==='training'?'trainingPage':'historyPage');$('activityDetailBack').textContent=type==='training'?'‹ Entraînements':'‹ Pistages opérationnels';
  $('activityDetailTitle').textContent=type==='training'?'📊 Statistiques entraînement':'📊 Statistiques pistage opérationnel';
- $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p><div class="detail-summary"><span>${fmt(p.distance_km,2)} km</span><span>${fmt(p.duree_h,2)} h</span><span>${fmt(p.delai_h,1)} h de délai</span></div></div></div>`;
+ $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>🐕 ${esc(dogDisplay(p.dog_id))} • ${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p><div class="detail-summary"><span>${fmt(p.distance_km,2)} km</span><span>${fmt(p.duree_h,2)} h</span><span>${fmt(p.delai_h,1)} h de délai</span></div></div></div>`;
  $('activityDetailStats').innerHTML=`<div class="detail-stats-grid">${activityStatsRows(p,type).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
  $('activityDetailObservation').innerHTML=p.observation?`<div class="detail-observation"><h3>Observation</h3><p>${esc(p.observation)}</p></div>`:'';
  showPage('activityDetailPage');setTimeout(()=>renderActivityDetailMap(p),100);
@@ -266,7 +289,7 @@ function pisteItem(p,actions=true){
  return `<div class="item activity-open" data-activity-id="${p.id}" data-activity-type="operational" data-origin="${actions?'historyPage':'homePage'}" role="button" tabindex="0" aria-label="Ouvrir les statistiques du pistage du ${esc(p.date)}">
    <div class="item-title"><div><span class="type-badge operational-type">🔵 Pistage opérationnel</span> <b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility)}">${visibilityLabel(p.visibility)}</span></div>
    <div>${esc(p.resultat)}</div>
-   <div class="small muted">${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h</div>
+   <div class="small muted">🐕 ${esc(dogDisplay(p.dog_id))} • ${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h</div>
    ${actions?`<div class="item-actions"><button class="primary showPisteStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deletePiste" data-id="${p.id}">Supprimer</button></div>`:`<div class="open-hint">Touchez pour ouvrir la fiche complète ›</div>`}
  </div>`;
 }
@@ -446,7 +469,7 @@ async function refreshTrainings(){
  }
 }
 function trainingItem(p){
- return `<div class="item"><div class="item-title"><div><span class="type-badge training-type">🟣 Entraînement</span> <b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility||'private')}">${visibilityLabel(p.visibility)}</span></div><div>${esc(p.resultat)}</div><div class="small muted">${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h${p.planned_distance_km?` • prévu ${fmt(p.planned_distance_km,2)} km`:""}</div><div class="item-actions"><button class="primary showTrainingStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrainingTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deleteTraining" data-id="${p.id}">Supprimer</button></div></div>`;
+ return `<div class="item activity-open" data-activity-id="${p.id}" data-activity-type="training" data-origin="trainingPage" role="button" tabindex="0" aria-label="Ouvrir les statistiques de l’entraînement du ${esc(p.date)}"><div class="item-title"><div><span class="type-badge training-type">🟣 Entraînement</span> <b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility||'private')}">${visibilityLabel(p.visibility)}</span></div><div>${esc(p.resultat)}</div><div class="small muted">🐕 ${esc(dogDisplay(p.dog_id))} • ${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h${p.planned_distance_km?` • prévu ${fmt(p.planned_distance_km,2)} km`:""}</div><div class="item-actions"><button class="primary showTrainingStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrainingTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deleteTraining" data-id="${p.id}">Supprimer</button></div></div>`;
 }
 async function loadTrainings(view='history',scope=trainingStatsScope){
  await refreshTrainings();
@@ -467,9 +490,13 @@ async function loadTrainings(view='history',scope=trainingStatsScope){
    $('trainingStatsScope').classList.add('hidden');
    $('trainingAdvancedStats').innerHTML='';
    $('trainingContent').innerHTML=trainings.length?trainings.map(trainingItem).join(""):'<p class="muted">Aucun entraînement enregistré.</p>';
-   document.querySelectorAll('.showTrainingStats').forEach(b=>b.onclick=()=>showActivityStats(b.dataset.id,'training','trainingPage'));
-   document.querySelectorAll('.showTrainingTrack').forEach(b=>b.onclick=()=>showTrainingTrack(b.dataset.id));
-   document.querySelectorAll('.deleteTraining').forEach(b=>b.onclick=async()=>{if(!confirm("Supprimer cet entraînement ?"))return;await supabase.from('entrainements').delete().eq('id',b.dataset.id);loadTrainings()});
+   $('trainingContent').onclick=e=>{
+     const stats=e.target.closest('.showTrainingStats');if(stats){e.preventDefault();e.stopPropagation();showActivityStats(stats.dataset.id,'training','trainingPage');return}
+     const track=e.target.closest('.showTrainingTrack');if(track){e.preventDefault();e.stopPropagation();showTrainingTrack(track.dataset.id);return}
+     const del=e.target.closest('.deleteTraining');if(del)return;
+     const card=e.target.closest('.activity-open[data-activity-type="training"]');if(card)showActivityStats(card.dataset.activityId,'training','trainingPage');
+   };
+   document.querySelectorAll('.deleteTraining').forEach(b=>b.onclick=async e=>{e.stopPropagation();if(!confirm("Supprimer cet entraînement ?"))return;await supabase.from('entrainements').delete().eq('id',b.dataset.id);loadTrainings()});
  }
 }
 function showTrainingTrack(id){
@@ -525,8 +552,8 @@ async function openComments(type,id){
 async function loadFeed(){
  $('friendFeed').innerHTML='<p class="muted">Chargement…</p>';
  const [op,tra]=await Promise.all([
-   supabase.from('pistes').select('id,owner_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
-   supabase.from('entrainements').select('id,owner_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50)
+   supabase.from('pistes').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
+   supabase.from('entrainements').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50)
  ]);
  if(op.error||tra.error){$('friendFeed').innerHTML=`<p>${esc(op.error?.message||tra.error?.message||'Erreur')}</p>`;return}
  friendFeedRows=[
@@ -534,16 +561,34 @@ async function loadFeed(){
    ...(tra.data||[]).map(x=>({...x,activity_type:'training'}))
  ].filter(x=>x.owner_id!==session.user.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
 
- const socials=await Promise.all(friendFeedRows.map(x=>socialSummary(x.activity_type,x.id)));
+ const ownerIds=[...new Set(friendFeedRows.map(x=>x.owner_id).filter(Boolean))];
+ const dogIds=[...new Set(friendFeedRows.map(x=>x.dog_id).filter(Boolean))];
+ const [{data:profiles=[]},{data:friendDogs=[]},socials]=await Promise.all([
+   ownerIds.length?supabase.from('profiles').select('user_id,display_name').in('user_id',ownerIds):Promise.resolve({data:[]}),
+   dogIds.length?supabase.from('dogs').select('id,owner_id,alias,photo_path').in('id',dogIds):Promise.resolve({data:[]}),
+   Promise.all(friendFeedRows.map(x=>socialSummary(x.activity_type,x.id)))
+ ]);
+ const profileMap=Object.fromEntries((profiles||[]).map(p=>[p.user_id,p]));
+ const dogMap=Object.fromEntries((friendDogs||[]).map(d=>[d.id,d]));
+ const signed=await Promise.all((friendDogs||[]).map(async d=>[d.id,await signedDogPhoto(d.photo_path)]));
+ const photoMap=Object.fromEntries(signed);
+
  $('friendFeed').innerHTML=friendFeedRows.length?friendFeedRows.map((x,i)=>{
    const training=x.activity_type==='training',key=`${x.activity_type}-${x.id}`,s=socials[i]||{};
    const badge=training?'<span class="type-badge training-type">🟣 Entraînement</span>':'<span class="type-badge operational-type">🔵 Pistage opérationnel</span>';
-   return `<div class="item social-activity"><div class="item-title"><div>${badge} <b>${esc(x.date)}</b> • ${fmt(x.distance_km,2)} km</div><span class="pill friends">Amis</span></div><div>${esc(x.resultat)}</div><div class="small muted">${esc(x.commune_depart||"Lieu non renseigné")} • ${fmt(x.duree_h,2)} h</div>
-   <div class="social-actions">
-     <button id="like-${key}" class="social-btn like-btn ${s.liked_by_me?'liked':''}" data-liked="${s.liked_by_me?'1':'0'}" data-type="${x.activity_type}" data-id="${x.id}">👍 <span>${s.likes_count||0}</span></button>
-     <button class="social-btn comments-btn" data-type="${x.activity_type}" data-id="${x.id}">💬 <span id="comments-count-${key}">${s.comments_count||0}</span></button>
-     ${Array.isArray(x.track)&&x.track.length>1?`<button class="social-btn showFriendTrack" data-id="${x.id}" data-type="${x.activity_type}">🗺️ Tracé</button>`:''}
-   </div><div id="comments-${key}" class="comments-box hidden"></div></div>`;
+   const owner=profileMap[x.owner_id]?.display_name||'Pisteur';
+   const dog=dogMap[x.dog_id],dogAlias=dog?.alias||'Chien non renseigné',photo=photoMap[x.dog_id]||'';
+   return `<div class="item social-activity">
+     <div class="feed-author"><div class="feed-dog-photo">${photo?`<img src="${esc(photo)}" alt="Photo de ${esc(dogAlias)}">`:'🐕'}</div><div><b>${esc(owner)}</b><span>avec ${esc(dogAlias)}</span></div><small>${new Date(x.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</small></div>
+     <div class="item-title"><div>${badge} <b>${esc(x.date)}</b> • ${fmt(x.distance_km,2)} km</div><span class="pill friends">Amis</span></div>
+     <div>${esc(x.resultat)}</div><div class="small muted">${esc(x.commune_depart||"Lieu non renseigné")} • ${fmt(x.duree_h,2)} h</div>
+     <div class="feed-mini-stats"><span>↗ ${fmt(x.distance_km,2)} km</span><span>⏱ ${fmt(x.duree_h,2)} h</span><span>🐕 ${esc(dogAlias)}</span></div>
+     <div class="social-actions">
+       <button id="like-${key}" class="social-btn like-btn ${s.liked_by_me?'liked':''}" data-liked="${s.liked_by_me?'1':'0'}" data-type="${x.activity_type}" data-id="${x.id}">👍 <span>${s.likes_count||0}</span></button>
+       <button class="social-btn comments-btn" data-type="${x.activity_type}" data-id="${x.id}">💬 <span id="comments-count-${key}">${s.comments_count||0}</span></button>
+       ${Array.isArray(x.track)&&x.track.length>1?`<button class="social-btn showFriendTrack" data-id="${x.id}" data-type="${x.activity_type}">🗺️ Tracé</button>`:''}
+     </div><div id="comments-${key}" class="comments-box hidden"></div>
+   </div>`;
  }).join(""):'<p class="muted">Aucune activité partagée par tes amis.</p>';
 
  document.querySelectorAll('.showFriendTrack').forEach(b=>b.onclick=()=>showFriendTrack(b.dataset.id,b.dataset.type));
@@ -646,9 +691,20 @@ function renderGlobalMap(filter='all'){
 async function loadProfileV8(){
  await Promise.all([loadDogs(),loadGoals()]);
  $('profilePseudo').textContent=me?.display_name||'Pisteur';
- $('dogsList').innerHTML=dogs.length?dogs.map(d=>`<div class="dog-row"><span class="dog-avatar">🐕</span><div><b>${esc(d.alias)}</b><small>${d.active?'Actif':'Archivé'}</small></div><div class="dog-actions">${!d.active?`<button class="secondary setActiveDog" data-id="${d.id}">Activer</button>`:''}<button class="ghost-dark deleteDog" data-id="${d.id}">×</button></div></div>`).join(''):'<p class="muted">Aucun chien enregistré.</p>';
+ const photoUrls=await Promise.all(dogs.map(d=>signedDogPhoto(d.photo_path)));
+ $('dogsList').innerHTML=dogs.length?dogs.map((d,i)=>{
+   const activities=[...mine,...trainings].filter(x=>x.dog_id===d.id);
+   const km=activities.reduce((s,x)=>s+Number(x.distance_km||0),0);
+   const photo=photoUrls[i];
+   return `<div class="dog-profile-row">
+     <div class="dog-photo">${photo?`<img src="${esc(photo)}" alt="Photo de ${esc(d.alias)}">`:'🐕'}</div>
+     <div class="dog-profile-main"><b>${esc(d.alias)}</b><small>${d.active?'Chien actif':'Archivé'} • ${activities.length} activités • ${fmt(km,1)} km</small></div>
+     <div class="dog-actions">${!d.active?`<button class="secondary setActiveDog" data-id="${d.id}">Activer</button>`:''}<label class="secondary dog-photo-btn">📷 Photo<input class="dogPhotoInput" data-id="${d.id}" type="file" accept="image/*" hidden></label><button class="ghost-dark deleteDog" data-id="${d.id}">×</button></div>
+   </div>`;
+ }).join(''):'<p class="muted">Aucun chien enregistré.</p>';
+ document.querySelectorAll('.dogPhotoInput').forEach(inp=>inp.onchange=async()=>{const f=inp.files?.[0];if(f)await uploadDogPhoto(inp.dataset.id,f)});
  document.querySelectorAll('.setActiveDog').forEach(b=>b.onclick=async()=>{await supabase.from('dogs').update({active:false}).eq('owner_id',session.user.id);await supabase.from('dogs').update({active:true}).eq('id',b.dataset.id);await loadProfileV8();updateV8Home()});
- document.querySelectorAll('.deleteDog').forEach(b=>b.onclick=async()=>{if(confirm('Supprimer cet alias de chien ? Les anciennes activités resteront conservées.')){await supabase.from('dogs').delete().eq('id',b.dataset.id);await loadProfileV8()}});
+ document.querySelectorAll('.deleteDog').forEach(b=>b.onclick=async()=>{if(confirm('Supprimer cet alias de chien ? Les anciennes activités resteront conservées.')){const d=dogs.find(x=>x.id===b.dataset.id);if(d?.photo_path)await supabase.storage.from('dog-photos').remove([d.photo_path]);await supabase.from('dogs').delete().eq('id',b.dataset.id);await loadProfileV8()}});
  renderGoals();
 }
 function goalValue(type){
