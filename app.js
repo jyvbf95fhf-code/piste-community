@@ -234,6 +234,7 @@ async function refreshMine(){
  $('kFound').textContent=mine.filter(x=>x.resultat?.startsWith("Personne retrouvée")).length;
  $('kUseful').textContent=mine.length?fmt(mine.filter(useful).length/mine.length*100,0)+"%":"0%";
  $('homeRecent').innerHTML=mine.length?mine.slice(0,5).map(p=>pisteItem(p,false)).join(""):'<p class="muted">Aucun pistage opérationnel enregistré.</p>';
+ bindOperationalActivityCards($('homeRecent'));
  renderHistory();updateV8Home();
 }
 
@@ -249,7 +250,7 @@ function showActivityStats(id,type,origin){
  const list=type==='training'?trainings:mine,p=list.find(x=>x.id===id);if(!p)return;
  $('activityDetailBack').dataset.page=origin||(type==='training'?'trainingPage':'historyPage');$('activityDetailBack').textContent=type==='training'?'‹ Entraînements':'‹ Pistages opérationnels';
  $('activityDetailTitle').textContent=type==='training'?'📊 Statistiques entraînement':'📊 Statistiques pistage opérationnel';
- $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p></div></div>`;
+ $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p><div class="detail-summary"><span>${fmt(p.distance_km,2)} km</span><span>${fmt(p.duree_h,2)} h</span><span>${fmt(p.delai_h,1)} h de délai</span></div></div></div>`;
  $('activityDetailStats').innerHTML=`<div class="detail-stats-grid">${activityStatsRows(p,type).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
  $('activityDetailObservation').innerHTML=p.observation?`<div class="detail-observation"><h3>Observation</h3><p>${esc(p.observation)}</p></div>`:'';
  showPage('activityDetailPage');setTimeout(()=>renderActivityDetailMap(p),100);
@@ -262,16 +263,26 @@ function renderActivityDetailMap(p){
 }
 
 function pisteItem(p,actions=true){
- return `<div class="item">
-   <div class="item-title"><div><b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility)}">${visibilityLabel(p.visibility)}</span></div>
+ return `<div class="item activity-open" data-activity-id="${p.id}" data-activity-type="operational" data-origin="${actions?'historyPage':'homePage'}" role="button" tabindex="0" aria-label="Ouvrir les statistiques du pistage du ${esc(p.date)}">
+   <div class="item-title"><div><span class="type-badge operational-type">🔵 Pistage opérationnel</span> <b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility)}">${visibilityLabel(p.visibility)}</span></div>
    <div>${esc(p.resultat)}</div>
    <div class="small muted">${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h</div>
-   ${actions?`<div class="item-actions"><button class="primary showPisteStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deletePiste" data-id="${p.id}">Supprimer</button></div>`:""}
+   ${actions?`<div class="item-actions"><button class="primary showPisteStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deletePiste" data-id="${p.id}">Supprimer</button></div>`:`<div class="open-hint">Touchez pour ouvrir la fiche complète ›</div>`}
  </div>`;
 }
+function bindOperationalActivityCards(container){
+ if(!container)return;
+ container.querySelectorAll('.activity-open[data-activity-type="operational"]').forEach(card=>{
+   const open=()=>showActivityStats(card.dataset.activityId,'operational',card.dataset.origin||'historyPage');
+   card.onclick=e=>{if(e.target.closest('button'))return;open()};
+   card.onkeydown=e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();open()}};
+ });
+}
+
 function renderHistory(){
  if(!$('historyList'))return;
  $('historyList').innerHTML=mine.length?mine.map(p=>pisteItem(p,true)).join(""):'<p class="muted">Aucun pistage opérationnel.</p>';
+ bindOperationalActivityCards($('historyList'));
  document.querySelectorAll('.showPisteStats').forEach(b=>b.onclick=()=>showActivityStats(b.dataset.id,'operational','historyPage'));
  document.querySelectorAll('.showTrack').forEach(b=>b.onclick=()=>showTrack(b.dataset.id));
  document.querySelectorAll('.deletePiste').forEach(b=>b.onclick=async()=>{

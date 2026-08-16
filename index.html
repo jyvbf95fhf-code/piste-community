@@ -66,7 +66,7 @@
     <div id="syncBanner" class="sync-banner hidden">⏳ <b id="syncCount">0</b> enregistrement(s) en attente de synchronisation.</div>
 
     <div class="kpi-grid v8-kpis">
-      <article><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistages</span></article>
+      <article class="kpi-clickable" data-page="historyPage" role="button" tabindex="0" aria-label="Ouvrir mes pistages"><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistages</span><small>Voir mes activités ›</small></article>
       <article><span class="kpi-icon">🐾</span><strong id="tHomeCount">0</strong><span>Entraînements</span></article>
       <article><span class="kpi-icon">↗</span><strong id="kKm">0</strong><span>km opérationnels</span></article>
       <article><span class="kpi-icon">✓</span><strong id="kUseful">0%</strong><span>Résultats utiles</span></article>
@@ -354,20 +354,6 @@
           <button id="printReportBtn" class="secondary">🖨️ Bilan PDF / impression</button>
         </div>
       </div>
-    </div>
-  </section>
-
-
-  <section id="activityDetailPage" class="page">
-    <div class="record-head">
-      <button id="activityDetailBack" class="back" data-page="historyPage">‹ Retour</button>
-      <h2 id="activityDetailTitle">📊 Statistiques de l’activité</h2>
-    </div>
-    <div class="card activity-detail-card">
-      <div id="activityDetailHeader"></div>
-      <div id="activityDetailMap" class="hidden"></div>
-      <div id="activityDetailStats"></div>
-      <div id="activityDetailObservation"></div>
     </div>
   </section>
 
