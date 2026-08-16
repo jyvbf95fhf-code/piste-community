@@ -188,3 +188,17 @@ body{background:linear-gradient(#eef6f0,#f7f8f7);color:var(--txt)}
 .kpi-total{background:linear-gradient(145deg,#133f31,#1d6048)!important;color:#fff}.kpi-total span{color:#dbeae3!important}
 .pre-save-summary{margin:12px 0;padding:13px;border-radius:14px;background:#eef6f1;border:1px solid #d8e8de}.pre-save-summary>b{display:block;margin-bottom:5px;color:#174331}
 .live-extra{min-width:90px;text-align:center}.live-extra span{display:block;font-size:9px;color:#728178}.live-extra b{font-size:13px}
+
+/* ===== V10.15 STATS AUTONOMES ===== */
+.stats-error{margin:0 0 12px;padding:12px;border-radius:12px;background:#fff0f0;border:1px solid #efcaca;color:#8a2c2c}
+.stats-error b,.stats-error span{display:block}.stats-error span{font-size:11px;margin-top:4px}
+.safe-stats-title{padding:15px;border-radius:15px;background:#123f31;color:#fff;margin-bottom:12px}
+.safe-stats-title small{font-size:9px;letter-spacing:1.2px;opacity:.7}.safe-stats-title h2{margin:3px 0}.safe-stats-title p{margin:0;font-size:11px;opacity:.8}
+.safe-score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.safe-score-grid>div{padding:11px;border:1px solid #e1eae4;border-radius:12px;background:#f7faf8}
+.safe-score-grid span{display:block;font-size:9px;text-transform:uppercase;color:#78877f}.safe-score-grid b{display:block;font-size:17px;margin-top:3px}
+.safe-stat-block{margin:12px 0;padding:13px;border:1px solid #e1eae4;border-radius:14px}.safe-stat-block h3{margin:0 0 8px}
+.safe-stat-row{position:relative;display:grid;grid-template-columns:1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid #edf2ee;overflow:hidden}
+.safe-stat-row:last-child{border-bottom:0}.safe-stat-row span,.safe-stat-row b{position:relative;z-index:2;font-size:11px}.safe-stat-row i{position:absolute;left:0;bottom:2px;height:3px;background:#1a825b;border-radius:3px;opacity:.35}
+.safe-activity-list{display:grid;gap:8px}
+@media(max-width:700px){.safe-score-grid{grid-template-columns:repeat(2,1fr)}}

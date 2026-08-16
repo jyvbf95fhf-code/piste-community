@@ -247,7 +247,7 @@ async function boot(){
  session=s;
  if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
  $('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
- await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();showPage('homePage');
+ await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');
 }
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();location.reload()};
 
@@ -1065,47 +1065,84 @@ function renderAdvancedStats(rows,targetId,label){
  ${barList('Résultat',groupCount(rows,x=>x.resultat),rows.length)}
  ${barList('Répartition mensuelle',months,rows.length)}</div>`;
 }
+
+function safeAverage(rows,key){
+ const vals=rows.map(r=>Number(r[key])).filter(Number.isFinite);
+ return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+}
+function safeTotal(rows,key){return rows.reduce((s,r)=>s+Number(r[key]||0),0)}
+function safeUsefulRate(rows){return rows.length?rows.filter(useful).length/rows.length*100:0}
+function safeScore(rows,key){
+ const v=rows.map(r=>Number(r[key])).filter(x=>Number.isFinite(x)&&x>0);
+ return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;
+}
+function safeGroup(rows,key){
+ const out={};for(const r of rows){const v=r[key]||'Non renseigné';out[v]=(out[v]||0)+1}
+ return Object.entries(out).sort((a,b)=>b[1]-a[1]);
+}
+function safeStatsDashboard(rows,type){
+ const label=type==='training'?'Entraînements':'Pistages opérationnels';
+ const km=safeTotal(rows,'distance_km'),hours=safeTotal(rows,'duree_h');
+ const avgKm=safeAverage(rows,'distance_km'),avgDur=safeAverage(rows,'duree_h'),avgDelay=safeAverage(rows,'delai_h');
+ const longest=[...rows].sort((a,b)=>Number(b.distance_km||0)-Number(a.distance_km||0))[0];
+ const fastest=[...rows].filter(r=>Number(r.distance_km)>0&&Number(r.duree_h)>0).sort((a,b)=>(Number(b.distance_km)/Number(b.duree_h))-(Number(a.distance_km)/Number(a.duree_h)))[0];
+ const gpsRows=rows.filter(r=>Array.isArray(r.track)&&r.track.length>1);
+ const gpsPts=gpsRows.reduce((s,r)=>s+r.track.length,0);
+ const scores=[
+   ['Difficulté','difficulte'],['Concentration','concentration'],['Autonomie','autonomie'],
+   ['Motivation','motivation'],['Précision','precision_travail'],['Fatigue','fatigue']
+ ];
+ const scoreHtml=scores.map(([label,key])=>{
+   const v=safeScore(rows,key);return `<div><span>${label}</span><b>${v===null?'—':fmt(v,1)+'/5'}</b></div>`;
+ }).join('');
+ const milieu=safeGroup(rows,'milieu'),meteo=safeGroup(rows,'meteo'),resultat=safeGroup(rows,'resultat');
+ const table=(title,entries)=>entries.length?`<div class="safe-stat-block"><h3>${title}</h3>${entries.map(([k,v])=>`<div class="safe-stat-row"><span>${esc(k)}</span><b>${v}</b><i style="width:${Math.max(5,v/rows.length*100)}%"></i></div>`).join('')}</div>`:'';
+ return `<div class="safe-stats-title"><small>STATISTIQUES PERSONNELLES</small><h2>${label}</h2><p>${rows.length} activité(s) analysée(s)</p></div>
+ <div class="stats-summary-grid">
+   <div><span>Activités</span><b>${rows.length}</b></div>
+   <div><span>Distance totale</span><b>${fmt(km,1)} km</b></div>
+   <div><span>Temps total</span><b>${fmt(hours,1)} h</b></div>
+   <div><span>Résultats utiles</span><b>${fmt(safeUsefulRate(rows),0)}%</b></div>
+   <div><span>Distance moyenne</span><b>${avgKm===null?'—':fmt(avgKm,2)+' km'}</b></div>
+   <div><span>Durée moyenne</span><b>${avgDur===null?'—':fmt(avgDur,2)+' h'}</b></div>
+   <div><span>Délai moyen</span><b>${avgDelay===null?'—':fmt(avgDelay,1)+' h'}</b></div>
+   <div><span>Tracés GPS</span><b>${gpsRows.length}</b></div>
+   <div><span>Points GPS</span><b>${gpsPts}</b></div>
+   <div><span>Plus longue piste</span><b>${longest?fmt(longest.distance_km,2)+' km':'—'}</b></div>
+   <div><span>Vitesse max. moyenne</span><b>${fastest?fmt(Number(fastest.distance_km)/Number(fastest.duree_h),2)+' km/h':'—'}</b></div>
+   <div><span>Mois actifs</span><b>${new Set(rows.map(r=>String(r.date||'').slice(0,7)).filter(Boolean)).size}</b></div>
+ </div>
+ <div class="safe-score-grid">${scoreHtml}</div>
+ ${table('🌲 Milieux',milieu)}
+ ${table('☁️ Météo',meteo)}
+ ${table('🎯 Résultats',resultat)}
+ <div class="stats-individual-title"><h3>📍 Activité par activité</h3><p>Touche une ligne ou le bouton Statistiques pour ouvrir sa fiche complète.</p></div>
+ <div class="safe-activity-list">${rows.map(r=>type==='training'?trainingItem(r):pisteItem(r,true)).join('')}</div>`;
+}
 async function loadStats(scope='mine'){
  currentStatsScope=scope||'mine';
-
- document.querySelectorAll('[data-stats-scope]').forEach(b=>{
-   b.classList.toggle('active',b.dataset.statsScope===currentStatsScope);
- });
-
- const content=$('statsContent'),advanced=$('advancedStats');
+ const content=$('statsContent'),advanced=$('advancedStats'),errBox=$('statsError');
  if(!content||!advanced)return;
- content.innerHTML='<p class="muted">Chargement…</p>';
+ if(errBox){errBox.classList.add('hidden');errBox.textContent=''}
  advanced.innerHTML='';
-
- if(currentStatsScope==='community'){
-   const {data=[],error}=await supabase.rpc('get_community_stats');
-   advanced.innerHTML='<div class="privacy-banner">Les statistiques communautaires détaillées restent volontairement agrégées pour ne pas exposer les interventions individuelles.</div>';
-   if(error){content.innerHTML=`<p>${esc(error.message)}</p>`;return}
-   content.innerHTML=data.length
-     ?data.map(x=>`<div class="stat-card"><b>${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join("")
-     :'<p class="muted">Aucune donnée communautaire pour le moment.</p>';
-   return;
- }
-
- if(currentStatsScope==='training'){
-   await refreshTrainings();
-   content.innerHTML=trainings.length
-     ?localStatsSummary(trainings,'training')+dogStatsHTML(trainings)
-     :'<p class="muted">Aucun entraînement enregistré.</p>';
-   renderAdvancedStats(trainings,'advancedStats','Entraînements');
-   if(trainings.length){
-     advanced.insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>🐾 Analyse entraînement par entraînement</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${trainings.map(trainingItem).join('')}`);
+ document.querySelectorAll('[data-stats-scope]').forEach(b=>b.classList.toggle('active',b.dataset.statsScope===currentStatsScope));
+ try{
+   if(currentStatsScope==='community'){
+     content.innerHTML='<p class="muted">Chargement des statistiques communautaires…</p>';
+     const {data=[],error}=await supabase.rpc('get_community_stats');
+     if(error)throw error;
+     content.innerHTML=data.length?data.map(x=>`<div class="stat-card"><b>${x.annee||''}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??'—')}</strong></div>`).join('')}</div>`).join(''):'<p class="muted">Aucune donnée communautaire.</p>';
+     return;
    }
-   return;
- }
-
- await refreshMine();
- content.innerHTML=mine.length
-   ?localStatsSummary(mine,'operational')+dogStatsHTML(mine)
-   :'<p class="muted">Aucun pistage opérationnel.</p>';
- renderAdvancedStats(mine,'advancedStats','Pistages opérationnels');
- if(mine.length){
-   advanced.insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>📍 Analyse piste par piste</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`);
+   const rows=currentStatsScope==='training'?trainings:mine;
+   content.innerHTML=rows.length?safeStatsDashboard(rows,currentStatsScope):`<p class="muted">Aucune activité enregistrée dans cette catégorie.</p>`;
+ }catch(error){
+   console.error('Erreur statistiques',error);
+   content.innerHTML='';
+   if(errBox){
+     errBox.classList.remove('hidden');
+     errBox.innerHTML=`<b>Erreur de chargement des statistiques</b><span>${esc(error?.message||String(error))}</span>`;
+   }
  }
 }
 function showTrack(id){
