@@ -380,6 +380,33 @@ function pisteItem(p,actions=true){
    ${actions?`<div class="item-actions"><button class="primary showPisteStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deletePiste" data-id="${p.id}">Supprimer</button></div>`:`<div class="open-hint">Touchez pour ouvrir la fiche complète ›</div>`}
  </div>`;
 }
+
+function installActivityNavigation(){
+ document.addEventListener('click',e=>{
+   const statsOp=e.target.closest('.showPisteStats');
+   if(statsOp){e.preventDefault();e.stopPropagation();showActivityStats(statsOp.dataset.id,'operational',statsOp.closest('[data-origin]')?.dataset.origin||'historyPage');return}
+   const statsTr=e.target.closest('.showTrainingStats');
+   if(statsTr){e.preventDefault();e.stopPropagation();showActivityStats(statsTr.dataset.id,'training','trainingPage');return}
+   const trackOp=e.target.closest('.showTrack');
+   if(trackOp){e.preventDefault();e.stopPropagation();showTrack(trackOp.dataset.id);return}
+   const trackTr=e.target.closest('.showTrainingTrack');
+   if(trackTr){e.preventDefault();e.stopPropagation();showTrainingTrack(trackTr.dataset.id);return}
+   if(e.target.closest('.deletePiste,.deleteTraining'))return;
+   const card=e.target.closest('.activity-open');
+   if(!card)return;
+   e.preventDefault();
+   const type=card.dataset.activityType;
+   if(type==='operational'||type==='training')showActivityStats(card.dataset.activityId,type,card.dataset.origin||(type==='training'?'trainingPage':'historyPage'));
+ },true);
+ document.addEventListener('keydown',e=>{
+   if(e.key!=='Enter'&&e.key!==' ')return;
+   const card=e.target.closest('.activity-open');
+   if(!card||e.target.closest('button'))return;
+   e.preventDefault();
+   showActivityStats(card.dataset.activityId,card.dataset.activityType,card.dataset.origin||(card.dataset.activityType==='training'?'trainingPage':'historyPage'));
+ });
+}
+
 function bindOperationalActivityCards(container){
  if(!container)return;
  container.onclick=e=>{
@@ -1009,7 +1036,7 @@ function showTrack(id){
 async function restoreDraft(){const d=getDraft();if(!d||!session||d.user_id!==session.user.id)return;recordMode=d.mode||'piste';resetGpsUI(false);showPage('recordPage');const training=recordMode==='training';$('recordTitle').textContent=training?'Entraînement repris':'Pistage opérationnel repris';$('finishTitle').textContent=training?'Terminer l’entraînement':'Terminer l’enregistrement';$('startGpsBtn').textContent=training?'REPRENDRE L’ENTRAÎNEMENT':'REPRENDRE LE PISTAGE';$('saveRecordBtn').textContent=training?'ENREGISTRER L’ENTRAÎNEMENT':'ENREGISTRER LE PISTAGE';$('pisteForm').elements.visibility.closest('label').classList.remove('hidden');const f=$('pisteForm');for(const [k,v] of Object.entries(d.form||{})){if(f.elements[k])f.elements[k].value=v}gps.start=d.start;gps.points=Array.isArray(d.points)?d.points:[];gps.distance=Number(d.distance||0);gps.startPoint=d.startPoint||gps.points[0]||null;gps.startPlace=d.startPlace||'';gps.paused=!!d.paused;gps.pauseStarted=d.pauseStarted||null;gps.pausedMs=Number(d.pausedMs||0);$('liveDistance').textContent=(gps.distance/1000).toFixed(2);$('liveLocation').textContent=gps.startPlace||'Lieu de départ enregistré';if(gps.points.length){liveLine.setLatLngs(gps.points.map(x=>[x.lat,x.lon]));liveMap.fitBounds(liveLine.getBounds(),{padding:[25,25]});const p=gps.points[0];liveMarker=L.marker([p.lat,p.lon]).addTo(liveMap).bindPopup('Départ')}gps.timer=setInterval(gpsTick,1000);gps.paused=true;gps.pauseStarted=Date.now();$('startGpsBtn').disabled=true;$('pauseGpsBtn').disabled=false;$('pauseGpsBtn').textContent='REPRENDRE';$('stopGpsBtn').disabled=false;setGpsStatus('À reprendre','paused');$('gpsMsg').textContent='Enregistrement récupéré. Appuie sur REPRENDRE pour relancer le GPS.';saveDraft(true)}
 $('resumeDraftBtn').onclick=restoreDraft;
 $('discardDraftBtn').onclick=()=>{if(confirm('Effacer cet enregistrement local interrompu ?')){clearDraft();updateResumeBanner()}};
-window.addEventListener('online',()=>{updateNetworkStatus();syncQueue()});window.addEventListener('offline',updateNetworkStatus);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gps.start&&!gps.paused)requestWakeLock()});window.addEventListener('beforeunload',()=>saveDraft(true));
+window.addEventListener('online',()=>{updateNetworkStatus();installActivityNavigation();syncQueue()});window.addEventListener('offline',updateNetworkStatus);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gps.start&&!gps.paused)requestWakeLock()});window.addEventListener('beforeunload',()=>saveDraft(true));
 
 $('newTrainingBtn').onclick=()=>beginNewPiste('training');
 $('analysisMineTab').onclick=()=>renderCanineAnalysis('mine');
