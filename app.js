@@ -452,10 +452,9 @@ function renderOperationalStats(){
  const box=$('operationalStatsContent'),adv=$('operationalAdvancedStats');
  if(!box||!adv)return;
  box.classList.remove('hidden');adv.classList.remove('hidden');$('historyList').classList.add('hidden');
- box.innerHTML=mine.length
-   ? localStatsSummary(mine,'operational')+dogStatsHTML(mine)+`<div class="stats-individual-title"><h3>📊 Chaque pistage</h3><p>Touche une activité ou son bouton Statistiques pour ouvrir toutes ses données.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`
-   : '<p class="muted">Aucun pistage opérationnel.</p>';
- renderAdvancedStats(mine,'operationalAdvancedStats','pistage opérationnel');
+ box.innerHTML=mine.length?localStatsSummary(mine,'operational')+dogStatsHTML(mine):'<p class="muted">Aucun pistage opérationnel.</p>';
+ renderAdvancedStats(mine,'operationalAdvancedStats','Pistages opérationnels');
+ if(mine.length)box.insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>📍 Analyse piste par piste</h3><p>Ouvre une activité pour consulter sa fiche détaillée et sa comparaison avec tes habitudes.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`);
  bindOperationalActivityCards(box);
  box.querySelectorAll('.deletePiste').forEach(b=>b.onclick=async e=>{
    e.stopPropagation();
@@ -632,8 +631,9 @@ async function loadTrainings(view='history',scope=trainingStatsScope){
    }else{
      $('trainingAdvancedStats').innerHTML='';
      const summary=trainings.length?localStatsSummary(trainings,'training')+dogStatsHTML(trainings):'<p class="muted">Aucun entraînement enregistré.</p>';
-     $('trainingContent').innerHTML=summary+`<div class="stats-individual-title"><h3>📊 Chaque entraînement</h3><p>Touche une activité ou son bouton Statistiques pour ouvrir toutes ses données.</p></div>`+(trainings.length?trainings.map(trainingItem).join(""):'');
-     renderAdvancedStats(trainings,'trainingAdvancedStats','entraînements');
+     $('trainingContent').innerHTML=summary;
+     renderAdvancedStats(trainings,'trainingAdvancedStats','Entraînements');
+     if(trainings.length)$('trainingAdvancedStats').insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>🐾 Analyse entraînement par entraînement</h3><p>Ouvre une activité pour consulter sa fiche détaillée et sa comparaison avec tes habitudes.</p></div>${trainings.map(trainingItem).join("")}`);
      $('trainingContent').onclick=e=>{
        const stats=e.target.closest('.showTrainingStats');if(stats){e.preventDefault();e.stopPropagation();showActivityStats(stats.dataset.id,'training','trainingPage');return}
        const track=e.target.closest('.showTrainingTrack');if(track){e.preventDefault();e.stopPropagation();showTrainingTrack(track.dataset.id);return}
@@ -893,13 +893,84 @@ function monthLabel(n){return ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Ao�
 function groupCount(rows,keyFn){const m=new Map();for(const r of rows){const k=keyFn(r);if(k===null||k===undefined||k==='')continue;m.set(String(k),(m.get(String(k))||0)+1)}return [...m.entries()].sort((a,b)=>b[1]-a[1])}
 function avg(rows,key){const a=rows.map(x=>Number(x[key])).filter(Number.isFinite);return a.length?a.reduce((s,x)=>s+x,0)/a.length:0}
 function barList(title,entries,total){if(!entries.length)return '';const max=Math.max(...entries.map(x=>x[1]),1);return `<div class="analysis-block"><h3>${title}</h3>${entries.map(([k,v])=>`<div class="bar-row"><span>${esc(k)}</span><div class="bar-track"><i style="width:${Math.max(4,v/max*100)}%"></i></div><b>${v}${total?` <small>(${Math.round(v/total*100)}%)</small>`:''}</b></div>`).join('')}</div>`}
-function renderAdvancedStats(rows,targetId,label){const el=$(targetId);if(!el)return;if(!rows.length){el.innerHTML='';return}const validHour=rows.filter(x=>hourOf(x)!==null);const day=validHour.filter(x=>{const h=hourOf(x);return h>=6&&h<20}).length,night=validHour.length-day;const delayBands=groupCount(rows,x=>{const d=Number(x.delai_h);if(!Number.isFinite(d))return null;if(d<1)return '< 1 h';if(d<3)return '1–3 h';if(d<6)return '3–6 h';if(d<12)return '6–12 h';if(d<24)return '12–24 h';return '24 h et +'});const hourBands=groupCount(rows,x=>{const h=hourOf(x);return h===null?null:`${pad(h)}h–${pad((h+1)%24)}h`}).sort((a,b)=>Number(a[0].slice(0,2))-Number(b[0].slice(0,2)));const months=groupCount(rows,x=>{const d=new Date(x.date);return isNaN(d)?null:monthLabel(d.getMonth())});const usefulRows=rows.filter(useful);el.innerHTML=`<hr><h2>Analyse avancée — ${label}</h2><div class="analysis-kpis"><div><b>${fmt(avg(rows,'delai_h'),1)} h</b><span>Délai moyen</span></div><div><b>${fmt(avg(rows,'distance_km'),2)} km</b><span>Distance moyenne</span></div><div><b>${fmt(avg(rows,'duree_h'),2)} h</b><span>Durée moyenne</span></div><div><b>${rows.length?Math.round(usefulRows.length/rows.length*100):0}%</b><span>Taux utile</span></div></div>${validHour.length?barList('Jour / nuit',[['Jour (06h–20h)',day],['Nuit (20h–06h)',night]],validHour.length):''}${barList('Heure de disparition',hourBands,validHour.length)}${barList('Délai avant engagement',delayBands,rows.length)}${barList('Milieu',groupCount(rows,x=>x.milieu),rows.length)}${barList('Tranche d’âge',groupCount(rows,x=>x.age||'Non renseigné'),rows.length)}${barList('Résultat',groupCount(rows,x=>x.resultat),rows.length)}${barList('Répartition mensuelle',months,rows.length)}`}
 
-let currentStatsScope='mine';
-let trainingStatsScope='mine';
-document.querySelectorAll('[data-scope]').forEach(b=>b.onclick=()=>{
- document.querySelectorAll('[data-scope]').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentStatsScope=b.dataset.scope;loadStats(currentStatsScope)
-});
+function statGroup(rows,keyFn){
+ const m=new Map();
+ rows.forEach(r=>{const k=keyFn(r);if(k===null||k===undefined||k==='')return;(m.get(String(k))||m.set(String(k),[]).get(String(k))).push(r)});
+ return [...m.entries()];
+}
+function usefulRate(rows){return rows.length?rows.filter(useful).length/rows.length*100:0}
+function avgSpeed(rows){const v=rows.map(speedFromActivity).filter(x=>x!==null&&Number.isFinite(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:0}
+function performanceTable(title,groups){
+ if(!groups.length)return '';
+ return `<div class="performance-card"><h3>${title}</h3><div class="performance-scroll"><table><thead><tr><th>Catégorie</th><th>Nb</th><th>Utile</th><th>Délai moy.</th><th>Distance moy.</th><th>Durée moy.</th><th>Vitesse</th></tr></thead><tbody>${groups.map(([name,a])=>`<tr><td><b>${esc(name)}</b></td><td>${a.length}</td><td><strong>${fmt(usefulRate(a),0)}%</strong></td><td>${fmt(avg(a,'delai_h'),1)} h</td><td>${fmt(avg(a,'distance_km'),2)} km</td><td>${fmt(avg(a,'duree_h'),2)} h</td><td>${fmt(avgSpeed(a),2)} km/h</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function monthKey(r){return r.date?String(r.date).slice(0,7):null}
+function monthFr(k){if(!k)return '';const [y,m]=k.split('-');return `${m}/${y}`}
+function trendDashboard(rows){
+ const months=statGroup(rows,monthKey).sort((a,b)=>a[0].localeCompare(b[0]));
+ if(!months.length)return '';
+ const maxKm=Math.max(...months.map(([,a])=>total(a,'distance_km')),1);
+ return `<div class="performance-card"><h3>📈 Évolution dans le temps</h3><div class="trend-chart">${months.map(([k,a])=>{const km=total(a,'distance_km');return `<div class="trend-col"><div class="trend-value">${fmt(km,1)} km</div><div class="trend-bar"><i style="height:${Math.max(8,km/maxKm*100)}%"></i></div><b>${monthFr(k)}</b><small>${a.length} act. • ${fmt(usefulRate(a),0)}% utiles</small></div>`}).join('')}</div></div>`;
+}
+function gpsDashboard(rows){
+ const withTrack=rows.filter(r=>Array.isArray(r.track)&&r.track.length>1);
+ if(!withTrack.length)return '';
+ const accuracies=withTrack.flatMap(r=>r.track.map(p=>Number(p.acc)).filter(Number.isFinite));
+ const direct=withTrack.map(routeEfficiency).filter(x=>x!==null&&Number.isFinite(x));
+ const pts=withTrack.reduce((s,r)=>s+r.track.length,0);
+ return `<div class="performance-card"><h3>🛰️ Qualité & analyse GPS</h3><div class="mini-kpi-grid">
+ <div><span>Tracés GPS</span><b>${withTrack.length}/${rows.length}</b></div>
+ <div><span>Points enregistrés</span><b>${pts}</b></div>
+ <div><span>Précision GPS moyenne</span><b>${accuracies.length?fmt(accuracies.reduce((a,b)=>a+b,0)/accuracies.length,1)+' m':'—'}</b></div>
+ <div><span>Directivité moyenne</span><b>${direct.length?fmt(direct.reduce((a,b)=>a+b,0)/direct.length,0)+' %':'—'}</b></div>
+ </div><p class="stat-explain">La directivité compare la distance à vol d’oiseau entre départ et arrivée à la distance réellement parcourue. Elle décrit la forme du parcours, pas la réussite du chien.</p></div>`;
+}
+function recordsDashboard(rows){
+ if(!rows.length)return '';
+ const fastest=rows.filter(r=>speedFromActivity(r)!==null).sort((a,b)=>speedFromActivity(b)-speedFromActivity(a))[0];
+ const maxDelay=[...rows].sort((a,b)=>Number(b.delai_h||0)-Number(a.delai_h||0))[0];
+ const maxKm=[...rows].sort((a,b)=>Number(b.distance_km||0)-Number(a.distance_km||0))[0];
+ const maxDur=[...rows].sort((a,b)=>Number(b.duree_h||0)-Number(a.duree_h||0))[0];
+ return `<div class="performance-card"><h3>🏅 Repères personnels</h3><div class="records-grid">
+ <div><span>Plus longue piste</span><b>${fmt(maxKm.distance_km,2)} km</b><small>${esc(maxKm.date||'')}</small></div>
+ <div><span>Plus long délai</span><b>${fmt(maxDelay.delai_h,1)} h</b><small>${esc(maxDelay.date||'')}</small></div>
+ <div><span>Plus longue durée</span><b>${fmt(maxDur.duree_h,2)} h</b><small>${esc(maxDur.date||'')}</small></div>
+ <div><span>Vitesse la plus élevée</span><b>${fastest?fmt(speedFromActivity(fastest),2)+' km/h':'—'}</b><small>${fastest?esc(fastest.date||''):''}</small></div>
+ </div></div>`;
+}
+function advancedDashboard(rows,label){
+ const delayGroups=statGroup(rows,r=>delayBand(r.delai_h));
+ const milieuGroups=statGroup(rows,r=>r.milieu||'Non renseigné').sort((a,b)=>b[1].length-a[1].length);
+ const ageGroups=statGroup(rows,r=>r.age||'Non renseigné').sort((a,b)=>b[1].length-a[1].length);
+ const momentGroups=statGroup(rows,dayPart);
+ const resultGroups=statGroup(rows,r=>r.resultat||'Non renseigné').sort((a,b)=>b[1].length-a[1].length);
+ return `<div class="advanced-dashboard-title"><small>TABLEAU DE BORD AVANCÉ</small><h2>${esc(label)}</h2><p>Les chiffres ci-dessous sont calculés directement à partir de tes activités enregistrées.</p></div>
+ ${recordsDashboard(rows)}
+ ${trendDashboard(rows)}
+ ${performanceTable('⏱️ Performance selon le délai',delayGroups)}
+ ${performanceTable('🌲 Performance selon le milieu',milieuGroups)}
+ ${performanceTable('👤 Performance selon l’âge recherché',ageGroups)}
+ ${performanceTable('🌗 Performance selon le moment',momentGroups)}
+ ${performanceTable('🎯 Analyse par résultat',resultGroups)}
+ ${gpsDashboard(rows)}`;
+}
+
+function renderAdvancedStats(rows,targetId,label){
+ const el=$(targetId);if(!el)return;
+ if(!rows.length){el.innerHTML='';return}
+ const validHour=rows.filter(x=>hourOf(x)!==null);
+ const day=validHour.filter(x=>{const h=hourOf(x);return h>=6&&h<20}).length,night=validHour.length-day;
+ const delayBands=groupCount(rows,x=>delayBand(x.delai_h));
+ const months=groupCount(rows,x=>{const d=new Date(x.date);return isNaN(d)?null:monthLabel(d.getMonth())});
+ el.innerHTML=advancedDashboard(rows,label)+`<div class="performance-card"><h3>📊 Répartition des activités</h3>
+ ${validHour.length?barList('Jour / nuit',[['Jour (06h–20h)',day],['Nuit (20h–06h)',night]],validHour.length):''}
+ ${barList('Délai avant engagement',delayBands,rows.length)}
+ ${barList('Milieu',groupCount(rows,x=>x.milieu),rows.length)}
+ ${barList('Tranche d’âge',groupCount(rows,x=>x.age||'Non renseigné'),rows.length)}
+ ${barList('Résultat',groupCount(rows,x=>x.resultat),rows.length)}
+ ${barList('Répartition mensuelle',months,rows.length)}</div>`;
+}
 async function loadStats(scope){
  $('statsContent').innerHTML='<p class="muted">Chargement…</p>';
  if(scope==='community'){
@@ -910,8 +981,10 @@ async function loadStats(scope){
    return;
  }
  await refreshMine();
- $('statsContent').innerHTML=mine.length?localStatsSummary(mine,'operational')+dogStatsHTML(mine)+`<div class="stats-individual-title"><h3>📊 Statistiques par pistage</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`:'<p class="muted">Aucun pistage opérationnel.</p>';
- renderAdvancedStats(mine,'advancedStats','pistage opérationnel');
+ $('statsContent').innerHTML=mine.length?localStatsSummary(mine,'operational')+dogStatsHTML(mine):'<p class="muted">Aucun pistage opérationnel.</p>';
+ renderAdvancedStats(mine,'advancedStats','Pistages opérationnels');
+ if(mine.length)$('advancedStats').insertAdjacentHTML('beforeend',`<div class="stats-individual-title"><h3>📍 Analyse piste par piste</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`);
+ bindOperationalActivityCards($('advancedStats'));
  bindOperationalActivityCards($('statsContent'));
 }
 
