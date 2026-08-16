@@ -409,6 +409,68 @@ function bindOperationalActivityCards(container){
  };
 }
 
+
+function total(rows,key){return rows.reduce((s,x)=>s+Number(x[key]||0),0)}
+function localStatsSummary(rows,type){
+ const label=type==='training'?'Entraînements':'Pistages';
+ const km=total(rows,'distance_km'),hours=total(rows,'duree_h');
+ const speeds=rows.map(speedFromActivity).filter(x=>x!==null&&Number.isFinite(x));
+ const usefulCount=rows.filter(useful).length;
+ const delays=rows.map(x=>Number(x.delai_h)).filter(Number.isFinite);
+ const longest=rows.reduce((best,x)=>Number(x.distance_km||0)>Number(best?.distance_km||0)?x:best,null);
+ const longestDur=rows.reduce((best,x)=>Number(x.duree_h||0)>Number(best?.duree_h||0)?x:best,null);
+ const activeMonths=new Set(rows.map(x=>x.date?String(x.date).slice(0,7):null).filter(Boolean)).size;
+ return `<div class="stats-summary-grid">
+   <div><span>Activités</span><b>${rows.length}</b></div>
+   <div><span>Distance totale</span><b>${fmt(km,1)} km</b></div>
+   <div><span>Temps total</span><b>${fmt(hours,1)} h</b></div>
+   <div><span>Résultats utiles</span><b>${rows.length?fmt(usefulCount/rows.length*100,0):0}%</b></div>
+   <div><span>Distance moyenne</span><b>${fmt(avg(rows,'distance_km'),2)} km</b></div>
+   <div><span>Durée moyenne</span><b>${fmt(avg(rows,'duree_h'),2)} h</b></div>
+   <div><span>Délai moyen</span><b>${fmt(avg(rows,'delai_h'),1)} h</b></div>
+   <div><span>Délai médian</span><b>${delays.length?fmt(median(delays),1):0} h</b></div>
+   <div><span>Vitesse moyenne</span><b>${speeds.length?fmt(speeds.reduce((a,b)=>a+b,0)/speeds.length,2):0} km/h</b></div>
+   <div><span>Mois actifs</span><b>${activeMonths}</b></div>
+   <div><span>Plus longue distance</span><b>${longest?fmt(longest.distance_km,2)+' km':'—'}</b></div>
+   <div><span>Plus longue durée</span><b>${longestDur?fmt(longestDur.duree_h,2)+' h':'—'}</b></div>
+ </div>`;
+}
+function dogStatsHTML(rows){
+ const grouped={};
+ for(const r of rows){
+   const name=dogDisplay(r.dog_id);
+   (grouped[name]??=[]).push(r);
+ }
+ const entries=Object.entries(grouped);
+ if(!entries.length)return '';
+ return `<div class="dog-stats-block"><h3>🐕 Statistiques par chien</h3>${entries.map(([name,a])=>{
+   const km=total(a,'distance_km'),rate=a.length?a.filter(useful).length/a.length*100:0;
+   return `<div class="dog-stat-row"><b>${esc(name)}</b><span>${a.length} activités</span><span>${fmt(km,1)} km</span><span>${fmt(rate,0)}% utiles</span></div>`;
+ }).join('')}</div>`;
+}
+function renderOperationalStats(){
+ const box=$('operationalStatsContent'),adv=$('operationalAdvancedStats');
+ if(!box||!adv)return;
+ box.classList.remove('hidden');adv.classList.remove('hidden');$('historyList').classList.add('hidden');
+ box.innerHTML=mine.length
+   ? localStatsSummary(mine,'operational')+dogStatsHTML(mine)+`<div class="stats-individual-title"><h3>📊 Chaque pistage</h3><p>Touche une activité ou son bouton Statistiques pour ouvrir toutes ses données.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`
+   : '<p class="muted">Aucun pistage opérationnel.</p>';
+ renderAdvancedStats(mine,'operationalAdvancedStats','pistage opérationnel');
+ bindOperationalActivityCards(box);
+ box.querySelectorAll('.deletePiste').forEach(b=>b.onclick=async e=>{
+   e.stopPropagation();
+   if(!confirm("Supprimer ce pistage opérationnel ?"))return;
+   const {error}=await supabase.from('pistes').delete().eq('id',b.dataset.id);
+   if(error)alert(error.message); else {await refreshMine();renderOperationalStats()}
+ });
+}
+function showOperationalHistory(){
+ $('historyList').classList.remove('hidden');
+ $('operationalStatsContent').classList.add('hidden');
+ $('operationalAdvancedStats').classList.add('hidden');
+ renderHistory();
+}
+
 function renderHistory(){
  if(!$('historyList'))return;
  $('historyList').innerHTML=mine.length?mine.map(p=>pisteItem(p,true)).join(""):'<p class="muted">Aucun pistage opérationnel.</p>';
@@ -568,12 +630,17 @@ async function loadTrainings(view='history',scope=trainingStatsScope){
      if(error){$('trainingContent').innerHTML=`<p>${esc(error.message)}</p>`;return}
      $('trainingContent').innerHTML=data.length?data.map(x=>`<div class="stat-card"><b>🟣 Entraînements communauté • ${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join(""):'<p class="muted">Aucun entraînement partagé avec la Communauté.</p>';
    }else{
+     $('trainingAdvancedStats').innerHTML='';
+     const summary=trainings.length?localStatsSummary(trainings,'training')+dogStatsHTML(trainings):'<p class="muted">Aucun entraînement enregistré.</p>';
+     $('trainingContent').innerHTML=summary+`<div class="stats-individual-title"><h3>📊 Chaque entraînement</h3><p>Touche une activité ou son bouton Statistiques pour ouvrir toutes ses données.</p></div>`+(trainings.length?trainings.map(trainingItem).join(""):'');
      renderAdvancedStats(trainings,'trainingAdvancedStats','entraînements');
-     const {data=[],error}=await supabase.from('my_training_stats').select('*');
-     if(error){$('trainingContent').innerHTML=`<p>${esc(error.message)}</p>`;return}
-     const summary=data.length?data.map(x=>`<div class="stat-card"><b>🟣 Mes entraînements • ${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join(""):'<p class="muted">Aucune statistique annuelle.</p>';
-     $('trainingContent').innerHTML=summary+`<div class="stats-individual-title"><h3>📊 Statistiques par entraînement</h3><p>Ouvre une activité pour consulter toutes ses données et son analyse comparative.</p></div>`+(trainings.length?trainings.map(trainingItem).join(""):'<p class="muted">Aucun entraînement enregistré.</p>');
-     $('trainingContent').onclick=e=>{const stats=e.target.closest('.showTrainingStats');if(stats){e.preventDefault();e.stopPropagation();showActivityStats(stats.dataset.id,'training','trainingPage');return}const track=e.target.closest('.showTrainingTrack');if(track){e.preventDefault();e.stopPropagation();showTrainingTrack(track.dataset.id);return}const card=e.target.closest('.activity-open[data-activity-type="training"]');if(card)showActivityStats(card.dataset.activityId,'training','trainingPage')};
+     $('trainingContent').onclick=e=>{
+       const stats=e.target.closest('.showTrainingStats');if(stats){e.preventDefault();e.stopPropagation();showActivityStats(stats.dataset.id,'training','trainingPage');return}
+       const track=e.target.closest('.showTrainingTrack');if(track){e.preventDefault();e.stopPropagation();showTrainingTrack(track.dataset.id);return}
+       const del=e.target.closest('.deleteTraining');if(del)return;
+       const card=e.target.closest('.activity-open[data-activity-type="training"]');if(card)showActivityStats(card.dataset.activityId,'training','trainingPage');
+     };
+     document.querySelectorAll('.deleteTraining').forEach(b=>b.onclick=async e=>{e.stopPropagation();if(!confirm("Supprimer cet entraînement ?"))return;await supabase.from('entrainements').delete().eq('id',b.dataset.id);loadTrainings('stats','mine')});
    }
  }else{
    $('trainingStatsScope').classList.add('hidden');
@@ -835,12 +902,17 @@ document.querySelectorAll('[data-scope]').forEach(b=>b.onclick=()=>{
 });
 async function loadStats(scope){
  $('statsContent').innerHTML='<p class="muted">Chargement…</p>';
- let data=[],error=null;
- if(scope==='community'){const r=await supabase.rpc('get_community_stats');data=r.data||[];error=r.error;$('advancedStats').innerHTML='<div class="privacy-banner">Les statistiques communautaires détaillées restent volontairement agrégées pour ne pas exposer les interventions individuelles.</div>'}
- else {const r=await supabase.from('my_stats').select('*');data=r.data||[];error=r.error;renderAdvancedStats(mine,'advancedStats','pistage opérationnel')}
- if(error){$('statsContent').innerHTML=`<p>${esc(error.message)}</p>`;return}
- if(!data.length){$('statsContent').innerHTML='<p class="muted">Aucune donnée pour le moment.</p>';return}
- $('statsContent').innerHTML=data.map(x=>`<div class="stat-card"><b>${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join("");
+ if(scope==='community'){
+   const {data=[],error}=await supabase.rpc('get_community_stats');
+   $('advancedStats').innerHTML='<div class="privacy-banner">Les statistiques communautaires détaillées restent volontairement agrégées pour ne pas exposer les interventions individuelles.</div>';
+   if(error){$('statsContent').innerHTML=`<p>${esc(error.message)}</p>`;return}
+   $('statsContent').innerHTML=data.length?data.map(x=>`<div class="stat-card"><b>${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join(""):'<p class="muted">Aucune donnée communautaire pour le moment.</p>';
+   return;
+ }
+ await refreshMine();
+ $('statsContent').innerHTML=mine.length?localStatsSummary(mine,'operational')+dogStatsHTML(mine)+`<div class="stats-individual-title"><h3>📊 Statistiques par pistage</h3><p>Chaque activité possède sa fiche détaillée et son analyse comparative.</p></div>${mine.map(p=>pisteItem(p,true)).join('')}`:'<p class="muted">Aucun pistage opérationnel.</p>';
+ renderAdvancedStats(mine,'advancedStats','pistage opérationnel');
+ bindOperationalActivityCards($('statsContent'));
 }
 
 function showTrack(id){
@@ -882,6 +954,12 @@ $('clearPlanner').onclick=()=>{plannerPoints=[];redrawPlanner()};
 $('saveTrainingRoute').onclick=savePlanner;
 $('detachPlannedRoute').onclick=()=>{selectedTrainingRoute=null;applySelectedTrainingRoute()};
 
+if($('operationalHistoryTab'))$('operationalHistoryTab').onclick=()=>{
+ $('operationalHistoryTab').classList.add('active');$('operationalStatsTab').classList.remove('active');showOperationalHistory();
+};
+if($('operationalStatsTab'))$('operationalStatsTab').onclick=()=>{
+ $('operationalStatsTab').classList.add('active');$('operationalHistoryTab').classList.remove('active');renderOperationalStats();
+};
 $('trainingHistoryTab').onclick=()=>{$('trainingHistoryTab').classList.add('active');$('trainingStatsTab').classList.remove('active');loadTrainings('history')};
 $('trainingStatsTab').onclick=()=>{$('trainingStatsTab').classList.add('active');$('trainingHistoryTab').classList.remove('active');loadTrainings('stats',trainingStatsScope)};
 $('trainingMineStats').onclick=()=>{trainingStatsScope='mine';$('trainingMineStats').classList.add('active');$('trainingCommunityStats').classList.remove('active');loadTrainings('stats','mine')};

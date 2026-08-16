@@ -240,7 +240,15 @@
 
   <section id="historyPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Mes pistages opérationnels</h2></div>
-    <div class="card"><div id="historyList"></div></div>
+    <div class="card">
+      <div class="segmented stats-tabs">
+        <button id="operationalHistoryTab" class="active">Historique</button>
+        <button id="operationalStatsTab">Statistiques</button>
+      </div>
+      <div id="historyList"></div>
+      <div id="operationalStatsContent" class="hidden"></div>
+      <div id="operationalAdvancedStats" class="advanced-stats hidden"></div>
+    </div>
   </section>
 
 
