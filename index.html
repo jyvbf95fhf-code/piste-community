@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#073f2b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="PISTE">
+<title>PISTE Community</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
+<link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="brand-mini" data-page="homePage" aria-label="Accueil">
+    <span class="dog-mark">🐕</span><span><b>PISTE</b><small>COMMUNITY</small></span>
+  </button>
+  <div class="top-actions"><span id="topDogAlias" class="top-dog"></span><button id="logoutBtn" class="ghost hidden">Déconnexion</button></div>
+</header>
+
+<main>
+<section id="authScreen">
+  <div class="auth-shell">
+    <div class="auth-brand">
+      <div class="brand-logo"><span class="brand-dog">🐕</span><div><b>PISTE</b><small>COMMUNITY</small></div></div>
+      <h2>L’outil des pisteurs,<br>par des pisteurs.</h2>
+      <p>Suivi GPS • statistiques • entraînements • partage entre amis</p>
+      <div class="paw-line">🐾 🐾 🐾</div>
+    </div>
+    <div class="auth-card">
+      <div class="segmented">
+        <button id="showLogin" class="active">Se connecter</button>
+        <button id="showSignup">Créer un compte</button>
+      </div>
+      <form id="loginForm" class="stack">
+        <label>Email<input type="email" name="email" required autocomplete="email"></label>
+        <label>Mot de passe<input type="password" name="password" required autocomplete="current-password"></label>
+        <button class="primary big dog-btn" type="submit">🐕 Se connecter</button>
+        <p id="loginMsg" class="msg"></p>
+      </form>
+      <form id="signupForm" class="stack hidden">
+        <label>Pseudo visible par les amis<input type="text" name="display_name" maxlength="24" placeholder="Ex. Pisteur68" required></label>
+        <label>Email<input type="email" name="email" required autocomplete="email"></label>
+        <label>Mot de passe<input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+        <button class="primary big dog-btn" type="submit">🐾 Créer mon compte</button>
+        <p class="small muted">Aucun nom réel n’est nécessaire.</p>
+        <p id="signupMsg" class="msg"></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section id="appScreen" class="hidden">
+  <section id="homePage" class="page active">
+    <div class="v8-hero">
+      <div class="hero-brand"><span class="hero-dog">🐕</span><div><small>PISTE COMMUNITY</small><b id="helloUser">Bonjour</b><span id="heroDogLine">Prêt pour le terrain.</span></div></div>
+      <button id="newPisteBtn" class="start-main v8-start"><span class="start-dog">🐕</span><span><b>NOUVEAU PISTAGE</b><small>OPÉRATIONNEL</small></span></button>
+      <button id="newTrainingHomeBtn" class="training-main v8-training"><span>🐾</span><span><b>NOUVEL ENTRAÎNEMENT</b><small>Espace indépendant</small></span></button>
+    </div>
+
+    <div id="resumeBanner" class="resume-banner hidden"><div><b>Enregistrement interrompu détecté</b><span id="resumeInfo">Une activité locale peut être reprise.</span></div><div class="resume-actions"><button id="resumeDraftBtn" class="primary">Reprendre</button><button id="discardDraftBtn" class="secondary">Effacer</button></div></div>
+    <div id="syncBanner" class="sync-banner hidden">⏳ <b id="syncCount">0</b> enregistrement(s) en attente de synchronisation.</div>
+
+    <div class="kpi-grid v8-kpis">
+      <article><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistages</span></article>
+      <article><span class="kpi-icon">🐾</span><strong id="tHomeCount">0</strong><span>Entraînements</span></article>
+      <article><span class="kpi-icon">↗</span><strong id="kKm">0</strong><span>km opérationnels</span></article>
+      <article><span class="kpi-icon">✓</span><strong id="kUseful">0%</strong><span>Résultats utiles</span></article>
+    </div>
+
+    <div class="module-grid">
+      <button data-page="feedPage"><span class="module-icon">🐕‍🦺</span><b>Activité amis</b><small>Partages & tracés</small></button>
+      <button data-page="statsPage"><span class="module-icon">▥</span><b>Statistiques</b><small>Personnelles & communauté</small></button>
+      <button data-page="mapPage"><span class="module-icon">🗺️</span><b>Carte</b><small>Tous mes tracés</small></button>
+      <button data-page="analysisPage"><span class="module-icon">🐾</span><b>Analyse cynophile</b><small>Tendances & résultats</small></button>
+      <button data-page="profilePage"><span class="module-icon">🐕</span><b>Profil & chien</b><small>Objectifs anonymes</small></button>
+      <button data-page="friendsPage"><span class="module-icon">👥</span><b>Mes amis</b><small>Invitations</small></button>
+    </div>
+
+    <div class="card v8-card">
+      <div class="card-title-row"><h2>Activité récente</h2><button class="text-btn" data-page="historyPage">Tout voir</button></div>
+      <div id="homeRecent"></div>
+    </div>
+  </section>
+
+  <section id="recordPage" class="page">
+    <div class="record-head">
+      <button class="back" data-page="homePage">‹ Accueil</button>
+      <h2 id="recordTitle">Nouveau pistage opérationnel</h2>
+    </div>
+
+    <div id="plannedRouteBanner" class="planned-route-banner hidden">
+      <div><span>🗺️</span><p><b id="plannedRouteName">Tracé préparé</b><small id="plannedRouteInfo">0 km prévus</small></p></div>
+      <button id="detachPlannedRoute" class="secondary">Retirer</button>
+    </div>
+    <div class="card gps-card">
+      <div id="liveMap"></div>
+      <div class="gps-kpis">
+        <div><strong id="liveDistance">0.00</strong><span>km</span></div>
+        <div><strong id="liveDuration">00:00:00</strong><span>durée</span></div>
+        <div><strong id="liveAccuracy">—</strong><span>précision</span></div>
+      </div>
+      <div class="location-box">
+        <span>Départ</span>
+        <b id="liveLocation">En attente du GPS</b>
+      </div>
+      <div class="record-actions terrain-actions">
+        <button id="startGpsBtn" class="start-main compact">DÉMARRER LE PISTAGE</button>
+        <button id="pauseGpsBtn" class="pause-btn" disabled>PAUSE</button>
+        <button id="stopGpsBtn" class="stop-btn" disabled>TERMINER</button>
+      </div>
+      <div class="gps-status-row"><span id="gpsStatusBadge" class="status-pill idle">Prêt</span><span id="offlineStatus" class="status-pill">Réseau : —</span><span id="savedStatus" class="status-pill">Sauvegarde locale : prête</span></div>
+      <p class="small muted">Pendant le suivi, garde PISTE Community ouverte. Si le réseau coupe, le tracé continue d’être conservé localement.</p>
+      <p id="gpsMsg" class="msg"></p>
+    </div>
+
+    <div id="finishFormCard" class="card hidden">
+      <h2 id="finishTitle">Terminer l’enregistrement</h2>
+      <p class="muted small">Le GPS a déjà renseigné la durée, la distance et le lieu de départ.</p>
+
+      <form id="pisteForm" class="form-grid">
+        <label>Date
+          <input type="date" name="date" required>
+        </label>
+
+        <label>Heure de disparition
+          <input type="datetime-local" name="disparition_at">
+        </label>
+
+        <label>Heure de départ
+          <input type="datetime-local" name="depart_at">
+        </label>
+
+        <label>Délai depuis la disparition
+          <input type="number" step="0.1" min="0" name="delai_h" readonly>
+        </label>
+
+        <label>Durée
+          <input type="number" step="0.01" min="0" name="duree_h" readonly>
+        </label>
+
+        <label>Distance
+          <input type="number" step="0.01" min="0" name="distance_km" readonly>
+        </label>
+
+        <label>Commune de départ
+          <input type="text" name="commune_depart" maxlength="80">
+        </label>
+
+        <label>Tranche d’âge
+          <select name="age">
+            <option value="">Non renseigné</option>
+            <option>0–12 ans</option><option>13–17 ans</option><option>18–39 ans</option>
+            <option>40–64 ans</option><option>65–79 ans</option><option>80 ans et +</option>
+          </select>
+        </label>
+
+        <label>Milieu principal
+          <select name="milieu">
+            <option>Urbain</option><option>Village / périurbain</option><option>Campagne / plaine</option>
+            <option>Forêt</option><option>Montagne</option><option>Habitation / dépendances</option>
+            <option>Routier</option><option>Ferroviaire</option><option>Autre</option>
+          </select>
+        </label>
+
+        <label>Résultat
+          <select name="resultat">
+            <option>Résultat négatif</option>
+            <option>Orientation positive</option>
+            <option>Personne retrouvée par le chien</option>
+            <option>Personne retrouvée par un tiers</option>
+            <option>Non mise en œuvre</option>
+            <option>Mission annulée</option>
+          </select>
+        </label>
+
+        <label>Chien / binôme
+          <select name="dog_id" id="recordDogSelect"><option value="">Non renseigné</option></select>
+        </label>
+
+        <label>Partage
+          <select name="visibility">
+            <option value="private">🔒 Privé</option>
+            <option value="friends">👥 Amis</option>
+            <option value="community">🌍 Communauté (statistiques anonymes)</option>
+          </select>
+        </label>
+
+        <label class="full">Observation
+          <textarea name="observation" maxlength="500" rows="3" placeholder="Facultatif — aucune identité de personne"></textarea>
+        </label>
+
+        <div class="full record-save">
+          <button id="saveRecordBtn" class="primary big" type="submit">ENREGISTRER LE PISTAGE</button>
+        </div>
+      </form>
+      <p id="pisteMsg" class="msg"></p>
+    </div>
+  </section>
+
+  <section id="feedPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Activité amis</h2></div>
+    <div class="card">
+      <p class="muted small">Les activités partagées avec les amis apparaissent ici. 🔵 Pistage opérationnel • 🟣 Entraînement.</p>
+      <div id="friendFeed"></div>
+    </div>
+  </section>
+
+  <section id="statsPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Statistiques</h2></div>
+    <div class="segmented stats-tabs">
+      <button data-scope="mine" class="active">Pistage opérationnel</button>
+      <button data-scope="community">Communauté</button>
+    </div>
+    <div class="card">
+      <div id="statsContent"></div>
+      <div id="advancedStats" class="advanced-stats"></div>
+    </div>
+  </section>
+
+  <section id="friendsPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Amis</h2></div>
+    <div class="card">
+      <h3>Ajouter un ami</h3>
+      <form id="friendForm" class="friend-add">
+        <input type="email" name="email" placeholder="Son adresse e-mail" required>
+        <button class="primary" type="submit">Envoyer</button>
+      </form>
+      <p id="friendMsg" class="msg"></p>
+    </div>
+    <div class="card">
+      <h3>Mes amis et invitations</h3>
+      <div id="friendsList"></div>
+    </div>
+  </section>
+
+  <section id="historyPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Mes pistages opérationnels</h2></div>
+    <div class="card"><div id="historyList"></div></div>
+  </section>
+
+
+  <section id="trainingPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Entraînements</h2></div>
+    <div class="training-hero">
+      <button id="newTrainingBtn" class="training-main">+ NOUVEL ENTRAÎNEMENT</button>
+      <button id="openPlannerBtn" class="planner-main">🗺️ CRÉER UN TRACÉ D’ENTRAÎNEMENT</button>
+      <p class="muted">Espace indépendant : ces données ne comptent jamais dans les statistiques des pistages opérationnels.</p>
+    </div>
+    <div class="card">
+      <div class="card-title-row"><h3>Mes tracés préparés</h3><span>🐾</span></div>
+      <div id="trainingRoutesList"></div>
+    </div>
+    <div class="kpi-grid">
+      <article><strong id="tCount">0</strong><span>Entraînements</span></article>
+      <article><strong id="tKm">0</strong><span>km parcourus</span></article>
+      <article><strong id="tFound">0</strong><span>Retrouvées</span></article>
+      <article><strong id="tUseful">0%</strong><span>Résultats utiles</span></article>
+    </div>
+    <div class="card">
+      <div class="segmented stats-tabs">
+        <button id="trainingHistoryTab" class="active">Historique</button>
+        <button id="trainingStatsTab">Statistiques</button>
+      </div>
+      <div id="trainingStatsScope" class="segmented stats-tabs hidden">
+        <button id="trainingMineStats" class="active">Mes entraînements</button>
+        <button id="trainingCommunityStats">Communauté</button>
+      </div>
+      <div id="trainingContent"></div><div id="trainingAdvancedStats" class="advanced-stats"></div>
+    </div>
+  </section>
+
+
+
+  <section id="plannerPage" class="page">
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Entraînements</button><h2>🗺️ Créateur de tracé</h2></div>
+    <div class="card planner-card">
+      <div class="planner-top">
+        <label>Nom du tracé
+          <input id="routeName" maxlength="80" placeholder="Ex. Forêt 3 km – angles">
+        </label>
+        <div class="planner-distance"><small>DISTANCE PRÉVUE</small><strong id="plannedDistance">0.00 km</strong></div>
+      </div>
+      <p class="small muted">Touchez la carte pour poser des points. Les segments sont reliés automatiquement.</p>
+      <div id="plannerMap"></div>
+      <div class="planner-actions">
+        <button id="undoPlannerPoint" class="secondary">↶ Annuler le dernier point</button>
+        <button id="clearPlanner" class="secondary">Effacer</button>
+        <button id="saveTrainingRoute" class="primary">💾 Enregistrer le tracé</button>
+      </div>
+      <p id="plannerMsg" class="msg"></p>
+    </div>
+  </section>
+
+  <section id="mapPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗺️ Carte de mes activités</h2></div>
+    <div class="card map-tools">
+      <div class="segmented three">
+        <button data-mapfilter="all" class="active">Toutes</button>
+        <button data-mapfilter="operational">🔵 Opérationnel</button>
+        <button data-mapfilter="training">🟣 Entraînement</button>
+      </div>
+      <div id="globalMap"></div>
+      <div id="mapLegend" class="map-legend"><span>🔵 Pistage opérationnel</span><span>🟣 Entraînement</span><span>✓ Résultat utile</span></div>
+    </div>
+  </section>
+
+  <section id="analysisPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🐾 Analyse cynophile</h2></div>
+    <div class="segmented">
+      <button id="analysisMineTab" class="active">Mes données</button>
+      <button id="analysisCommunityTab">Communauté</button>
+    </div>
+    <div class="card">
+      <div id="canineInsights"></div>
+    </div>
+  </section>
+
+  <section id="profilePage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🐕 Profil & objectifs</h2></div>
+    <div class="profile-grid">
+      <div class="card profile-card">
+        <div class="profile-avatar">🐕</div>
+        <div><small>MON PROFIL</small><h2 id="profilePseudo">Pisteur</h2><p class="muted small">Profil anonyme PISTE Community</p></div>
+      </div>
+      <div class="card">
+        <div class="card-title-row"><h3>Mes chiens</h3><span class="paw-muted">🐾</span></div>
+        <div id="dogsList"></div>
+        <form id="dogForm" class="friend-add">
+          <input name="alias" maxlength="24" placeholder="Alias du chien (ex. Chien A)" required>
+          <button class="primary" type="submit">Ajouter</button>
+        </form>
+        <p class="small muted">Utilise un alias si tu veux rester entièrement anonyme.</p>
+      </div>
+      <div class="card">
+        <div class="card-title-row"><h3>Objectifs annuels</h3><span>🏆</span></div>
+        <div id="goalsContent"></div>
+        <button id="editGoalsBtn" class="secondary big">Modifier mes objectifs</button>
+        <form id="goalsForm" class="form-grid hidden">
+          <label>Entraînements / an<input name="training_count" type="number" min="1" value="15"></label>
+          <label>Km d’entraînement / an<input name="distance_km" type="number" min="1" value="100"></label>
+          <label class="full">Mois actifs / an<input name="monthly_regularity" type="number" min="1" max="12" value="10"></label>
+          <button class="primary big full" type="submit">Enregistrer les objectifs</button>
+        </form>
+      </div>
+      <div class="card">
+        <h3>Exporter mes données</h3>
+        <div class="export-grid">
+          <button id="exportCsvBtn" class="secondary">📄 Export CSV</button>
+          <button id="printReportBtn" class="secondary">🖨️ Bilan PDF / impression</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="trackPage" class="page">
+    <div class="record-head"><button id="trackBackBtn" class="back" data-page="historyPage">‹ Mes pistages opérationnels</button><h2 id="trackTitle">Tracé</h2></div>
+    <div class="card">
+      <div id="historyMap"></div>
+      <div id="trackDetails"></div>
+    </div>
+  </section>
+
+  <nav class="bottom-nav">
+    <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
+    <button data-page="feedPage"><span class="nav-icon">🐕‍🦺</span><span>Amis</span></button>
+    <button id="navRecord" class="nav-paw"><span class="nav-icon">🐾</span><span>Pistage</span></button>
+    <button data-page="mapPage"><span class="nav-icon">🗺️</span><span>Carte</span></button>
+    <button data-page="profilePage"><span class="nav-icon">🐕</span><span>Profil</span></button>
+  </nav>
+</section>
+</main>
+
+<script src="./config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

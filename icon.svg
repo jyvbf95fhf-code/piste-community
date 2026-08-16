@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#063f2b"/><stop offset="1" stop-color="#0b7450"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="url(#g)"/>
+<path d="M95 322c55-36 77-86 93-142 13 25 35 38 66 39 37 1 70-20 94-58 18 43 39 65 70 82-19 17-41 27-66 31-17 42-52 73-101 88-53 16-105 4-156-40Z" fill="#fff"/>
+<circle cx="331" cy="193" r="10" fill="#063f2b"/>
+<path d="M155 173c-27-25-28-57-12-83 24 10 44 29 57 55-12 15-27 24-45 28Z" fill="#fff"/>
+<text x="256" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-weight="800" font-size="58" fill="#fff">PISTE</text>
+<text x="256" y="465" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="24" letter-spacing="7" fill="#cfe8db">COMMUNITY</text>
+</svg>
