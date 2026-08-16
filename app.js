@@ -219,6 +219,10 @@ function updateV8Home(){
  if($('helloUser'))$('helloUser').textContent=`Bonjour ${me?.display_name||'Pisteur'}`;
  if($('tHomeCount'))$('tHomeCount').textContent=trainings.length;
  renderDogChoices();
+ const opKmV12=mine.reduce((s,x)=>s+Number(x.distance_km||0),0),trKmV12=trainings.reduce((s,x)=>s+Number(x.distance_km||0),0);
+ if($('homeKm'))$('homeKm').textContent=fmt(opKmV12,1);
+ if($('homeTrainingKm'))$('homeTrainingKm').textContent=fmt(trKmV12,1);
+ if($('homeTotalKm'))$('homeTotalKm').textContent=fmt(opKmV12+trKmV12,1);
 }
 async function boot(){
  const {data:{session:s}}=await supabase.auth.getSession();
@@ -566,7 +570,7 @@ function resetGpsUI(clear=true){
  if(gps.watch!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gps.watch);clearInterval(gps.timer);releaseWakeLock();
  gps={watch:null,start:null,timer:null,points:[],distance:0,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0};
  $('liveDistance').textContent="0.00";$('liveDuration').textContent="00:00:00";$('liveAccuracy').textContent="—";$('liveLocation').textContent="En attente du GPS";$('gpsMsg').textContent="";
- $('startGpsBtn').disabled=false;$('pauseGpsBtn').disabled=true;$('pauseGpsBtn').textContent='PAUSE';$('stopGpsBtn').disabled=true;$('finishFormCard').classList.add('hidden');setGpsStatus('Prêt','idle');
+ $('startGpsBtn').disabled=false;$('startGpsBtn').classList.remove('hidden');$('pauseGpsBtn').disabled=true;$('pauseGpsBtn').textContent='PAUSE';$('stopGpsBtn').disabled=true;$('finishFormCard').classList.add('hidden');setGpsStatus('Prêt','idle');
  if(liveLine)liveLine.setLatLngs([]);if(liveMarker){liveMarker.remove();liveMarker=null}
  if(plannedLiveLine){plannedLiveLine.remove();plannedLiveLine=null}if(clear)clearDraft();
 }
@@ -589,6 +593,7 @@ function hav(a,b){
 }
 function gpsTick(){
  if(!gps.start)return;const s=Math.floor(msDuration()/1000),h=pad(Math.floor(s/3600)),m=pad(Math.floor((s%3600)/60)),ss=pad(s%60);$('liveDuration').textContent=`${h}:${m}:${ss}`;saveDraft();
+ const liveHours=msDuration()/3600000;if($('liveAvgSpeed'))$('liveAvgSpeed').textContent=(liveHours>0?fmt((gps.distance/1000)/liveHours,2):'0.00')+' km/h';
 }
 async function reverseCommune(lat,lon){
  try{
@@ -620,7 +625,7 @@ function beginWatch(){
 }
 $('startGpsBtn').onclick=()=>{
  if(!gps.start){gps.start=Date.now();gps.timer=setInterval(gpsTick,1000)}
- gps.paused=false;gps.pauseStarted=null;$('startGpsBtn').disabled=true;$('pauseGpsBtn').disabled=false;$('stopGpsBtn').disabled=false;$('gpsMsg').textContent="Acquisition GPS…";setGpsStatus('Recherche GPS','warn');requestWakeLock();beginWatch();saveDraft(true);
+ gps.paused=false;gps.pauseStarted=null;$('startGpsBtn').disabled=true;$('startGpsBtn').classList.add('hidden');$('pauseGpsBtn').disabled=false;$('stopGpsBtn').disabled=false;$('gpsMsg').textContent="Acquisition GPS…";setGpsStatus('Recherche GPS','warn');requestWakeLock();beginWatch();saveDraft(true);
 };
 $('pauseGpsBtn').onclick=()=>{
  if(!gps.start)return;
@@ -629,8 +634,8 @@ $('pauseGpsBtn').onclick=()=>{
 };
 $('stopGpsBtn').onclick=()=>{
  if(gps.watch!==null)navigator.geolocation.clearWatch(gps.watch);gps.watch=null;clearInterval(gps.timer);releaseWakeLock();if(gps.paused&&gps.pauseStarted){gps.pausedMs+=Date.now()-gps.pauseStarted;gps.pauseStarted=null;gps.paused=false}
- $('startGpsBtn').disabled=false;$('pauseGpsBtn').disabled=true;$('stopGpsBtn').disabled=true;setGpsStatus('Terminé','idle');
- const h=msDuration()/3600000;const f=$('pisteForm');f.elements.duree_h.value=h.toFixed(2);f.elements.distance_km.value=(gps.distance/1000).toFixed(2);f.elements.commune_depart.value=gps.startPlace||"";f.elements.depart_at.value=new Date(gps.start).toISOString().slice(0,16);f.elements.date.value=today();$('finishFormCard').classList.remove('hidden');$('gpsMsg').textContent="Suivi terminé. Complète les informations puis enregistre.";saveDraft(true);setTimeout(()=>$('finishFormCard').scrollIntoView({behavior:'smooth'}),150);
+ $('startGpsBtn').disabled=false;$('startGpsBtn').classList.add('hidden');$('pauseGpsBtn').disabled=true;$('stopGpsBtn').disabled=true;setGpsStatus('Terminé','idle');
+ const h=msDuration()/3600000;const f=$('pisteForm');f.elements.duree_h.value=h.toFixed(2);f.elements.distance_km.value=(gps.distance/1000).toFixed(2);f.elements.commune_depart.value=gps.startPlace||"";f.elements.depart_at.value=new Date(gps.start).toISOString().slice(0,16);f.elements.date.value=today();$('finishFormCard').classList.remove('hidden');updatePreSaveSummary();$('gpsMsg').textContent="Suivi terminé. Complète les informations puis enregistre.";saveDraft(true);setTimeout(()=>$('finishFormCard').scrollIntoView({behavior:'smooth'}),150);
 };
 
 function calcDelay(){
@@ -638,6 +643,15 @@ function calcDelay(){
  if(a&&b){const d=(new Date(b)-new Date(a))/3600000;f.elements.delai_h.value=Math.max(0,d).toFixed(1)}
 }
 $('pisteForm').elements.disparition_at.onchange=calcDelay;$('pisteForm').elements.depart_at.onchange=calcDelay;
+
+
+function updatePreSaveSummary(){
+ const form=$('pisteForm'),box=$('preSaveSummaryContent');if(!form||!box)return;
+ const f=new FormData(form),dog=f.get('dog_id')?dogDisplay(f.get('dog_id')):'—';
+ box.innerHTML=`🐕 <b>${esc(dog)}</b> • ${fmt(f.get('distance_km'),2)} km • ${fmt(f.get('duree_h'),2)} h • délai ${fmt(f.get('delai_h'),1)} h<br>${esc(f.get('resultat')||'Résultat non renseigné')} • difficulté ${f.get('difficulte')||'—'}/5 • concentration ${f.get('concentration')||'—'}/5 • autonomie ${f.get('autonomie')||'—'}/5 • précision ${f.get('precision_travail')||'—'}/5`;
+}
+$('pisteForm').addEventListener('input',updatePreSaveSummary);
+$('pisteForm').addEventListener('change',updatePreSaveSummary);
 
 $('pisteForm').onsubmit=async e=>{
  e.preventDefault();$('pisteMsg').textContent="Enregistrement…";

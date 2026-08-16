@@ -183,3 +183,8 @@ body{background:linear-gradient(#eef6f0,#f7f8f7);color:var(--txt)}
 .field-notes b{font-size:11px}.field-notes p{margin:4px 0 0;font-size:12px;white-space:pre-wrap}
 #activityDetailMap{height:380px;border-radius:15px;margin:12px 0;background:#e9efeb}
 @media(max-width:700px){.assessment-grid,.field-detail-grid{grid-template-columns:1fr}#activityDetailMap{height:310px}}
+
+/* ===== V10.12 AMÉLIORATIONS TERRAIN ===== */
+.kpi-total{background:linear-gradient(145deg,#133f31,#1d6048)!important;color:#fff}.kpi-total span{color:#dbeae3!important}
+.pre-save-summary{margin:12px 0;padding:13px;border-radius:14px;background:#eef6f1;border:1px solid #d8e8de}.pre-save-summary>b{display:block;margin-bottom:5px;color:#174331}
+.live-extra{min-width:90px;text-align:center}.live-extra span{display:block;font-size:9px;color:#728178}.live-extra b{font-size:13px}
