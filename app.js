@@ -53,8 +53,9 @@ $('showLogin').onclick=()=>switchAuth('login');
 $('showSignup').onclick=()=>switchAuth('signup');
 
 function showPage(id){
+ const target=$(id);if(!target){console.error('Page introuvable:',id);return}
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
- $(id).classList.add('active');
+ target.classList.add('active');
  if(id==='feedPage')loadFeed();
  if(id==='statsPage')loadStats(currentStatsScope);
  if(id==='friendsPage')loadFriends();
@@ -72,6 +73,15 @@ function showPage(id){
  },180);
 }
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
+document.addEventListener('click',e=>{
+ const nav=e.target.closest('[data-page]');
+ if(!nav)return;
+ const page=nav.dataset.page;
+ if(!page||!document.getElementById(page))return;
+ e.preventDefault();
+ showPage(page);
+},true);
+if($('homeStatsBtn'))$('homeStatsBtn').onclick=e=>{e.preventDefault();currentStatsScope='mine';showPage('statsPage');};
 if($('trackBackBtn'))$('trackBackBtn').onclick=()=>showPage($('trackBackBtn').dataset.page);
 if($('activityDetailBack'))$('activityDetailBack').onclick=()=>showPage($('activityDetailBack').dataset.page);
 $('newPisteBtn').onclick=()=>beginNewPiste('piste');
