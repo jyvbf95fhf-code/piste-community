@@ -191,11 +191,26 @@ async function loadDogs(){
  if(!session)return;
  const {data=[]}=await supabase.from('dogs').select('*').eq('owner_id',session.user.id).order('created_at',{ascending:true});
  dogs=data||[];
- renderDogChoices();
+ renderDogChoices();refreshActiveDogVisuals();
 }
+
+async function refreshActiveDogVisuals(){
+ const active=dogs.find(d=>d.active)||dogs[0];
+ const top=$('topDogPhoto'),hero=$('heroDogPhoto');
+ if(!active){
+   if(top){top.innerHTML='🐕';top.classList.remove('has-photo')}
+   if(hero){hero.innerHTML='🐕';hero.classList.remove('has-photo')}
+   return;
+ }
+ const url=await signedDogPhoto(active.photo_path);
+ const html=url?`<img src="${esc(url)}" alt="Photo de ${esc(active.alias)}">`:'🐕';
+ if(top){top.innerHTML=html;top.classList.toggle('has-photo',!!url)}
+ if(hero){hero.innerHTML=html;hero.classList.toggle('has-photo',!!url)}
+}
+
 function renderDogChoices(){
  const sel=$('recordDogSelect'); if(sel){const current=sel.value;sel.innerHTML='<option value="">Non renseigné</option>'+dogs.map(d=>`<option value="${d.id}">${esc(d.alias)}${d.active?' • actif':''}</option>`).join('');if(current)sel.value=current;else if(dogs.length)sel.value=dogs.find(d=>d.active)?.id||dogs[0].id}
- const active=dogs.find(d=>d.active)||dogs[0];if($('topDogAlias'))$('topDogAlias').textContent=active?`🐕 ${active.alias}`:'';if($('heroDogLine'))$('heroDogLine').textContent=active?`${active.alias} • prêt pour le terrain.`:'Ajoute un chien dans ton profil.';
+ const active=dogs.find(d=>d.active)||dogs[0];if($('topDogAlias'))$('topDogAlias').textContent=active?`🐕 ${active.alias}`:'';if($('heroDogLine'))$('heroDogLine').textContent=active?`${active.alias} • prêt pour le terrain.`:'Ajoute un chien dans ton profil.';refreshActiveDogVisuals();
 }
 async function loadGoals(){
  if(!session)return;const y=new Date().getFullYear();const {data=[]}=await supabase.from('goals').select('*').eq('owner_id',session.user.id).eq('year',y);goals=data||[];
@@ -264,8 +279,79 @@ async function refreshMine(){
 function dogAliasFor(id){return id?(dogs.find(d=>d.id===id)?.alias||'Chien non disponible'):'Non renseigné'}
 function dateTimeFr(v){if(!v)return 'Non renseigné';try{return new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}catch{return String(v)}}
 function paceFromActivity(p){const km=Number(p.distance_km||0),h=Number(p.duree_h||0);if(km<=0||h<=0)return '—';const min=(h*60)/km,m=Math.floor(min),s=Math.round((min-m)*60);return `${m}:${String(s).padStart(2,'0')} min/km`}
+
+function speedFromActivity(p){
+ const km=Number(p.distance_km||0),h=Number(p.duree_h||0);return km>0&&h>0?km/h:null;
+}
+function dayPart(p){
+ const v=p.depart_at||p.disparition_at;if(!v)return 'Non renseigné';
+ const h=new Date(v).getHours();
+ if(h>=6&&h<12)return 'Matin';
+ if(h>=12&&h<18)return 'Après-midi';
+ if(h>=18&&h<22)return 'Soir';
+ return 'Nuit';
+}
+function trackStraightDistanceKm(p){
+ if(!Array.isArray(p.track)||p.track.length<2)return null;
+ const a=p.track[0],b=p.track[p.track.length-1];
+ return hav(a,b)/1000;
+}
+function routeEfficiency(p){
+ const actual=Number(p.distance_km||0),straight=trackStraightDistanceKm(p);
+ if(!actual||!straight)return null;
+ return Math.min(100,(straight/actual)*100);
+}
+function sameActivityPool(p,type){
+ const all=type==='training'?trainings:mine;
+ return all.filter(x=>x.id!==p.id && (!p.dog_id || x.dog_id===p.dog_id));
+}
+function pctDiff(value,avgValue){
+ const v=Number(value||0),a=Number(avgValue||0);
+ if(!a||!Number.isFinite(v))return null;
+ return ((v-a)/a)*100;
+}
+function median(nums){
+ const a=nums.filter(Number.isFinite).sort((x,y)=>x-y);if(!a.length)return null;
+ const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+function activityAnalysisHTML(p,type){
+ const pool=sameActivityPool(p,type);
+ const currentUseful=useful(p);
+ const speed=speedFromActivity(p);
+ const straight=trackStraightDistanceKm(p);
+ const efficiency=routeEfficiency(p);
+ const delayBandLabel=delayBand(p.delai_h);
+ const sameMilieu=(type==='training'?trainings:mine).filter(x=>x.milieu&&x.milieu===p.milieu);
+ const sameDelay=(type==='training'?trainings:mine).filter(x=>delayBand(x.delai_h)===delayBandLabel);
+ const rows=[];
+ if(speed!==null)rows.push(['Vitesse moyenne',`${fmt(speed,2)} km/h`,'Vitesse calculée sur distance ÷ durée']);
+ rows.push(['Moment de la journée',dayPart(p),'Selon l’heure de départ enregistrée']);
+ if(straight!==null)rows.push(['Éloignement départ → arrivée',`${fmt(straight,2)} km`,'Distance à vol d’oiseau entre les extrémités du GPS']);
+ if(efficiency!==null)rows.push(['Directivité du parcours',`${fmt(efficiency,0)} %`,'Plus le pourcentage est élevé, plus le trajet est direct']);
+ if(pool.length){
+   const avgKm=avg(pool,'distance_km'),avgDur=avg(pool,'duree_h'),avgDelay=avg(pool,'delai_h');
+   const dKm=pctDiff(p.distance_km,avgKm),dDur=pctDiff(p.duree_h,avgDur),dDelay=pctDiff(p.delai_h,avgDelay);
+   if(dKm!==null)rows.push(['Distance vs habitudes',`${dKm>=0?'+':''}${fmt(dKm,0)} %`,`Comparée aux autres ${type==='training'?'entraînements':'pistages'} de ${esc(dogDisplay(p.dog_id))}`]);
+   if(dDur!==null)rows.push(['Durée vs habitudes',`${dDur>=0?'+':''}${fmt(dDur,0)} %`,'Comparaison avec la durée moyenne']);
+   if(dDelay!==null)rows.push(['Délai vs habitudes',`${dDelay>=0?'+':''}${fmt(dDelay,0)} %`,'Comparaison avec le délai moyen']);
+   const usefulRate=pool.length?pool.filter(useful).length/pool.length*100:null;
+   if(usefulRate!==null)rows.push(['Taux utile du chien',`${fmt(usefulRate,0)} %`,`${pool.length} autre(s) activité(s) comparables`]);
+ }
+ if(sameMilieu.length>=2)rows.push([`Résultats en ${p.milieu}`,`${fmt(sameMilieu.filter(useful).length/sameMilieu.length*100,0)} % utiles`,`${sameMilieu.length} activité(s) dans ce milieu`]);
+ if(sameDelay.length>=2)rows.push([`Résultats avec délai ${delayBandLabel}`,`${fmt(sameDelay.filter(useful).length/sameDelay.length*100,0)} % utiles`,`${sameDelay.length} activité(s) dans cette tranche de délai`]);
+ if(type==='training'&&p.planned_distance_km){
+   const planned=Number(p.planned_distance_km),actual=Number(p.distance_km||0);
+   if(planned>0){
+     const ratio=actual/planned*100;
+     rows.push(['Réalisation du tracé prévu',`${fmt(ratio,0)} %`,`Distance réelle ${fmt(actual,2)} km / prévue ${fmt(planned,2)} km`]);
+   }
+ }
+ const status=currentUseful?'✓ Résultat classé utile':'• Résultat non classé utile';
+ return `<div class="activity-analysis-card"><div class="analysis-title"><span>🐾</span><div><small>ANALYSE DE CETTE ACTIVITÉ</small><b>${status}</b></div></div><div class="analysis-metric-grid">${rows.map(([k,v,n])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b><small>${n}</small></div>`).join('')}</div></div>`;
+}
+
 function activityStatsRows(p,type){
- const rows=[['Date',p.date||'—'],['Lieu de départ',p.commune_depart||'Non renseigné'],['Heure de disparition',dateTimeFr(p.disparition_at)],['Heure de départ',dateTimeFr(p.depart_at)],['Délai avant engagement',`${fmt(p.delai_h,1)} h`],['Durée',`${fmt(p.duree_h,2)} h`],['Distance réelle',`${fmt(p.distance_km,2)} km`],['Allure moyenne',paceFromActivity(p)],['Tranche d’âge',p.age||'Non renseigné'],['Milieu',p.milieu||'Non renseigné'],['Résultat',p.resultat||'Non renseigné'],['Chien / binôme',dogAliasFor(p.dog_id)],['Partage',visibilityLabel(p.visibility)],['Points GPS',Array.isArray(p.track)?p.track.length:0]];
+ const rows=[['Date',p.date||'—'],['Lieu de départ',p.commune_depart||'Non renseigné'],['Heure de disparition',dateTimeFr(p.disparition_at)],['Heure de départ',dateTimeFr(p.depart_at)],['Délai avant engagement',`${fmt(p.delai_h,1)} h`],['Tranche de délai',delayBand(p.delai_h)],['Durée',`${fmt(p.duree_h,2)} h`],['Distance réelle',`${fmt(p.distance_km,2)} km`],['Vitesse moyenne',speedFromActivity(p)!==null?`${fmt(speedFromActivity(p),2)} km/h`:'—'],['Allure moyenne',paceFromActivity(p)],['Moment',dayPart(p)],['Tranche d’âge',p.age||'Non renseigné'],['Milieu',p.milieu||'Non renseigné'],['Résultat',p.resultat||'Non renseigné'],['Chien / binôme',dogAliasFor(p.dog_id)],['Partage',visibilityLabel(p.visibility)],['Points GPS',Array.isArray(p.track)?p.track.length:0]];
  if(type==='training'&&p.planned_distance_km){const planned=Number(p.planned_distance_km),real=Number(p.distance_km||0),delta=real-planned;rows.splice(7,0,['Distance prévue',`${fmt(planned,2)} km`],['Écart prévu / réel',`${delta>=0?'+':''}${fmt(delta,2)} km`])}
  return rows;
 }
@@ -275,6 +361,7 @@ function showActivityStats(id,type,origin){
  $('activityDetailTitle').textContent=type==='training'?'📊 Statistiques entraînement':'📊 Statistiques pistage opérationnel';
  $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>🐕 ${esc(dogDisplay(p.dog_id))} • ${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p><div class="detail-summary"><span>${fmt(p.distance_km,2)} km</span><span>${fmt(p.duree_h,2)} h</span><span>${fmt(p.delai_h,1)} h de délai</span></div></div></div>`;
  $('activityDetailStats').innerHTML=`<div class="detail-stats-grid">${activityStatsRows(p,type).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+ $('activityDetailAnalysis').innerHTML=activityAnalysisHTML(p,type);
  $('activityDetailObservation').innerHTML=p.observation?`<div class="detail-observation"><h3>Observation</h3><p>${esc(p.observation)}</p></div>`:'';
  showPage('activityDetailPage');setTimeout(()=>renderActivityDetailMap(p),100);
 }
@@ -484,7 +571,9 @@ async function loadTrainings(view='history',scope=trainingStatsScope){
      renderAdvancedStats(trainings,'trainingAdvancedStats','entraînements');
      const {data=[],error}=await supabase.from('my_training_stats').select('*');
      if(error){$('trainingContent').innerHTML=`<p>${esc(error.message)}</p>`;return}
-     $('trainingContent').innerHTML=data.length?data.map(x=>`<div class="stat-card"><b>🟣 Mes entraînements • ${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join(""):'<p class="muted">Aucune statistique d’entraînement.</p>';
+     const summary=data.length?data.map(x=>`<div class="stat-card"><b>🟣 Mes entraînements • ${x.annee||""}</b>${Object.entries(x).filter(([k])=>k!=='annee').map(([k,v])=>`<div class="stat-row"><span>${esc(k.replaceAll('_',' '))}</span><strong>${esc(v??"—")}</strong></div>`).join("")}</div>`).join(""):'<p class="muted">Aucune statistique annuelle.</p>';
+     $('trainingContent').innerHTML=summary+`<div class="stats-individual-title"><h3>📊 Statistiques par entraînement</h3><p>Ouvre une activité pour consulter toutes ses données et son analyse comparative.</p></div>`+(trainings.length?trainings.map(trainingItem).join(""):'<p class="muted">Aucun entraînement enregistré.</p>');
+     $('trainingContent').onclick=e=>{const stats=e.target.closest('.showTrainingStats');if(stats){e.preventDefault();e.stopPropagation();showActivityStats(stats.dataset.id,'training','trainingPage');return}const track=e.target.closest('.showTrainingTrack');if(track){e.preventDefault();e.stopPropagation();showTrainingTrack(track.dataset.id);return}const card=e.target.closest('.activity-open[data-activity-type="training"]');if(card)showActivityStats(card.dataset.activityId,'training','trainingPage')};
    }
  }else{
    $('trainingStatsScope').classList.add('hidden');
