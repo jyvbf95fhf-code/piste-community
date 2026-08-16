@@ -4,7 +4,7 @@ const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
-let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannedLiveLine=null;
+let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannedLiveLine=null;
 let wakeLock=null;
 let plannerPoints=[];
 let gps={watch:null,start:null,timer:null,points:[],distance:0,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0};
@@ -34,6 +34,14 @@ function updateResumeBanner(){const d=getDraft();if(!d||!session||d.user_id!==se
 async function syncQueue(){if(!navigator.onLine||!session)return;let q=getQueue();if(!q.length)return;const rest=[];for(const item of q){const table=item.mode==='training'?'entrainements':'pistes';const {error}=await supabase.from(table).insert(item.payload);if(error)rest.push(item)}setQueue(rest);if(rest.length===0){await refreshMine();await refreshTrainings()}}
 function queueRecord(mode,payload){const q=getQueue();q.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),mode,payload,queuedAt:Date.now()});setQueue(q)}
 
+function addCleanBaseLayers(map){
+ const voyager=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{maxZoom:20,subdomains:'abcd',attribution:'© OpenStreetMap contributors © CARTO'});
+ const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
+ voyager.addTo(map);
+ L.control.layers({'Carte claire':voyager,'OpenStreetMap':osm},null,{position:'topright',collapsed:true}).addTo(map);
+ return voyager;
+}
+
 
 function switchAuth(mode){
  $('loginForm').classList.toggle('hidden',mode!=='login');
@@ -56,10 +64,16 @@ function showPage(id){
  if(id==='profilePage')loadProfileV8();
  if(id==='trainingPage'){loadTrainings();loadTrainingRoutes();}
  if(id==='plannerPage')initPlanner();
- setTimeout(()=>{if(id==='recordPage'&&liveMap)liveMap.invalidateSize();if(id==='trackPage'&&historyMap)historyMap.invalidateSize()},150);
+ if(id==='recordPage')initLiveMap(true);
+ setTimeout(()=>{
+   if(id==='recordPage'&&liveMap){liveMap.invalidateSize();redrawLiveRecordingMap()}
+   if(id==='trackPage'&&historyMap)historyMap.invalidateSize();
+   if(id==='activityDetailPage'&&activityDetailMap)activityDetailMap.invalidateSize();
+ },180);
 }
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 $('trackBackBtn').onclick=()=>showPage($('trackBackBtn').dataset.page);
+$('activityDetailBack').onclick=()=>showPage($('activityDetailBack').dataset.page);
 $('newPisteBtn').onclick=()=>beginNewPiste('piste');
 $('navRecord').onclick=()=>beginNewPiste('piste');
 
@@ -92,7 +106,7 @@ function initPlanner(route=null){
   if(!$('plannerMap'))return;
   if(plannerMap){plannerMap.remove();plannerMap=null}
   plannerMap=L.map('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(plannerMap);
+  addCleanBaseLayers(plannerMap);
   plannerPoints=route&&Array.isArray(route.route)?route.route.map(x=>({lat:Number(x.lat),lon:Number(x.lon)})):[];
   $('routeName').value=route?.name||'';
   redrawPlanner();
@@ -140,6 +154,7 @@ function startTrainingFromRoute(id){
 }
 function applySelectedTrainingRoute(){
  const b=$('plannedRouteBanner');if(!b)return;
+ initLiveMap();
  if(!selectedTrainingRoute){b.classList.add('hidden');if(plannedLiveLine){plannedLiveLine.remove();plannedLiveLine=null}return}
  b.classList.remove('hidden');$('plannedRouteName').textContent=selectedTrainingRoute.name;$('plannedRouteInfo').textContent=`${fmt(selectedTrainingRoute.planned_distance_km,2)} km prévus`;
  if(liveMap&&Array.isArray(selectedTrainingRoute.route)&&selectedTrainingRoute.route.length>1){
@@ -222,17 +237,19 @@ async function refreshMine(){
  renderHistory();updateV8Home();
 }
 
+function dogAliasFor(id){return id?(dogs.find(d=>d.id===id)?.alias||'Chien non disponible'):'Non renseigné'}\nfunction dateTimeFr(v){if(!v)return 'Non renseigné';try{return new Date(v).toLocaleString('fr-FR',{dateStyle:'short',timeStyle:'short'})}catch{return String(v)}}\nfunction paceFromActivity(p){const km=Number(p.distance_km||0),h=Number(p.duree_h||0);if(km<=0||h<=0)return '—';const min=(h*60)/km,m=Math.floor(min),s=Math.round((min-m)*60);return `${m}:${String(s).padStart(2,'0')} min/km`}\nfunction activityStatsRows(p,type){\n const rows=[['Date',p.date||'—'],['Lieu de départ',p.commune_depart||'Non renseigné'],['Heure de disparition',dateTimeFr(p.disparition_at)],['Heure de départ',dateTimeFr(p.depart_at)],['Délai avant engagement',`${fmt(p.delai_h,1)} h`],['Durée',`${fmt(p.duree_h,2)} h`],['Distance réelle',`${fmt(p.distance_km,2)} km`],['Allure moyenne',paceFromActivity(p)],['Tranche d’âge',p.age||'Non renseigné'],['Milieu',p.milieu||'Non renseigné'],['Résultat',p.resultat||'Non renseigné'],['Chien / binôme',dogAliasFor(p.dog_id)],['Partage',visibilityLabel(p.visibility)],['Points GPS',Array.isArray(p.track)?p.track.length:0]];\n if(type==='training'&&p.planned_distance_km){const planned=Number(p.planned_distance_km),real=Number(p.distance_km||0),delta=real-planned;rows.splice(7,0,['Distance prévue',`${fmt(planned,2)} km`],['Écart prévu / réel',`${delta>=0?'+':''}${fmt(delta,2)} km`])}\n return rows;\n}\nfunction showActivityStats(id,type,origin){\n const list=type==='training'?trainings:mine,p=list.find(x=>x.id===id);if(!p)return;\n $('activityDetailBack').dataset.page=origin||(type==='training'?'trainingPage':'historyPage');$('activityDetailBack').textContent=type==='training'?'‹ Entraînements':'‹ Pistages opérationnels';\n $('activityDetailTitle').textContent=type==='training'?'📊 Statistiques entraînement':'📊 Statistiques pistage opérationnel';\n $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p></div></div>`;\n $('activityDetailStats').innerHTML=`<div class="detail-stats-grid">${activityStatsRows(p,type).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;\n $('activityDetailObservation').innerHTML=p.observation?`<div class="detail-observation"><h3>Observation</h3><p>${esc(p.observation)}</p></div>`:'';\n showPage('activityDetailPage');setTimeout(()=>renderActivityDetailMap(p),100);\n}\nfunction renderActivityDetailMap(p){\n const el=$('activityDetailMap');if(activityDetailMap){try{activityDetailMap.remove()}catch{}activityDetailMap=null}\n if(!Array.isArray(p.track)||p.track.length<2){el.classList.add('hidden');return}\n el.classList.remove('hidden');activityDetailMap=L.map('activityDetailMap').setView([p.track[0].lat,p.track[0].lon],15);addCleanBaseLayers(activityDetailMap);\n const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5,color:'#0b6a46'}).addTo(activityDetailMap);L.marker([p.track[0].lat,p.track[0].lon]).addTo(activityDetailMap).bindPopup('Départ');const last=p.track[p.track.length-1];L.marker([last.lat,last.lon]).addTo(activityDetailMap).bindPopup('Arrivée');activityDetailMap.fitBounds(line.getBounds(),{padding:[25,25]});setTimeout(()=>activityDetailMap.invalidateSize(),80);\n}\n
 function pisteItem(p,actions=true){
  return `<div class="item">
    <div class="item-title"><div><b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility)}">${visibilityLabel(p.visibility)}</span></div>
    <div>${esc(p.resultat)}</div>
    <div class="small muted">${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h</div>
-   ${actions?`<div class="item-actions">${Array.isArray(p.track)&&p.track.length>1?`<button class="primary showTrack" data-id="${p.id}">Voir le tracé</button>`:""}<button class="secondary deletePiste" data-id="${p.id}">Supprimer</button></div>`:""}
+   ${actions?`<div class="item-actions"><button class="primary showPisteStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deletePiste" data-id="${p.id}">Supprimer</button></div>`:""}
  </div>`;
 }
 function renderHistory(){
  if(!$('historyList'))return;
  $('historyList').innerHTML=mine.length?mine.map(p=>pisteItem(p,true)).join(""):'<p class="muted">Aucun pistage opérationnel.</p>';
+ document.querySelectorAll('.showPisteStats').forEach(b=>b.onclick=()=>showActivityStats(b.dataset.id,'operational','historyPage'));
  document.querySelectorAll('.showTrack').forEach(b=>b.onclick=()=>showTrack(b.dataset.id));
  document.querySelectorAll('.deletePiste').forEach(b=>b.onclick=async()=>{
    if(!confirm("Supprimer ce pistage opérationnel ?"))return;
@@ -241,11 +258,28 @@ function renderHistory(){
  });
 }
 
-function initLiveMap(){
- if(liveMap)return;
+function initLiveMap(force=false){
+ const el=$('liveMap');if(!el)return;
+ if(force&&liveMap){try{liveMap.remove()}catch{}liveMap=null;liveLine=null;liveMarker=null;plannedLiveLine=null}
+ if(liveMap){setTimeout(()=>liveMap.invalidateSize(),80);return}
  liveMap=L.map('liveMap',{zoomControl:true}).setView([48.3,7.45],8);
- L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(liveMap);
- liveLine=L.polyline([],{weight:5}).addTo(liveMap);
+ addCleanBaseLayers(liveMap);
+ liveLine=L.polyline([],{weight:5,color:'#0b6a46',opacity:.95}).addTo(liveMap);
+ setTimeout(()=>liveMap.invalidateSize(),100);
+}
+function redrawLiveRecordingMap(){
+ if(!liveMap)return;
+ if(!liveLine)liveLine=L.polyline([],{weight:5,color:'#0b6a46',opacity:.95}).addTo(liveMap);
+ liveLine.setLatLngs((gps.points||[]).map(x=>[x.lat,x.lon]));
+ if(liveMarker){try{liveMarker.remove()}catch{}liveMarker=null}
+ if(gps.startPoint)liveMarker=L.marker([gps.startPoint.lat,gps.startPoint.lon]).addTo(liveMap).bindPopup('Départ');
+ if(plannedLiveLine){try{plannedLiveLine.remove()}catch{}plannedLiveLine=null}
+ if(selectedTrainingRoute&&Array.isArray(selectedTrainingRoute.route)&&selectedTrainingRoute.route.length>1){
+  plannedLiveLine=L.polyline(selectedTrainingRoute.route.map(p=>[p.lat,p.lon]),{weight:5,color:'#7a5cc7',dashArray:'9 8',opacity:.8}).addTo(liveMap);
+ }
+ const layers=[];if(gps.points?.length>1&&liveLine)layers.push(liveLine);if(plannedLiveLine)layers.push(plannedLiveLine);
+ if(layers.length){try{liveMap.fitBounds(L.featureGroup(layers).getBounds(),{padding:[25,25]})}catch{}}
+ else if(gps.startPoint)liveMap.setView([gps.startPoint.lat,gps.startPoint.lon],16);
 }
 function resetGpsUI(clear=true){
  if(gps.watch!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gps.watch);clearInterval(gps.timer);releaseWakeLock();
@@ -287,6 +321,7 @@ async function reverseCommune(lat,lon){
  }catch{return ""}
 }
 function beginWatch(){
+ initLiveMap();
  if(!navigator.geolocation){$('gpsMsg').textContent="GPS non disponible.";return}
  if(gps.watch!==null)navigator.geolocation.clearWatch(gps.watch);
  gps.watch=navigator.geolocation.watchPosition(async pos=>{
@@ -359,7 +394,7 @@ async function refreshTrainings(){
  }
 }
 function trainingItem(p){
- return `<div class="item"><div class="item-title"><div><span class="type-badge training-type">🟣 Entraînement</span> <b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility||'private')}">${visibilityLabel(p.visibility)}</span></div><div>${esc(p.resultat)}</div><div class="small muted">${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h${p.planned_distance_km?` • prévu ${fmt(p.planned_distance_km,2)} km`:""}</div><div class="item-actions">${Array.isArray(p.track)&&p.track.length>1?`<button class="primary showTrainingTrack" data-id="${p.id}">Voir le tracé</button>`:""}<button class="secondary deleteTraining" data-id="${p.id}">Supprimer</button></div></div>`;
+ return `<div class="item"><div class="item-title"><div><span class="type-badge training-type">🟣 Entraînement</span> <b>${esc(p.date)}</b> • ${fmt(p.distance_km,2)} km</div><span class="pill ${esc(p.visibility||'private')}">${visibilityLabel(p.visibility)}</span></div><div>${esc(p.resultat)}</div><div class="small muted">${esc(p.commune_depart||"Lieu non renseigné")} • ${fmt(p.duree_h,2)} h${p.planned_distance_km?` • prévu ${fmt(p.planned_distance_km,2)} km`:""}</div><div class="item-actions"><button class="primary showTrainingStats" data-id="${p.id}">📊 Statistiques</button>${Array.isArray(p.track)&&p.track.length>1?`<button class="secondary showTrainingTrack" data-id="${p.id}">🗺️ Tracé</button>`:""}<button class="secondary deleteTraining" data-id="${p.id}">Supprimer</button></div></div>`;
 }
 async function loadTrainings(view='history',scope=trainingStatsScope){
  await refreshTrainings();
@@ -380,6 +415,7 @@ async function loadTrainings(view='history',scope=trainingStatsScope){
    $('trainingStatsScope').classList.add('hidden');
    $('trainingAdvancedStats').innerHTML='';
    $('trainingContent').innerHTML=trainings.length?trainings.map(trainingItem).join(""):'<p class="muted">Aucun entraînement enregistré.</p>';
+   document.querySelectorAll('.showTrainingStats').forEach(b=>b.onclick=()=>showActivityStats(b.dataset.id,'training','trainingPage'));
    document.querySelectorAll('.showTrainingTrack').forEach(b=>b.onclick=()=>showTrainingTrack(b.dataset.id));
    document.querySelectorAll('.deleteTraining').forEach(b=>b.onclick=async()=>{if(!confirm("Supprimer cet entraînement ?"))return;await supabase.from('entrainements').delete().eq('id',b.dataset.id);loadTrainings()});
  }
@@ -392,7 +428,7 @@ function showTrainingTrack(id){
  setTimeout(()=>{
    if(historyMap){historyMap.remove();historyMap=null}
    historyMap=L.map('historyMap').setView([p.track[0].lat,p.track[0].lon],15);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(historyMap);
+   addCleanBaseLayers(historyMap);
    const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5}).addTo(historyMap);
    L.marker([p.track[0].lat,p.track[0].lon]).addTo(historyMap).bindPopup("Départ");
    const last=p.track[p.track.length-1];L.marker([last.lat,last.lon]).addTo(historyMap).bindPopup("Arrivée");
@@ -470,7 +506,7 @@ function showFriendTrack(id,type){
  setTimeout(()=>{
    if(historyMap){historyMap.remove();historyMap=null}
    historyMap=L.map('historyMap').setView([p.track[0].lat,p.track[0].lon],15);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(historyMap);
+   addCleanBaseLayers(historyMap);
    const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5}).addTo(historyMap);
    L.marker([p.track[0].lat,p.track[0].lon]).addTo(historyMap).bindPopup('Départ');
    const last=p.track[p.track.length-1];L.marker([last.lat,last.lon]).addTo(historyMap).bindPopup('Arrivée');
@@ -544,7 +580,7 @@ function renderGlobalMap(filter='all'){
   if(!$('globalMap'))return;
   if(globalMap){globalMap.remove();globalMap=null}
   globalMap=L.map('globalMap').setView([48.3,7.45],8);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(globalMap);
+  addCleanBaseLayers(globalMap);
   globalLayers=[];
   const rows=[...mine.map(x=>({...x,_type:'operational'})),...trainings.map(x=>({...x,_type:'training'}))].filter(x=>filter==='all'||x._type===filter).filter(x=>Array.isArray(x.track)&&x.track.length>1);
   for(const p of rows){
@@ -618,7 +654,7 @@ function showTrack(id){
  setTimeout(()=>{
    if(historyMap){historyMap.remove();historyMap=null}
    historyMap=L.map('historyMap').setView([p.track[0].lat,p.track[0].lon],15);
-   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(historyMap);
+   addCleanBaseLayers(historyMap);
    const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5}).addTo(historyMap);
    L.marker([p.track[0].lat,p.track[0].lon]).addTo(historyMap).bindPopup("Départ");
    const last=p.track[p.track.length-1];L.marker([last.lat,last.lon]).addTo(historyMap).bindPopup("Arrivée");

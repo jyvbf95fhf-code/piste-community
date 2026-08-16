@@ -91,3 +91,13 @@ body{background:linear-gradient(#eef6f0,#f7f8f7);color:var(--txt)}
 #plannerMap{height:520px;border-radius:16px;background:#e9eef0;margin-top:9px}.planner-top{display:grid;grid-template-columns:1fr 180px;gap:12px;align-items:end}.planner-distance{background:#f4f0fc;border:1px solid #e3daf6;border-radius:13px;padding:10px 14px}.planner-distance small{display:block;font-size:9px;letter-spacing:1px;color:#75698d}.planner-distance strong{font-size:22px;color:#624891}.planner-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .planned-route-banner{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#f1ecfb;border:1px solid #dfd5f4;border-radius:14px;padding:11px 13px;margin-bottom:10px}.planned-route-banner>div{display:flex;align-items:center;gap:10px}.planned-route-banner>div>span{font-size:25px}.planned-route-banner p{margin:0;display:grid}.planned-route-banner small{color:#796d91}
 @media(max-width:700px){#plannerMap{height:430px}.planner-top{grid-template-columns:1fr}.route-row{grid-template-columns:42px 1fr}.route-actions{grid-column:1/-1;justify-content:flex-start}}
+
+/* ===== V10.2 STABILISATION : CARTE + FICHE ACTIVITE ===== */
+#liveMap{min-height:340px;height:46vh;max-height:520px;width:100%;position:relative;z-index:1}
+#activityDetailMap{height:420px;border-radius:15px;margin:12px 0;background:#e9efeb}
+.detail-hero{display:flex;gap:13px;align-items:center;border-radius:16px;padding:15px;margin-bottom:12px}.detail-hero>span{font-size:38px}.detail-hero small{font-size:9px;letter-spacing:1.5px;display:block;opacity:.7}.detail-hero b{font-size:18px;display:block}.detail-hero p{font-size:11px;margin:3px 0 0;opacity:.78}
+.operational-detail{background:#e8f3fa;color:#174f73}.training-detail{background:#f0ebfa;color:#60488a}
+.detail-stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.detail-stats-grid>div{background:#f7faf8;border:1px solid #e5ece7;border-radius:12px;padding:11px}.detail-stats-grid span{display:block;font-size:9px;color:#78877f;text-transform:uppercase;letter-spacing:.6px}.detail-stats-grid b{display:block;margin-top:3px;font-size:13px}
+.detail-observation{margin-top:12px;border-top:1px solid #e7ece8;padding-top:10px}.detail-observation h3{margin:0 0 5px}.detail-observation p{white-space:pre-wrap;margin:0;font-size:13px}
+.leaflet-control-layers{border-radius:10px!important;box-shadow:0 3px 12px #0002!important}
+@media(max-width:700px){#liveMap{height:42vh;min-height:300px}#activityDetailMap{height:330px}.detail-stats-grid{grid-template-columns:1fr}}
