@@ -190,6 +190,98 @@
           </select>
         </label>
 
+
+        <fieldset class="full field-assessment">
+          <legend>🐕 Évaluation terrain</legend>
+          <p class="muted small">Facultatif — complète ce qui te semble utile pour analyser la progression du binôme.</p>
+
+          <div class="assessment-grid">
+            <label>Météo
+              <select name="meteo">
+                <option value="">Non renseignée</option>
+                <option>Ensoleillé</option><option>Nuageux</option><option>Pluie</option>
+                <option>Brouillard</option><option>Neige</option><option>Orage</option><option>Variable</option>
+              </select>
+            </label>
+
+            <label>Température (°C)
+              <input type="number" step="0.5" min="-30" max="50" name="temperature_c" placeholder="Ex. 14">
+            </label>
+
+            <label>Vent
+              <select name="vent">
+                <option value="">Non renseigné</option>
+                <option>Calme</option><option>Faible</option><option>Modéré</option><option>Fort</option><option>Rafales</option>
+              </select>
+            </label>
+
+            <label>Humidité
+              <select name="humidite">
+                <option value="">Non renseignée</option>
+                <option>Faible / sec</option><option>Normale</option><option>Humide</option><option>Très humide</option>
+              </select>
+            </label>
+
+            <label>État du sol
+              <select name="sol">
+                <option value="">Non renseigné</option>
+                <option>Sec</option><option>Humide</option><option>Mouillé</option><option>Boueux</option>
+                <option>Gelé</option><option>Neige</option><option>Mixte</option>
+              </select>
+            </label>
+
+            <label>Difficulté générale
+              <select name="difficulte">
+                <option value="">—</option><option value="1">1 — Facile</option><option value="2">2</option>
+                <option value="3">3 — Moyenne</option><option value="4">4</option><option value="5">5 — Très difficile</option>
+              </select>
+            </label>
+
+            <label>Concentration
+              <select name="concentration">
+                <option value="">—</option><option value="1">1 — Faible</option><option value="2">2</option>
+                <option value="3">3 — Bonne</option><option value="4">4</option><option value="5">5 — Excellente</option>
+              </select>
+            </label>
+
+            <label>Autonomie
+              <select name="autonomie">
+                <option value="">—</option><option value="1">1 — Faible</option><option value="2">2</option>
+                <option value="3">3 — Bonne</option><option value="4">4</option><option value="5">5 — Excellente</option>
+              </select>
+            </label>
+
+            <label>Motivation
+              <select name="motivation">
+                <option value="">—</option><option value="1">1 — Faible</option><option value="2">2</option>
+                <option value="3">3 — Bonne</option><option value="4">4</option><option value="5">5 — Excellente</option>
+              </select>
+            </label>
+
+            <label>Précision du travail
+              <select name="precision_travail">
+                <option value="">—</option><option value="1">1 — Faible</option><option value="2">2</option>
+                <option value="3">3 — Bonne</option><option value="4">4</option><option value="5">5 — Excellente</option>
+              </select>
+            </label>
+
+            <label>Fatigue en fin de piste
+              <select name="fatigue">
+                <option value="">—</option><option value="1">1 — Très faible</option><option value="2">2</option>
+                <option value="3">3 — Moyenne</option><option value="4">4</option><option value="5">5 — Forte</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="full">Distractions rencontrées
+            <input type="text" name="distractions" maxlength="200" placeholder="Animaux, véhicules, foule, odeurs parasites…">
+          </label>
+
+          <label class="full">Comportement / remarques cynophiles
+            <textarea name="comportement" maxlength="500" rows="3" placeholder="Prise de piste, pertes, relances, changements de comportement…"></textarea>
+          </label>
+        </fieldset>
+
         <label class="full">Observation
           <textarea name="observation" maxlength="500" rows="3" placeholder="Facultatif — aucune identité de personne"></textarea>
         </label>
@@ -199,6 +291,22 @@
         </div>
       </form>
       <p id="pisteMsg" class="msg"></p>
+    </div>
+  </section>
+
+
+  <section id="activityDetailPage" class="page">
+    <div class="record-head">
+      <button id="activityDetailBack" class="back">‹ Retour</button>
+      <h2 id="activityDetailTitle">📊 Statistiques de l’activité</h2>
+    </div>
+    <div class="card activity-detail-card">
+      <div id="activityDetailHeader"></div>
+      <div id="activityDetailMap" class="hidden"></div>
+      <div id="activityDetailStats"></div>
+      <div id="activityDetailField"></div>
+      <div id="activityDetailAnalysis"></div>
+      <div id="activityDetailObservation"></div>
     </div>
   </section>
 

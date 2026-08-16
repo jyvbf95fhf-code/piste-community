@@ -167,3 +167,19 @@ body{background:linear-gradient(#eef6f0,#f7f8f7);color:var(--txt)}
 .trend-col b{font-size:10px}.trend-col small{font-size:8px;color:#829087}
 .stat-explain{font-size:10px;color:#74827b;line-height:1.45;margin:10px 0 0}
 @media(max-width:700px){.records-grid,.mini-kpi-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ===== V10.11 FICHE TERRAIN + FICHE INDIVIDUELLE ===== */
+.field-assessment{border:1px solid #dfe9e3;border-radius:16px;padding:14px!important;background:#f8fbf9;margin-top:8px!important}
+.field-assessment legend{padding:0 8px;font-weight:800;color:#173f30}
+.assessment-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:10px 0}
+.field-detail-card{margin-top:14px;padding:14px;border:1px solid #dce8e0;border-radius:16px;background:#f8fbf9}
+.field-detail-card h3{margin:0 0 10px}
+.field-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.field-detail-grid>div{background:#fff;border:1px solid #e4ece7;border-radius:11px;padding:10px}
+.field-detail-grid span{display:block;font-size:9px;color:#77877e;text-transform:uppercase;letter-spacing:.45px}
+.field-detail-grid b{display:block;margin-top:3px;font-size:13px}
+.field-notes{margin-top:10px;display:grid;gap:8px}
+.field-notes>div{background:#fff;border:1px solid #e4ece7;border-radius:11px;padding:10px}
+.field-notes b{font-size:11px}.field-notes p{margin:4px 0 0;font-size:12px;white-space:pre-wrap}
+#activityDetailMap{height:380px;border-radius:15px;margin:12px 0;background:#e9efeb}
+@media(max-width:700px){.assessment-grid,.field-detail-grid{grid-template-columns:1fr}#activityDetailMap{height:310px}}

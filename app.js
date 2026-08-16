@@ -351,16 +351,47 @@ function activityAnalysisHTML(p,type){
 }
 
 function activityStatsRows(p,type){
- const rows=[['Date',p.date||'—'],['Lieu de départ',p.commune_depart||'Non renseigné'],['Heure de disparition',dateTimeFr(p.disparition_at)],['Heure de départ',dateTimeFr(p.depart_at)],['Délai avant engagement',`${fmt(p.delai_h,1)} h`],['Tranche de délai',delayBand(p.delai_h)],['Durée',`${fmt(p.duree_h,2)} h`],['Distance réelle',`${fmt(p.distance_km,2)} km`],['Vitesse moyenne',speedFromActivity(p)!==null?`${fmt(speedFromActivity(p),2)} km/h`:'—'],['Allure moyenne',paceFromActivity(p)],['Moment',dayPart(p)],['Tranche d’âge',p.age||'Non renseigné'],['Milieu',p.milieu||'Non renseigné'],['Résultat',p.resultat||'Non renseigné'],['Chien / binôme',dogAliasFor(p.dog_id)],['Partage',visibilityLabel(p.visibility)],['Points GPS',Array.isArray(p.track)?p.track.length:0]];
+ const rows=[['Date',p.date||'—'],['Lieu de départ',p.commune_depart||'Non renseigné'],['Heure de disparition',dateTimeFr(p.disparition_at)],['Heure de départ',dateTimeFr(p.depart_at)],['Délai avant engagement',`${fmt(p.delai_h,1)} h`],['Tranche de délai',delayBand(p.delai_h)],['Durée',`${fmt(p.duree_h,2)} h`],['Distance réelle',`${fmt(p.distance_km,2)} km`],['Vitesse moyenne',speedFromActivity(p)!==null?`${fmt(speedFromActivity(p),2)} km/h`:'—'],['Allure moyenne',paceFromActivity(p)],['Moment',dayPart(p)],['Tranche d’âge',p.age||'Non renseigné'],['Milieu',p.milieu||'Non renseigné'],['Résultat',p.resultat||'Non renseigné'],['Chien / binôme',dogAliasFor(p.dog_id)],['Partage',visibilityLabel(p.visibility)],['Points GPS',Array.isArray(p.track)?p.track.length:0],
+ ['Météo',p.meteo||'Non renseignée'],
+ ['Température',p.temperature_c!==null&&p.temperature_c!==undefined?`${p.temperature_c} °C`:'Non renseignée'],
+ ['Vent',p.vent||'Non renseigné'],['Humidité',p.humidite||'Non renseignée'],['Sol',p.sol||'Non renseigné'],
+ ['Difficulté',scoreLabel(p.difficulte)],['Concentration',scoreLabel(p.concentration)],
+ ['Autonomie',scoreLabel(p.autonomie)],['Motivation',scoreLabel(p.motivation)],
+ ['Précision du travail',scoreLabel(p.precision_travail)],['Fatigue',scoreLabel(p.fatigue)]];
  if(type==='training'&&p.planned_distance_km){const planned=Number(p.planned_distance_km),real=Number(p.distance_km||0),delta=real-planned;rows.splice(7,0,['Distance prévue',`${fmt(planned,2)} km`],['Écart prévu / réel',`${delta>=0?'+':''}${fmt(delta,2)} km`])}
  return rows;
 }
+
+function scoreLabel(v){
+ if(v===null||v===undefined||v==='')return '—';
+ return `${Number(v)}/5`;
+}
+function fieldAssessmentHTML(p){
+ const items=[
+   ['Météo',p.meteo],
+   ['Température',p.temperature_c!==null&&p.temperature_c!==undefined?`${p.temperature_c} °C`:null],
+   ['Vent',p.vent],['Humidité',p.humidite],['Sol',p.sol],
+   ['Difficulté',scoreLabel(p.difficulte)],['Concentration',scoreLabel(p.concentration)],
+   ['Autonomie',scoreLabel(p.autonomie)],['Motivation',scoreLabel(p.motivation)],
+   ['Précision du travail',scoreLabel(p.precision_travail)],['Fatigue',scoreLabel(p.fatigue)]
+ ].filter(([,v])=>v!==null&&v!==undefined&&v!==''&&v!=='—');
+ const notes=[];
+ if(p.distractions)notes.push(`<div><b>Distractions</b><p>${esc(p.distractions)}</p></div>`);
+ if(p.comportement)notes.push(`<div><b>Comportement cynophile</b><p>${esc(p.comportement)}</p></div>`);
+ if(!items.length&&!notes.length)return '';
+ return `<div class="field-detail-card"><h3>🐕 Évaluation terrain</h3>
+   ${items.length?`<div class="field-detail-grid">${items.map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`:''}
+   ${notes.length?`<div class="field-notes">${notes.join('')}</div>`:''}
+ </div>`;
+}
+
 function showActivityStats(id,type,origin){
  const list=type==='training'?trainings:mine,p=list.find(x=>x.id===id);if(!p)return;
  $('activityDetailBack').dataset.page=origin||(type==='training'?'trainingPage':'historyPage');$('activityDetailBack').textContent=type==='training'?'‹ Entraînements':'‹ Pistages opérationnels';
  $('activityDetailTitle').textContent=type==='training'?'📊 Statistiques entraînement':'📊 Statistiques pistage opérationnel';
  $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>🐕 ${esc(dogDisplay(p.dog_id))} • ${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p><div class="detail-summary"><span>${fmt(p.distance_km,2)} km</span><span>${fmt(p.duree_h,2)} h</span><span>${fmt(p.delai_h,1)} h de délai</span></div></div></div>`;
  $('activityDetailStats').innerHTML=`<div class="detail-stats-grid">${activityStatsRows(p,type).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
+ $('activityDetailField').innerHTML=fieldAssessmentHTML(p);
  $('activityDetailAnalysis').innerHTML=activityAnalysisHTML(p,type);
  $('activityDetailObservation').innerHTML=p.observation?`<div class="detail-observation"><h3>Observation</h3><p>${esc(p.observation)}</p></div>`:'';
  showPage('activityDetailPage');setTimeout(()=>renderActivityDetailMap(p),100);
@@ -612,6 +643,10 @@ $('pisteForm').onsubmit=async e=>{
  e.preventDefault();$('pisteMsg').textContent="Enregistrement…";
  const f=new FormData(e.target),o={};f.forEach((v,k)=>o[k]=v);
  ['delai_h','duree_h','distance_km'].forEach(k=>o[k]=Number(o[k]||0));
+ ['temperature_c','difficulte','concentration','autonomie','motivation','precision_travail','fatigue'].forEach(k=>{
+   o[k]=o[k]===''?null:Number(o[k]);
+ });
+ ['meteo','vent','humidite','sol','distractions','comportement'].forEach(k=>{if(o[k]==='')o[k]=null});
  o.owner_id=session.user.id;o.track=gps.points;if(!o.dog_id)o.dog_id=null;
  if(!o.disparition_at)o.disparition_at=null;if(!o.depart_at)o.depart_at=null;
  let error=null;
