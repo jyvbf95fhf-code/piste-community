@@ -1,11 +1,11 @@
 {
-  "name": "PISTE Community",
+  "name": "PISTE Community V2",
   "short_name": "PISTE",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f3f7f4",
-  "theme_color": "#063f2b",
+  "background_color": "#071015",
+  "theme_color": "#071015",
   "icons": [
     {
       "src": "./icon.svg",
