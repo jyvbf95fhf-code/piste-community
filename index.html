@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1019">
-<link rel="stylesheet" href="./v2.css?v=2004">
+<link rel="stylesheet" href="./styles.css?v=1020">
+<link rel="stylesheet" href="./v2.css?v=2005">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -410,6 +410,7 @@
       <div id="plannerTools" class="planner-tools" aria-label="Outils de création du scénario">
         <button class="active" data-planner-tool="route">〰️ Tracé</button><button data-planner-tool="pause">⏳ Attente</button><button data-planner-tool="object">📦 Objet</button><button data-planner-tool="direction">↪️ Direction</button><button data-planner-tool="crossing">🔀 Croisement</button><button data-planner-tool="contamination">👥 Contamination</button><button data-planner-tool="danger">⚠️ Danger</button><button data-planner-tool="subject">👤 Personne</button><button data-planner-tool="note">📍 Note</button>
       </div>
+      <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
       <div id="plannerMap"></div>
       <div id="plannerScenarioList" class="scenario-list"></div>
       <div class="planner-actions">
@@ -532,7 +533,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1019"></script>
-<script src="./v2.js?v=2004"></script>
+<script type="module" src="./app.js?v=1020"></script>
+<script src="./v2.js?v=2005"></script>
 </body>
 </html>

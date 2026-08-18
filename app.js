@@ -5,7 +5,7 @@ const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
 let currentStatsScope='mine';
-let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannedLiveLine=null, coachingMap=null, coachingLayers=[], coachingChannel=null;
+let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannedLiveLine=null, coachingMap=null, coachingLayers=[], coachingChannel=null;
 let wakeLock=null;
 let plannerPoints=[], plannerWaypoints=[], plannerTool='route', coachingSessions=[], activeCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, liveMarkerTool='off', coachingAutoMetrics=null;
 const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{icon:'📦',label:'Objet déposé'},direction:{icon:'↪️',label:'Changement de direction'},crossing:{icon:'🔀',label:'Croisement'},contamination:{icon:'👥',label:'Contamination'},danger:{icon:'⚠️',label:'Danger'},subject:{icon:'👤',label:'Personne recherchée'},note:{icon:'📍',label:'Note'}};
@@ -126,7 +126,7 @@ function renderTrainingRoutes(){
 function initPlanner(route=null){
  setTimeout(()=>{
   if(!$('plannerMap'))return;
-  if(plannerMap){plannerMap.remove();plannerMap=null}
+  if(plannerMap){plannerMap.remove();plannerMap=null}plannerUserMarker=null;plannerAccuracyCircle=null;
   plannerMap=L.map('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
   addCleanBaseLayers(plannerMap);
   plannerPoints=route&&Array.isArray(route.route)?route.route.map(x=>({lat:Number(x.lat),lon:Number(x.lon)})):[];
@@ -139,6 +139,7 @@ function initPlanner(route=null){
 function plannerDistance(){
  let d=0;for(let i=1;i<plannerPoints.length;i++)d+=hav(plannerPoints[i-1],plannerPoints[i]);return d/1000;
 }
+function locatePlanner(){const status=$('plannerLocationStatus'),btn=$('locatePlannerBtn');if(!navigator.geolocation){status.textContent='Géolocalisation non disponible sur cet appareil.';return}status.textContent='Recherche de la position…';btn.disabled=true;navigator.geolocation.getCurrentPosition(pos=>{btn.disabled=false;if(!plannerMap)return;const lat=pos.coords.latitude,lon=pos.coords.longitude,accuracy=Math.round(pos.coords.accuracy||0);if(plannerUserMarker)plannerUserMarker.remove();if(plannerAccuracyCircle)plannerAccuracyCircle.remove();plannerAccuracyCircle=L.circle([lat,lon],{radius:Math.max(accuracy,5),color:'#2789d8',weight:1,fillColor:'#2789d8',fillOpacity:.12}).addTo(plannerMap);plannerUserMarker=L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:3,fillColor:'#2789d8',fillOpacity:1}).addTo(plannerMap).bindPopup(`Ma position • précision ${accuracy} m`).openPopup();plannerMap.setView([lat,lon],Math.max(plannerMap.getZoom(),16));status.textContent=`Position trouvée • précision ${accuracy} m`},err=>{btn.disabled=false;status.textContent=err.code===1?'Localisation refusée. Autorise-la dans les réglages du navigateur.':err.code===3?'Le GPS met trop de temps. Réessaie à l’extérieur.':'Position indisponible. Vérifie le GPS et la connexion.'},{enableHighAccuracy:true,maximumAge:5000,timeout:20000})}
 function redrawPlanner(){
  if(!plannerMap)return;
  plannerMarkers.forEach(m=>m.remove());plannerMarkers=[];
@@ -1340,6 +1341,7 @@ $('exportCsvBtn').onclick=exportCSV;
 $('printReportBtn').onclick=printReport;
 $('newTrainingHomeBtn').onclick=()=>beginNewPiste('training');
 $('openPlannerBtn').onclick=()=>{window.editingTrainingRouteId=null;showPage('plannerPage')};
+$('locatePlannerBtn').onclick=locatePlanner;
 $('openCoachingBtn').onclick=()=>showPage('coachingPage');
 $('undoPlannerPoint').onclick=()=>{if(plannerTool==='route')plannerPoints.pop();else plannerWaypoints.pop();redrawPlanner()};
 $('clearPlanner').onclick=()=>{if(confirm('Effacer le tracé et tous les signes du scénario ?')){plannerPoints=[];plannerWaypoints=[];redrawPlanner()}};
