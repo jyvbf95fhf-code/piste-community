@@ -1,5 +1,15 @@
-const C='piste-community-v1016';
-const A=['./','./index.html','./styles.css?v=1016','./app.js?v=1016','./config.js','./manifest.webmanifest','./icon.svg'];
+const C='piste-community-v2001';
+const A=[
+  './',
+  './index.html',
+  './styles.css?v=1016',
+  './v2.css?v=2001',
+  './app.js?v=1016',
+  './v2.js?v=2001',
+  './config.js',
+  './manifest.webmanifest',
+  './icon.svg'
+];
 self.addEventListener('install',e=>{self.skipWaiting();e.waitUntil(caches.open(C).then(c=>c.addAll(A)))});
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{
