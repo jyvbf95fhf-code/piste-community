@@ -212,7 +212,7 @@
    ========================================================================== */
 window.PISTE_COACHING = Object.freeze({
   enabled: true,
-  version: '10.18',
+  version: '10.19',
   roles: ['driver','coach','observer'],
   capabilities: {
     liveLocation: true,

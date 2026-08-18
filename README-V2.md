@@ -91,4 +91,6 @@ Fichiers ajoutés :
 - `coaching-live-schema.sql`
 
 Le module Coaching est activé dans la V10.18. Il permet de préparer un scénario cartographique, partager un code d’invitation, suivre le tracé réalisé en direct et enregistrer un débrief. Exécuter d’abord `coaching-live-schema.sql` dans Supabase.
+
+La V10.19 ajoute le rôle de traceur, les annotations cartographiques en direct et le débrief automatique prévu/réalisé. Pour une base déjà équipée de la V10.18, exécuter `coaching-v10.19-schema.sql`.
 Le SQL ne contient volontairement aucune policy RLS finale.

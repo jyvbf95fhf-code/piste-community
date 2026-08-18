@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1018">
-<link rel="stylesheet" href="./v2.css?v=2003">
+<link rel="stylesheet" href="./styles.css?v=1019">
+<link rel="stylesheet" href="./v2.css?v=2004">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -425,10 +425,20 @@
     <div class="record-head"><button class="back" data-page="trainingPage">‹ Entraînements</button><h2>🎧 Coaching</h2></div>
     <div class="coaching-grid">
       <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session coachée</h3><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Visibilité des indices<select id="coachingVisibility"><option value="coach">Coach uniquement</option><option value="all">Visible par tous</option><option value="progressive">Révélation progressive</option></select></label><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
-      <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
+      <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="coach">Coach</option><option value="traceur">Traceur</option><option value="observer">Observateur</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
     </div>
     <div class="card"><div class="card-title-row"><h3>Mes sessions</h3><button id="refreshCoaching" class="secondary">Actualiser</button></div><div id="coachingSessionsList"></div></div>
-    <div id="coachingLivePanel" class="card hidden"><div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode">—</strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div><div id="coachingMap"></div><div class="coaching-legend"><span>〰️ prévu</span><span>🔵 réalisé</span><span>📍 annotations</span></div><div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div><div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div><div class="coaching-actions"><button id="startCoachingLive" class="primary">Démarrer la session</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div><form id="coachingDebriefForm" class="form-grid hidden"><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><button class="primary full" type="submit">Terminer et enregistrer le débrief</button></form></div>
+    <div id="coachingLivePanel" class="card hidden">
+      <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode">—</strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
+      <div id="coachingMap"></div><div class="coaching-legend"><span>〰️ prévu</span><span>🟠 posé par le traceur</span><span>🔵 réalisé</span><span>📍 annotations</span></div>
+      <div id="coachAnnotationTools" class="coach-tools hidden"><small class="section-kicker">ANNOTER EN DIRECT</small><p class="small muted">Choisis un événement puis touche la carte.</p><div class="quick-coaching"><button data-live-marker="loss">❌ Perte</button><button data-live-marker="recovery">↩️ Reprise</button><button data-live-marker="decision">↪️ Décision</button><button data-live-marker="success">✓ Réussite</button><button data-live-marker="note">📍 Note</button><button data-live-marker="off">✋ Arrêter d’annoter</button></div></div>
+      <div id="traceurTools" class="traceur-tools hidden"><small class="section-kicker">POSE DE PISTE</small><p id="traceurStatus" class="small muted">Prêt à enregistrer le chemin réellement posé.</p><div class="coaching-actions"><button id="startTraceurTrack" class="primary">Démarrer la pose</button><button id="stopTraceurTrack" class="secondary" disabled>Terminer la pose</button></div></div>
+      <div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div>
+      <div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div>
+      <div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
+      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Démarrer la session</button><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
+      <form id="coachingDebriefForm" class="form-grid hidden"><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><button class="primary full" type="submit">Terminer et enregistrer le débrief</button></form>
+    </div>
   </section>
 
   <section id="mapPage" class="page">
@@ -522,7 +532,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1018"></script>
-<script src="./v2.js?v=2003"></script>
+<script type="module" src="./app.js?v=1019"></script>
+<script src="./v2.js?v=2004"></script>
 </body>
 </html>
