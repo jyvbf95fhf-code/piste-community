@@ -1,84 +1,24 @@
--- PISTE Community — Coaching Live V2.1
--- PREPARATION UNIQUEMENT : NE PAS EXECUTER AVANT REVUE DES RLS.
-
-create table if not exists public.coaching_sessions (
-  id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  activity_id uuid null,
-  status text not null default 'waiting'
-    check (status in ('waiting','live','ended','cancelled')),
-  invite_code text unique,
-  expires_at timestamptz,
-  started_at timestamptz,
-  ended_at timestamptz,
-  share_live_location boolean not null default true,
-  share_live_track boolean not null default true,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.coaching_members (
-  session_id uuid not null references public.coaching_sessions(id) on delete cascade,
-  user_id uuid not null references auth.users(id) on delete cascade,
-  role text not null check (role in ('driver','coach','observer')),
-  joined_at timestamptz not null default now(),
-  primary key (session_id, user_id)
-);
-
-create table if not exists public.coaching_live_points (
-  id bigint generated always as identity primary key,
-  session_id uuid not null references public.coaching_sessions(id) on delete cascade,
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  lat double precision not null,
-  lon double precision not null,
-  accuracy_m double precision,
-  speed_mps double precision,
-  heading double precision,
-  recorded_at timestamptz not null default now()
-);
-
-create index if not exists coaching_live_points_session_time_idx
-  on public.coaching_live_points(session_id, recorded_at desc);
-
-create table if not exists public.coaching_messages (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.coaching_sessions(id) on delete cascade,
-  author_id uuid not null references auth.users(id) on delete cascade,
-  message_type text not null default 'text'
-    check (message_type in ('text','quick','system')),
-  body text not null check (char_length(body) <= 500),
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.coaching_markers (
-  id uuid primary key default gen_random_uuid(),
-  session_id uuid not null references public.coaching_sessions(id) on delete cascade,
-  author_id uuid not null references auth.users(id) on delete cascade,
-  lat double precision not null,
-  lon double precision not null,
-  marker_type text not null default 'note'
-    check (marker_type in ('note','loss','recovery','decision','success')),
-  note text check (char_length(note) <= 1000),
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.coaching_debriefs (
-  session_id uuid primary key references public.coaching_sessions(id) on delete cascade,
-  owner_id uuid not null references auth.users(id) on delete cascade,
-  coach_id uuid references auth.users(id) on delete set null,
-  strengths text,
-  improvement_area text,
-  coach_notes text,
-  driver_notes text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-alter table public.coaching_sessions enable row level security;
-alter table public.coaching_members enable row level security;
-alter table public.coaching_live_points enable row level security;
-alter table public.coaching_messages enable row level security;
-alter table public.coaching_markers enable row level security;
-alter table public.coaching_debriefs enable row level security;
-
--- Les policies RLS finales sont volontairement absentes.
--- Elles doivent être écrites et testées séparément avant activation.
+-- PISTE Community V10.18 — Coaching sécurisé et temps réel
+-- À exécuter dans Supabase SQL Editor avant de tester le mode Coaching.
+create schema if not exists private;
+create table if not exists public.coaching_sessions(id uuid primary key default gen_random_uuid(),owner_id uuid not null references auth.users(id) on delete cascade,route_id uuid references public.training_routes(id) on delete set null,name text not null check(char_length(name) between 1 and 100),status text not null default 'waiting' check(status in('waiting','live','ended','cancelled')),invite_code text not null unique check(char_length(invite_code) between 8 and 12),visibility_mode text not null default 'coach' check(visibility_mode in('all','coach','progressive')),planned_route jsonb not null default '[]'::jsonb check(jsonb_typeof(planned_route)='array'),planned_markers jsonb not null default '[]'::jsonb check(jsonb_typeof(planned_markers)='array'),expires_at timestamptz,started_at timestamptz,ended_at timestamptz,created_at timestamptz not null default now());
+create table if not exists public.coaching_members(session_id uuid not null references public.coaching_sessions(id) on delete cascade,user_id uuid not null references auth.users(id) on delete cascade,role text not null check(role in('driver','coach','observer')),joined_at timestamptz not null default now(),primary key(session_id,user_id));
+create table if not exists public.coaching_live_points(id bigint generated always as identity primary key,session_id uuid not null references public.coaching_sessions(id) on delete cascade,owner_id uuid not null references auth.users(id) on delete cascade,lat double precision not null check(lat between -90 and 90),lon double precision not null check(lon between -180 and 180),accuracy_m double precision check(accuracy_m is null or accuracy_m>=0),recorded_at timestamptz not null default now());
+create table if not exists public.coaching_messages(id uuid primary key default gen_random_uuid(),session_id uuid not null references public.coaching_sessions(id) on delete cascade,author_id uuid not null references auth.users(id) on delete cascade,message_type text not null default 'text' check(message_type in('text','quick','system')),body text not null check(char_length(body) between 1 and 500),created_at timestamptz not null default now());
+create table if not exists public.coaching_markers(id uuid primary key default gen_random_uuid(),session_id uuid not null references public.coaching_sessions(id) on delete cascade,author_id uuid not null references auth.users(id) on delete cascade,lat double precision not null check(lat between -90 and 90),lon double precision not null check(lon between -180 and 180),marker_type text not null default 'note' check(marker_type in('note','loss','recovery','decision','success')),note text check(char_length(note)<=1000),created_at timestamptz not null default now());
+create table if not exists public.coaching_debriefs(session_id uuid primary key references public.coaching_sessions(id) on delete cascade,owner_id uuid not null references auth.users(id) on delete cascade,coach_id uuid references auth.users(id) on delete set null,strengths text check(char_length(strengths)<=1500),improvement_area text check(char_length(improvement_area)<=1500),coach_notes text check(char_length(coach_notes)<=2500),driver_notes text check(char_length(driver_notes)<=2500),actual_track jsonb not null default '[]'::jsonb check(jsonb_typeof(actual_track)='array'),created_at timestamptz not null default now(),updated_at timestamptz not null default now());
+create index if not exists coaching_sessions_owner_idx on public.coaching_sessions(owner_id);create index if not exists coaching_sessions_route_idx on public.coaching_sessions(route_id);create index if not exists coaching_members_user_idx on public.coaching_members(user_id);create index if not exists coaching_live_points_owner_idx on public.coaching_live_points(owner_id);create index if not exists coaching_live_points_session_time_idx on public.coaching_live_points(session_id,recorded_at);create index if not exists coaching_messages_session_time_idx on public.coaching_messages(session_id,created_at);create index if not exists coaching_messages_author_idx on public.coaching_messages(author_id);create index if not exists coaching_markers_session_time_idx on public.coaching_markers(session_id,created_at);create index if not exists coaching_markers_author_idx on public.coaching_markers(author_id);create index if not exists coaching_debriefs_owner_idx on public.coaching_debriefs(owner_id);create index if not exists coaching_debriefs_coach_idx on public.coaching_debriefs(coach_id);
+create or replace function private.is_coaching_member(p_session_id uuid) returns boolean language sql stable security definer set search_path='' as $$select exists(select 1 from public.coaching_members m where m.session_id=p_session_id and m.user_id=(select auth.uid()))$$;
+create or replace function private.coaching_role(p_session_id uuid) returns text language sql stable security definer set search_path='' as $$select m.role from public.coaching_members m where m.session_id=p_session_id and m.user_id=(select auth.uid()) limit 1$$;
+revoke all on function private.is_coaching_member(uuid) from public,anon;revoke all on function private.coaching_role(uuid) from public,anon;grant usage on schema private to authenticated;grant execute on function private.is_coaching_member(uuid),private.coaching_role(uuid) to authenticated;
+create or replace function public.join_coaching_session(p_invite_code text) returns uuid language plpgsql security definer set search_path='' as $$declare v_id uuid;begin if(select auth.uid()) is null then raise exception 'Authentification requise';end if;select s.id into v_id from public.coaching_sessions s where upper(s.invite_code)=upper(trim(p_invite_code)) and s.status in('waiting','live') and(s.expires_at is null or s.expires_at>now());if v_id is null then raise exception 'Code invalide ou expiré';end if;insert into public.coaching_members(session_id,user_id,role) values(v_id,(select auth.uid()),'coach') on conflict(session_id,user_id) do nothing;return v_id;end$$;
+revoke all on function public.join_coaching_session(text) from public,anon;grant execute on function public.join_coaching_session(text) to authenticated;
+alter table public.coaching_sessions enable row level security;alter table public.coaching_members enable row level security;alter table public.coaching_live_points enable row level security;alter table public.coaching_messages enable row level security;alter table public.coaching_markers enable row level security;alter table public.coaching_debriefs enable row level security;
+create policy "coaching_sessions_read" on public.coaching_sessions for select to authenticated using((select auth.uid())=owner_id or private.is_coaching_member(id));create policy "coaching_sessions_owner_insert" on public.coaching_sessions for insert to authenticated with check((select auth.uid())=owner_id);create policy "coaching_sessions_owner_update" on public.coaching_sessions for update to authenticated using((select auth.uid())=owner_id) with check((select auth.uid())=owner_id);create policy "coaching_sessions_owner_delete" on public.coaching_sessions for delete to authenticated using((select auth.uid())=owner_id);
+create policy "coaching_members_read" on public.coaching_members for select to authenticated using(user_id=(select auth.uid()) or private.is_coaching_member(session_id));create policy "coaching_members_owner_insert" on public.coaching_members for insert to authenticated with check(exists(select 1 from public.coaching_sessions s where s.id=session_id and s.owner_id=(select auth.uid())));create policy "coaching_members_owner_delete" on public.coaching_members for delete to authenticated using(exists(select 1 from public.coaching_sessions s where s.id=session_id and s.owner_id=(select auth.uid())));
+create policy "coaching_points_read" on public.coaching_live_points for select to authenticated using(private.is_coaching_member(session_id));create policy "coaching_points_driver_insert" on public.coaching_live_points for insert to authenticated with check(owner_id=(select auth.uid()) and private.coaching_role(session_id)='driver');
+create policy "coaching_messages_read" on public.coaching_messages for select to authenticated using(private.is_coaching_member(session_id));create policy "coaching_messages_insert" on public.coaching_messages for insert to authenticated with check(author_id=(select auth.uid()) and private.is_coaching_member(session_id));
+create policy "coaching_markers_read" on public.coaching_markers for select to authenticated using(private.is_coaching_member(session_id));create policy "coaching_markers_insert" on public.coaching_markers for insert to authenticated with check(author_id=(select auth.uid()) and private.is_coaching_member(session_id));
+create policy "coaching_debriefs_read" on public.coaching_debriefs for select to authenticated using(private.is_coaching_member(session_id));create policy "coaching_debriefs_insert" on public.coaching_debriefs for insert to authenticated with check(private.coaching_role(session_id) in('driver','coach'));create policy "coaching_debriefs_update" on public.coaching_debriefs for update to authenticated using(private.coaching_role(session_id) in('driver','coach')) with check(private.coaching_role(session_id) in('driver','coach'));
+grant select,insert,update,delete on public.coaching_sessions,public.coaching_members,public.coaching_live_points,public.coaching_messages,public.coaching_markers,public.coaching_debriefs to authenticated;grant usage,select on sequence public.coaching_live_points_id_seq to authenticated;
+do $$begin if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='coaching_live_points')then alter publication supabase_realtime add table public.coaching_live_points;end if;if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='coaching_messages')then alter publication supabase_realtime add table public.coaching_messages;end if;end$$;

@@ -20,10 +20,11 @@
 
   function syncDogMirror(){
     const alias = (q('#topDogAlias')?.textContent || '').trim();
+    const meta = (q('#topDogAlias')?.dataset?.dogMeta || '').trim();
     const dogName = q('#v2DogName');
     const dogMeta = q('#v2DogMeta');
     if(dogName) dogName.textContent = alias || 'Chien actif';
-    if(dogMeta) dogMeta.textContent = alias ? 'Binôme sélectionné pour le terrain' : 'Sélectionne ton chien depuis le profil';
+    if(dogMeta) dogMeta.textContent = alias ? (meta || 'Binôme sélectionné pour le terrain') : 'Sélectionne ton chien depuis le profil';
     copyPhoto(q('#topDogPhoto') || q('#heroDogPhoto'), q('#v2DogPhoto'));
   }
 
@@ -210,8 +211,8 @@
    Coaching Live — architecture préparée, NON ACTIVÉE
    ========================================================================== */
 window.PISTE_COACHING = Object.freeze({
-  enabled: false,
-  version: 'prep-1',
+  enabled: true,
+  version: '10.18',
   roles: ['driver','coach','observer'],
   capabilities: {
     liveLocation: true,

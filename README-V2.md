@@ -90,5 +90,5 @@ Fichiers ajoutés :
 - `COACHING-WIREFRAMES.md`
 - `coaching-live-schema.sql`
 
-Le module est déclaré dans `v2.js` avec `enabled: false`.
+Le module Coaching est activé dans la V10.18. Il permet de préparer un scénario cartographique, partager un code d’invitation, suivre le tracé réalisé en direct et enregistrer un débrief. Exécuter d’abord `coaching-live-schema.sql` dans Supabase.
 Le SQL ne contient volontairement aucune policy RLS finale.

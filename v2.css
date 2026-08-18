@@ -420,6 +420,21 @@ input:focus,select:focus,textarea:focus{
 .route-row,.activity-row,.friend-row{
   border-color:var(--v2-line)!important
 }
+.dog-profile-row{border-color:var(--v2-line)}
+.dog-profile-main small{color:var(--v2-muted)}
+.dog-name-line span{color:#cfe2ae;background:rgba(158,183,109,.09);border:1px solid rgba(158,183,109,.18)}
+.dog-form{border-color:var(--v2-line)}
+.dog-form-heading small{color:var(--v2-green)}
+
+/* ---- V10.18 scenario planner & coaching ---- */
+.coaching-main{border-color:rgba(159,189,101,.4)!important;color:#d8e8bc!important}
+.planner-tools{display:flex;gap:8px;overflow-x:auto;padding:4px 0 12px;scrollbar-width:thin}
+.planner-tools button,.quick-coaching button{white-space:nowrap;background:#132128;color:#c2cec9;border:1px solid var(--v2-line);border-radius:12px;padding:10px 12px;font-weight:750}
+.planner-tools button.active{background:#9fbd65;color:#102018;border-color:#9fbd65}
+.scenario-map-icon{background:transparent!important;border:0!important}.scenario-map-icon span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;font-size:18px;background:#102027;border:2px solid #aac778;box-shadow:0 3px 12px #0008}
+.scenario-list{margin-top:12px}.scenario-list>div{display:grid;grid-template-columns:30px minmax(110px,.6fr) 1fr auto;align-items:center;gap:8px;border-bottom:1px solid var(--v2-line);padding:9px 4px}.scenario-list small{color:var(--v2-muted)}
+.coaching-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.coaching-grid label{display:grid;gap:6px;margin:12px 0}.section-kicker{color:var(--v2-green);font-weight:850;letter-spacing:.12em}.join-row{display:flex;gap:8px}.join-row input{flex:1}.coaching-live-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.invite-chip{display:grid;justify-items:center;gap:4px;padding:10px 14px;background:#111f25;border:1px solid var(--v2-line);border-radius:14px}.invite-chip strong{letter-spacing:.12em;color:#d7e8b8}.invite-chip small{font-size:9px;color:var(--v2-muted)}
+#coachingMap{height:440px;border-radius:16px;margin-top:12px}.coaching-legend{display:flex;gap:14px;flex-wrap:wrap;color:var(--v2-muted);font-size:12px;padding:9px}.quick-coaching{display:flex;gap:8px;overflow-x:auto;margin:5px 0 12px}.quick-coaching button{padding:8px 10px}.coaching-messages{display:grid;gap:7px;max-height:220px;overflow:auto;margin:12px 0}.coaching-messages>div{justify-self:start;max-width:80%;background:#17272d;border-radius:12px;padding:9px 12px}.coaching-messages>div.mine{justify-self:end;background:#30451f}.coaching-messages small{display:block;color:var(--v2-muted);font-size:9px}.coaching-actions{display:flex;gap:9px;margin-top:12px}
 
 /* Leaflet controls stay legible */
 .leaflet-control-layers,.leaflet-control-zoom a,.leaflet-popup-content-wrapper,.leaflet-popup-tip{
@@ -445,6 +460,7 @@ input:focus,select:focus,textarea:focus{
   .auth-brand{min-height:250px;padding:30px 24px}
   .auth-brand h2{font-size:27px;margin:22px 0 8px}
   .brand-dog{font-size:48px}.brand-logo b{font-size:38px}
+  .coaching-grid{grid-template-columns:1fr}.coaching-live-head{display:block}.invite-chip{margin-top:10px;justify-items:start;grid-template-columns:auto 1fr auto;align-items:center}.scenario-list>div{grid-template-columns:30px 1fr auto}.scenario-list small{grid-column:2}.join-row{align-items:stretch}.join-row button{flex:0 0 auto}#coachingMap{height:360px}
 }
 
 @media(max-width:390px){
