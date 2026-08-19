@@ -99,4 +99,6 @@ Elle ajoute aussi l’Intelligence olfactive V1 : saisie du vent, de l’âge de
 Le correctif V10.20.1 conserve le tracé préparé et son couloir olfactif sur la carte lors du démarrage d’une session coachée, y compris pour le conducteur.
 
 La V10.21 simplifie le parcours Terrain autour de trois étapes — Préparer, Réaliser et Débriefer — avec un accueil regroupé, une barre d’étapes, un contrôle avant départ, des couches de carte activables, des outils cartographiques fixes et la sauvegarde locale automatique du brouillon. Elle inclut directement le correctif V10.20.1.
+
+La V10.22 ajoute l’Assistant de tracé. Il propose une géométrie modifiable selon la distance cible, la forme, la difficulté, l’objectif cynophile, le nombre d’objets, les attentes et l’orientation par rapport au vent. Cette proposition reste un scénario pédagogique : elle doit obligatoirement être replacée sur des chemins autorisés et contrôlée sur le terrain.
 Le SQL ne contient volontairement aucune policy RLS finale.

@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1024">
-<link rel="stylesheet" href="./v2.css?v=2009">
+<link rel="stylesheet" href="./styles.css?v=1025">
+<link rel="stylesheet" href="./v2.css?v=2010">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -411,6 +411,22 @@
       </div>
       <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
       <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
+      <details class="route-suggestion-card" open>
+        <summary>✨ Assistant de tracé <small>Nouvelle proposition</small></summary>
+        <p class="small muted">Choisis les critères : l’assistant crée une base modifiable autour du premier point déjà posé, ou autour du centre de la carte.</p>
+        <div class="route-suggestion-grid">
+          <label>Distance cible (km)<input id="suggestionDistance" type="number" min="0.2" max="30" step="0.1" value="1.5"></label>
+          <label>Forme<select id="suggestionShape"><option value="loop">Boucle</option><option value="outback">Aller-retour</option><option value="open">Départ-arrivée distincts</option></select></label>
+          <label>Difficulté<select id="suggestionDifficulty"><option value="easy">Simple</option><option value="medium" selected>Intermédiaire</option><option value="hard">Complexe</option></select></label>
+          <label>Objectif<select id="suggestionObjective"><option value="angles">Travail des angles</option><option value="objects">Recherche d’objets</option><option value="discrimination">Discrimination</option><option value="endurance">Endurance</option><option value="wind">Travail du vent</option></select></label>
+          <label>Objets<input id="suggestionObjects" type="number" min="0" max="10" step="1" value="2"></label>
+          <label>Attentes<input id="suggestionWaits" type="number" min="0" max="6" step="1" value="1"></label>
+          <label>Orientation<select id="suggestionWindMode"><option value="varied">Varier par rapport au vent</option><option value="cross">Privilégier le vent latéral</option><option value="downwind">Départ sous le vent</option><option value="free">Sans contrainte</option></select></label>
+        </div>
+        <div class="suggestion-actions"><button id="generateRouteSuggestion" class="primary" type="button">✨ Suggérer un tracé</button><button id="regenerateRouteSuggestion" class="secondary" type="button">↻ Autre proposition</button></div>
+        <p id="routeSuggestionMsg" class="route-suggestion-msg">La proposition devra être déplacée sur les chemins réellement accessibles.</p>
+        <p class="odor-disclaimer">Avertissement : l’assistant dessine un scénario d’entraînement géométrique. Il ne connaît pas les clôtures, propriétés privées, interdictions, pentes ni dangers réels. Validation humaine obligatoire avant utilisation.</p>
+      </details>
       <details class="odor-model-card">
         <summary>🌬️ Intelligence olfactive <small>Options avancées</small></summary>
         <div class="card-title-row"><div><small class="section-kicker">INTELLIGENCE OLFACTIVE</small><h3>Couloir olfactif estimé</h3></div><label class="odor-switch"><input id="odorEnabled" type="checkbox"><span>Afficher</span></label></div>
@@ -550,7 +566,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1024"></script>
-<script src="./v2.js?v=2009"></script>
+<script type="module" src="./app.js?v=1025"></script>
+<script src="./v2.js?v=2010"></script>
 </body>
 </html>
