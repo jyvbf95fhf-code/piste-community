@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1020">
-<link rel="stylesheet" href="./v2.css?v=2005">
+<link rel="stylesheet" href="./styles.css?v=1022">
+<link rel="stylesheet" href="./v2.css?v=2007">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -59,8 +59,7 @@
   <section id="homePage" class="page active">
     <div class="v8-hero">
       <div class="hero-brand"><span id="heroDogPhoto" class="hero-dog hero-dog-photo">🐕</span><div><small>PISTE COMMUNITY</small><b id="helloUser">Bonjour</b><span id="heroDogLine">Prêt pour le terrain.</span></div></div>
-      <button id="newPisteBtn" class="start-main v8-start"><span class="start-dog">🐕</span><span><b>NOUVEAU PISTAGE</b><small>OPÉRATIONNEL</small></span></button>
-      <button id="newTrainingHomeBtn" class="training-main v8-training"><span>🐾</span><span><b>NOUVEL ENTRAÎNEMENT</b><small>Espace indépendant</small></span></button>
+      <button id="openTerrainHomeBtn" class="start-main v8-start" data-page="trainingPage"><span class="start-dog">◎</span><span><b>DÉMARRER UNE ACTIVITÉ</b><small>Opérationnel • entraînement • coaching</small></span></button>
     </div>
 
     <div id="resumeBanner" class="resume-banner hidden"><div><b>Enregistrement interrompu détecté</b><span id="resumeInfo">Une activité locale peut être reprise.</span></div><div class="resume-actions"><button id="resumeDraftBtn" class="primary">Reprendre</button><button id="discardDraftBtn" class="secondary">Effacer</button></div></div>
@@ -90,7 +89,7 @@
 
   <section id="recordPage" class="page">
     <div class="record-head">
-      <button class="back" data-page="homePage">‹ Accueil</button>
+      <button class="back" data-page="trainingPage">‹ Terrain</button>
       <h2 id="recordTitle">Nouveau pistage opérationnel</h2>
     </div>
 
@@ -365,12 +364,11 @@
 
 
   <section id="trainingPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Entraînements</h2></div>
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Terrain</h2></div>
     <div class="training-hero">
-      <button id="newTrainingBtn" class="training-main">+ NOUVEL ENTRAÎNEMENT</button>
-      <button id="openPlannerBtn" class="planner-main">🗺️ CRÉER UN TRACÉ D’ENTRAÎNEMENT</button>
-      <button id="openCoachingBtn" class="planner-main coaching-main">🎧 MODE COACHING</button>
-      <p class="muted">Espace indépendant : ces données ne comptent jamais dans les statistiques des pistages opérationnels.</p>
+      <div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement</b><small>Démarrer une séance</small></button><button id="openPlannerBtn" class="terrain-choice planner"><span>🗺️</span><b>Tracé et scénario</b><small>Préparer une piste</small></button><button id="openCoachingBtn" class="terrain-choice coaching"><span>🎧</span><b>Session coachée</b><small>Préparer ou rejoindre</small></button></div>
+      <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Voir mes pistages opérationnels ›</button>
+      <p class="muted">Choisis une activité. Les statistiques opérationnelles et d’entraînement restent séparées.</p>
     </div>
     <div class="card">
       <div class="card-title-row"><h3>Mes tracés préparés</h3><span>🐾</span></div>
@@ -398,7 +396,7 @@
 
 
   <section id="plannerPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Entraînements</button><h2>🗺️ Créateur de tracé</h2></div>
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🗺️ Créateur de tracé</h2></div>
     <div class="card planner-card">
       <div class="planner-top">
         <label>Nom du tracé
@@ -410,7 +408,21 @@
       <div id="plannerTools" class="planner-tools" aria-label="Outils de création du scénario">
         <button class="active" data-planner-tool="route">〰️ Tracé</button><button data-planner-tool="pause">⏳ Attente</button><button data-planner-tool="object">📦 Objet</button><button data-planner-tool="direction">↪️ Direction</button><button data-planner-tool="crossing">🔀 Croisement</button><button data-planner-tool="contamination">👥 Contamination</button><button data-planner-tool="danger">⚠️ Danger</button><button data-planner-tool="subject">👤 Personne</button><button data-planner-tool="note">📍 Note</button>
       </div>
-      <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
+      <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
+      <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
+      <section class="odor-model-card">
+        <div class="card-title-row"><div><small class="section-kicker">INTELLIGENCE OLFACTIVE</small><h3>Couloir olfactif estimé</h3></div><label class="odor-switch"><input id="odorEnabled" type="checkbox"><span>Afficher</span></label></div>
+        <div class="odor-model-grid">
+          <label>Vent venant de (°)<input id="odorWindDirection" type="number" min="0" max="359" step="1" value="0"></label>
+          <label>Vitesse du vent (km/h)<input id="odorWindSpeed" type="number" min="0" max="100" step="0.5" value="5"></label>
+          <label>Âge de la piste (h)<input id="odorAge" type="number" min="0" max="168" step="0.5" value="1"></label>
+          <label>Milieu<select id="odorEnvironment"><option value="open">Terrain ouvert</option><option value="mixed" selected>Mixte</option><option value="forest">Forêt</option><option value="urban">Urbain</option></select></label>
+          <label>Température (°C)<input id="odorTemperature" type="number" min="-30" max="60" step="1" placeholder="Facultatif"></label>
+          <label>Humidité (%)<input id="odorHumidity" type="number" min="0" max="100" step="1" placeholder="Facultatif"></label>
+        </div>
+        <p id="odorSummary" class="odor-summary">Simulation désactivée.</p>
+        <p class="odor-disclaimer">Modèle pédagogique indicatif : il estime une zone cohérente à partir des paramètres saisis. Il ne mesure pas l’odeur et ne remplace ni l’observation du terrain ni l’analyse du coach.</p>
+      </section>
       <div id="plannerMap"></div>
       <div id="plannerScenarioList" class="scenario-list"></div>
       <div class="planner-actions">
@@ -423,7 +435,7 @@
   </section>
 
   <section id="coachingPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Entraînements</button><h2>🎧 Coaching</h2></div>
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🎧 Coaching</h2></div>
     <div class="coaching-grid">
       <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session coachée</h3><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Visibilité des indices<select id="coachingVisibility"><option value="coach">Coach uniquement</option><option value="all">Visible par tous</option><option value="progressive">Révélation progressive</option></select></label><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
       <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="coach">Coach</option><option value="traceur">Traceur</option><option value="observer">Observateur</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
@@ -524,7 +536,7 @@
   <nav class="bottom-nav">
     <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
     <button data-page="feedPage"><span class="nav-icon">🐕‍🦺</span><span>Amis</span></button>
-    <button id="navRecord" class="nav-paw"><span class="nav-icon">🐾</span><span>Pistage</span></button>
+    <button id="navRecord" class="nav-paw" data-page="trainingPage"><span class="nav-icon">◎</span><span>Terrain</span></button>
     <button data-page="mapPage"><span class="nav-icon">🗺️</span><span>Carte</span></button>
     <button data-page="profilePage"><span class="nav-icon">🐕</span><span>Profil</span></button>
   </nav>
@@ -533,7 +545,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1020"></script>
-<script src="./v2.js?v=2005"></script>
+<script type="module" src="./app.js?v=1022"></script>
+<script src="./v2.js?v=2007"></script>
 </body>
 </html>

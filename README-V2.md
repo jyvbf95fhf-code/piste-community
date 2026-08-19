@@ -93,4 +93,7 @@ Fichiers ajoutés :
 Le module Coaching est activé dans la V10.18. Il permet de préparer un scénario cartographique, partager un code d’invitation, suivre le tracé réalisé en direct et enregistrer un débrief. Exécuter d’abord `coaching-live-schema.sql` dans Supabase.
 
 La V10.19 ajoute le rôle de traceur, les annotations cartographiques en direct et le débrief automatique prévu/réalisé. Pour une base déjà équipée de la V10.18, exécuter `coaching-v10.19-schema.sql`.
+
+La V10.20 regroupe les lancements sous une entrée unique `Terrain` et améliore le créateur cartographique : recherche de lieu, suivi GPS, plein écran, déplacement et suppression des points et des signes.
+Elle ajoute aussi l’Intelligence olfactive V1 : saisie du vent, de l’âge de piste et du milieu, visualisation d’un couloir olfactif estimé à deux niveaux, copie dans les sessions coachées et indicateurs de débrief. Exécuter `odor-intelligence-v10.20-schema.sql` sur une base déjà équipée des migrations Coaching. Cette visualisation est pédagogique et indicative, pas une mesure physique de l’odeur.
 Le SQL ne contient volontairement aucune policy RLS finale.
