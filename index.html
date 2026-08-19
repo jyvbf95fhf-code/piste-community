@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1016">
-<link rel="stylesheet" href="./v2.css?v=2001">
+<link rel="stylesheet" href="./styles.css?v=1024">
+<link rel="stylesheet" href="./v2.css?v=2009">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -59,8 +59,7 @@
   <section id="homePage" class="page active">
     <div class="v8-hero">
       <div class="hero-brand"><span id="heroDogPhoto" class="hero-dog hero-dog-photo">🐕</span><div><small>PISTE COMMUNITY</small><b id="helloUser">Bonjour</b><span id="heroDogLine">Prêt pour le terrain.</span></div></div>
-      <button id="newPisteBtn" class="start-main v8-start"><span class="start-dog">🐕</span><span><b>NOUVEAU PISTAGE</b><small>OPÉRATIONNEL</small></span></button>
-      <button id="newTrainingHomeBtn" class="training-main v8-training"><span>🐾</span><span><b>NOUVEL ENTRAÎNEMENT</b><small>Espace indépendant</small></span></button>
+      <button id="openTerrainHomeBtn" class="start-main v8-start" data-page="trainingPage"><span class="start-dog">◎</span><span><b>DÉMARRER UNE ACTIVITÉ</b><small>Opérationnel • entraînement • coaching</small></span></button>
     </div>
 
     <div id="resumeBanner" class="resume-banner hidden"><div><b>Enregistrement interrompu détecté</b><span id="resumeInfo">Une activité locale peut être reprise.</span></div><div class="resume-actions"><button id="resumeDraftBtn" class="primary">Reprendre</button><button id="discardDraftBtn" class="secondary">Effacer</button></div></div>
@@ -90,7 +89,7 @@
 
   <section id="recordPage" class="page">
     <div class="record-head">
-      <button class="back" data-page="homePage">‹ Accueil</button>
+      <button class="back" data-page="trainingPage">‹ Terrain</button>
       <h2 id="recordTitle">Nouveau pistage opérationnel</h2>
     </div>
 
@@ -365,11 +364,12 @@
 
 
   <section id="trainingPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Entraînements</h2></div>
-    <div class="training-hero">
-      <button id="newTrainingBtn" class="training-main">+ NOUVEL ENTRAÎNEMENT</button>
-      <button id="openPlannerBtn" class="planner-main">🗺️ CRÉER UN TRACÉ D’ENTRAÎNEMENT</button>
-      <p class="muted">Espace indépendant : ces données ne comptent jamais dans les statistiques des pistages opérationnels.</p>
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Terrain</h2></div>
+    <div class="training-hero terrain-hub">
+      <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div></div>
+      <div class="terrain-group prepared"><small class="section-kicker">SESSION PRÉPARÉE</small><h3>Préparer, réaliser, débriefer</h3><div class="terrain-choice-grid"><button id="openPlannerBtn" class="terrain-choice planner"><span>🗺️</span><b>Créer une session</b><small>Tracé, signes et odeur</small></button><button id="openCoachingBtn" class="terrain-choice coaching"><span>🎧</span><b>Ouvrir le coaching</b><small>Créer, rejoindre ou reprendre</small></button></div></div>
+      <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Voir mes pistages opérationnels ›</button>
+      <p class="muted">Choisis une activité. Les statistiques opérationnelles et d’entraînement restent séparées.</p>
     </div>
     <div class="card">
       <div class="card-title-row"><h3>Mes tracés préparés</h3><span>🐾</span></div>
@@ -397,7 +397,7 @@
 
 
   <section id="plannerPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Entraînements</button><h2>🗺️ Créateur de tracé</h2></div>
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🗺️ Créateur de tracé</h2></div>
     <div class="card planner-card">
       <div class="planner-top">
         <label>Nom du tracé
@@ -405,14 +405,57 @@
         </label>
         <div class="planner-distance"><small>DISTANCE PRÉVUE</small><strong id="plannedDistance">0.00 km</strong></div>
       </div>
-      <p class="small muted">Touchez la carte pour poser des points. Les segments sont reliés automatiquement.</p>
+      <p class="small muted">Choisis « Tracé », puis touche la carte pour dessiner. Choisis ensuite un signe pour scénariser la piste.</p>
+      <div id="plannerTools" class="planner-tools" aria-label="Outils de création du scénario">
+        <button class="active" data-planner-tool="route">〰️ Tracé</button><button data-planner-tool="pause">⏳ Attente</button><button data-planner-tool="object">📦 Objet</button><button data-planner-tool="direction">↪️ Direction</button><button data-planner-tool="crossing">🔀 Croisement</button><button data-planner-tool="contamination">👥 Contamination</button><button data-planner-tool="danger">⚠️ Danger</button><button data-planner-tool="subject">👤 Personne</button><button data-planner-tool="note">📍 Note</button>
+      </div>
+      <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
+      <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
+      <details class="odor-model-card">
+        <summary>🌬️ Intelligence olfactive <small>Options avancées</small></summary>
+        <div class="card-title-row"><div><small class="section-kicker">INTELLIGENCE OLFACTIVE</small><h3>Couloir olfactif estimé</h3></div><label class="odor-switch"><input id="odorEnabled" type="checkbox"><span>Afficher</span></label></div>
+        <div class="odor-model-grid">
+          <label>Vent venant de (°)<input id="odorWindDirection" type="number" min="0" max="359" step="1" value="0"></label>
+          <label>Vitesse du vent (km/h)<input id="odorWindSpeed" type="number" min="0" max="100" step="0.5" value="5"></label>
+          <label>Âge de la piste (h)<input id="odorAge" type="number" min="0" max="168" step="0.5" value="1"></label>
+          <label>Milieu<select id="odorEnvironment"><option value="open">Terrain ouvert</option><option value="mixed" selected>Mixte</option><option value="forest">Forêt</option><option value="urban">Urbain</option></select></label>
+          <label>Température (°C)<input id="odorTemperature" type="number" min="-30" max="60" step="1" placeholder="Facultatif"></label>
+          <label>Humidité (%)<input id="odorHumidity" type="number" min="0" max="100" step="1" placeholder="Facultatif"></label>
+        </div>
+        <p id="odorSummary" class="odor-summary">Simulation désactivée.</p>
+        <p class="odor-disclaimer">Modèle pédagogique indicatif : il estime une zone cohérente à partir des paramètres saisis. Il ne mesure pas l’odeur et ne remplace ni l’observation du terrain ni l’analyse du coach.</p>
+      </details>
       <div id="plannerMap"></div>
+      <div id="plannerScenarioList" class="scenario-list"></div>
       <div class="planner-actions">
         <button id="undoPlannerPoint" class="secondary">↶ Annuler le dernier point</button>
         <button id="clearPlanner" class="secondary">Effacer</button>
-        <button id="saveTrainingRoute" class="primary">💾 Enregistrer le tracé</button>
+        <button id="saveTrainingRoute" class="primary">💾 Enregistrer la préparation</button>
       </div>
+      <small id="plannerDraftStatus" class="muted">Le brouillon est sauvegardé automatiquement sur cet appareil.</small>
       <p id="plannerMsg" class="msg"></p>
+    </div>
+  </section>
+
+  <section id="coachingPage" class="page">
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🎧 Coaching</h2></div>
+    <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
+    <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
+      <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session coachée</h3><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Visibilité des indices<select id="coachingVisibility"><option value="coach">Coach uniquement</option><option value="all">Visible par tous</option><option value="progressive">Révélation progressive</option></select></label><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
+      <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="coach">Coach</option><option value="traceur">Traceur</option><option value="observer">Observateur</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
+    </div>
+    <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><h3>Mes sessions</h3><button id="refreshCoaching" class="secondary">Actualiser</button></div><div id="coachingSessionsList"></div></div>
+    <div id="coachingLivePanel" class="card hidden">
+      <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode">—</strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
+      <div class="session-preflight"><small class="section-kicker">AVANT DE COMMENCER</small><div id="coachingPreflight" class="preflight-grid"></div></div>
+      <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Réalisé</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div></div><div class="coaching-legend"><span>🟢 zone olfactive principale</span><span>🟠 dispersion possible</span><span>〰️ prévu</span><span>🔵 réalisé</span></div>
+      <div id="coachAnnotationTools" class="coach-tools hidden"><small class="section-kicker">ANNOTER EN DIRECT</small><p class="small muted">Choisis un événement puis touche la carte.</p><div class="quick-coaching"><button data-live-marker="loss">❌ Perte</button><button data-live-marker="recovery">↩️ Reprise</button><button data-live-marker="decision">↪️ Décision</button><button data-live-marker="success">✓ Réussite</button><button data-live-marker="note">📍 Note</button><button data-live-marker="off">✋ Arrêter d’annoter</button></div></div>
+      <div id="traceurTools" class="traceur-tools hidden"><small class="section-kicker">POSE DE PISTE</small><p id="traceurStatus" class="small muted">Prêt à enregistrer le chemin réellement posé.</p><div class="coaching-actions"><button id="startTraceurTrack" class="primary">Démarrer la pose</button><button id="stopTraceurTrack" class="secondary" disabled>Terminer la pose</button></div></div>
+      <div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div>
+      <div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div>
+      <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
+      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Démarrer la session</button><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
+      <form id="coachingDebriefForm" class="form-grid hidden"><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><button class="primary full" type="submit">Terminer et enregistrer le débrief</button></form></div>
     </div>
   </section>
 
@@ -448,13 +491,23 @@
         <div><small>MON PROFIL</small><h2 id="profilePseudo">Pisteur</h2><p class="muted small">Profil anonyme PISTE Community</p></div>
       </div>
       <div class="card">
-        <div class="card-title-row"><h3>Mes chiens</h3><span class="paw-muted">🐾</span></div>
+        <div class="card-title-row"><h3>Mes chiens</h3><button id="showDogFormBtn" class="secondary" type="button">+ Ajouter un chien</button></div>
         <div id="dogsList"></div>
-        <form id="dogForm" class="friend-add">
-          <input name="alias" maxlength="24" placeholder="Alias du chien (ex. Chien A)" required>
-          <button class="primary" type="submit">Ajouter</button>
+        <form id="dogForm" class="form-grid dog-form hidden">
+          <input name="dog_id" type="hidden">
+          <div class="full dog-form-heading"><div><small>FICHE DU CHIEN</small><h3 id="dogFormTitle">Ajouter un chien</h3></div><span>🐕</span></div>
+          <label>Alias<input name="alias" maxlength="24" placeholder="Ex. Ninja" required></label>
+          <label>Race<input name="breed" maxlength="80" placeholder="Ex. Berger allemand"></label>
+          <label>Date de naissance<input name="birth_date" type="date"></label>
+          <label>Poids (kg)<input name="weight_kg" type="number" min="0.1" max="150" step="0.1" placeholder="Ex. 32,5"></label>
+          <label>Taille au garrot (cm)<input name="height_cm" type="number" min="10" max="120" step="0.1" placeholder="Ex. 62"></label>
+          <label>Technicité<input name="specialty" maxlength="100" placeholder="Ex. Piste / défense"></label>
+          <label>Niveau<select name="level"><option value="">Non renseigné</option><option>En formation</option><option>Opérationnel</option><option>Retraité</option></select></label>
+          <label class="full">Provenance<input name="origin" maxlength="160" placeholder="Élevage, unité, refuge, ville ou pays d’origine"></label>
+          <label class="full">Notes<textarea name="notes" maxlength="500" rows="3" placeholder="Caractère, particularités ou informations utiles"></textarea></label>
+          <div class="full dog-form-actions"><button id="cancelDogFormBtn" class="secondary" type="button">Annuler</button><button id="saveDogBtn" class="primary" type="submit">Enregistrer le chien</button></div>
         </form>
-        <p class="small muted">Utilise un alias si tu veux rester entièrement anonyme. Tu peux ensuite ajouter une photo à chaque chien.</p>
+        <p class="small muted">Ces informations restent dans ton profil privé. Seuls l’alias et la photo accompagnent les activités que tu choisis de partager.</p>
       </div>
       <div class="card">
         <div class="card-title-row"><h3>Objectifs annuels</h3><span>🏆</span></div>
@@ -488,7 +541,7 @@
   <nav class="bottom-nav">
     <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
     <button data-page="feedPage"><span class="nav-icon">🐕‍🦺</span><span>Amis</span></button>
-    <button id="navRecord" class="nav-paw"><span class="nav-icon">🐾</span><span>Pistage</span></button>
+    <button id="navRecord" class="nav-paw" data-page="trainingPage"><span class="nav-icon">◎</span><span>Terrain</span></button>
     <button data-page="mapPage"><span class="nav-icon">🗺️</span><span>Carte</span></button>
     <button data-page="profilePage"><span class="nav-icon">🐕</span><span>Profil</span></button>
   </nav>
@@ -497,7 +550,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1016"></script>
-<script src="./v2.js?v=2001"></script>
+<script type="module" src="./app.js?v=1024"></script>
+<script src="./v2.js?v=2009"></script>
 </body>
 </html>

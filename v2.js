@@ -20,10 +20,11 @@
 
   function syncDogMirror(){
     const alias = (q('#topDogAlias')?.textContent || '').trim();
+    const meta = (q('#topDogAlias')?.dataset?.dogMeta || '').trim();
     const dogName = q('#v2DogName');
     const dogMeta = q('#v2DogMeta');
     if(dogName) dogName.textContent = alias || 'Chien actif';
-    if(dogMeta) dogMeta.textContent = alias ? 'Binôme sélectionné pour le terrain' : 'Sélectionne ton chien depuis le profil';
+    if(dogMeta) dogMeta.textContent = alias ? (meta || 'Binôme sélectionné pour le terrain') : 'Sélectionne ton chien depuis le profil';
     copyPhoto(q('#topDogPhoto') || q('#heroDogPhoto'), q('#v2DogPhoto'));
   }
 
@@ -52,8 +53,7 @@
 
     const legacyHero = q('.v8-hero', home);
     const heroBrand = q('.hero-brand', legacyHero);
-    const pisteBtn = q('#newPisteBtn');
-    const trainingBtn = q('#newTrainingHomeBtn');
+    const terrainBtn = q('#openTerrainHomeBtn');
     const resume = q('#resumeBanner');
     const sync = q('#syncBanner');
     const kpis = q('.v8-kpis', home);
@@ -71,13 +71,12 @@
       <div class="v2-action-card">
         <div class="v2-action-copy">
           <span class="v2-action-icon">◎</span>
-          <div><b>Prêt pour le terrain</b><small>Démarre un pistage opérationnel ou une séance d’entraînement.</small></div>
+          <div><b>Prêt pour le terrain</b><small>Opérationnel, entraînement et coaching au même endroit.</small></div>
         </div>
         <div class="v2-action-buttons"></div>
       </div>`;
     const actionButtons = q('.v2-action-buttons', actionSection);
-    if(pisteBtn) actionButtons.appendChild(pisteBtn);
-    if(trainingBtn) actionButtons.appendChild(trainingBtn);
+    if(terrainBtn) actionButtons.appendChild(terrainBtn);
 
     const dogSection = document.createElement('section');
     dogSection.className = 'v2-section';
@@ -132,16 +131,16 @@
 
     const defs = [
       {page:'homePage', icon:'⌂', label:'Accueil'},
-      {page:'trainingPage', icon:'🐾', label:'Entraînement'},
-      {record:true, icon:'◎', label:'Pister'},
-      {page:'analysisPage', icon:'▥', label:'Analyse'},
+      {page:'feedPage', icon:'🐕‍🦺', label:'Amis'},
+      {page:'trainingPage', icon:'◎', label:'Terrain'},
+      {page:'mapPage', icon:'🗺️', label:'Carte'},
       {page:'profilePage', icon:'○', label:'Profil'}
     ];
 
     buttons.forEach((btn, i) => {
       const d = defs[i];
       if(!d) return;
-      if(!d.record) btn.dataset.page = d.page;
+      btn.dataset.page = d.page;
       btn.innerHTML = `<span class="nav-icon">${d.icon}</span><span>${d.label}</span>`;
     });
 
@@ -155,7 +154,7 @@
     document.addEventListener('click', e => {
       const btn = e.target.closest('[data-page]');
       if(btn?.dataset?.page) setTimeout(() => setActive(btn.dataset.page), 0);
-      if(e.target.closest('#navRecord')) setTimeout(() => setActive('recordPage'), 0);
+      if(e.target.closest('#navRecord')) setTimeout(() => setActive('trainingPage'), 0);
     }, true);
 
     const pages = qa('.page');
@@ -169,15 +168,8 @@
     const title = q('title');
     if(title) title.textContent = 'PISTE Community V2';
 
-    const record = q('#newPisteBtn b');
-    if(record) record.textContent = 'DÉMARRER UNE PISTE';
-    const recordSmall = q('#newPisteBtn small');
-    if(recordSmall) recordSmall.textContent = 'Pistage opérationnel';
-
-    const train = q('#newTrainingHomeBtn b');
-    if(train) train.textContent = 'ENTRAÎNEMENT';
-    const trainSmall = q('#newTrainingHomeBtn small');
-    if(trainSmall) trainSmall.textContent = 'Préparer une séance';
+    const terrain = q('#openTerrainHomeBtn b');
+    if(terrain) terrain.textContent = 'DÉMARRER UNE ACTIVITÉ';
   }
 
   function monitorDynamicData(){
@@ -210,8 +202,8 @@
    Coaching Live — architecture préparée, NON ACTIVÉE
    ========================================================================== */
 window.PISTE_COACHING = Object.freeze({
-  enabled: false,
-  version: 'prep-1',
+  enabled: true,
+  version: '10.21',
   roles: ['driver','coach','observer'],
   capabilities: {
     liveLocation: true,
