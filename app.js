@@ -5,10 +5,11 @@ const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
 let currentStatsScope='mine';
-let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, coachingMap=null, coachingLayers=[], coachingChannel=null;
+let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingChannel=null;
 let wakeLock=null;
 let plannerPoints=[], plannerWaypoints=[], plannerTool='route', coachingSessions=[], activeCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, liveMarkerTool='off', coachingAutoMetrics=null;
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
+let coachingLayerVisibility={planned:true,trace:true,actual:true,odor:true,markers:true},plannerDraftTimer=null;
 const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{icon:'📦',label:'Objet déposé'},direction:{icon:'↪️',label:'Changement de direction'},crossing:{icon:'🔀',label:'Croisement'},contamination:{icon:'👥',label:'Contamination'},danger:{icon:'⚠️',label:'Danger'},subject:{icon:'👤',label:'Personne recherchée'},note:{icon:'📍',label:'Note'}};
 const LIVE_MARKERS={loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
 let gps={watch:null,start:null,timer:null,points:[],distance:0,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0};
@@ -121,7 +122,7 @@ function renderTrainingRoutes(){
  </div>`).join(''):'<p class="muted small">Aucun tracé préparé pour le moment.</p>';
  el.querySelectorAll('.startPreparedRoute').forEach(b=>b.onclick=()=>startTrainingFromRoute(b.dataset.id));
  el.querySelectorAll('.editPreparedRoute').forEach(b=>b.onclick=()=>editTrainingRoute(b.dataset.id));
- el.querySelectorAll('.coachPreparedRoute').forEach(b=>b.onclick=()=>{showPage('coachingPage');setTimeout(()=>{$('coachingRouteSelect').value=b.dataset.id},200)});
+ el.querySelectorAll('.coachPreparedRoute').forEach(b=>b.onclick=()=>{showPage('coachingPage');setCoachingStage('prepare');setTimeout(()=>{$('coachingRouteSelect').value=b.dataset.id},200)});
  el.querySelectorAll('.deletePreparedRoute').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce tracé préparé ?'))return;await supabase.from('training_routes').delete().eq('id',b.dataset.id);await loadTrainingRoutes()});
 }
 function initPlanner(route=null){
@@ -130,10 +131,12 @@ function initPlanner(route=null){
   if(plannerMap){plannerMap.remove();plannerMap=null}plannerUserMarker=null;plannerAccuracyCircle=null;
   plannerMap=L.map('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
   addCleanBaseLayers(plannerMap);
-  plannerPoints=route&&Array.isArray(route.route)?route.route.map(x=>({lat:Number(x.lat),lon:Number(x.lon)})):[];
-  plannerWaypoints=route&&Array.isArray(route.waypoints)?route.waypoints.map(x=>({...x})):[];plannerTool='route';setPlannerTool('route');
-  plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual',...(route?.odor_model||{})};setOdorForm(plannerOdorModel);
-  $('routeName').value=route?.name||'';
+  const draft=!route?readPlannerDraft():null,source=route||draft;
+  plannerPoints=source&&Array.isArray(source.route)?source.route.map(x=>({lat:Number(x.lat),lon:Number(x.lon)})):[];
+  plannerWaypoints=source&&Array.isArray(source.waypoints)?source.waypoints.map(x=>({...x})):[];plannerTool='route';setPlannerTool('route');
+  plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual',...(source?.odor_model||{})};setOdorForm(plannerOdorModel);
+  $('routeName').value=source?.name||'';
+  if(draft)$('plannerMsg').textContent='Brouillon récupéré automatiquement.';
   redrawPlanner();
   plannerMap.on('click',e=>{if(plannerTool==='route')plannerPoints.push({lat:e.latlng.lat,lon:e.latlng.lng});else addScenarioMarker(e.latlng);redrawPlanner()});
  },100);
@@ -141,6 +144,10 @@ function initPlanner(route=null){
 function plannerDistance(){
  let d=0;for(let i=1;i<plannerPoints.length;i++)d+=hav(plannerPoints[i-1],plannerPoints[i]);return d/1000;
 }
+function plannerDraftKey(){return `piste-planner-draft-${session?.user?.id||'local'}`}
+function readPlannerDraft(){try{return JSON.parse(localStorage.getItem(plannerDraftKey())||'null')}catch{return null}}
+function savePlannerDraft(){clearTimeout(plannerDraftTimer);plannerDraftTimer=setTimeout(()=>{if(window.editingTrainingRouteId)return;try{localStorage.setItem(plannerDraftKey(),JSON.stringify({name:$('routeName')?.value||'',route:plannerPoints,waypoints:plannerWaypoints,odor_model:readOdorForm(),saved_at:new Date().toISOString()}));if($('plannerDraftStatus'))$('plannerDraftStatus').textContent='Brouillon sauvegardé'}catch{}},250)}
+function clearPlannerDraft(){try{localStorage.removeItem(plannerDraftKey())}catch{}}
 function numberOrNull(v){return v===''||v===null?null:Number(v)}
 function compassLabel(deg){return ['N','NE','E','SE','S','SO','O','NO'][Math.round((((Number(deg)||0)%360)+360)%360/45)%8]}
 function destinationPoint(p,bearing,distance){const R=6371000,d=distance/R,b=bearing*Math.PI/180,lat1=p.lat*Math.PI/180,lon1=p.lon*Math.PI/180,lat2=Math.asin(Math.sin(lat1)*Math.cos(d)+Math.cos(lat1)*Math.sin(d)*Math.cos(b)),lon2=lon1+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(lat1),Math.cos(d)-Math.sin(lat1)*Math.sin(lat2));return{lat:lat2*180/Math.PI,lon:lon2*180/Math.PI}}
@@ -171,6 +178,7 @@ function redrawPlanner(fit=true){
  $('plannedDistance').textContent=`${plannerDistance().toFixed(2)} km`;
  renderPlannerScenarioList();
  updateOdorPreview();
+ savePlannerDraft();
 }
 function setPlannerTool(tool){plannerTool=tool;document.querySelectorAll('[data-planner-tool]').forEach(b=>b.classList.toggle('active',b.dataset.plannerTool===tool))}
 function addScenarioMarker(latlng){const def=SCENARIO_MARKERS[plannerTool]||SCENARIO_MARKERS.note,note=prompt(`${def.label} — ajoute une précision (facultatif) :`,'');if(note===null)return;let duration_min=null;if(plannerTool==='pause'){const d=prompt('Temps d’attente sur place en minutes (facultatif) :','5');if(d!==null&&d.trim())duration_min=Math.max(0,Number(d)||0)}plannerWaypoints.push({id:crypto.randomUUID?.()||String(Date.now()),type:plannerTool,lat:latlng.lat,lon:latlng.lng,note:note.trim(),duration_min,visibility:'coach'})}
@@ -188,7 +196,7 @@ async function savePlanner(){
   ({error}=await supabase.from('training_routes').insert(payload));
  }
  if(error){$('plannerMsg').textContent='Erreur : '+error.message;return}
- window.editingTrainingRouteId=null;$('plannerMsg').textContent='Tracé enregistré.';await loadTrainingRoutes();showPage('trainingPage');
+ window.editingTrainingRouteId=null;clearPlannerDraft();$('plannerMsg').textContent='Tracé enregistré.';await loadTrainingRoutes();showPage('trainingPage');
 }
 function editTrainingRoute(id){
  const r=trainingRoutes.find(x=>x.id===id);if(!r)return;
@@ -202,11 +210,13 @@ function startTrainingFromRoute(id){
 function applySelectedTrainingRoute(){
  const b=$('plannedRouteBanner');if(!b)return;
  initLiveMap();
+ plannedLiveOdorLayers.forEach(x=>{try{x.remove()}catch{}});plannedLiveOdorLayers=[];
  if(!selectedTrainingRoute){b.classList.add('hidden');if(plannedLiveLine){plannedLiveLine.remove();plannedLiveLine=null}return}
  b.classList.remove('hidden');$('plannedRouteName').textContent=selectedTrainingRoute.name;$('plannedRouteInfo').textContent=`${fmt(selectedTrainingRoute.planned_distance_km,2)} km prévus`;
  if(liveMap&&Array.isArray(selectedTrainingRoute.route)&&selectedTrainingRoute.route.length>1){
   if(plannedLiveLine)plannedLiveLine.remove();
   plannedLiveLine=L.polyline(selectedTrainingRoute.route.map(p=>[p.lat,p.lon]),{weight:5,color:'#7a5cc7',dashArray:'9 8',opacity:.8}).addTo(liveMap);
+  addOdorLayers(liveMap,selectedTrainingRoute.route,selectedTrainingRoute.odor_model||{},plannedLiveOdorLayers);
   liveMap.fitBounds(plannedLiveLine.getBounds(),{padding:[25,25]});
  }
 }
@@ -221,11 +231,13 @@ async function loadCoachingHub(){
 function myCoachingRole(s){if(s.owner_id===session?.user?.id)return 'driver';return s.coaching_members?.find(m=>m.user_id===session?.user?.id)?.role||'observer'}
 function coachingRoleLabel(role){return role==='driver'?'Conducteur':role==='coach'?'Coach':role==='traceur'?'Traceur':'Observateur'}
 function coachingStatusLabel(v){return v==='live'?'En direct':v==='ended'?'Terminée':v==='cancelled'?'Annulée':'En attente'}
+function setCoachingStage(stage){document.querySelectorAll('[data-coaching-stage]').forEach(b=>b.classList.toggle('active',b.dataset.coachingStage===stage));$('coachingPrepareStage')?.classList.toggle('stage-hidden',stage!=='prepare');$('coachingSessionsCard')?.classList.toggle('stage-hidden',stage!=='prepare');if(stage==='prepare')$('coachingLivePanel')?.classList.add('hidden');else if(activeCoachingSession)$('coachingLivePanel')?.classList.remove('hidden');$('coachingDebriefStage')?.classList.toggle('stage-hidden',stage!=='debrief');if(stage==='debrief'&&activeCoachingSession)calculateCoachingDebrief();setTimeout(()=>coachingMap?.invalidateSize(),100)}
+function updateCoachingPreflight(){const el=$('coachingPreflight');if(!el||!activeCoachingSession)return;const route=activeCoachingSession.planned_route||[],odor=activeCoachingSession.odor_model||{},gpsReady=!!navigator.geolocation,role=myCoachingRole(activeCoachingSession);el.innerHTML=`<span class="${route.length>1?'ok':'warn'}">${route.length>1?'✓':'!'} Tracé ${route.length>1?'chargé':'absent'}</span><span class="${odor.enabled?'ok':'muted'}">${odor.enabled?'✓':'○'} Odeur ${odor.enabled?'active':'désactivée'}</span><span class="${gpsReady?'ok':'warn'}">${gpsReady?'✓':'!'} GPS ${gpsReady?'disponible':'indisponible'}</span><span class="ok">✓ Rôle : ${esc(coachingRoleLabel(role))}</span>`}
 function renderCoachingSessions(){const el=$('coachingSessionsList');if(!el)return;el.innerHTML=coachingSessions.length?coachingSessions.map(s=>`<div class="route-row"><div class="route-icon">${s.status==='live'?'🔴':'🎧'}</div><div class="route-main"><b>${esc(s.name||'Session coachée')}</b><span>${coachingStatusLabel(s.status)} • ${coachingRoleLabel(myCoachingRole(s))} • code ${esc(s.invite_code)}</span></div><div class="route-actions"><button class="secondary openCoachingSession" data-id="${s.id}">Ouvrir</button></div></div>`).join(''):'<p class="muted small">Aucune session coachée.</p>';el.querySelectorAll('.openCoachingSession').forEach(b=>b.onclick=()=>openCoachingSession(b.dataset.id))}
 async function createCoaching(){const route=trainingRoutes.find(r=>r.id===$('coachingRouteSelect').value);if(!route){$('coachingCreateMsg').textContent='Choisis d’abord un tracé préparé.';return}const payload={owner_id:session.user.id,route_id:route.id,name:$('coachingSessionName').value.trim()||route.name,planned_route:route.route||[],planned_markers:route.waypoints||[],odor_model:route.odor_model||{},visibility_mode:$('coachingVisibility').value,invite_code:coachingCode(),expires_at:new Date(Date.now()+7*864e5).toISOString()};$('coachingCreateMsg').textContent='Création…';const {data,error}=await supabase.from('coaching_sessions').insert(payload).select().single();if(error){$('coachingCreateMsg').textContent='Erreur : '+error.message;return}await supabase.from('coaching_members').insert({session_id:data.id,user_id:session.user.id,role:'driver'});$('coachingCreateMsg').textContent=`Session créée — code ${data.invite_code}`;await loadCoachingHub();openCoachingSession(data.id)}
 async function joinCoaching(){const code=$('coachingInviteInput').value.trim().toUpperCase(),role=$('coachingJoinRole').value;if(!code)return;const {data,error}=await supabase.rpc('join_coaching_session',{p_invite_code:code,p_role:role});if(error){$('coachingJoinMsg').textContent='Impossible de rejoindre : '+error.message;return}$('coachingJoinMsg').textContent=`Session rejointe comme ${coachingRoleLabel(role).toLowerCase()}.`;await loadCoachingHub();if(data)openCoachingSession(data)}
 function clearCoachingRealtime(){if(coachingChannel){supabase.removeChannel(coachingChannel);coachingChannel=null}}
-async function openCoachingSession(id){clearCoachingRealtime();let s=coachingSessions.find(x=>x.id===id);if(!s){const {data}=await supabase.from('coaching_sessions').select('*,coaching_members(role,user_id)').eq('id',id).single();s=data}if(!s)return;activeCoachingSession=s;coachingAutoMetrics=null;const role=myCoachingRole(s);$('coachingLivePanel').classList.remove('hidden');$('coachingRole').textContent=coachingRoleLabel(role).toUpperCase();$('coachingLiveTitle').textContent=s.name||'Session coachée';$('coachingLiveCode').textContent=s.invite_code;$('coachingLiveStatus').textContent=`${coachingStatusLabel(s.status)} • indices ${s.visibility_mode==='all'?'partagés':s.visibility_mode==='progressive'?'progressifs':'réservés au coach'}`;$('startCoachingLive').textContent=s.status==='live'?'Ouvrir le suivi GPS':'Démarrer la session';$('startCoachingLive').classList.toggle('hidden',role!=='driver'||s.status==='ended');$('coachAnnotationTools').classList.toggle('hidden',!['coach','driver'].includes(role)||s.status==='ended');$('traceurTools').classList.toggle('hidden',role!=='traceur'||s.status==='ended');$('calculateCoachingDebrief').classList.toggle('hidden',s.status==='waiting');$('coachingDebriefForm').classList.toggle('hidden',s.status!=='live'||!['coach','driver'].includes(role));$('coachingAutoDebrief').classList.add('hidden');await renderCoachingMap();await loadCoachingMessages();coachingChannel=supabase.channel(`coaching-${s.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_live_points',filter:`session_id=eq.${s.id}`},()=>renderCoachingMap()).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_trace_points',filter:`session_id=eq.${s.id}`},()=>renderCoachingMap()).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_markers',filter:`session_id=eq.${s.id}`},()=>renderCoachingMap()).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_messages',filter:`session_id=eq.${s.id}`},()=>loadCoachingMessages()).subscribe();setTimeout(()=>$('coachingLivePanel').scrollIntoView({behavior:'smooth'}),100)}
+async function openCoachingSession(id){clearCoachingRealtime();let s=coachingSessions.find(x=>x.id===id);if(!s){const {data}=await supabase.from('coaching_sessions').select('*,coaching_members(role,user_id)').eq('id',id).single();s=data}if(!s)return;activeCoachingSession=s;coachingAutoMetrics=null;const role=myCoachingRole(s);$('coachingLivePanel').classList.remove('hidden');$('coachingRole').textContent=coachingRoleLabel(role).toUpperCase();$('coachingLiveTitle').textContent=s.name||'Session coachée';$('coachingLiveCode').textContent=s.invite_code;$('coachingLiveStatus').textContent=`${coachingStatusLabel(s.status)} • indices ${s.visibility_mode==='all'?'partagés':s.visibility_mode==='progressive'?'progressifs':'réservés au coach'}`;$('startCoachingLive').textContent=s.status==='live'?'Ouvrir le suivi GPS':'Démarrer la session';$('startCoachingLive').classList.toggle('hidden',role!=='driver'||s.status==='ended');$('coachAnnotationTools').classList.toggle('hidden',!['coach','driver'].includes(role)||s.status==='ended');$('traceurTools').classList.toggle('hidden',role!=='traceur'||s.status==='ended');$('calculateCoachingDebrief').classList.toggle('hidden',s.status==='waiting');$('coachingDebriefForm').classList.toggle('hidden',s.status!=='live'||!['coach','driver'].includes(role));$('coachingAutoDebrief').classList.add('hidden');updateCoachingPreflight();setCoachingStage(s.status==='ended'?'debrief':'live');await renderCoachingMap();await loadCoachingMessages();coachingChannel=supabase.channel(`coaching-${s.id}`).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_live_points',filter:`session_id=eq.${s.id}`},()=>renderCoachingMap()).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_trace_points',filter:`session_id=eq.${s.id}`},()=>renderCoachingMap()).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_markers',filter:`session_id=eq.${s.id}`},()=>renderCoachingMap()).on('postgres_changes',{event:'INSERT',schema:'public',table:'coaching_messages',filter:`session_id=eq.${s.id}`},()=>loadCoachingMessages()).subscribe();setTimeout(()=>$('coachingLivePanel').scrollIntoView({behavior:'smooth'}),100)}
 function markerVisible(w,s,points=[]){if(s.visibility_mode==='all'||myCoachingRole(s)!=='driver'||w.visibility==='all')return true;if(s.visibility_mode==='progressive')return points.some(p=>hav(p,w)<=35);return false}
 async function renderCoachingMap(){
  if(!activeCoachingSession||!$('coachingMap'))return;
@@ -233,20 +245,19 @@ async function renderCoachingMap(){
  const points=liveRes.data||[],trace=traceRes.data||[],annotations=markerRes.data||[];
  if(coachingMap){coachingMap.remove();coachingMap=null}coachingMap=L.map('coachingMap').setView([48.3,7.45],9);addCleanBaseLayers(coachingMap);coachingLayers=[];
  const route=activeCoachingSession.planned_route||[];
- const showOdor=myCoachingRole(activeCoachingSession)!=='driver'||activeCoachingSession.status==='ended';
- if(showOdor)addOdorLayers(coachingMap,route,activeCoachingSession.odor_model||{},coachingLayers);
- if(route.length>1)coachingLayers.push(L.polyline(route.map(p=>[p.lat,p.lon]),{color:'#9fbd65',weight:5,dashArray:'10 8'}).addTo(coachingMap));
- if(trace.length>1)coachingLayers.push(L.polyline(trace.map(p=>[p.lat,p.lon]),{color:'#e28b3f',weight:5,dashArray:'5 6'}).addTo(coachingMap));
- if(points.length>1)coachingLayers.push(L.polyline(points.map(p=>[p.lat,p.lon]),{color:'#2789d8',weight:5}).addTo(coachingMap));
- (activeCoachingSession.planned_markers||[]).filter(w=>markerVisible(w,activeCoachingSession,points)).forEach(w=>{const d=SCENARIO_MARKERS[w.type]||SCENARIO_MARKERS.note;coachingLayers.push(L.marker([w.lat,w.lon],{icon:L.divIcon({className:'scenario-map-icon',html:`<span>${d.icon}</span>`,iconSize:[34,34],iconAnchor:[17,17]})}).addTo(coachingMap).bindPopup(`<b>${esc(d.label)}</b>${w.note?`<br>${esc(w.note)}`:''}`))});
- annotations.forEach(w=>{const d=LIVE_MARKERS[w.marker_type]||LIVE_MARKERS.note;coachingLayers.push(L.marker([w.lat,w.lon],{icon:L.divIcon({className:'live-map-icon',html:`<span>${d.icon}</span>`,iconSize:[32,32],iconAnchor:[16,16]})}).addTo(coachingMap).bindPopup(`<b>${esc(d.label)}</b>${w.note?`<br>${esc(w.note)}`:''}`))});
+ if(coachingLayerVisibility.odor)addOdorLayers(coachingMap,route,activeCoachingSession.odor_model||{},coachingLayers);
+ if(coachingLayerVisibility.planned&&route.length>1)coachingLayers.push(L.polyline(route.map(p=>[p.lat,p.lon]),{color:'#9fbd65',weight:5,dashArray:'10 8'}).addTo(coachingMap));
+ if(coachingLayerVisibility.trace&&trace.length>1)coachingLayers.push(L.polyline(trace.map(p=>[p.lat,p.lon]),{color:'#e28b3f',weight:5,dashArray:'5 6'}).addTo(coachingMap));
+ if(coachingLayerVisibility.actual&&points.length>1)coachingLayers.push(L.polyline(points.map(p=>[p.lat,p.lon]),{color:'#2789d8',weight:5}).addTo(coachingMap));
+ if(coachingLayerVisibility.markers)(activeCoachingSession.planned_markers||[]).filter(w=>markerVisible(w,activeCoachingSession,points)).forEach(w=>{const d=SCENARIO_MARKERS[w.type]||SCENARIO_MARKERS.note;coachingLayers.push(L.marker([w.lat,w.lon],{icon:L.divIcon({className:'scenario-map-icon',html:`<span>${d.icon}</span>`,iconSize:[34,34],iconAnchor:[17,17]})}).addTo(coachingMap).bindPopup(`<b>${esc(d.label)}</b>${w.note?`<br>${esc(w.note)}`:''}`))});
+ if(coachingLayerVisibility.markers)annotations.forEach(w=>{const d=LIVE_MARKERS[w.marker_type]||LIVE_MARKERS.note;coachingLayers.push(L.marker([w.lat,w.lon],{icon:L.divIcon({className:'live-map-icon',html:`<span>${d.icon}</span>`,iconSize:[32,32],iconAnchor:[16,16]})}).addTo(coachingMap).bindPopup(`<b>${esc(d.label)}</b>${w.note?`<br>${esc(w.note)}`:''}`))});
  const all=[...route,...trace,...points];if(all.length)coachingMap.fitBounds(L.latLngBounds(all.map(p=>[p.lat,p.lon])),{padding:[30,30]});
  coachingMap.on('click',e=>addLiveCoachingMarker(e.latlng));
 }
 async function addLiveCoachingMarker(latlng){if(liveMarkerTool==='off'||!activeCoachingSession||!['coach','driver'].includes(myCoachingRole(activeCoachingSession)))return;const d=LIVE_MARKERS[liveMarkerTool],note=prompt(`${d.label} — observation facultative :`,'');if(note===null)return;const {error}=await supabase.from('coaching_markers').insert({session_id:activeCoachingSession.id,author_id:session.user.id,lat:latlng.lat,lon:latlng.lng,marker_type:liveMarkerTool,note:note.trim()||null});if(error)alert('Annotation impossible : '+error.message);else renderCoachingMap()}
 async function sendCoachingMessage(body,type='text'){if(!activeCoachingSession||!body.trim())return;const {error}=await supabase.from('coaching_messages').insert({session_id:activeCoachingSession.id,author_id:session.user.id,message_type:type,body:body.trim()});if(!error&&$('coachingMessageInput'))$('coachingMessageInput').value=''}
 async function loadCoachingMessages(){if(!activeCoachingSession)return;const {data=[]}=await supabase.from('coaching_messages').select('*').eq('session_id',activeCoachingSession.id).order('created_at',{ascending:false}).limit(30);$('coachingMessages').innerHTML=data.map(m=>`<div class="${m.author_id===session.user.id?'mine':''}"><small>${new Date(m.created_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</small>${esc(m.body)}</div>`).join('')}
-async function startActiveCoaching(){if(!activeCoachingSession)return;if(activeCoachingSession.status!=='live'){const {error}=await supabase.from('coaching_sessions').update({status:'live',started_at:new Date().toISOString()}).eq('id',activeCoachingSession.id);if(error){alert(error.message);return}activeCoachingSession.status='live'}selectedTrainingRoute={id:activeCoachingSession.route_id,name:activeCoachingSession.name,route:activeCoachingSession.planned_route,waypoints:activeCoachingSession.planned_markers,planned_distance_km:0};beginNewPiste('training');setTimeout(()=>applySelectedTrainingRoute(),150)}
+async function startActiveCoaching(){if(!activeCoachingSession)return;if(activeCoachingSession.status!=='live'){const {error}=await supabase.from('coaching_sessions').update({status:'live',started_at:new Date().toISOString()}).eq('id',activeCoachingSession.id);if(error){alert(error.message);return}activeCoachingSession.status='live'}selectedTrainingRoute={id:activeCoachingSession.route_id,name:activeCoachingSession.name,route:activeCoachingSession.planned_route||[],waypoints:activeCoachingSession.planned_markers||[],odor_model:activeCoachingSession.odor_model||{},planned_distance_km:Number((routeDistance(activeCoachingSession.planned_route||[])/1000).toFixed(2))};beginNewPiste('training');setTimeout(()=>applySelectedTrainingRoute(),250)}
 async function saveCoachingDebrief(e){e.preventDefault();if(!activeCoachingSession)return;const f=new FormData(e.target),{data:points=[]}=await supabase.from('coaching_live_points').select('lat,lon,accuracy_m,recorded_at').eq('session_id',activeCoachingSession.id).order('recorded_at');if(!coachingAutoMetrics)await calculateCoachingDebrief();const payload={session_id:activeCoachingSession.id,owner_id:activeCoachingSession.owner_id,coach_id:myCoachingRole(activeCoachingSession)==='driver'?null:session.user.id,strengths:f.get('strengths')||null,improvement_area:f.get('improvement_area')||null,coach_notes:f.get('coach_notes')||null,actual_track:points,auto_metrics:coachingAutoMetrics||{},updated_at:new Date().toISOString()};const {error}=await supabase.from('coaching_debriefs').upsert(payload);if(error){alert(error.message);return}const endedId=activeCoachingSession.id,{error:endError}=await supabase.rpc('finish_coaching_session',{p_session_id:endedId});if(endError){alert('Débrief enregistré, mais clôture impossible : '+endError.message);return}activeCoachingSession.status='ended';clearCoachingRealtime();alert('Débrief enregistré. Les tracés, événements et mesures automatiques sont conservés.');await loadCoachingHub();await openCoachingSession(endedId);await calculateCoachingDebrief()}
 function sendActiveCoachingPoint(p){if(!activeCoachingSession||activeCoachingSession.status!=='live'||myCoachingRole(activeCoachingSession)!=='driver'||!navigator.onLine||Date.now()-coachingLastPointAt<5000)return;coachingLastPointAt=Date.now();supabase.from('coaching_live_points').insert({session_id:activeCoachingSession.id,owner_id:session.user.id,lat:p.lat,lon:p.lon,accuracy_m:p.acc,recorded_at:new Date(p.t).toISOString()}).then(()=>{}).catch(()=>{})}
 function startTraceurTracking(){if(!activeCoachingSession||myCoachingRole(activeCoachingSession)!=='traceur'||!navigator.geolocation)return;traceurLastPointAt=0;$('startTraceurTrack').disabled=true;$('stopTraceurTrack').disabled=false;$('traceurStatus').textContent='Pose en cours — acquisition GPS…';traceurWatch=navigator.geolocation.watchPosition(pos=>{if(Date.now()-traceurLastPointAt<5000||pos.coords.accuracy>45)return;traceurLastPointAt=Date.now();const p={session_id:activeCoachingSession.id,owner_id:session.user.id,lat:pos.coords.latitude,lon:pos.coords.longitude,accuracy_m:pos.coords.accuracy,recorded_at:new Date(pos.timestamp).toISOString()};supabase.from('coaching_trace_points').insert(p).then(({error})=>{if(error)$('traceurStatus').textContent='Envoi interrompu : '+error.message;else $('traceurStatus').textContent=`Pose enregistrée • précision ${Math.round(p.accuracy_m)} m`}).catch(()=>{$('traceurStatus').textContent='Hors réseau : la pose nécessite une connexion.'})},err=>$('traceurStatus').textContent='GPS : '+err.message,{enableHighAccuracy:true,maximumAge:1000,timeout:15000})}
@@ -664,7 +675,7 @@ function renderHistory(){
 
 function initLiveMap(force=false){
  const el=$('liveMap');if(!el)return;
- if(force&&liveMap){try{liveMap.remove()}catch{}liveMap=null;liveLine=null;liveMarker=null;plannedLiveLine=null}
+ if(force&&liveMap){try{liveMap.remove()}catch{}liveMap=null;liveLine=null;liveMarker=null;plannedLiveLine=null;plannedLiveOdorLayers=[]}
  if(liveMap){setTimeout(()=>liveMap.invalidateSize(),80);return}
  liveMap=L.map('liveMap',{zoomControl:true}).setView([48.3,7.45],8);
  addCleanBaseLayers(liveMap);
@@ -678,8 +689,10 @@ function redrawLiveRecordingMap(){
  if(liveMarker){try{liveMarker.remove()}catch{}liveMarker=null}
  if(gps.startPoint)liveMarker=L.marker([gps.startPoint.lat,gps.startPoint.lon]).addTo(liveMap).bindPopup('Départ');
  if(plannedLiveLine){try{plannedLiveLine.remove()}catch{}plannedLiveLine=null}
+ plannedLiveOdorLayers.forEach(x=>{try{x.remove()}catch{}});plannedLiveOdorLayers=[];
  if(selectedTrainingRoute&&Array.isArray(selectedTrainingRoute.route)&&selectedTrainingRoute.route.length>1){
   plannedLiveLine=L.polyline(selectedTrainingRoute.route.map(p=>[p.lat,p.lon]),{weight:5,color:'#7a5cc7',dashArray:'9 8',opacity:.8}).addTo(liveMap);
+  addOdorLayers(liveMap,selectedTrainingRoute.route,selectedTrainingRoute.odor_model||{},plannedLiveOdorLayers);
  }
  const layers=[];if(gps.points?.length>1&&liveLine)layers.push(liveLine);if(plannedLiveLine)layers.push(plannedLiveLine);
  if(layers.length){try{liveMap.fitBounds(L.featureGroup(layers).getBounds(),{padding:[25,25]})}catch{}}
@@ -691,7 +704,7 @@ function resetGpsUI(clear=true){
  $('liveDistance').textContent="0.00";$('liveDuration').textContent="00:00:00";$('liveAccuracy').textContent="—";$('liveLocation').textContent="En attente du GPS";$('gpsMsg').textContent="";
  $('startGpsBtn').disabled=false;$('startGpsBtn').classList.remove('hidden');$('pauseGpsBtn').disabled=true;$('pauseGpsBtn').textContent='PAUSE';$('stopGpsBtn').disabled=true;$('finishFormCard').classList.add('hidden');setGpsStatus('Prêt','idle');
  if(liveLine)liveLine.setLatLngs([]);if(liveMarker){liveMarker.remove();liveMarker=null}
- if(plannedLiveLine){plannedLiveLine.remove();plannedLiveLine=null}if(clear)clearDraft();
+ if(plannedLiveLine){plannedLiveLine.remove();plannedLiveLine=null}plannedLiveOdorLayers.forEach(x=>{try{x.remove()}catch{}});plannedLiveOdorLayers=[];if(clear)clearDraft();
 }
 function beginNewPiste(mode='piste'){
  recordMode=mode;if(mode!=='training')selectedTrainingRoute=null;resetGpsUI();showPage('recordPage');$('pisteForm').reset();$('pisteForm').elements.date.value=today();
@@ -1368,12 +1381,15 @@ $('fullscreenPlannerBtn').onclick=togglePlannerFullscreen;
 $('plannerSearchBtn').onclick=searchPlannerLocation;
 $('plannerSearchInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();searchPlannerLocation()}};
 ['odorEnabled','odorWindDirection','odorWindSpeed','odorAge','odorEnvironment','odorTemperature','odorHumidity'].forEach(id=>{if($(id))$(id).oninput=updateOdorPreview});
-$('openCoachingBtn').onclick=()=>showPage('coachingPage');
+$('routeName').oninput=savePlannerDraft;
+$('openCoachingBtn').onclick=()=>{showPage('coachingPage');setCoachingStage('prepare')};
 $('undoPlannerPoint').onclick=()=>{if(plannerTool==='route')plannerPoints.pop();else plannerWaypoints.pop();redrawPlanner()};
-$('clearPlanner').onclick=()=>{if(confirm('Effacer le tracé et tous les signes du scénario ?')){plannerPoints=[];plannerWaypoints=[];redrawPlanner()}};
+$('clearPlanner').onclick=()=>{if(confirm('Effacer le tracé, les signes et le brouillon ?')){plannerPoints=[];plannerWaypoints=[];clearPlannerDraft();redrawPlanner()}};
 $('saveTrainingRoute').onclick=savePlanner;
 $('detachPlannedRoute').onclick=()=>{selectedTrainingRoute=null;applySelectedTrainingRoute()};
 document.querySelectorAll('[data-planner-tool]').forEach(b=>b.onclick=()=>setPlannerTool(b.dataset.plannerTool));
+document.querySelectorAll('[data-coaching-stage]').forEach(b=>b.onclick=()=>{if(b.dataset.coachingStage!=='prepare'&&!activeCoachingSession){$('coachingJoinMsg').textContent='Ouvre d’abord une session.';return}setCoachingStage(b.dataset.coachingStage)});
+document.querySelectorAll('[data-coaching-layer]').forEach(input=>input.onchange=()=>{coachingLayerVisibility[input.dataset.coachingLayer]=input.checked;renderCoachingMap()});
 $('createCoachingSession').onclick=createCoaching;$('joinCoachingSession').onclick=joinCoaching;$('refreshCoaching').onclick=loadCoachingHub;$('copyCoachingCode').onclick=async()=>{if(activeCoachingSession){await navigator.clipboard?.writeText(activeCoachingSession.invite_code);$('copyCoachingCode').textContent='Copié ✓';setTimeout(()=>$('copyCoachingCode').textContent='Copier',1200)}};$('startCoachingLive').onclick=startActiveCoaching;$('leaveCoachingLive').onclick=()=>{stopTraceurTracking();clearCoachingRealtime();$('coachingLivePanel').classList.add('hidden');activeCoachingSession=null};$('sendCoachingMessage').onclick=()=>sendCoachingMessage($('coachingMessageInput').value);document.querySelectorAll('[data-coaching-quick]').forEach(b=>b.onclick=()=>sendCoachingMessage(b.dataset.coachingQuick,'quick'));document.querySelectorAll('[data-live-marker]').forEach(b=>b.onclick=()=>{liveMarkerTool=b.dataset.liveMarker;document.querySelectorAll('[data-live-marker]').forEach(x=>x.classList.toggle('active',x===b))});$('startTraceurTrack').onclick=startTraceurTracking;$('stopTraceurTrack').onclick=stopTraceurTracking;$('calculateCoachingDebrief').onclick=calculateCoachingDebrief;$('coachingDebriefForm').onsubmit=saveCoachingDebrief;
 
 if($('operationalHistoryTab'))$('operationalHistoryTab').onclick=()=>{

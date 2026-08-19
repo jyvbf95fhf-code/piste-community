@@ -96,4 +96,7 @@ La V10.19 ajoute le rôle de traceur, les annotations cartographiques en direct 
 
 La V10.20 regroupe les lancements sous une entrée unique `Terrain` et améliore le créateur cartographique : recherche de lieu, suivi GPS, plein écran, déplacement et suppression des points et des signes.
 Elle ajoute aussi l’Intelligence olfactive V1 : saisie du vent, de l’âge de piste et du milieu, visualisation d’un couloir olfactif estimé à deux niveaux, copie dans les sessions coachées et indicateurs de débrief. Exécuter `odor-intelligence-v10.20-schema.sql` sur une base déjà équipée des migrations Coaching. Cette visualisation est pédagogique et indicative, pas une mesure physique de l’odeur.
+Le correctif V10.20.1 conserve le tracé préparé et son couloir olfactif sur la carte lors du démarrage d’une session coachée, y compris pour le conducteur.
+
+La V10.21 simplifie le parcours Terrain autour de trois étapes — Préparer, Réaliser et Débriefer — avec un accueil regroupé, une barre d’étapes, un contrôle avant départ, des couches de carte activables, des outils cartographiques fixes et la sauvegarde locale automatique du brouillon. Elle inclut directement le correctif V10.20.1.
 Le SQL ne contient volontairement aucune policy RLS finale.
