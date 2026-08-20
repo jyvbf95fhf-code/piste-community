@@ -492,3 +492,27 @@ input:focus,select:focus,textarea:focus{
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
+
+/* V10.22.1 — cases des couches de carte lisibles sur mobile */
+.coaching-layer-controls label{
+  min-width:0;
+  white-space:nowrap;
+  line-height:1.25;
+}
+.coaching-layer-controls input[type="checkbox"]{
+  -webkit-appearance:checkbox;
+  appearance:auto;
+  display:inline-block;
+  flex:0 0 16px;
+  width:16px;
+  min-width:16px;
+  height:16px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:3px;
+  box-shadow:none;
+  accent-color:#9fbd65;
+}
+@media(max-width:700px){
+  .coaching-layer-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:calc(100% - 20px)}
