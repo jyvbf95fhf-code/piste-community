@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2011">
+<link rel="stylesheet" href="./v2.css?v=2023">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -538,11 +538,36 @@
       </div>
       <div class="card">
         <h3>Exporter mes données</h3>
+        <p class="small muted">Crée une sauvegarde avant toute suppression de compte.</p>
         <div class="export-grid">
           <button id="exportCsvBtn" class="secondary">📄 Export CSV</button>
+          <button id="exportAccountBtn" class="secondary">📦 Sauvegarde complète JSON</button>
           <button id="printReportBtn" class="secondary">🖨️ Bilan PDF / impression</button>
         </div>
       </div>
+      <div class="card">
+        <div class="card-title-row"><h3>Aide</h3><span>?</span></div>
+        <p class="small muted">Retrouve le fonctionnement de l’Accueil, du Terrain, du Coaching, de l’intelligence olfactive, du GPS et du mode hors ligne.</p>
+        <button id="openHelpBtn" class="secondary big" type="button">Ouvrir le centre d’aide</button>
+      </div>
+      <div class="card danger-zone">
+        <h3>Supprimer mon compte</h3>
+        <p class="small muted">Cette action supprime définitivement le compte et toutes les données associées. Elle est irréversible.</p>
+        <button id="openDeleteAccountBtn" class="danger-button" type="button">Supprimer mon compte</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="helpPage" class="page">
+    <div class="record-head"><button class="back" data-page="profilePage">‹ Profil</button><h2>Centre d’aide</h2></div>
+    <div class="card help-intro"><h3>Bien utiliser PISTE Community</h3><p class="muted">Des repères courts pour préparer, enregistrer et analyser une activité.</p><button id="reviewTutorialBtn" class="primary" type="button">Revoir la présentation guidée</button></div>
+    <div class="help-grid">
+      <article class="card"><span>⌂</span><h3>Accueil</h3><p>Consulte les indicateurs, les activités récentes et accède rapidement aux principaux outils.</p></article>
+      <article class="card"><span>◎</span><h3>Terrain</h3><p>Démarre immédiatement un pistage opérationnel ou un entraînement, ou prépare une session complète.</p></article>
+      <article class="card"><span>🎧</span><h3>Coaching</h3><p>Crée ou rejoins une session par code, suis la réalisation en direct puis enregistre le débrief.</p></article>
+      <article class="card"><span>🌬️</span><h3>Intelligence olfactive</h3><p>Visualise une estimation pédagogique selon le vent, l’âge de piste et le milieu. Elle ne remplace pas l’analyse terrain.</p></article>
+      <article class="card"><span>⌖</span><h3>GPS</h3><p>Autorise la localisation précise, garde l’application ouverte et vérifie l’indicateur de précision avant le départ.</p></article>
+      <article class="card"><span>⇄</span><h3>Mode hors ligne</h3><p>Le tracé et le brouillon restent enregistrés sur l’appareil. La synchronisation reprend au retour du réseau.</p></article>
     </div>
   </section>
 
@@ -564,9 +589,29 @@
 </section>
 </main>
 
+<div id="tutorialOverlay" class="guided-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tutorialTitle">
+  <div class="guided-card">
+    <div class="guided-progress"><span id="tutorialProgress"></span><button id="skipTutorialBtn" class="text-btn" type="button">Ignorer</button></div>
+    <div id="tutorialIcon" class="guided-icon">🐕</div>
+    <small id="tutorialStepLabel">BIENVENUE</small><h2 id="tutorialTitle">Découvrir PISTE Community</h2><p id="tutorialText"></p>
+    <div class="guided-actions"><button id="tutorialPrevBtn" class="secondary" type="button">Précédent</button><button id="tutorialNextBtn" class="primary" type="button">Suivant</button></div>
+  </div>
+</div>
+
+<div id="deleteAccountDialog" class="guided-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
+  <div class="guided-card delete-card">
+    <small>ZONE SENSIBLE</small><h2 id="deleteAccountTitle">Supprimer définitivement le compte ?</h2>
+    <p>Toutes tes activités, cartes, chiens, objectifs, sessions de coaching, interactions et photos seront supprimés.</p>
+    <button id="exportBeforeDeleteBtn" class="secondary big" type="button">📦 Exporter mes données d’abord</button>
+    <label>Pour confirmer, écris <b>SUPPRIMER</b><input id="deleteAccountConfirmation" autocomplete="off" maxlength="9" placeholder="SUPPRIMER"></label>
+    <p id="deleteAccountMsg" class="msg" aria-live="polite"></p>
+    <div class="guided-actions"><button id="cancelDeleteAccountBtn" class="secondary" type="button">Conserver mon compte</button><button id="confirmDeleteAccountBtn" class="danger-button" type="button" disabled>Supprimer définitivement</button></div>
+  </div>
+</div>
+
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1025"></script>
+<script type="module" src="./app.js?v=1026"></script>
 <script src="./v2.js?v=2010"></script>
 </body>
 </html>
