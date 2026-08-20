@@ -362,12 +362,58 @@ function updateV8Home(){
  if($('homeTrainingKm'))$('homeTrainingKm').textContent=fmt(trKmV12,1);
  if($('homeTotalKm'))$('homeTotalKm').textContent=fmt(opKmV12+trKmV12,1);
 }
+
+const TUTORIAL_STEPS=[
+ {icon:'🐕',label:'BIENVENUE',title:'Découvrir PISTE Community',text:'En quelques écrans, découvre les fonctions essentielles avant ta première activité.'},
+ {icon:'⌂',label:'ACCUEIL',title:'Tes repères en un coup d’œil',text:'Retrouve tes indicateurs, ton chien actif, tes activités récentes et les raccourcis vers les principaux outils.'},
+ {icon:'◎',label:'TERRAIN',title:'Préparer ou partir immédiatement',text:'Lance un pistage opérationnel, un entraînement libre ou prépare un scénario complet avant de rejoindre le terrain.'},
+ {icon:'🎧',label:'COACHING',title:'Travailler à plusieurs',text:'Crée une session, partage son code, suis la réalisation en direct et conserve un débrief clair.'},
+ {icon:'🌬️',label:'INTELLIGENCE OLFACTIVE',title:'Visualiser une estimation',text:'Le couloir olfactif aide à réfléchir au vent, à l’âge de piste et au milieu. Il reste pédagogique et ne remplace jamais l’analyse terrain.'},
+ {icon:'⌖',label:'GPS',title:'Enregistrer le tracé',text:'Autorise la position précise, attends une précision correcte et garde l’application ouverte pendant le suivi.'},
+ {icon:'⇄',label:'MODE HORS LIGNE',title:'Continuer sans réseau',text:'Le tracé et les brouillons restent sur cet appareil. Ils seront synchronisés automatiquement dès le retour du réseau.'}
+];
+let tutorialIndex=0;
+function tutorialStorageKey(){return `piste_tutorial_v10_23_${session?.user?.id||'guest'}`}
+function renderTutorial(){
+ const step=TUTORIAL_STEPS[tutorialIndex],progress=Math.round((tutorialIndex+1)/TUTORIAL_STEPS.length*100);
+ $('tutorialIcon').textContent=step.icon;$('tutorialStepLabel').textContent=step.label;$('tutorialTitle').textContent=step.title;$('tutorialText').textContent=step.text;
+ $('tutorialProgress').style.setProperty('--tutorial-progress',`${progress}%`);
+ $('tutorialPrevBtn').disabled=tutorialIndex===0;$('tutorialNextBtn').textContent=tutorialIndex===TUTORIAL_STEPS.length-1?'Commencer':'Suivant';
+}
+function openTutorial(force=false){
+ if(!force&&localStorage.getItem(tutorialStorageKey())==='done')return;
+ tutorialIndex=0;renderTutorial();$('tutorialOverlay').classList.remove('hidden');document.body.style.overflow='hidden';
+}
+function closeTutorial(){
+ localStorage.setItem(tutorialStorageKey(),'done');$('tutorialOverlay').classList.add('hidden');document.body.style.overflow='';
+}
+function downloadJson(data,filename){
+ const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+ a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+async function exportAccountData(){
+ if(!session)return;
+ const tables=['profiles','dogs','pistes','entrainements','goals','training_routes','coaching_sessions','coaching_members','coaching_live_points','coaching_trace_points','coaching_messages','coaching_markers','coaching_debriefs','activity_likes','activity_comments'];
+ const entries=await Promise.all(tables.map(async table=>{const {data,error}=await supabase.from(table).select('*');return [table,error?{export_error:error.message}:data]}));
+ downloadJson({format:'PISTE Community',version:'10.23',exported_at:new Date().toISOString(),user_id:session.user.id,data:Object.fromEntries(entries)},`piste-community-sauvegarde-${new Date().toISOString().slice(0,10)}.json`);
+}
+function clearLocalAccountData(){
+ ['piste_sync_queue','piste_active_draft','piste_planner_draft',tutorialStorageKey()].forEach(key=>localStorage.removeItem(key));
+}
+async function deleteCurrentAccount(){
+ const confirmation=$('deleteAccountConfirmation').value.trim().toUpperCase(),msg=$('deleteAccountMsg'),button=$('confirmDeleteAccountBtn');
+ if(confirmation!=='SUPPRIMER')return;
+ button.disabled=true;msg.textContent='Suppression sécurisée en cours…';
+ const {data,error}=await supabase.functions.invoke('delete-account',{body:{confirmation}});
+ if(error||!data?.deleted){msg.textContent=error?.message||data?.error||'Suppression impossible. Ton compte est toujours actif.';button.disabled=false;return}
+ clearLocalAccountData();await supabase.auth.signOut({scope:'local'});alert('Ton compte et les données associées ont été supprimés définitivement.');location.reload();
+}
 async function boot(){
  const {data:{session:s}}=await supabase.auth.getSession();
  session=s;
  if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
  $('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
- await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');
+ await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');setTimeout(()=>openTutorial(false),350);
 }
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();location.reload()};
 
@@ -1379,7 +1425,18 @@ $('dogForm').onsubmit=async e=>{
 $('editGoalsBtn').onclick=()=>{$('goalsForm').classList.toggle('hidden')};
 $('goalsForm').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),y=new Date().getFullYear();for(const t of ['training_count','distance_km','monthly_regularity']){const target=Number(f.get(t));await supabase.from('goals').upsert({owner_id:session.user.id,year:y,goal_type:t,target},{onConflict:'owner_id,year,goal_type'})}await loadGoals();renderGoals();$('goalsForm').classList.add('hidden')};
 $('exportCsvBtn').onclick=exportCSV;
+$('exportAccountBtn').onclick=exportAccountData;
 $('printReportBtn').onclick=printReport;
+$('openHelpBtn').onclick=()=>showPage('helpPage');
+$('reviewTutorialBtn').onclick=()=>openTutorial(true);
+$('skipTutorialBtn').onclick=closeTutorial;
+$('tutorialPrevBtn').onclick=()=>{if(tutorialIndex>0){tutorialIndex--;renderTutorial()}};
+$('tutorialNextBtn').onclick=()=>{if(tutorialIndex<TUTORIAL_STEPS.length-1){tutorialIndex++;renderTutorial()}else closeTutorial()};
+$('openDeleteAccountBtn').onclick=()=>{$('deleteAccountConfirmation').value='';$('deleteAccountMsg').textContent='';$('confirmDeleteAccountBtn').disabled=true;$('deleteAccountDialog').classList.remove('hidden');document.body.style.overflow='hidden'};
+$('cancelDeleteAccountBtn').onclick=()=>{$('deleteAccountDialog').classList.add('hidden');document.body.style.overflow=''};
+$('deleteAccountConfirmation').oninput=e=>$('confirmDeleteAccountBtn').disabled=e.target.value.trim().toUpperCase()!=='SUPPRIMER';
+$('exportBeforeDeleteBtn').onclick=exportAccountData;
+$('confirmDeleteAccountBtn').onclick=deleteCurrentAccount;
 $('newOperationalTerrainBtn').onclick=()=>beginNewPiste('piste');
 $('openOperationalHistoryTerrainBtn').onclick=()=>showPage('historyPage');
 $('openPlannerBtn').onclick=()=>{window.editingTrainingRouteId=null;showPage('plannerPage')};
