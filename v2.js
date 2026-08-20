@@ -203,7 +203,7 @@
    ========================================================================== */
 window.PISTE_COACHING = Object.freeze({
   enabled: true,
-  version: '10.21',
+  version: '10.22',
   roles: ['driver','coach','observer'],
   capabilities: {
     liveLocation: true,
