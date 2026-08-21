@@ -1,4 +1,4 @@
-const C='piste-community-v2026';
+const C='piste-community-v2027';
 const A=[
   './',
   './index.html',
