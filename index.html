@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2023">
+<link rel="stylesheet" href="./v2.css?v=2025">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -98,7 +98,7 @@
       <button id="detachPlannedRoute" class="secondary">Retirer</button>
     </div>
     <div class="card gps-card">
-      <div id="liveMap"></div>
+      <div class="live-map-shell"><div id="liveMap"></div><button id="recenterLiveMapBtn" class="map-recenter hidden" type="button">⌖ Recentrer</button></div>
       <div class="gps-kpis">
         <div><strong id="liveDistance">0.00</strong><span>km</span></div>
         <div><strong id="liveDuration">00:00:00</strong><span>durée</span></div>
@@ -194,8 +194,10 @@
         <fieldset class="full field-assessment">
           <legend>🐕 Évaluation terrain</legend>
           <p class="muted small">Facultatif — complète ce qui te semble utile pour analyser la progression du binôme.</p>
+          <div class="weather-actions full"><button id="loadRecordWeatherBtn" class="secondary" type="button">🌦️ Remplir avec la météo du jour</button><span id="recordWeatherStatus" class="small muted">Utilise le lieu et l’heure de départ GPS</span></div>
 
           <div class="assessment-grid">
+            <div class="assessment-group-title"><span>🌦️</span><div><b>Conditions météo et terrain</b><small>Renseignées automatiquement ou modifiables</small></div></div>
             <label>Météo
               <select name="meteo">
                 <option value="">Non renseignée</option>
@@ -229,6 +231,7 @@
                 <option>Gelé</option><option>Neige</option><option>Mixte</option>
               </select>
             </label>
+            <div class="assessment-group-title dog-assessment-title"><span>🐕</span><div><b>Évaluation du chien</b><small>Ressenti du conducteur après la piste</small></div></div>
 
             <label>Difficulté générale
               <select name="difficulte">
@@ -431,6 +434,7 @@
         <summary>🌬️ Intelligence olfactive <small>Options avancées</small></summary>
         <div class="card-title-row"><div><small class="section-kicker">INTELLIGENCE OLFACTIVE</small><h3>Couloir olfactif estimé</h3></div><label class="odor-switch"><input id="odorEnabled" type="checkbox"><span>Afficher</span></label></div>
         <div class="odor-model-grid">
+          <label>Date et heure prévues<input id="weatherPlannedAt" type="datetime-local"></label>
           <label>Vent venant de (°)<input id="odorWindDirection" type="number" min="0" max="359" step="1" value="0"></label>
           <label>Vitesse du vent (km/h)<input id="odorWindSpeed" type="number" min="0" max="100" step="0.5" value="5"></label>
           <label>Âge de la piste (h)<input id="odorAge" type="number" min="0" max="168" step="0.5" value="1"></label>
@@ -438,9 +442,11 @@
           <label>Température (°C)<input id="odorTemperature" type="number" min="-30" max="60" step="1" placeholder="Facultatif"></label>
           <label>Humidité (%)<input id="odorHumidity" type="number" min="0" max="100" step="1" placeholder="Facultatif"></label>
         </div>
+        <div class="weather-actions"><button id="loadWeatherBtn" class="secondary" type="button">🌦️ Récupérer la météo</button><span id="weatherStatus" class="small muted">Saisie manuelle</span></div>
         <p id="odorSummary" class="odor-summary">Simulation désactivée.</p>
         <p class="odor-disclaimer">Modèle pédagogique indicatif : il estime une zone cohérente à partir des paramètres saisis. Il ne mesure pas l’odeur et ne remplace ni l’observation du terrain ni l’analyse du coach.</p>
       </details>
+      <div class="planner-routing-bar" aria-label="Mode de calcul du tracé"><button id="routingTrailBtn" class="active" type="button">🥾 Chemins</button><button id="routingStreetBtn" type="button">🚶 Rues</button><button id="routingFreeBtn" type="button">✏️ Libre</button><span id="routingStatus">Les nouveaux segments suivront les voies cartographiées.</span></div>
       <div id="plannerMap"></div>
       <div id="plannerScenarioList" class="scenario-list"></div>
       <div class="planner-actions">
@@ -457,8 +463,8 @@
     <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🎧 Coaching</h2></div>
     <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
     <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
-      <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session coachée</h3><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Visibilité des indices<select id="coachingVisibility"><option value="coach">Coach uniquement</option><option value="all">Visible par tous</option><option value="progressive">Révélation progressive</option></select></label><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
-      <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="coach">Coach</option><option value="traceur">Traceur</option><option value="observer">Observateur</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
+      <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session</h3><label>Je crée cette session comme<select id="coachingCreatorRole"><option value="coach">Coach — je prépare et dirige</option><option value="solo">Solo — je prépare et conduis</option></select></label><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Ce que voit le conducteur<select id="coachingVisibility"><option value="coach">Départ uniquement / indices masqués</option><option value="progressive">Indices révélés progressivement</option><option value="all">Tracé et indices visibles</option></select></label><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
+      <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="driver">Conducteur — je travaille avec le chien</option><option value="traceur">Traceur — je pose la piste</option><option value="observer">Observateur — je suis la séance</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
     </div>
     <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><h3>Mes sessions</h3><button id="refreshCoaching" class="secondary">Actualiser</button></div><div id="coachingSessionsList"></div></div>
     <div id="coachingLivePanel" class="card hidden">
@@ -469,8 +475,9 @@
       <div id="traceurTools" class="traceur-tools hidden"><small class="section-kicker">POSE DE PISTE</small><p id="traceurStatus" class="small muted">Prêt à enregistrer le chemin réellement posé.</p><div class="coaching-actions"><button id="startTraceurTrack" class="primary">Démarrer la pose</button><button id="stopTraceurTrack" class="secondary" disabled>Terminer la pose</button></div></div>
       <div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div>
       <div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div>
+      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Démarrer avec mon chien</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
-      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Démarrer la session</button><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
+      <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button></div>
       <form id="coachingDebriefForm" class="form-grid hidden"><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><button class="primary full" type="submit">Terminer et enregistrer le débrief</button></form></div>
     </div>
   </section>
@@ -611,7 +618,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1026"></script>
+<script type="module" src="./app.js?v=1028"></script>
 <script src="./v2.js?v=2010"></script>
 </body>
 </html>
