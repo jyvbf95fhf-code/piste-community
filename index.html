@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2026">
+<link rel="stylesheet" href="./v2.css?v=2027">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -92,6 +92,8 @@
       <button class="back" data-page="trainingPage">‹ Terrain</button>
       <h2 id="recordTitle">Nouveau pistage opérationnel</h2>
     </div>
+
+    <div id="operationalCallBanner" class="planned-route-banner operational-call-banner hidden"><div><span>📞</span><p><b id="operationalCallBannerTitle">Engagement préparé</b><small id="operationalCallBannerInfo">Dernier point connu</small></p></div><button id="detachOperationalCall" class="secondary" type="button">Retirer</button></div>
 
     <div id="plannedRouteBanner" class="planned-route-banner hidden">
       <div><span>🗺️</span><p><b id="plannedRouteName">Tracé préparé</b><small id="plannedRouteInfo">0 km prévus</small></p></div>
@@ -352,6 +354,47 @@
     </div>
   </section>
 
+
+  <!-- V10.27_OPERATIONAL_CALL -->
+  <section id="operationalCallPage" class="page">
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>📞 J’ai reçu un appel</h2></div>
+    <div class="call-privacy-notice"><span>🔒</span><p><b>Fiche confidentielle</b><small>Utilise des initiales et limite les informations identifiantes au strict nécessaire. Tests Preview uniquement avec des données fictives.</small></p></div>
+    <nav class="call-stepper" aria-label="Étapes de la prise d’appel">
+      <button type="button" class="active" data-call-step="1"><span>1</span>Appel</button><button type="button" data-call-step="2"><span>2</span>Personne</button><button type="button" data-call-step="3"><span>3</span>Environnement</button><button type="button" data-call-step="4"><span>4</span>Carte & synthèse</button>
+    </nav>
+    <form id="operationalCallForm">
+      <section class="call-step active" data-call-panel="1"><div class="card call-card"><small class="section-kicker">PRISE D’APPEL</small><h3>Informations initiales</h3><div class="form-grid">
+        <label>Date et heure de l’appel<input id="callAt" name="call_at" type="datetime-local" required></label><label>Disparition constatée<input id="callDisappearanceAt" name="disappearance_at" type="datetime-local"></label>
+        <label>Niveau d’urgence<select name="urgency"><option value="standard">Standard</option><option value="vulnerable">Personne vulnérable</option><option value="immediate">Danger immédiat</option></select></label><label>Origine de l’appel<input name="call_source" maxlength="120" placeholder="CODIS, famille, unité…"></label>
+        <label>Initiales de l’appelant<input name="caller_initials" maxlength="20" placeholder="Ex. J. D."></label><label>Téléphone<input name="caller_phone" maxlength="40" inputmode="tel" autocomplete="off"></label>
+        <label class="full">Lien avec la personne disparue<input name="caller_relation" maxlength="160" placeholder="Famille, témoin, établissement…"></label>
+      </div></div></section>
+      <section class="call-step" data-call-panel="2"><div class="card call-card"><small class="section-kicker">PERSONNE RECHERCHÉE</small><h3>Signalement utile</h3><div class="form-grid">
+        <label>Initiales ou indicatif<input name="subject_initials" maxlength="30" placeholder="Éviter le nom complet"></label><label>Âge approximatif<input name="subject_age" type="number" min="0" max="120"></label>
+        <label>Sexe / genre<input name="subject_sex" maxlength="60"></label><label>Téléphone joignable<input name="subject_phone" maxlength="40" inputmode="tel" autocomplete="off"></label>
+        <label class="full">Signalement physique<textarea name="subject_description" maxlength="1500" rows="2" placeholder="Taille, corpulence, cheveux, signes distinctifs…"></textarea></label>
+        <label class="full">Tenue vestimentaire<textarea name="subject_clothing" maxlength="1200" rows="2"></textarea></label>
+        <label class="full">Santé, vulnérabilité et traitement indispensable<textarea name="subject_health" maxlength="1800" rows="2"></textarea></label>
+        <label class="full">Véhicule ou moyen de déplacement<input name="subject_vehicle" maxlength="300" placeholder="Type, couleur, immatriculation si indispensable"></label>
+      </div></div></section>
+      <section class="call-step" data-call-panel="3"><div class="card call-card"><small class="section-kicker">CONTEXTE</small><h3>Circonstances et habitudes</h3><div class="form-grid">
+        <label class="full">Circonstances de la disparition<textarea name="circumstances" maxlength="5000" rows="3"></textarea></label>
+        <label class="full">Habitudes et itinéraires régulièrement empruntés<textarea name="habits" maxlength="5000" rows="3"></textarea></label>
+        <label class="full">Destinations ou lieux possibles<textarea name="likely_places" maxlength="5000" rows="3"></textarea></label>
+      </div><h4>Milieux présents</h4><div class="call-check-grid"><label><input type="checkbox" name="environment_types" value="forest">🌲 Forêt</label><label><input type="checkbox" name="environment_types" value="urban">🏘️ Urbain</label><label><input type="checkbox" name="environment_types" value="fields">🌾 Champs</label><label><input type="checkbox" name="environment_types" value="mountain">⛰️ Relief</label><label><input type="checkbox" name="environment_types" value="water">🌊 Eau</label><label><input type="checkbox" name="environment_types" value="industrial">🏭 Industriel</label></div>
+      <h4>Dangers identifiés</h4><div class="call-check-grid danger"><label><input type="checkbox" name="hazards" value="roads">🛣️ Routes</label><label><input type="checkbox" name="hazards" value="railway">🚆 Voies ferrées</label><label><input type="checkbox" name="hazards" value="water">🌊 Cours d’eau</label><label><input type="checkbox" name="hazards" value="cliffs">⚠️ Falaises</label><label><input type="checkbox" name="hazards" value="weather">🌩️ Météo</label><label><input type="checkbox" name="hazards" value="traffic">🚗 Circulation</label></div><label class="full">Observations terrain<textarea name="terrain_notes" maxlength="5000" rows="3"></textarea></label></div></section>
+      <section class="call-step" data-call-panel="4"><div class="card call-card"><small class="section-kicker">DERNIER POINT CONNU</small><h3>Carte opérationnelle</h3>
+        <div class="planner-search-row"><input id="callLocationSearch" maxlength="160" placeholder="Adresse, commune ou lieu"><button id="callLocationSearchBtn" class="secondary" type="button">Rechercher</button></div>
+        <div class="call-map-actions"><button id="locateCallBtn" class="secondary" type="button">◎ Ma position</button><button id="analyzeCallAreaBtn" class="secondary" type="button">🌦️ Analyser le secteur</button><button id="openCallNavigationBtn" class="secondary" type="button" disabled>↗ Itinéraire GPS</button></div>
+        <p id="callLocationStatus" class="small muted">Recherche le lieu ou touche la carte pour placer le dernier point connu.</p><div id="operationalCallMap"></div>
+        <div class="call-marker-tools"><label>Repère à ajouter<select id="callMarkerType"><option value="habit">🏠 Lieu habituel</option><option value="route">↝ Passage habituel</option><option value="sighting">👁 Dernier signalement</option><option value="danger">⚠️ Danger</option><option value="access">🚗 Accès équipe</option><option value="note">📍 Note</option></select></label><label>Précision<input id="callMarkerNote" maxlength="250" placeholder="Puis touche la carte"></label></div><div id="callMarkerList" class="call-marker-list"></div>
+        <div id="callEnvironmentAnalysis" class="call-analysis"><p class="muted">L’analyse est lancée uniquement sur demande et utilise OpenStreetMap et Open-Meteo.</p></div>
+      </div><div class="card call-summary-card"><div class="card-title-row"><div><small class="section-kicker">SYNTHÈSE</small><h3>Préparation de l’engagement</h3></div><button id="copyCallSummaryBtn" class="secondary" type="button">Copier</button></div><pre id="operationalCallSummary">Complète la fiche pour générer la synthèse.</pre></div></section>
+      <div class="call-footer-actions"><button id="callPrevBtn" class="secondary" type="button">‹ Précédent</button><button id="callNextBtn" class="primary" type="button">Suivant ›</button><button id="saveOperationalCallBtn" class="secondary hidden" type="submit">💾 Enregistrer la fiche</button><button id="startOperationalCallBtn" class="primary hidden" type="button">🐕 Démarrer avec mon chien</button></div><p id="operationalCallMsg" class="msg"></p>
+    </form>
+    <div class="card"><div class="card-title-row"><h3>Appels enregistrés</h3><button id="newOperationalCallBtn" class="secondary" type="button">+ Nouvel appel</button></div><div id="operationalCallsList"></div></div>
+  </section>
+
   <section id="historyPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Mes pistages opérationnels</h2></div>
     <div class="card">
@@ -369,7 +412,7 @@
   <section id="trainingPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Terrain</h2></div>
     <div class="training-hero terrain-hub">
-      <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div></div>
+      <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div><button id="receivedCallBtn" class="received-call-btn" type="button"><span>📞</span><span><b>J’AI REÇU UN APPEL</b><small>Préparer l’engagement et le dernier point connu</small></span><em>›</em></button></div>
       <div class="terrain-group prepared"><small class="section-kicker">SESSION PRÉPARÉE</small><h3>Préparer, réaliser, débriefer</h3><div class="terrain-choice-grid"><button id="openPlannerBtn" class="terrain-choice planner"><span>🗺️</span><b>Créer une session</b><small>Tracé, signes et odeur</small></button><button id="openCoachingBtn" class="terrain-choice coaching"><span>🎧</span><b>Ouvrir le coaching</b><small>Créer, rejoindre ou reprendre</small></button></div></div>
       <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Voir mes pistages opérationnels ›</button>
       <p class="muted">Choisis une activité. Les statistiques opérationnelles et d’entraînement restent séparées.</p>
@@ -647,7 +690,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1029"></script>
+<script type="module" src="./app.js?v=1030"></script>
 <script src="./v2.js?v=2010"></script>
 </body>
 </html>
