@@ -129,9 +129,40 @@ function renderTrainingRoutes(){
  el.querySelectorAll('.coachPreparedRoute').forEach(b=>b.onclick=()=>{showPage('coachingPage');setCoachingStage('prepare');setTimeout(()=>{$('coachingRouteSelect').value=b.dataset.id},200)});
  el.querySelectorAll('.deletePreparedRoute').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce tracé préparé ?'))return;await supabase.from('training_routes').delete().eq('id',b.dataset.id);await loadTrainingRoutes()});
 }
+
+// V10.26_ASSISTANT_GPX
+let plannerImportedGpx=false;
+function setPlannerSection(section='map'){
+ document.querySelectorAll('[data-planner-section]').forEach(button=>{const active=button.dataset.plannerSection===section;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active))});
+ const assistant=$('plannerAssistantPanel'),odor=$('plannerOdorPanel');
+ assistant?.classList.toggle('active',section==='assistant');odor?.classList.toggle('active',section==='odor');
+ if(assistant&&section==='assistant')assistant.open=true;if(odor&&section==='odor')odor.open=true;
+ setTimeout(()=>plannerMap?.invalidateSize(),80);
+}
+function gpxElements(document,name){return Array.from(document.getElementsByTagNameNS('*',name))}
+function gpxCoordinate(element){const lat=Number(element.getAttribute('lat')),lon=Number(element.getAttribute('lon'));return Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180?{lat,lon}:null}
+function gpxText(element,name){const node=Array.from(element.children||[]).find(x=>x.localName===name);return node?.textContent?.trim()||''}
+function reduceGpxPoints(points,max=5000){if(points.length<=max)return points;const step=(points.length-1)/(max-1),out=[];for(let i=0;i<max;i++)out.push(points[Math.round(i*step)]);return out}
+function parseGpx(text){
+ const doc=new DOMParser().parseFromString(text,'application/xml');if(doc.querySelector('parsererror'))throw new Error('Le fichier GPX est illisible ou endommagé.');
+ let nodes=gpxElements(doc,'trkpt');if(nodes.length<2)nodes=gpxElements(doc,'rtept');if(nodes.length<2)throw new Error('Aucune trace exploitable : au moins deux points sont nécessaires.');
+ const raw=nodes.map(gpxCoordinate).filter(Boolean),deduped=raw.filter((p,i)=>!i||p.lat!==raw[i-1].lat||p.lon!==raw[i-1].lon);if(deduped.length<2)throw new Error('La trace GPX ne contient pas assez de positions différentes.');
+ const points=reduceGpxPoints(deduped),waypoints=gpxElements(doc,'wpt').map(node=>{const p=gpxCoordinate(node);if(!p)return null;const label=gpxText(node,'name')||gpxText(node,'desc')||'Repère GPX';return{id:crypto.randomUUID?.()||String(Date.now()+Math.random()),type:'note',lat:p.lat,lon:p.lon,note:label.slice(0,250),duration_min:null,visibility:'coach'}}).filter(Boolean).slice(0,100);
+ const name=(gpxText(doc.documentElement,'name')||'Trace GPX importée').slice(0,80);return{points,waypoints,name,originalCount:deduped.length,reduced:points.length<deduped.length};
+}
+async function importPlannerGpx(file){
+ const status=$('gpxImportStatus');if(!file)return;if(file.size>10*1024*1024){status.textContent='Fichier refusé : la taille maximale est de 10 Mo.';return}
+ status.textContent='Lecture du fichier…';try{const parsed=parseGpx(await file.text());if(plannerPoints.length&&!confirm('Remplacer le tracé actuellement affiché par ce fichier GPX ?')){status.textContent='Import annulé : le tracé actuel est conservé.';return}
+  plannerPoints=parsed.points;plannerWaypoints=parsed.waypoints;plannerImportedGpx=true;setPlannerRoutingMode('free');if(!$('routeName').value.trim())$('routeName').value=parsed.name;redrawPlanner(true);$('clearImportedGpxBtn').classList.remove('hidden');
+  status.innerHTML='<b>Trace prête :</b> '+parsed.originalCount+' points lus, '+plannerDistance().toFixed(2)+' km'+(parsed.waypoints.length?' et '+parsed.waypoints.length+' repère(s)':'')+(parsed.reduced?' • affichage optimisé à '+parsed.points.length+' points':'')+'. Vérifie la carte puis enregistre.';
+ }catch(error){status.textContent=error.message||'Impossible de lire ce fichier GPX.'}finally{$('gpxFileInput').value=''}
+}
+function clearImportedGpx(){if(!plannerImportedGpx||confirm('Retirer la trace GPX importée de la préparation ?')){plannerPoints=[];plannerWaypoints=[];plannerImportedGpx=false;$('clearImportedGpxBtn')?.classList.add('hidden');if($('gpxImportStatus'))$('gpxImportStatus').textContent='Formats acceptés : trace GPX ou route GPX, 10 Mo maximum.';redrawPlanner()}}
+
 function initPlanner(route=null){
  setTimeout(()=>{
   if(!$('plannerMap'))return;
+  setPlannerSection('map');plannerImportedGpx=false;$('clearImportedGpxBtn')?.classList.add('hidden');if($('gpxImportStatus'))$('gpxImportStatus').textContent='Formats acceptés : trace GPX ou route GPX, 10 Mo maximum.';
   if(plannerMap){plannerMap.remove();plannerMap=null}plannerUserMarker=null;plannerAccuracyCircle=null;
   plannerMap=L.map('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
   addCleanBaseLayers(plannerMap);
@@ -1502,6 +1533,10 @@ $('followPlannerBtn').onclick=togglePlannerFollow;
 $('fullscreenPlannerBtn').onclick=togglePlannerFullscreen;
 $('plannerSearchBtn').onclick=searchPlannerLocation;
 $('plannerSearchInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();searchPlannerLocation()}};
+document.querySelectorAll('[data-planner-section]').forEach(button=>button.onclick=()=>setPlannerSection(button.dataset.plannerSection));
+$('chooseGpxBtn').onclick=()=>$('gpxFileInput').click();
+$('gpxFileInput').onchange=e=>importPlannerGpx(e.target.files?.[0]);
+$('clearImportedGpxBtn').onclick=clearImportedGpx;
 $('generateRouteSuggestion').onclick=async()=>{generateRouteSuggestion();await snapSuggestedRoute()};
 $('regenerateRouteSuggestion').onclick=async()=>{generateRouteSuggestion();await snapSuggestedRoute()};
 $('routingTrailBtn').onclick=()=>setPlannerRoutingMode('trail');$('routingStreetBtn').onclick=()=>setPlannerRoutingMode('street');$('routingFreeBtn').onclick=()=>setPlannerRoutingMode('free');
