@@ -11,6 +11,7 @@ let plannerPoints=[], plannerWaypoints=[], plannerTool='route', coachingSessions
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
 let coachingLayerVisibility={planned:true,trace:true,actual:true,odor:true,markers:true},plannerDraftTimer=null;
 let routeSuggestionSeed=0;
+let dogHealthEvents=[],dogDuties=[],dogShares=[],dogHubFriends=[]; // V10.25_DOG_HUB
 let plannerRoutingMode='trail',plannerRoutingBusy=false,liveMapFollow=true,liveMapProgrammatic=false;
 const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{icon:'📦',label:'Objet déposé'},direction:{icon:'↪️',label:'Changement de direction'},crossing:{icon:'🔀',label:'Croisement'},contamination:{icon:'👥',label:'Contamination'},danger:{icon:'⚠️',label:'Danger'},subject:{icon:'👤',label:'Personne recherchée'},note:{icon:'📍',label:'Note'}};
 const LIVE_MARKERS={loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
@@ -70,6 +71,7 @@ function showPage(id){
  if(id==='mapPage')renderGlobalMap();
  if(id==='analysisPage')renderCanineAnalysis('mine');
  if(id==='profilePage')loadProfileV8();
+ if(id==='dogPage')loadDogHub();
  if(id==='trainingPage'){loadTrainings();loadTrainingRoutes();}
  if(id==='plannerPage')initPlanner();else stopPlannerFollow();
  if(id==='coachingPage')loadCoachingHub();
@@ -1121,6 +1123,40 @@ function renderGlobalMap(filter='all'){
   if(globalLayers.length){const group=L.featureGroup(globalLayers);globalMap.fitBounds(group.getBounds(),{padding:[25,25]})}
  },80);
 }
+
+// V10.25_DOG_HUB — santé, rappels, partage limité et permanences
+function dogHubSelected(){return dogs.find(d=>d.id===$('dogHubSelect')?.value)||(dogs.find(d=>d.active)||dogs[0]||null)}
+function healthKindLabel(v){return({illness:'Maladie',medication:'Médicament',deworming:'Vermifuge',external_parasite:'Antiparasitaire externe',bravecto:'Bravecto',vaccine:'Vaccin',vet_visit:'Visite vétérinaire',other:'Autre'})[v]||'Suivi'}
+function dueState(date,done){if(done)return{label:'Terminé',cls:'done'};if(!date)return{label:'Sans échéance',cls:'neutral'};const days=Math.ceil((new Date(date+'T12:00:00')-new Date())/864e5);return days<0?{label:`En retard de ${Math.abs(days)} j`,cls:'late'}:days===0?{label:"Aujourd’hui",cls:'soon'}:days<=14?{label:`Dans ${days} j`,cls:'soon'}:{label:new Date(date+'T12:00:00').toLocaleDateString('fr-FR'),cls:'ok'}}
+function addMonthsISO(date,months){const d=new Date((date||today())+'T12:00:00');d.setMonth(d.getMonth()+Number(months||0));return d.toISOString().slice(0,10)}
+function renderDogHub(){
+ const dog=dogHubSelected(),select=$('dogHubSelect');if(!select)return;
+ const current=select.value;select.innerHTML=dogs.map(d=>`<option value="${d.id}">${esc(d.alias)}${d.active?' • actif':''}</option>`).join('');if(dog)select.value=dogs.some(d=>d.id===current)?current:dog.id;
+ const active=dogHubSelected(),identity=active?dogIdentityParts(active):[];
+ $('dogHubHero').innerHTML=active?`<div class="dog-hub-avatar">🐕</div><div><small>FICHE ACTIVE</small><h2>${esc(active.alias)}</h2><p>${identity.length?identity.map(esc).join(' • '):'Informations physiques à compléter'}</p><span>${esc(active.specialty||'Technicité non renseignée')}</span></div><button id="dogHubEdit" class="secondary" type="button">Modifier la fiche</button>`:'<div class="empty-state">🐕<b>Aucun chien</b><span>Ajoute ton premier chien depuis Profil.</span><button data-page="profilePage" class="primary">Ouvrir Profil</button></div>';
+ if($('dogHubEdit'))$('dogHubEdit').onclick=()=>{showPage('profilePage');setTimeout(()=>openDogForm(active),150)};
+ const rows=active?dogHealthEvents.filter(x=>x.dog_id===active.id):[];
+ $('dogHealthList').innerHTML=rows.length?rows.map(x=>{const state=dueState(x.due_on,x.completed_at);return `<article class="dog-health-row"><span>${x.kind==='medication'?'💊':x.kind==='illness'?'🩺':x.kind==='vaccine'?'💉':'🛡️'}</span><div><small>${esc(healthKindLabel(x.kind))}</small><b>${esc(x.title)}</b><p>${x.details?esc(x.details):'Aucune précision'}</p></div><em class="due-chip ${state.cls}">${esc(state.label)}</em><div class="dog-row-actions">${!x.completed_at?'<button class="secondary completeHealth" data-id="'+x.id+'">✓</button>':''}<button class="ghost-dark deleteHealth" data-id="${x.id}">×</button></div></article>`}).join(''):'<p class="muted small">Aucun traitement ni rappel pour ce chien.</p>';
+ document.querySelectorAll('.completeHealth').forEach(b=>b.onclick=async()=>{await supabase.from('dog_health_events').update({completed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',b.dataset.id).eq('owner_id',session.user.id);loadDogHub()});
+ document.querySelectorAll('.deleteHealth').forEach(b=>b.onclick=async()=>{if(confirm('Supprimer ce suivi ?')){await supabase.from('dog_health_events').delete().eq('id',b.dataset.id).eq('owner_id',session.user.id);loadDogHub()}});
+ const duties=dogDuties.filter(x=>!active||!x.dog_id||x.dog_id===active.id),friendName=id=>dogHubFriends.find(f=>f.user_id===id)?.display_name||((id===session.user.id)?'Moi':'Ami');
+ $('dogDutyList').innerHTML=duties.length?duties.map(x=>`<article class="duty-row"><span>📅</span><div><b>${esc(friendName(x.assigned_user_id))}</b><small>${new Date(x.starts_at).toLocaleString('fr-FR')} → ${new Date(x.ends_at).toLocaleString('fr-FR')}</small><p>${esc(x.note||'Permanence')}</p></div>${x.owner_id===session.user.id?'<button class="ghost-dark deleteDuty" data-id="'+x.id+'">×</button>':''}</article>`).join(''):'<p class="muted small">Aucune permanence programmée.</p>';
+ document.querySelectorAll('.deleteDuty').forEach(b=>b.onclick=async()=>{if(confirm('Supprimer cette permanence ?')){await supabase.from('dog_duties').delete().eq('id',b.dataset.id).eq('owner_id',session.user.id);loadDogHub()}});
+ $('dogShareList').innerHTML=dogShares.length?dogShares.map(x=>{const snap=x.dog_snapshot||{},name=x.owner_id===session.user.id?(dogHubFriends.find(f=>f.user_id===x.shared_with)?.display_name||'Ami'):'Partagé avec moi';return `<article class="share-row"><span>👥</span><div><b>${esc(snap.alias||'Chien')}</b><small>${esc(name)}</small><p>${[snap.breed,snap.specialty].filter(Boolean).map(esc).join(' • ')}</p></div>${x.owner_id===session.user.id?'<button class="ghost-dark deleteShare" data-id="'+x.id+'">×</button>':''}</article>`}).join(''):'<p class="muted small">Aucune fiche partagée.</p>';
+ document.querySelectorAll('.deleteShare').forEach(b=>b.onclick=async()=>{await supabase.from('dog_shares').delete().eq('id',b.dataset.id).eq('owner_id',session.user.id);loadDogHub()});
+ const accepted=dogHubFriends.filter(f=>f.status==='accepted');
+ $('dogDutyFriend').innerHTML='<option value="'+session.user.id+'">Moi</option>'+accepted.map(f=>`<option value="${f.user_id}">${esc(f.display_name||'Pisteur')}</option>`).join('');
+ $('dogShareFriend').innerHTML='<option value="">Choisir un ami…</option>'+accepted.map(f=>`<option value="${f.user_id}">${esc(f.display_name||'Pisteur')}</option>`).join('');
+}
+async function loadDogHub(){
+ if(!session)return;await loadDogs();
+ const [health,duties,shares,friends]=await Promise.all([supabase.from('dog_health_events').select('*').eq('owner_id',session.user.id).order('due_on',{ascending:true,nullsFirst:false}),supabase.from('dog_duties').select('*').or(`owner_id.eq.${session.user.id},assigned_user_id.eq.${session.user.id}`).order('starts_at'),supabase.from('dog_shares').select('*').or(`owner_id.eq.${session.user.id},shared_with.eq.${session.user.id}`).order('created_at',{ascending:false}),supabase.rpc('get_friends')]);
+ dogHealthEvents=health.data||[];dogDuties=duties.data||[];dogShares=shares.data||[];dogHubFriends=friends.data||[];renderDogHub();
+}
+async function saveDogHealth(e){e.preventDefault();const dog=dogHubSelected();if(!dog)return alert('Ajoute ou sélectionne un chien.');const f=new FormData(e.target),kind=f.get('kind'),eventOn=f.get('event_on')||today(),defaults={deworming:6,bravecto:3,external_parasite:3},interval=Number(f.get('interval_months')||defaults[kind]||0)||null,due=f.get('due_on')||(interval?addMonthsISO(eventOn,interval):null),payload={owner_id:session.user.id,dog_id:dog.id,kind,title:String(f.get('title')||'').trim(),details:dogValue(f.get('details')),event_on:eventOn,due_on:due,interval_months:interval};const {error}=await supabase.from('dog_health_events').insert(payload);if(error)return alert(error.message);e.target.reset();$('healthEventOn').value=today();await loadDogHub()}
+async function saveDogDuty(e){e.preventDefault();const dog=dogHubSelected(),f=new FormData(e.target),payload={owner_id:session.user.id,dog_id:dog?.id||null,assigned_user_id:f.get('assigned_user_id'),starts_at:new Date(f.get('starts_at')).toISOString(),ends_at:new Date(f.get('ends_at')).toISOString(),note:dogValue(f.get('note'))};const {error}=await supabase.from('dog_duties').insert(payload);if(error)return alert(error.message);e.target.reset();await loadDogHub()}
+async function shareDogCard(){const dog=dogHubSelected(),friend=$('dogShareFriend').value;if(!dog||!friend)return alert('Sélectionne un chien et un ami.');const snapshot={alias:dog.alias,breed:dog.breed,birth_date:dog.birth_date,weight_kg:dog.weight_kg,height_cm:dog.height_cm,specialty:dog.specialty,level:dog.level};const {error}=await supabase.from('dog_shares').upsert({owner_id:session.user.id,dog_id:dog.id,shared_with:friend,dog_snapshot:snapshot},{onConflict:'dog_id,shared_with'});if(error)return alert(error.message);await loadDogHub()}
+
 async function loadProfileV8(){
  await Promise.all([loadDogs(),loadGoals()]);
  $('profilePseudo').textContent=me?.display_name||'Pisteur';
@@ -1427,6 +1463,13 @@ $('newTrainingBtn').onclick=()=>beginNewPiste('training');
 $('analysisMineTab').onclick=()=>renderCanineAnalysis('mine');
 $('analysisCommunityTab').onclick=()=>renderCanineAnalysis('community');
 document.querySelectorAll('[data-mapfilter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-mapfilter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderGlobalMap(b.dataset.mapfilter)});
+
+if($('dogHubSelect'))$('dogHubSelect').onchange=renderDogHub;
+if($('dogHealthForm'))$('dogHealthForm').onsubmit=saveDogHealth;
+if($('dogDutyForm'))$('dogDutyForm').onsubmit=saveDogDuty;
+if($('shareDogBtn'))$('shareDogBtn').onclick=shareDogCard;
+if($('healthKind'))$('healthKind').onchange=e=>{const defaults={deworming:6,bravecto:3,external_parasite:3};$('healthInterval').value=defaults[e.target.value]||''};
+
 $('showDogFormBtn').onclick=()=>openDogForm();
 $('cancelDogFormBtn').onclick=closeDogForm;
 $('dogForm').onsubmit=async e=>{
