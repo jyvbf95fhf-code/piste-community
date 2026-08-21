@@ -573,3 +573,11 @@ input:focus,select:focus,textarea:focus{
 /* V10.28 — Actualités et notifications sociales */
 .nav-social{position:relative}
 .nav-notification{position:absolute;top:8px;left:calc(50% + 8px);min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#d94b4b;color:#fff;border:2px solid #071015;font-size:11px;line-height:15px;font-weight:800;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+
+
+/* V10.28 — commentaires lisibles dans le thème sombre */
+.comments-box{border-top-color:rgba(181,202,192,.22)}
+.comment-row{background:#eef4f0;color:#14231d;border:1px solid #d7e2dc}
+.comment-main b,.comment-main p{color:#14231d!important}
+.comment-main span{color:#66756e!important}
+.comment-form input{background:#fff;color:#14231d;border-color:#cbd8d1}
