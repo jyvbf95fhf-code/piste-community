@@ -1076,7 +1076,7 @@ async function loadFeed(){
  const dogIds=[...new Set(friendFeedRows.map(x=>x.dog_id).filter(Boolean))];
  const [{data:profiles=[]},{data:friendDogs=[]},socials]=await Promise.all([
    ownerIds.length?supabase.from('profiles').select('user_id,display_name').in('user_id',ownerIds):Promise.resolve({data:[]}),
-   dogIds.length?supabase.from('dogs').select('id,owner_id,alias,photo_path').in('id',dogIds):Promise.resolve({data:[]}),
+   dogIds.length?supabase.rpc('get_friend_dog_cards',{dog_ids:dogIds}):Promise.resolve({data:[]}),
    Promise.all(friendFeedRows.map(x=>socialSummary(x.activity_type,x.id)))
  ]);
  const profileMap=Object.fromEntries((profiles||[]).map(p=>[p.user_id,p]));
