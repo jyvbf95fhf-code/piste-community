@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2027">
+<link rel="stylesheet" href="./v2.css?v=2031">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -73,7 +73,7 @@
     </div>
 
     <div class="module-grid">
-      <button data-page="feedPage"><span class="module-icon">🐕‍🦺</span><b>Activité amis</b><small>Partages & tracés</small></button>
+      <button data-page="feedPage"><span class="module-icon">🔔</span><b>Actualités</b><small>Partages, likes & commentaires</small></button>
       <button id="homeStatsBtn" type="button" data-page="statsPage"><span class="module-icon">▥</span><b>Statistiques</b><small>Personnelles & communauté</small></button>
       <button data-page="mapPage"><span class="module-icon">🗺️</span><b>Carte</b><small>Tous mes tracés</small></button>
       <button data-page="analysisPage"><span class="module-icon">🐾</span><b>Analyse cynophile</b><small>Tendances & résultats</small></button>
@@ -184,13 +184,15 @@
           <select name="dog_id" id="recordDogSelect"><option value="">Non renseigné</option></select>
         </label>
 
-        <label>Partage
-          <select name="visibility">
-            <option value="private">🔒 Privé</option>
-            <option value="friends">👥 Amis</option>
-            <option value="community">🌍 Communauté (statistiques anonymes)</option>
-          </select>
-        </label>
+        <fieldset class="full visibility-picker">
+          <legend>Qui peut voir cette activité ?</legend>
+          <p class="small muted">Choisis avant l’enregistrement. Le mode privé reste sélectionné par défaut.</p>
+          <div class="visibility-options">
+            <label><input type="radio" name="visibility" value="private" checked><span><b>🔒 Privé</b><small>Uniquement moi</small></span></label>
+            <label><input type="radio" name="visibility" value="friends"><span><b>👥 Amis</b><small>Visible dans leurs Actualités</small></span></label>
+            <label><input type="radio" name="visibility" value="community"><span><b>🌍 Communauté</b><small>Statistiques anonymes uniquement</small></span></label>
+          </div>
+        </fieldset>
 
 
         <fieldset class="full field-assessment">
@@ -317,9 +319,9 @@
   </section>
 
   <section id="feedPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Activité amis</h2></div>
-    <div class="card">
-      <p class="muted small">Les activités partagées avec les amis apparaissent ici. 🔵 Pistage opérationnel • 🟣 Entraînement.</p>
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🔔 Actualités</h2></div>
+    <div class="card feed-shell">
+      <div class="feed-intro"><span>🐾</span><div><b>Le fil de ta communauté</b><small>Activités partagées, réactions et commentaires de tes amis.</small></div></div>
       <div id="friendFeed"></div>
     </div>
   </section>
@@ -662,7 +664,7 @@
     <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
     <button data-page="dogPage"><span class="nav-icon">🐕</span><span>Chien</span></button>
     <button id="navRecord" class="nav-paw" data-page="trainingPage"><span class="nav-icon">◎</span><span>Terrain</span></button>
-    <button data-page="mapPage"><span class="nav-icon">🗺️</span><span>Carte</span></button>
+    <button class="nav-social" data-page="feedPage"><span class="nav-icon">🔔</span><span>Actualités</span><b id="socialNavBadge" class="nav-notification hidden">0</b></button>
     <button data-page="profilePage"><span class="nav-icon">🐕</span><span>Profil</span></button>
   </nav>
 </section>
@@ -690,7 +692,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1030"></script>
-<script src="./v2.js?v=2010"></script>
+<script type="module" src="./app.js?v=1036"></script>
+<script src="./v2.js?v=2012"></script>
 </body>
 </html>

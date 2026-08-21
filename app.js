@@ -65,7 +65,7 @@ function showPage(id){
  const target=$(id);if(!target){console.error('Page introuvable:',id);return}
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
  target.classList.add('active');
- if(id==='feedPage')loadFeed();
+ if(id==='feedPage'){markSocialSeen();loadFeed();}
  if(id==='statsPage')loadStats(currentStatsScope||'mine');
  if(id==='friendsPage')loadFriends();
  if(id==='historyPage')renderHistory();
@@ -458,7 +458,7 @@ async function boot(){
  session=s;
  if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
  $('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
- await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');setTimeout(()=>openTutorial(false),350);
+ await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');refreshSocialBadge();setTimeout(()=>openTutorial(false),350);
 }
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();location.reload()};
 
@@ -858,8 +858,8 @@ function beginNewPiste(mode='piste'){
  $('finishTitle').textContent=training?'Terminer l’entraînement':'Terminer l’enregistrement';
  $('startGpsBtn').textContent=training?'DÉMARRER L’ENTRAÎNEMENT':'DÉMARRER LE PISTAGE';
  $('saveRecordBtn').textContent=training?'ENREGISTRER L’ENTRAÎNEMENT':'ENREGISTRER LE PISTAGE';
- const vis=$('pisteForm').elements.visibility.closest('label');
- vis.classList.remove('hidden');
+ const vis=$('pisteForm').querySelector('.visibility-picker');
+ vis?.classList.remove('hidden');
  $('pisteForm').elements.visibility.value='private';
  applySelectedTrainingRoute();
 }
@@ -931,6 +931,15 @@ function updatePreSaveSummary(){
 $('pisteForm').addEventListener('input',updatePreSaveSummary);
 $('pisteForm').addEventListener('change',updatePreSaveSummary);
 
+function showActivitySavedToast(message){
+ document.getElementById('activitySavedToast')?.remove();
+ const toast=document.createElement('div');toast.id='activitySavedToast';toast.className='activity-saved-toast';
+ toast.innerHTML=`<span>✓</span><div><b>Activité enregistrée</b><small>${esc(message)}</small></div>`;
+ document.body.appendChild(toast);
+ requestAnimationFrame(()=>toast.classList.add('show'));
+ setTimeout(()=>{toast.classList.remove('show');setTimeout(()=>toast.remove(),250)},4200);
+}
+
 $('pisteForm').onsubmit=async e=>{
  e.preventDefault();$('pisteMsg').textContent="Enregistrement…";
  const f=new FormData(e.target),o={};f.forEach((v,k)=>o[k]=v);
@@ -953,7 +962,10 @@ $('pisteForm').onsubmit=async e=>{
    if(!navigator.onLine||/fetch|network|Failed to fetch/i.test(error.message||'')){queueRecord(recordMode,o);$('pisteMsg').textContent="Pas de réseau : enregistrement conservé sur ce téléphone et synchronisé automatiquement.";clearDraft();resetGpsUI(false);showPage(recordMode==='training'?'trainingPage':'homePage');return}
    $('pisteMsg').textContent="Erreur : "+error.message;return
  }
- clearDraft();$('pisteMsg').textContent=recordMode==='training'?"Entraînement enregistré.":"Pistage opérationnel enregistré.";
+ const activityName=recordMode==='training'?'Entraînement':'Pistage opérationnel';
+ const sharing=o.visibility==='friends'?'Partagé avec tes amis.':o.visibility==='community'?'Ajouté aux statistiques anonymes de la communauté.':'Conservé en privé.';
+ clearDraft();$('pisteMsg').textContent=activityName+' enregistré. '+sharing;
+ showActivitySavedToast(sharing);
  if(recordMode==='training'){await refreshTrainings();resetGpsUI(false);showPage('trainingPage')}
  else{await refreshMine();resetGpsUI(false);showPage('homePage')}
 };
@@ -1047,21 +1059,51 @@ async function refreshSocialCard(type,id){
  if(like){like.dataset.liked=s.liked_by_me?'1':'0';like.classList.toggle('liked',!!s.liked_by_me);like.innerHTML=`👍 <span>${s.likes_count||0}</span>`}
  if(comments)comments.textContent=s.comments_count||0;
 }
-async function openComments(type,id){
+async function openComments(type,id,forceOpen=false){
  const key=`${type}-${id}`,box=$(`comments-${key}`);
  if(!box)return;
- box.classList.toggle('hidden');
+ if(forceOpen)box.classList.remove('hidden');else box.classList.toggle('hidden');
  if(box.classList.contains('hidden'))return;
  box.innerHTML='<p class="muted small">Chargement…</p>';
  const {data=[],error}=await supabase.rpc('get_activity_comments',{a_type:type,a_id:id});
  if(error){box.innerHTML=`<p class="msg">${esc(error.message)}</p>`;return}
  box.innerHTML=`<div class="comments-list">${data.map(c=>`<div class="comment-row"><div class="comment-avatar">🐾</div><div class="comment-main"><div><b>${esc(c.display_name||'Pisteur')}</b><span>${new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span></div><p>${esc(c.body)}</p></div>${c.is_mine?`<button class="delete-comment" data-id="${c.id}" data-type="${type}" data-activity="${id}" title="Supprimer">×</button>`:''}</div>`).join('')||'<p class="muted small">Aucun commentaire.</p>'}</div>
  <form class="comment-form" data-type="${type}" data-id="${id}"><input name="body" maxlength="500" placeholder="Écrire un commentaire…" required><button class="primary" type="submit">Envoyer</button></form>`;
- box.querySelector('.comment-form').onsubmit=async e=>{e.preventDefault();const body=String(new FormData(e.target).get('body')||'').trim();if(!body)return;const {error}=await supabase.from('activity_comments').insert({user_id:session.user.id,activity_type:type,activity_id:id,body});if(error){alert(error.message);return}await openComments(type,id);box.classList.remove('hidden');await refreshSocialCard(type,id)};
- box.querySelectorAll('.delete-comment').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce commentaire ?'))return;await supabase.from('activity_comments').delete().eq('id',b.dataset.id);await openComments(type,id);box.classList.remove('hidden');await refreshSocialCard(type,id)});
+ box.querySelector('.comment-form').onsubmit=async e=>{e.preventDefault();const body=String(new FormData(e.target).get('body')||'').trim();if(!body)return;const {error}=await supabase.from('activity_comments').insert({user_id:session.user.id,activity_type:type,activity_id:id,body});if(error){alert(error.message);return}await openComments(type,id,true);await refreshSocialCard(type,id)};
+ box.querySelectorAll('.delete-comment').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce commentaire ?'))return;await supabase.from('activity_comments').delete().eq('id',b.dataset.id);await openComments(type,id,true);await refreshSocialCard(type,id)});
 }
+const SOCIAL_SEEN_KEY='piste_social_seen_at';
+async function refreshSocialBadge(){
+ const badge=$('socialNavBadge');if(!session||!badge)return;
+ const since=localStorage.getItem(SOCIAL_SEEN_KEY);
+ const {data,error}=await supabase.rpc('get_social_notification_count',{since_at:since||null});
+ if(error)return;
+ const count=Math.max(0,Number(data||0));
+ badge.textContent=count>99?'99+':String(count);
+ badge.classList.toggle('hidden',count===0);
+}
+function markSocialSeen(){
+ localStorage.setItem(SOCIAL_SEEN_KEY,new Date().toISOString());
+ const badge=$('socialNavBadge');if(badge){badge.textContent='0';badge.classList.add('hidden')}
+}
+window.addEventListener('focus',()=>refreshSocialBadge());
+setInterval(()=>refreshSocialBadge(),60000);
+
+function feedTrackPreview(track){
+ if(!Array.isArray(track)||track.length<2)return '';
+ const pts=track.map(p=>({lat:Number(p.lat),lon:Number(p.lon)})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+ if(pts.length<2)return '';
+ const minLat=Math.min(...pts.map(p=>p.lat)),maxLat=Math.max(...pts.map(p=>p.lat));
+ const minLon=Math.min(...pts.map(p=>p.lon)),maxLon=Math.max(...pts.map(p=>p.lon));
+ const dLat=Math.max(maxLat-minLat,.000001),dLon=Math.max(maxLon-minLon,.000001);
+ const sample=pts.filter((_,i)=>i===0||i===pts.length-1||i%Math.max(1,Math.ceil(pts.length/80))===0);
+ const points=sample.map(p=>`${(8+(p.lon-minLon)/dLon*84).toFixed(1)},${(52-(p.lat-minLat)/dLat*44).toFixed(1)}`).join(' ');
+ const first=points.split(' ')[0],last=points.split(' ').slice(-1)[0];
+ return `<div class="feed-track-preview"><div class="feed-map-grid"></div><svg viewBox="0 0 100 60" preserveAspectRatio="none" aria-label="Aperçu du tracé"><polyline points="${points}" fill="none" stroke="#b9d66c" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${first.split(',')[0]}" cy="${first.split(',')[1]}" r="3" fill="#f3c269"/><circle cx="${last.split(',')[0]}" cy="${last.split(',')[1]}" r="3" fill="#69d6a2"/></svg><span>APERÇU DU TRACÉ</span></div>`;
+}
+
 async function loadFeed(){
- $('friendFeed').innerHTML='<p class="muted">Chargement…</p>';
+ $('friendFeed').innerHTML='<div class="feed-loading"><span>🐾</span><p>Chargement des actualités…</p></div>';
  const [op,tra]=await Promise.all([
    supabase.from('pistes').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
    supabase.from('entrainements').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50)
@@ -1070,13 +1112,13 @@ async function loadFeed(){
  friendFeedRows=[
    ...(op.data||[]).map(x=>({...x,activity_type:'operational'})),
    ...(tra.data||[]).map(x=>({...x,activity_type:'training'}))
- ].filter(x=>x.owner_id!==session.user.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
+ ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
 
  const ownerIds=[...new Set(friendFeedRows.map(x=>x.owner_id).filter(Boolean))];
  const dogIds=[...new Set(friendFeedRows.map(x=>x.dog_id).filter(Boolean))];
  const [{data:profiles=[]},{data:friendDogs=[]},socials]=await Promise.all([
    ownerIds.length?supabase.from('profiles').select('user_id,display_name').in('user_id',ownerIds):Promise.resolve({data:[]}),
-   dogIds.length?supabase.from('dogs').select('id,owner_id,alias,photo_path').in('id',dogIds):Promise.resolve({data:[]}),
+   dogIds.length?supabase.rpc('get_friend_dog_cards',{dog_ids:dogIds}):Promise.resolve({data:[]}),
    Promise.all(friendFeedRows.map(x=>socialSummary(x.activity_type,x.id)))
  ]);
  const profileMap=Object.fromEntries((profiles||[]).map(p=>[p.user_id,p]));
@@ -1087,13 +1129,16 @@ async function loadFeed(){
  $('friendFeed').innerHTML=friendFeedRows.length?friendFeedRows.map((x,i)=>{
    const training=x.activity_type==='training',key=`${x.activity_type}-${x.id}`,s=socials[i]||{};
    const badge=training?'<span class="type-badge training-type">🟣 Entraînement</span>':'<span class="type-badge operational-type">🔵 Pistage opérationnel</span>';
-   const owner=profileMap[x.owner_id]?.display_name||'Pisteur';
+   const mineActivity=x.owner_id===session.user.id;
+   const owner=mineActivity?'Moi':(profileMap[x.owner_id]?.display_name||'Pisteur');
    const dog=dogMap[x.dog_id],dogAlias=dog?.alias||'Chien non renseigné',photo=photoMap[x.dog_id]||'';
    return `<div class="item social-activity">
      <div class="feed-author"><div class="feed-dog-photo">${photo?`<img src="${esc(photo)}" alt="Photo de ${esc(dogAlias)}">`:'🐕'}</div><div><b>${esc(owner)}</b><span>avec ${esc(dogAlias)}</span></div><small>${new Date(x.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</small></div>
-     <div class="item-title"><div>${badge} <b>${esc(x.date)}</b> • ${fmt(x.distance_km,2)} km</div><span class="pill friends">Amis</span></div>
-     <div>${esc(x.resultat)}</div><div class="small muted">${esc(x.commune_depart||"Lieu non renseigné")} • ${fmt(x.duree_h,2)} h</div>
-     <div class="feed-mini-stats"><span>↗ ${fmt(x.distance_km,2)} km</span><span>⏱ ${fmt(x.duree_h,2)} h</span><span>🐕 ${esc(dogAlias)}</span></div>
+     <div class="item-title"><div>${badge}<b>${new Date(x.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</b></div><span class="pill friends">${mineActivity?'Mon partage':'Ami'}</span></div>
+     ${feedTrackPreview(x.track)}
+     <div class="feed-result"><span>RÉSULTAT</span><b>${esc(x.resultat)}</b></div>
+     <div class="feed-meta">📍 ${esc(x.commune_depart||"Lieu non renseigné")}</div>
+     <div class="feed-mini-stats"><span><small>DISTANCE</small><b>↗ ${fmt(x.distance_km,2)} km</b></span><span><small>DURÉE</small><b>⏱ ${fmt(x.duree_h,2)} h</b></span><span><small>BINÔME</small><b>🐕 ${esc(dogAlias)}</b></span></div>
      <div class="social-actions">
        <button id="like-${key}" class="social-btn like-btn ${s.liked_by_me?'liked':''}" data-liked="${s.liked_by_me?'1':'0'}" data-type="${x.activity_type}" data-id="${x.id}">👍 <span>${s.likes_count||0}</span></button>
        <button class="social-btn comments-btn" data-type="${x.activity_type}" data-id="${x.id}">💬 <span id="comments-count-${key}">${s.comments_count||0}</span></button>
@@ -1535,7 +1580,7 @@ $('resumeDraftBtn').onclick=restoreDraft;
 $('discardDraftBtn').onclick=()=>{if(confirm('Effacer cet enregistrement local interrompu ?')){clearDraft();updateResumeBanner()}};
 window.addEventListener('online',()=>{updateNetworkStatus();installActivityNavigation();syncQueue()});window.addEventListener('offline',updateNetworkStatus);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gps.start&&!gps.paused)requestWakeLock()});window.addEventListener('beforeunload',()=>saveDraft(true));
 
-$('newTrainingBtn').onclick=()=>beginNewPiste('training');
+$('newTrainingBtn').onclick=()=>{selectedTrainingRoute=null;beginNewPiste('training')};
 $('analysisMineTab').onclick=()=>renderCanineAnalysis('mine');
 $('analysisCommunityTab').onclick=()=>renderCanineAnalysis('community');
 document.querySelectorAll('[data-mapfilter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-mapfilter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderGlobalMap(b.dataset.mapfilter)});

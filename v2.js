@@ -30,17 +30,11 @@
 
   function privateAuth(){
     const authCard = q('#authScreen .auth-card');
-    const signupButton = q('#showSignup');
-    const signupForm = q('#signupForm');
-    const segmented = q('#authScreen .segmented');
-    if(signupButton) signupButton.classList.add('hidden');
-    if(signupForm) signupForm.classList.add('hidden');
-    if(segmented) segmented.style.gridTemplateColumns = '1fr';
 
     if(authCard && !q('.v2-private-auth', authCard)){
       const badge = document.createElement('div');
       badge.className = 'v2-private-auth';
-      badge.innerHTML = '<span>🔒</span><span>Version privée en développement — inscriptions fermées.</span>';
+      badge.innerHTML = '<span>🛡️</span><span>Bêta privée — inscriptions réservées aux testeurs invités.</span>';
       authCard.insertBefore(badge, authCard.firstChild);
     }
   }
@@ -131,9 +125,9 @@
 
     const defs = [
       {page:'homePage', icon:'⌂', label:'Accueil'},
-      {page:'feedPage', icon:'🐕‍🦺', label:'Amis'},
+      {page:'dogPage', icon:'🐕', label:'Chien'},
       {page:'trainingPage', icon:'◎', label:'Terrain'},
-      {page:'mapPage', icon:'🗺️', label:'Carte'},
+      {page:'feedPage', icon:'🔔', label:'Actualités'},
       {page:'profilePage', icon:'○', label:'Profil'}
     ];
 
@@ -142,6 +136,10 @@
       if(!d) return;
       btn.dataset.page = d.page;
       btn.innerHTML = `<span class="nav-icon">${d.icon}</span><span>${d.label}</span>`;
+      if(d.page==='feedPage'){
+        btn.classList.add('nav-social');
+        btn.insertAdjacentHTML('beforeend','<b id="socialNavBadge" class="nav-notification hidden">0</b>');
+      }
     });
 
     const setActive = (page) => {
