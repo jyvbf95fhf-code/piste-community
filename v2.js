@@ -30,17 +30,11 @@
 
   function privateAuth(){
     const authCard = q('#authScreen .auth-card');
-    const signupButton = q('#showSignup');
-    const signupForm = q('#signupForm');
-    const segmented = q('#authScreen .segmented');
-    if(signupButton) signupButton.classList.add('hidden');
-    if(signupForm) signupForm.classList.add('hidden');
-    if(segmented) segmented.style.gridTemplateColumns = '1fr';
 
     if(authCard && !q('.v2-private-auth', authCard)){
       const badge = document.createElement('div');
       badge.className = 'v2-private-auth';
-      badge.innerHTML = '<span>🔒</span><span>Version privée en développement — inscriptions fermées.</span>';
+      badge.innerHTML = '<span>🛡️</span><span>Bêta privée — inscriptions réservées aux testeurs invités.</span>';
       authCard.insertBefore(badge, authCard.firstChild);
     }
   }
