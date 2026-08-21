@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2030">
+<link rel="stylesheet" href="./v2.css?v=2031">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -184,13 +184,15 @@
           <select name="dog_id" id="recordDogSelect"><option value="">Non renseigné</option></select>
         </label>
 
-        <label>Partage
-          <select name="visibility">
-            <option value="private">🔒 Privé</option>
-            <option value="friends">👥 Amis</option>
-            <option value="community">🌍 Communauté (statistiques anonymes)</option>
-          </select>
-        </label>
+        <fieldset class="full visibility-picker">
+          <legend>Qui peut voir cette activité ?</legend>
+          <p class="small muted">Choisis avant l’enregistrement. Le mode privé reste sélectionné par défaut.</p>
+          <div class="visibility-options">
+            <label><input type="radio" name="visibility" value="private" checked><span><b>🔒 Privé</b><small>Uniquement moi</small></span></label>
+            <label><input type="radio" name="visibility" value="friends"><span><b>👥 Amis</b><small>Visible dans leurs Actualités</small></span></label>
+            <label><input type="radio" name="visibility" value="community"><span><b>🌍 Communauté</b><small>Statistiques anonymes uniquement</small></span></label>
+          </div>
+        </fieldset>
 
 
         <fieldset class="full field-assessment">
@@ -690,7 +692,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1034"></script>
+<script type="module" src="./app.js?v=1035"></script>
 <script src="./v2.js?v=2012"></script>
 </body>
 </html>

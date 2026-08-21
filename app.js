@@ -931,6 +931,15 @@ function updatePreSaveSummary(){
 $('pisteForm').addEventListener('input',updatePreSaveSummary);
 $('pisteForm').addEventListener('change',updatePreSaveSummary);
 
+function showActivitySavedToast(message){
+ document.getElementById('activitySavedToast')?.remove();
+ const toast=document.createElement('div');toast.id='activitySavedToast';toast.className='activity-saved-toast';
+ toast.innerHTML=`<span>✓</span><div><b>Activité enregistrée</b><small>${esc(message)}</small></div>`;
+ document.body.appendChild(toast);
+ requestAnimationFrame(()=>toast.classList.add('show'));
+ setTimeout(()=>{toast.classList.remove('show');setTimeout(()=>toast.remove(),250)},4200);
+}
+
 $('pisteForm').onsubmit=async e=>{
  e.preventDefault();$('pisteMsg').textContent="Enregistrement…";
  const f=new FormData(e.target),o={};f.forEach((v,k)=>o[k]=v);
@@ -953,7 +962,10 @@ $('pisteForm').onsubmit=async e=>{
    if(!navigator.onLine||/fetch|network|Failed to fetch/i.test(error.message||'')){queueRecord(recordMode,o);$('pisteMsg').textContent="Pas de réseau : enregistrement conservé sur ce téléphone et synchronisé automatiquement.";clearDraft();resetGpsUI(false);showPage(recordMode==='training'?'trainingPage':'homePage');return}
    $('pisteMsg').textContent="Erreur : "+error.message;return
  }
- clearDraft();$('pisteMsg').textContent=recordMode==='training'?"Entraînement enregistré.":"Pistage opérationnel enregistré.";
+ const activityName=recordMode==='training'?'Entraînement':'Pistage opérationnel';
+ const sharing=o.visibility==='friends'?'Partagé avec tes amis.':o.visibility==='community'?'Ajouté aux statistiques anonymes de la communauté.':'Conservé en privé.';
+ clearDraft();$('pisteMsg').textContent=activityName+' enregistré. '+sharing;
+ showActivitySavedToast(sharing);
  if(recordMode==='training'){await refreshTrainings();resetGpsUI(false);showPage('trainingPage')}
  else{await refreshMine();resetGpsUI(false);showPage('homePage')}
 };
