@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2024">
+<link rel="stylesheet" href="./v2.css?v=2025">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -409,7 +409,6 @@
       <div id="plannerTools" class="planner-tools" aria-label="Outils de création du scénario">
         <button class="active" data-planner-tool="route">〰️ Tracé</button><button data-planner-tool="pause">⏳ Attente</button><button data-planner-tool="object">📦 Objet</button><button data-planner-tool="direction">↪️ Direction</button><button data-planner-tool="crossing">🔀 Croisement</button><button data-planner-tool="contamination">👥 Contamination</button><button data-planner-tool="danger">⚠️ Danger</button><button data-planner-tool="subject">👤 Personne</button><button data-planner-tool="note">📍 Note</button>
       </div>
-      <div class="planner-routing-bar" aria-label="Mode de calcul du tracé"><button id="routingTrailBtn" class="active" type="button">🥾 Suivre chemins</button><button id="routingStreetBtn" type="button">🚶 Suivre rues</button><button id="routingFreeBtn" type="button">✏️ Tracé libre</button><span id="routingStatus">Les nouveaux segments suivront les voies cartographiées.</span></div>
       <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
       <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
       <details class="route-suggestion-card" open>
@@ -444,6 +443,7 @@
         <p id="odorSummary" class="odor-summary">Simulation désactivée.</p>
         <p class="odor-disclaimer">Modèle pédagogique indicatif : il estime une zone cohérente à partir des paramètres saisis. Il ne mesure pas l’odeur et ne remplace ni l’observation du terrain ni l’analyse du coach.</p>
       </details>
+      <div class="planner-routing-bar" aria-label="Mode de calcul du tracé"><button id="routingTrailBtn" class="active" type="button">🥾 Chemins</button><button id="routingStreetBtn" type="button">🚶 Rues</button><button id="routingFreeBtn" type="button">✏️ Libre</button><span id="routingStatus">Les nouveaux segments suivront les voies cartographiées.</span></div>
       <div id="plannerMap"></div>
       <div id="plannerScenarioList" class="scenario-list"></div>
       <div class="planner-actions">
