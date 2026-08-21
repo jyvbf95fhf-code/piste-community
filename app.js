@@ -858,8 +858,8 @@ function beginNewPiste(mode='piste'){
  $('finishTitle').textContent=training?'Terminer l’entraînement':'Terminer l’enregistrement';
  $('startGpsBtn').textContent=training?'DÉMARRER L’ENTRAÎNEMENT':'DÉMARRER LE PISTAGE';
  $('saveRecordBtn').textContent=training?'ENREGISTRER L’ENTRAÎNEMENT':'ENREGISTRER LE PISTAGE';
- const vis=$('pisteForm').elements.visibility.closest('label');
- vis.classList.remove('hidden');
+ const vis=$('pisteForm').querySelector('.visibility-picker');
+ vis?.classList.remove('hidden');
  $('pisteForm').elements.visibility.value='private';
  applySelectedTrainingRoute();
 }
@@ -1580,7 +1580,7 @@ $('resumeDraftBtn').onclick=restoreDraft;
 $('discardDraftBtn').onclick=()=>{if(confirm('Effacer cet enregistrement local interrompu ?')){clearDraft();updateResumeBanner()}};
 window.addEventListener('online',()=>{updateNetworkStatus();installActivityNavigation();syncQueue()});window.addEventListener('offline',updateNetworkStatus);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gps.start&&!gps.paused)requestWakeLock()});window.addEventListener('beforeunload',()=>saveDraft(true));
 
-$('newTrainingBtn').onclick=()=>beginNewPiste('training');
+$('newTrainingBtn').onclick=()=>{selectedTrainingRoute=null;beginNewPiste('training')};
 $('analysisMineTab').onclick=()=>renderCanineAnalysis('mine');
 $('analysisCommunityTab').onclick=()=>renderCanineAnalysis('community');
 document.querySelectorAll('[data-mapfilter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-mapfilter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderGlobalMap(b.dataset.mapfilter)});
