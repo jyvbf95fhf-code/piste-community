@@ -1077,8 +1077,21 @@ function markSocialSeen(){
 window.addEventListener('focus',()=>refreshSocialBadge());
 setInterval(()=>refreshSocialBadge(),60000);
 
+function feedTrackPreview(track){
+ if(!Array.isArray(track)||track.length<2)return '';
+ const pts=track.map(p=>({lat:Number(p.lat),lon:Number(p.lon)})).filter(p=>Number.isFinite(p.lat)&&Number.isFinite(p.lon));
+ if(pts.length<2)return '';
+ const minLat=Math.min(...pts.map(p=>p.lat)),maxLat=Math.max(...pts.map(p=>p.lat));
+ const minLon=Math.min(...pts.map(p=>p.lon)),maxLon=Math.max(...pts.map(p=>p.lon));
+ const dLat=Math.max(maxLat-minLat,.000001),dLon=Math.max(maxLon-minLon,.000001);
+ const sample=pts.filter((_,i)=>i===0||i===pts.length-1||i%Math.max(1,Math.ceil(pts.length/80))===0);
+ const points=sample.map(p=>`${(8+(p.lon-minLon)/dLon*84).toFixed(1)},${(52-(p.lat-minLat)/dLat*44).toFixed(1)}`).join(' ');
+ const first=points.split(' ')[0],last=points.split(' ').slice(-1)[0];
+ return `<div class="feed-track-preview"><div class="feed-map-grid"></div><svg viewBox="0 0 100 60" preserveAspectRatio="none" aria-label="Aperçu du tracé"><polyline points="${points}" fill="none" stroke="#b9d66c" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${first.split(',')[0]}" cy="${first.split(',')[1]}" r="3" fill="#f3c269"/><circle cx="${last.split(',')[0]}" cy="${last.split(',')[1]}" r="3" fill="#69d6a2"/></svg><span>APERÇU DU TRACÉ</span></div>`;
+}
+
 async function loadFeed(){
- $('friendFeed').innerHTML='<p class="muted">Chargement…</p>';
+ $('friendFeed').innerHTML='<div class="feed-loading"><span>🐾</span><p>Chargement des actualités…</p></div>';
  const [op,tra]=await Promise.all([
    supabase.from('pistes').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
    supabase.from('entrainements').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50)
@@ -1109,9 +1122,11 @@ async function loadFeed(){
    const dog=dogMap[x.dog_id],dogAlias=dog?.alias||'Chien non renseigné',photo=photoMap[x.dog_id]||'';
    return `<div class="item social-activity">
      <div class="feed-author"><div class="feed-dog-photo">${photo?`<img src="${esc(photo)}" alt="Photo de ${esc(dogAlias)}">`:'🐕'}</div><div><b>${esc(owner)}</b><span>avec ${esc(dogAlias)}</span></div><small>${new Date(x.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</small></div>
-     <div class="item-title"><div>${badge} <b>${esc(x.date)}</b> • ${fmt(x.distance_km,2)} km</div><span class="pill friends">${mineActivity?'Mon partage':'Amis'}</span></div>
-     <div>${esc(x.resultat)}</div><div class="small muted">${esc(x.commune_depart||"Lieu non renseigné")} • ${fmt(x.duree_h,2)} h</div>
-     <div class="feed-mini-stats"><span>↗ ${fmt(x.distance_km,2)} km</span><span>⏱ ${fmt(x.duree_h,2)} h</span><span>🐕 ${esc(dogAlias)}</span></div>
+     <div class="item-title"><div>${badge}<b>${new Date(x.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</b></div><span class="pill friends">${mineActivity?'Mon partage':'Ami'}</span></div>
+     ${feedTrackPreview(x.track)}
+     <div class="feed-result"><span>RÉSULTAT</span><b>${esc(x.resultat)}</b></div>
+     <div class="feed-meta">📍 ${esc(x.commune_depart||"Lieu non renseigné")}</div>
+     <div class="feed-mini-stats"><span><small>DISTANCE</small><b>↗ ${fmt(x.distance_km,2)} km</b></span><span><small>DURÉE</small><b>⏱ ${fmt(x.duree_h,2)} h</b></span><span><small>BINÔME</small><b>🐕 ${esc(dogAlias)}</b></span></div>
      <div class="social-actions">
        <button id="like-${key}" class="social-btn like-btn ${s.liked_by_me?'liked':''}" data-liked="${s.liked_by_me?'1':'0'}" data-type="${x.activity_type}" data-id="${x.id}">👍 <span>${s.likes_count||0}</span></button>
        <button class="social-btn comments-btn" data-type="${x.activity_type}" data-id="${x.id}">💬 <span id="comments-count-${key}">${s.comments_count||0}</span></button>
