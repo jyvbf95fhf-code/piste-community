@@ -65,7 +65,7 @@ function showPage(id){
  const target=$(id);if(!target){console.error('Page introuvable:',id);return}
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
  target.classList.add('active');
- if(id==='feedPage')loadFeed();
+ if(id==='feedPage'){markSocialSeen();loadFeed();}
  if(id==='statsPage')loadStats(currentStatsScope||'mine');
  if(id==='friendsPage')loadFriends();
  if(id==='historyPage')renderHistory();
@@ -458,7 +458,7 @@ async function boot(){
  session=s;
  if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
  $('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
- await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');setTimeout(()=>openTutorial(false),350);
+ await ensureProfile(); await refreshMine(); await refreshTrainings(); await loadDogs(); await loadGoals(); await loadTrainingRoutes(); updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');refreshSocialBadge();setTimeout(()=>openTutorial(false),350);
 }
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();location.reload()};
 
@@ -1060,6 +1060,23 @@ async function openComments(type,id){
  box.querySelector('.comment-form').onsubmit=async e=>{e.preventDefault();const body=String(new FormData(e.target).get('body')||'').trim();if(!body)return;const {error}=await supabase.from('activity_comments').insert({user_id:session.user.id,activity_type:type,activity_id:id,body});if(error){alert(error.message);return}await openComments(type,id);box.classList.remove('hidden');await refreshSocialCard(type,id)};
  box.querySelectorAll('.delete-comment').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce commentaire ?'))return;await supabase.from('activity_comments').delete().eq('id',b.dataset.id);await openComments(type,id);box.classList.remove('hidden');await refreshSocialCard(type,id)});
 }
+const SOCIAL_SEEN_KEY='piste_social_seen_at';
+async function refreshSocialBadge(){
+ const badge=$('socialNavBadge');if(!session||!badge)return;
+ const since=localStorage.getItem(SOCIAL_SEEN_KEY);
+ const {data,error}=await supabase.rpc('get_social_notification_count',{since_at:since||null});
+ if(error)return;
+ const count=Math.max(0,Number(data||0));
+ badge.textContent=count>99?'99+':String(count);
+ badge.classList.toggle('hidden',count===0);
+}
+function markSocialSeen(){
+ localStorage.setItem(SOCIAL_SEEN_KEY,new Date().toISOString());
+ const badge=$('socialNavBadge');if(badge){badge.textContent='0';badge.classList.add('hidden')}
+}
+window.addEventListener('focus',()=>refreshSocialBadge());
+setInterval(()=>refreshSocialBadge(),60000);
+
 async function loadFeed(){
  $('friendFeed').innerHTML='<p class="muted">Chargement…</p>';
  const [op,tra]=await Promise.all([
@@ -1070,7 +1087,7 @@ async function loadFeed(){
  friendFeedRows=[
    ...(op.data||[]).map(x=>({...x,activity_type:'operational'})),
    ...(tra.data||[]).map(x=>({...x,activity_type:'training'}))
- ].filter(x=>x.owner_id!==session.user.id).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
+ ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
 
  const ownerIds=[...new Set(friendFeedRows.map(x=>x.owner_id).filter(Boolean))];
  const dogIds=[...new Set(friendFeedRows.map(x=>x.dog_id).filter(Boolean))];
@@ -1087,11 +1104,12 @@ async function loadFeed(){
  $('friendFeed').innerHTML=friendFeedRows.length?friendFeedRows.map((x,i)=>{
    const training=x.activity_type==='training',key=`${x.activity_type}-${x.id}`,s=socials[i]||{};
    const badge=training?'<span class="type-badge training-type">🟣 Entraînement</span>':'<span class="type-badge operational-type">🔵 Pistage opérationnel</span>';
-   const owner=profileMap[x.owner_id]?.display_name||'Pisteur';
+   const mineActivity=x.owner_id===session.user.id;
+   const owner=mineActivity?'Moi':(profileMap[x.owner_id]?.display_name||'Pisteur');
    const dog=dogMap[x.dog_id],dogAlias=dog?.alias||'Chien non renseigné',photo=photoMap[x.dog_id]||'';
    return `<div class="item social-activity">
      <div class="feed-author"><div class="feed-dog-photo">${photo?`<img src="${esc(photo)}" alt="Photo de ${esc(dogAlias)}">`:'🐕'}</div><div><b>${esc(owner)}</b><span>avec ${esc(dogAlias)}</span></div><small>${new Date(x.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</small></div>
-     <div class="item-title"><div>${badge} <b>${esc(x.date)}</b> • ${fmt(x.distance_km,2)} km</div><span class="pill friends">Amis</span></div>
+     <div class="item-title"><div>${badge} <b>${esc(x.date)}</b> • ${fmt(x.distance_km,2)} km</div><span class="pill friends">${mineActivity?'Mon partage':'Amis'}</span></div>
      <div>${esc(x.resultat)}</div><div class="small muted">${esc(x.commune_depart||"Lieu non renseigné")} • ${fmt(x.duree_h,2)} h</div>
      <div class="feed-mini-stats"><span>↗ ${fmt(x.distance_km,2)} km</span><span>⏱ ${fmt(x.duree_h,2)} h</span><span>🐕 ${esc(dogAlias)}</span></div>
      <div class="social-actions">
