@@ -1047,18 +1047,18 @@ async function refreshSocialCard(type,id){
  if(like){like.dataset.liked=s.liked_by_me?'1':'0';like.classList.toggle('liked',!!s.liked_by_me);like.innerHTML=`👍 <span>${s.likes_count||0}</span>`}
  if(comments)comments.textContent=s.comments_count||0;
 }
-async function openComments(type,id){
+async function openComments(type,id,forceOpen=false){
  const key=`${type}-${id}`,box=$(`comments-${key}`);
  if(!box)return;
- box.classList.toggle('hidden');
+ if(forceOpen)box.classList.remove('hidden');else box.classList.toggle('hidden');
  if(box.classList.contains('hidden'))return;
  box.innerHTML='<p class="muted small">Chargement…</p>';
  const {data=[],error}=await supabase.rpc('get_activity_comments',{a_type:type,a_id:id});
  if(error){box.innerHTML=`<p class="msg">${esc(error.message)}</p>`;return}
  box.innerHTML=`<div class="comments-list">${data.map(c=>`<div class="comment-row"><div class="comment-avatar">🐾</div><div class="comment-main"><div><b>${esc(c.display_name||'Pisteur')}</b><span>${new Date(c.created_at).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span></div><p>${esc(c.body)}</p></div>${c.is_mine?`<button class="delete-comment" data-id="${c.id}" data-type="${type}" data-activity="${id}" title="Supprimer">×</button>`:''}</div>`).join('')||'<p class="muted small">Aucun commentaire.</p>'}</div>
  <form class="comment-form" data-type="${type}" data-id="${id}"><input name="body" maxlength="500" placeholder="Écrire un commentaire…" required><button class="primary" type="submit">Envoyer</button></form>`;
- box.querySelector('.comment-form').onsubmit=async e=>{e.preventDefault();const body=String(new FormData(e.target).get('body')||'').trim();if(!body)return;const {error}=await supabase.from('activity_comments').insert({user_id:session.user.id,activity_type:type,activity_id:id,body});if(error){alert(error.message);return}await openComments(type,id);box.classList.remove('hidden');await refreshSocialCard(type,id)};
- box.querySelectorAll('.delete-comment').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce commentaire ?'))return;await supabase.from('activity_comments').delete().eq('id',b.dataset.id);await openComments(type,id);box.classList.remove('hidden');await refreshSocialCard(type,id)});
+ box.querySelector('.comment-form').onsubmit=async e=>{e.preventDefault();const body=String(new FormData(e.target).get('body')||'').trim();if(!body)return;const {error}=await supabase.from('activity_comments').insert({user_id:session.user.id,activity_type:type,activity_id:id,body});if(error){alert(error.message);return}await openComments(type,id,true);await refreshSocialCard(type,id)};
+ box.querySelectorAll('.delete-comment').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer ce commentaire ?'))return;await supabase.from('activity_comments').delete().eq('id',b.dataset.id);await openComments(type,id,true);await refreshSocialCard(type,id)});
 }
 const SOCIAL_SEEN_KEY='piste_social_seen_at';
 async function refreshSocialBadge(){
