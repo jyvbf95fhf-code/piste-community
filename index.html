@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2025">
+<link rel="stylesheet" href="./v2.css?v=2026">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -402,6 +402,12 @@
   <section id="plannerPage" class="page">
     <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🗺️ Créateur de tracé</h2></div>
     <div class="card planner-card">
+      <!-- V10.26_ASSISTANT_GPX -->
+      <nav class="planner-section-tabs" aria-label="Fonctions du créateur de tracé">
+        <button type="button" class="active" data-planner-section="map" aria-selected="true"><span>🗺️</span><b>Carte</b><small>Dessiner et ajuster</small></button>
+        <button type="button" data-planner-section="assistant" aria-selected="false"><span>✨</span><b>Assistant</b><small>Suggérer ou importer</small></button>
+        <button type="button" data-planner-section="odor" aria-selected="false"><span>🌬️</span><b>Intelligence olfactive</b><small>Météo et couloir</small></button>
+      </nav>
       <div class="planner-top">
         <label>Nom du tracé
           <input id="routeName" maxlength="80" placeholder="Ex. Forêt 3 km – angles">
@@ -414,9 +420,16 @@
       </div>
       <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
       <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
-      <details class="route-suggestion-card" open>
+      <details id="plannerAssistantPanel" class="route-suggestion-card planner-feature-panel" open>
         <summary>✨ Assistant de tracé <small>Nouvelle proposition</small></summary>
+        <div class="planner-panel-heading"><span>✨</span><div><small class="section-kicker">ASSISTANT DE TRACÉ</small><h3>Créer ou importer un parcours</h3></div></div>
         <p class="small muted">Choisis les critères : l’assistant crée une base modifiable autour du premier point déjà posé, ou autour du centre de la carte.</p>
+        <div class="gpx-import-card">
+          <div class="gpx-import-copy"><span>📥</span><div><b>Importer une trace GPX</b><small>Depuis Fichiers, Garmin, une randonnée ou une ancienne piste. Le fichier reste sur cet appareil jusqu’à l’enregistrement.</small></div></div>
+          <input id="gpxFileInput" class="visually-hidden" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml">
+          <div class="gpx-import-actions"><button id="chooseGpxBtn" class="secondary" type="button">Choisir un fichier GPX</button><button id="clearImportedGpxBtn" class="ghost-dark hidden" type="button">Retirer l’import</button></div>
+          <p id="gpxImportStatus" class="gpx-import-status" role="status">Formats acceptés : trace GPX ou route GPX, 10 Mo maximum.</p>
+        </div>
         <div class="route-suggestion-grid">
           <label>Distance cible (km)<input id="suggestionDistance" type="number" min="0.2" max="30" step="0.1" value="1.5"></label>
           <label>Forme<select id="suggestionShape"><option value="loop">Boucle</option><option value="outback">Aller-retour</option><option value="open">Départ-arrivée distincts</option></select></label>
@@ -430,8 +443,9 @@
         <p id="routeSuggestionMsg" class="route-suggestion-msg">La proposition devra être déplacée sur les chemins réellement accessibles.</p>
         <p class="odor-disclaimer">Avertissement : l’assistant dessine un scénario d’entraînement géométrique. Il ne connaît pas les clôtures, propriétés privées, interdictions, pentes ni dangers réels. Validation humaine obligatoire avant utilisation.</p>
       </details>
-      <details class="odor-model-card">
+      <details id="plannerOdorPanel" class="odor-model-card planner-feature-panel">
         <summary>🌬️ Intelligence olfactive <small>Options avancées</small></summary>
+        <div class="planner-panel-heading"><span>🌬️</span><div><small class="section-kicker">INTELLIGENCE OLFACTIVE</small><h3>Météo, vent et couloir estimé</h3></div></div>
         <div class="card-title-row"><div><small class="section-kicker">INTELLIGENCE OLFACTIVE</small><h3>Couloir olfactif estimé</h3></div><label class="odor-switch"><input id="odorEnabled" type="checkbox"><span>Afficher</span></label></div>
         <div class="odor-model-grid">
           <label>Date et heure prévues<input id="weatherPlannedAt" type="datetime-local"></label>
@@ -633,7 +647,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1028"></script>
+<script type="module" src="./app.js?v=1029"></script>
 <script src="./v2.js?v=2010"></script>
 </body>
 </html>
