@@ -5,8 +5,8 @@ const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
 let currentStatsScope='mine';
-let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingChannel=null;
-let wakeLock=null,fakeLockPressTimer=null,fakeLockUnlockReady=false,fakeLockBlockUntil=0;
+let liveMap=null, liveLine=null, liveMarker=null, livePositionMarker=null, liveAccuracyCircle=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingChannel=null;
+let wakeLock=null,wakeLockSupported='wakeLock' in navigator,fakeLockPressTimer=null,fakeLockUnlockReady=false,fakeLockBlockUntil=0;
 let plannerPoints=[], plannerWaypoints=[], plannerTool='route', coachingSessions=[], activeCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, liveMarkerTool='off', coachingAutoMetrics=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
@@ -20,7 +20,7 @@ const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{ico
 const LIVE_MARKERS={loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
 const OPERATIONAL_GPX_KINDS={habitual:{label:'Itinéraire habituel',icon:'↝'},searched:{label:'Zone ou trajet déjà parcouru',icon:'✓'},access:{label:'Accès équipe',icon:'🚗'},team:{label:'Trace d’une autre équipe',icon:'👥'},reference:{label:'Autre référence',icon:'🗺️'}};
 const OPERATIONAL_GPX_COLORS=['#a98be8','#4db6ac','#ef9a55','#64a7e8','#d86f8c'];
-let gps={watch:null,start:null,timer:null,points:[],distance:0,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0};
+let gps={watch:null,start:null,timer:null,points:[],distance:0,distanceAnchor:null,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0,lastFixAt:0,lastWatchRestartAt:0};
 const DRAFT_KEY='piste_active_draft_v4';
 const QUEUE_KEY='piste_sync_queue_v4';
 
@@ -37,10 +37,24 @@ const setQueue=q=>{localStorage.setItem(QUEUE_KEY,JSON.stringify(q));updateSyncB
 function updateNetworkStatus(){if(!$('offlineStatus'))return;const online=navigator.onLine;$('offlineStatus').textContent='Réseau : '+(online?'en ligne':'hors ligne');$('offlineStatus').classList.toggle('offline',!online)}
 function updateSyncBanner(){const n=getQueue().length;if(!$('syncBanner'))return;$('syncBanner').classList.toggle('hidden',!n);$('syncCount').textContent=n}
 function setGpsStatus(text,kind='idle'){if(!$('gpsStatusBadge'))return;$('gpsStatusBadge').textContent=text;$('gpsStatusBadge').className='status-pill '+kind}
-async function requestWakeLock(){try{if('wakeLock' in navigator&&!wakeLock)wakeLock=await navigator.wakeLock.request('screen')}catch{}}
+async function requestWakeLock(){
+ if(!wakeLockSupported)return false;
+ try{
+  if(!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener?.('release',()=>{wakeLock=null;if(gps.start&&!gps.paused&&document.visibilityState==='visible')setTimeout(requestWakeLock,250)},{once:true})}
+  return !wakeLock.released;
+ }catch{wakeLock=null;return false}
+}
 async function releaseWakeLock(){try{if(wakeLock){await wakeLock.release();wakeLock=null}}catch{}}
-function updateFakeLock(){if(!$('fakeLockScreen'))return;$('fakeLockDuration').textContent=$('liveDuration')?.textContent||'00:00:00';$('fakeLockDistance').textContent=($('liveDistance')?.textContent||'0.00')+' km';$('fakeLockAccuracy').textContent=$('liveAccuracy')?.textContent||'—'}
-async function openFakeLock(){if(!gps.start||gps.paused)return;$('fakeLockScreen').classList.remove('hidden');document.body.classList.add('fake-lock-active');updateFakeLock();await requestWakeLock()}
+function gpsFixAge(){return gps.lastFixAt?Date.now()-gps.lastFixAt:Infinity}
+function updateGpsHealth(){
+ if(!gps.start||gps.paused)return;
+ const age=gpsFixAge(),stalled=age>20000,status=$('fakeLockGpsStatus');
+ if(status){status.textContent=stalled?'⚠️ GPS interrompu — garde PISTE affichée':age>10000?'GPS en attente…':'● Positions GPS reçues';status.className=stalled?'fake-lock-gps bad':age>10000?'fake-lock-gps warn':'fake-lock-gps good'}
+ if(stalled){setGpsStatus('GPS interrompu','bad');$('gpsMsg').textContent='Aucune position récente. Ne verrouille pas réellement l’iPhone et garde PISTE Community affichée.'}
+ if(stalled&&document.visibilityState==='visible'&&Date.now()-gps.lastWatchRestartAt>30000){gps.lastWatchRestartAt=Date.now();beginWatch(true)}
+}
+function updateFakeLock(){if(!$('fakeLockScreen'))return;$('fakeLockDuration').textContent=$('liveDuration')?.textContent||'00:00:00';$('fakeLockDistance').textContent=($('liveDistance')?.textContent||'0.00')+' km';$('fakeLockAccuracy').textContent=$('liveAccuracy')?.textContent||'—';updateGpsHealth()}
+async function openFakeLock(){if(!gps.start||gps.paused)return;$('fakeLockScreen').classList.remove('hidden');document.body.classList.add('fake-lock-active');const keptAwake=await requestWakeLock();$('fakeLockWakeStatus').textContent=keptAwake?'Écran maintenu actif':'Maintien d’écran indisponible : ne verrouille pas l’iPhone';$('fakeLockWakeStatus').className=keptAwake?'good':'bad';updateFakeLock()}
 function closeFakeLock(){$('fakeLockScreen')?.classList.add('hidden');$('fakeUnlockBtn')?.classList.remove('holding','ready');document.body.classList.remove('fake-lock-active');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;fakeLockUnlockReady=false}
 function beginFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockPressTimer)return;fakeLockUnlockReady=false;$('fakeUnlockBtn').classList.add('holding');fakeLockPressTimer=setTimeout(()=>{fakeLockUnlockReady=true;$('fakeUnlockBtn').classList.add('ready')},1400)}
 function finishFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockUnlockReady){fakeLockBlockUntil=Date.now()+900;clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;$('fakeUnlockBtn').classList.remove('holding');setTimeout(closeFakeLock,320);return}cancelFakeUnlock()}
@@ -819,7 +833,7 @@ function renderHistory(){
 
 function initLiveMap(force=false){
  const el=$('liveMap');if(!el)return;
- if(force&&liveMap){try{liveMap.remove()}catch{}liveMap=null;liveLine=null;liveMarker=null;plannedLiveLine=null;plannedLiveOdorLayers=[]}
+ if(force&&liveMap){try{liveMap.remove()}catch{}liveMap=null;liveLine=null;liveMarker=null;livePositionMarker=null;liveAccuracyCircle=null;plannedLiveLine=null;plannedLiveOdorLayers=[]}
  if(liveMap){setTimeout(()=>liveMap.invalidateSize(),80);return}
  liveMap=L.map('liveMap',{zoomControl:true}).setView([48.3,7.45],8);
  addCleanBaseLayers(liveMap);
@@ -829,6 +843,13 @@ function initLiveMap(force=false){
 }
 function followLivePosition(p,zoom=false){if(!liveMap||!liveMapFollow)return;liveMapProgrammatic=true;if(zoom)liveMap.setView([p.lat,p.lon],16);else liveMap.panTo([p.lat,p.lon],{animate:true,duration:.35});setTimeout(()=>liveMapProgrammatic=false,100)}
 function recenterLiveMap(){const p=gps.points.at(-1)||gps.startPoint;if(!p)return;liveMapFollow=true;$('recenterLiveMapBtn')?.classList.add('hidden');followLivePosition(p,true)}
+function showFullLiveTrack(){if(!liveMap||!liveLine||gps.points.length<2)return;liveMapFollow=false;$('recenterLiveMapBtn')?.classList.remove('hidden');try{liveMap.fitBounds(liveLine.getBounds(),{padding:[28,28]})}catch{}}
+function updateLivePosition(p){
+ if(!liveMap)return;
+ const latlng=[p.lat,p.lon];
+ if(!livePositionMarker)livePositionMarker=L.circleMarker(latlng,{radius:8,color:'#fff',weight:3,fillColor:'#2186d4',fillOpacity:1}).addTo(liveMap).bindTooltip('Ma position');else livePositionMarker.setLatLng(latlng);
+ if(!liveAccuracyCircle)liveAccuracyCircle=L.circle(latlng,{radius:p.acc,color:'#2186d4',weight:1,fillColor:'#2186d4',fillOpacity:.08,interactive:false}).addTo(liveMap);else liveAccuracyCircle.setLatLng(latlng).setRadius(p.acc);
+}
 function renderOperationalLiveGpx(){
  operationalLiveGpxLayers.forEach(x=>{try{x.remove()}catch{}});operationalLiveGpxLayers=[];
  if(!liveMap)return;
@@ -842,6 +863,7 @@ function redrawLiveRecordingMap(){
  if(!liveMap)return;
  if(!liveLine)liveLine=L.polyline([],{weight:5,color:'#0b6a46',opacity:.95}).addTo(liveMap);
  liveLine.setLatLngs((gps.points||[]).map(x=>[x.lat,x.lon]));
+ const current=gps.points?.at(-1);if(current)updateLivePosition(current);
  if(liveMarker){try{liveMarker.remove()}catch{}liveMarker=null}
  if(gps.startPoint)liveMarker=L.marker([gps.startPoint.lat,gps.startPoint.lon]).addTo(liveMap).bindPopup('Départ');
  if(plannedLiveLine){try{plannedLiveLine.remove()}catch{}plannedLiveLine=null}
@@ -858,11 +880,11 @@ function redrawLiveRecordingMap(){
 function resetGpsUI(clear=true){
  if(gps.watch!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gps.watch);clearInterval(gps.timer);releaseWakeLock();
  closeFakeLock();
- gps={watch:null,start:null,timer:null,points:[],distance:0,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0};
+ gps={watch:null,start:null,timer:null,points:[],distance:0,distanceAnchor:null,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0,lastFixAt:0,lastWatchRestartAt:0};
  liveMapFollow=true;$('recenterLiveMapBtn')?.classList.add('hidden');
  $('liveDistance').textContent="0.00";$('liveDuration').textContent="00:00:00";$('liveAccuracy').textContent="—";$('liveLocation').textContent="En attente du GPS";$('gpsMsg').textContent="";
  $('startGpsBtn').disabled=false;$('startGpsBtn').classList.remove('hidden');$('pauseGpsBtn').disabled=true;$('pauseGpsBtn').textContent='PAUSE';$('stopGpsBtn').disabled=true;$('fakeLockBtn').disabled=true;$('finishFormCard').classList.add('hidden');setGpsStatus('Prêt','idle');
- if(liveLine)liveLine.setLatLngs([]);if(liveMarker){liveMarker.remove();liveMarker=null}
+ if(liveLine)liveLine.setLatLngs([]);if(liveMarker){liveMarker.remove();liveMarker=null}if(livePositionMarker){livePositionMarker.remove();livePositionMarker=null}if(liveAccuracyCircle){liveAccuracyCircle.remove();liveAccuracyCircle=null}
  if(plannedLiveLine){plannedLiveLine.remove();plannedLiveLine=null}plannedLiveOdorLayers.forEach(x=>{try{x.remove()}catch{}});plannedLiveOdorLayers=[];operationalLiveGpxLayers.forEach(x=>{try{x.remove()}catch{}});operationalLiveGpxLayers=[];if(clear)clearDraft();
 }
 
@@ -949,10 +971,18 @@ function hav(a,b){
  const q=Math.sin(dLat/2)**2+Math.cos(r(a.lat))*Math.cos(r(b.lat))*Math.sin(dLon/2)**2;
  return 2*R*Math.atan2(Math.sqrt(q),Math.sqrt(1-q));
 }
+function addGpsDistancePoint(p){
+ const anchor=gps.distanceAnchor;
+ if(!anchor){gps.distanceAnchor=p;return}
+ const d=hav(anchor,p),dt=Math.max(1,(p.t-anchor.t)/1000),speed=d/dt;
+ if(d<1.5)return;
+ if((gps.points.length<3&&d>150)||d>=300||speed>=12){gps.distanceAnchor=p;return}
+ gps.distance+=d;gps.distanceAnchor=p;
+}
 function gpsTick(){
  if(!gps.start)return;const s=Math.floor(msDuration()/1000),h=pad(Math.floor(s/3600)),m=pad(Math.floor((s%3600)/60)),ss=pad(s%60);$('liveDuration').textContent=`${h}:${m}:${ss}`;saveDraft();
  const liveHours=msDuration()/3600000;if($('liveAvgSpeed'))$('liveAvgSpeed').textContent=(liveHours>0?fmt((gps.distance/1000)/liveHours,2):'0.00')+' km/h';
- updateFakeLock();
+ updateFakeLock();updateGpsHealth();
 }
 async function reverseCommune(lat,lon){
  try{
@@ -965,31 +995,31 @@ async function reverseCommune(lat,lon){
    return commune+(dep?` (${dep})`:"");
  }catch{return ""}
 }
-function beginWatch(){
+function beginWatch(isRecovery=false){
  initLiveMap();
  if(!navigator.geolocation){$('gpsMsg').textContent="GPS non disponible.";return}
  if(gps.watch!==null)navigator.geolocation.clearWatch(gps.watch);
  gps.watch=navigator.geolocation.watchPosition(async pos=>{
    if(gps.paused)return;
    const p={lat:pos.coords.latitude,lon:pos.coords.longitude,acc:pos.coords.accuracy,t:pos.timestamp,alt:Number.isFinite(pos.coords.altitude)?pos.coords.altitude:null};
+   gps.lastFixAt=Date.now();
    $('liveAccuracy').textContent=Math.round(p.acc)+" m";
    if(p.acc>45){setGpsStatus('GPS faible','warn');return}
    setGpsStatus(p.acc<=15?'GPS excellent':p.acc<=30?'GPS bon':'GPS moyen',p.acc<=30?'good':'warn');
-   const last=gps.points[gps.points.length-1];
-   if(last){const d=hav(last,p),dt=Math.max(1,(p.t-last.t)/1000),speed=d/dt;if(d>=1.5&&d<100&&speed<9)gps.distance+=d}
+   addGpsDistancePoint(p);
    gps.points.push(p);
    sendActiveCoachingPoint(p);
    if(!gps.startPoint){gps.startPoint=p;followLivePosition(p,true);liveMarker=L.marker([p.lat,p.lon]).addTo(liveMap).bindPopup("Départ").openPopup();$('liveLocation').textContent="Localisation…";gps.startPlace=await reverseCommune(p.lat,p.lon);$('liveLocation').textContent=gps.startPlace||`${p.lat.toFixed(5)}, ${p.lon.toFixed(5)}`}
-   liveLine.setLatLngs(gps.points.map(x=>[x.lat,x.lon]));followLivePosition(p,false);$('liveDistance').textContent=(gps.distance/1000).toFixed(2);$('gpsMsg').textContent=`${gps.points.length} points GPS valides`;updateFakeLock();saveDraft();
- },err=>{$('gpsMsg').textContent="GPS : "+err.message;setGpsStatus('Erreur GPS','bad')},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
+   liveLine.setLatLngs(gps.points.map(x=>[x.lat,x.lon]));updateLivePosition(p);followLivePosition(p,false);$('liveDistance').textContent=(gps.distance/1000).toFixed(2);$('gpsMsg').textContent=`${gps.points.length} points GPS valides${isRecovery?' • suivi relancé':''}`;updateFakeLock();saveDraft();
+ },err=>{$('gpsMsg').textContent="GPS : "+err.message;setGpsStatus('Erreur GPS','bad');updateGpsHealth()},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
 }
 $('startGpsBtn').onclick=()=>{
- if(!gps.start){gps.start=Date.now();gps.timer=setInterval(gpsTick,1000)}
+ if(!gps.start){gps.start=Date.now();gps.lastFixAt=Date.now();gps.timer=setInterval(gpsTick,1000)}
  gps.paused=false;gps.pauseStarted=null;$('startGpsBtn').disabled=true;$('startGpsBtn').classList.add('hidden');$('pauseGpsBtn').disabled=false;$('stopGpsBtn').disabled=false;$('fakeLockBtn').disabled=false;$('gpsMsg').textContent="Acquisition GPS…";setGpsStatus('Recherche GPS','warn');requestWakeLock();beginWatch();saveDraft(true);
 };
 $('pauseGpsBtn').onclick=()=>{
  if(!gps.start)return;
- if(!gps.paused){gps.paused=true;gps.pauseStarted=Date.now();if(gps.watch!==null){navigator.geolocation.clearWatch(gps.watch);gps.watch=null}$('pauseGpsBtn').textContent='REPRENDRE';$('fakeLockBtn').disabled=true;closeFakeLock();setGpsStatus('En pause','paused');$('gpsMsg').textContent='Suivi GPS en pause.';releaseWakeLock();saveDraft(true)}
+ if(!gps.paused){gps.paused=true;gps.pauseStarted=Date.now();gps.distanceAnchor=null;if(gps.watch!==null){navigator.geolocation.clearWatch(gps.watch);gps.watch=null}$('pauseGpsBtn').textContent='REPRENDRE';$('fakeLockBtn').disabled=true;closeFakeLock();setGpsStatus('En pause','paused');$('gpsMsg').textContent='Suivi GPS en pause.';releaseWakeLock();saveDraft(true)}
  else{gps.pausedMs+=Date.now()-gps.pauseStarted;gps.pauseStarted=null;gps.paused=false;$('pauseGpsBtn').textContent='PAUSE';$('fakeLockBtn').disabled=false;setGpsStatus('Reprise GPS','warn');requestWakeLock();beginWatch();saveDraft(true)}
 };
 $('stopGpsBtn').onclick=()=>{
@@ -1663,10 +1693,10 @@ function showTrack(id){
 }
 
 
-async function restoreDraft(){const d=getDraft();if(!d||!session||d.user_id!==session.user.id)return;recordMode=d.mode||'piste';resetGpsUI(false);showPage('recordPage');const training=recordMode==='training';$('recordTitle').textContent=training?'Entraînement repris':'Pistage opérationnel repris';$('finishTitle').textContent=training?'Terminer l’entraînement':'Terminer l’enregistrement';$('startGpsBtn').textContent=training?'REPRENDRE L’ENTRAÎNEMENT':'REPRENDRE LE PISTAGE';$('saveRecordBtn').textContent=training?'ENREGISTRER L’ENTRAÎNEMENT':'ENREGISTRER LE PISTAGE';$('pisteForm').elements.visibility.closest('label').classList.remove('hidden');const f=$('pisteForm');for(const [k,v] of Object.entries(d.form||{})){if(f.elements[k])f.elements[k].value=v}gps.start=d.start;gps.points=Array.isArray(d.points)?d.points:[];gps.distance=Number(d.distance||0);gps.startPoint=d.startPoint||gps.points[0]||null;gps.startPlace=d.startPlace||'';gps.paused=!!d.paused;gps.pauseStarted=d.pauseStarted||null;gps.pausedMs=Number(d.pausedMs||0);$('liveDistance').textContent=(gps.distance/1000).toFixed(2);$('liveLocation').textContent=gps.startPlace||'Lieu de départ enregistré';if(gps.points.length){liveLine.setLatLngs(gps.points.map(x=>[x.lat,x.lon]));liveMap.fitBounds(liveLine.getBounds(),{padding:[25,25]});const p=gps.points[0];liveMarker=L.marker([p.lat,p.lon]).addTo(liveMap).bindPopup('Départ')}gps.timer=setInterval(gpsTick,1000);gps.paused=true;gps.pauseStarted=Date.now();$('startGpsBtn').disabled=true;$('pauseGpsBtn').disabled=false;$('pauseGpsBtn').textContent='REPRENDRE';$('stopGpsBtn').disabled=false;setGpsStatus('À reprendre','paused');$('gpsMsg').textContent='Enregistrement récupéré. Appuie sur REPRENDRE pour relancer le GPS.';saveDraft(true)}
+async function restoreDraft(){const d=getDraft();if(!d||!session||d.user_id!==session.user.id)return;recordMode=d.mode||'piste';resetGpsUI(false);showPage('recordPage');const training=recordMode==='training';$('recordTitle').textContent=training?'Entraînement repris':'Pistage opérationnel repris';$('finishTitle').textContent=training?'Terminer l’entraînement':'Terminer l’enregistrement';$('startGpsBtn').textContent=training?'REPRENDRE L’ENTRAÎNEMENT':'REPRENDRE LE PISTAGE';$('saveRecordBtn').textContent=training?'ENREGISTRER L’ENTRAÎNEMENT':'ENREGISTRER LE PISTAGE';$('pisteForm').elements.visibility.closest('label').classList.remove('hidden');const f=$('pisteForm');for(const [k,v] of Object.entries(d.form||{})){if(f.elements[k])f.elements[k].value=v}gps.start=d.start;gps.points=Array.isArray(d.points)?d.points:[];gps.distance=Number(d.distance||0);gps.distanceAnchor=null;gps.startPoint=d.startPoint||gps.points[0]||null;gps.startPlace=d.startPlace||'';gps.paused=!!d.paused;gps.pauseStarted=d.pauseStarted||null;gps.pausedMs=Number(d.pausedMs||0);$('liveDistance').textContent=(gps.distance/1000).toFixed(2);$('liveLocation').textContent=gps.startPlace||'Lieu de départ enregistré';if(gps.points.length){liveLine.setLatLngs(gps.points.map(x=>[x.lat,x.lon]));liveMap.fitBounds(liveLine.getBounds(),{padding:[25,25]});const first=gps.points[0],last=gps.points.at(-1);liveMarker=L.marker([first.lat,first.lon]).addTo(liveMap).bindPopup('Départ');updateLivePosition(last)}gps.timer=setInterval(gpsTick,1000);gps.paused=true;gps.pauseStarted=Date.now();$('startGpsBtn').disabled=true;$('pauseGpsBtn').disabled=false;$('pauseGpsBtn').textContent='REPRENDRE';$('stopGpsBtn').disabled=false;setGpsStatus('À reprendre','paused');$('gpsMsg').textContent='Enregistrement récupéré. Appuie sur REPRENDRE pour relancer le GPS.';saveDraft(true)}
 $('resumeDraftBtn').onclick=restoreDraft;
 $('discardDraftBtn').onclick=()=>{if(confirm('Effacer cet enregistrement local interrompu ?')){clearDraft();updateResumeBanner()}};
-window.addEventListener('online',()=>{updateNetworkStatus();installActivityNavigation();syncQueue()});window.addEventListener('offline',updateNetworkStatus);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gps.start&&!gps.paused)requestWakeLock()});window.addEventListener('beforeunload',()=>saveDraft(true));
+window.addEventListener('online',()=>{updateNetworkStatus();installActivityNavigation();syncQueue()});window.addEventListener('offline',updateNetworkStatus);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&gps.start&&!gps.paused){requestWakeLock();if(gpsFixAge()>15000)beginWatch(true)}});window.addEventListener('beforeunload',()=>saveDraft(true));
 
 $('newTrainingBtn').onclick=()=>{selectedTrainingRoute=null;beginNewPiste('training')};
 $('analysisMineTab').onclick=()=>renderCanineAnalysis('mine');
@@ -1731,6 +1761,7 @@ $('routingTrailBtn').onclick=()=>setPlannerRoutingMode('trail');$('routingStreet
 $('loadWeatherBtn').onclick=loadPlannerWeather;
 $('loadRecordWeatherBtn').onclick=loadRecordWeather;
 $('recenterLiveMapBtn').onclick=recenterLiveMap;
+$('showFullLiveTrackBtn').onclick=showFullLiveTrack;
 ['odorEnabled','odorWindDirection','odorWindSpeed','odorAge','odorEnvironment','odorTemperature','odorHumidity'].forEach(id=>{if($(id))$(id).oninput=updateOdorPreview});
 $('routeName').oninput=savePlannerDraft;
 $('openCoachingBtn').onclick=()=>{showPage('coachingPage');setCoachingStage('prepare')};
