@@ -5,6 +5,8 @@
 - [ ] L'écran sombre affiche la durée, la distance et la précision en direct.
 - [ ] Les appuis accidentels sur l'écran sombre ne ferment pas le mode.
 - [ ] Une pression continue de 1,4 seconde ferme le mode.
+- [ ] L'écran se ferme seulement lorsque le doigt est relâché, sans activer un bouton situé dessous.
+- [ ] Le déverrouillage revient à la carte GPS et non au menu principal.
 - [ ] Une pression trop courte ne ferme pas le mode.
 - [ ] La mise en pause ferme le mode et désactive son bouton.
 - [ ] La reprise du GPS réactive le bouton.
