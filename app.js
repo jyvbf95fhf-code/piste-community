@@ -6,7 +6,7 @@ const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
 let currentStatsScope='mine';
 let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingChannel=null;
-let wakeLock=null,fakeLockPressTimer=null,fakeLockUnlockReady=false;
+let wakeLock=null,fakeLockPressTimer=null,fakeLockUnlockReady=false,fakeLockBlockUntil=0;
 let plannerPoints=[], plannerWaypoints=[], plannerTool='route', coachingSessions=[], activeCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, liveMarkerTool='off', coachingAutoMetrics=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
@@ -43,7 +43,7 @@ function updateFakeLock(){if(!$('fakeLockScreen'))return;$('fakeLockDuration').t
 async function openFakeLock(){if(!gps.start||gps.paused)return;$('fakeLockScreen').classList.remove('hidden');document.body.classList.add('fake-lock-active');updateFakeLock();await requestWakeLock()}
 function closeFakeLock(){$('fakeLockScreen')?.classList.add('hidden');$('fakeUnlockBtn')?.classList.remove('holding','ready');document.body.classList.remove('fake-lock-active');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;fakeLockUnlockReady=false}
 function beginFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockPressTimer)return;fakeLockUnlockReady=false;$('fakeUnlockBtn').classList.add('holding');fakeLockPressTimer=setTimeout(()=>{fakeLockUnlockReady=true;$('fakeUnlockBtn').classList.add('ready')},1400)}
-function finishFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockUnlockReady){closeFakeLock();return}cancelFakeUnlock()}
+function finishFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockUnlockReady){fakeLockBlockUntil=Date.now()+900;clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;$('fakeUnlockBtn').classList.remove('holding');setTimeout(closeFakeLock,320);return}cancelFakeUnlock()}
 function cancelFakeUnlock(event){event?.preventDefault();event?.stopPropagation();$('fakeUnlockBtn')?.classList.remove('holding','ready');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;fakeLockUnlockReady=false}
 function serializeDraft(){return {user_id:session?.user?.id,mode:recordMode,start:gps.start,points:gps.points,distance:gps.distance,startPoint:gps.startPoint,startPlace:gps.startPlace,paused:gps.paused,pauseStarted:gps.pauseStarted,pausedMs:gps.pausedMs,form:formSnapshot(),savedAt:Date.now()}}
 function formSnapshot(){const f=$('pisteForm');if(!f)return {};const o={};new FormData(f).forEach((v,k)=>o[k]=v);return o}
@@ -97,6 +97,7 @@ function showPage(id){
 }
 document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>showPage(b.dataset.page));
 document.addEventListener('click',e=>{
+ if(Date.now()<fakeLockBlockUntil){e.preventDefault();e.stopImmediatePropagation();return}
  const nav=e.target.closest('[data-page]');
  if(!nav)return;
  const page=nav.dataset.page;

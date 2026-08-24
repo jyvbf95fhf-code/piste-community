@@ -7,6 +7,8 @@
 - [ ] Une pression continue de 1,4 seconde ferme le mode.
 - [ ] L'écran se ferme seulement lorsque le doigt est relâché, sans activer un bouton situé dessous.
 - [ ] Le déverrouillage revient à la carte GPS et non au menu principal.
+- [ ] Sur iPhone, le bouclier tactile reste présent pendant la génération du clic synthétique.
+- [ ] Toute navigation résiduelle est bloquée pendant 900 ms après le relâchement.
 - [ ] Une pression trop courte ne ferme pas le mode.
 - [ ] La mise en pause ferme le mode et désactive son bouton.
 - [ ] La reprise du GPS réactive le bouton.
