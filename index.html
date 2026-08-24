@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2033">
+<link rel="stylesheet" href="./v2.css?v=2034">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -115,9 +115,17 @@
         <button id="pauseGpsBtn" class="pause-btn" disabled>PAUSE</button>
         <button id="stopGpsBtn" class="stop-btn" disabled>TERMINER</button>
       </div>
+      <button id="fakeLockBtn" class="fake-lock-launch" type="button" disabled>🔒 Mode écran verrouillé</button>
       <div class="gps-status-row"><span id="gpsStatusBadge" class="status-pill idle">Prêt</span><span id="offlineStatus" class="status-pill">Réseau : —</span><span id="savedStatus" class="status-pill">Sauvegarde locale : prête</span></div>
       <p class="small muted">Pendant le suivi, garde PISTE Community ouverte. Si le réseau coupe, le tracé continue d’être conservé localement.</p>
       <p id="gpsMsg" class="msg"></p>
+    </div>
+
+    <div id="fakeLockScreen" class="fake-lock-screen hidden" role="dialog" aria-modal="true" aria-label="Mode écran verrouillé">
+      <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b>GPS ACTIF</b><small>PISTE Community reste ouverte</small></div>
+      <div class="fake-lock-stats"><article><strong id="fakeLockDuration">00:00:00</strong><span>durée</span></article><article><strong id="fakeLockDistance">0.00 km</strong><span>distance</span></article><article><strong id="fakeLockAccuracy">—</strong><span>précision GPS</span></article></div>
+      <p>Écran simulé pour éviter les manipulations accidentelles.<br>Le téléphone n’est pas réellement verrouillé.</p>
+      <button id="fakeUnlockBtn" type="button"><span>Maintenir pour déverrouiller</span><i></i></button>
     </div>
 
     <div id="finishFormCard" class="card hidden">
@@ -695,7 +703,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1038"></script>
+<script type="module" src="./app.js?v=1039"></script>
 <script src="./v2.js?v=2012"></script>
 </body>
 </html>
