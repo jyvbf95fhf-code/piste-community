@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2032">
+<link rel="stylesheet" href="./v2.css?v=2033">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -388,7 +388,9 @@
       <section class="call-step" data-call-panel="4"><div class="card call-card"><small class="section-kicker">DERNIER POINT CONNU</small><h3>Carte opérationnelle</h3>
         <div class="planner-search-row"><input id="callLocationSearch" maxlength="160" placeholder="Adresse, commune ou lieu"><button id="callLocationSearchBtn" class="secondary" type="button">Rechercher</button></div>
         <div class="call-map-actions"><button id="locateCallBtn" class="secondary" type="button">◎ Ma position</button><button id="analyzeCallAreaBtn" class="secondary" type="button">🌦️ Analyser le secteur</button><button id="openCallNavigationBtn" class="secondary" type="button" disabled>↗ Itinéraire GPS</button></div>
-        <p id="callLocationStatus" class="small muted">Recherche le lieu ou touche la carte pour placer le dernier point connu.</p><div id="operationalCallMap"></div>
+        <p id="callLocationStatus" class="small muted">Recherche le lieu ou touche la carte pour placer le dernier point connu.</p>
+        <section class="call-gpx-import" aria-labelledby="callGpxTitle"><div><small class="section-kicker">COUCHES DE RÉFÉRENCE</small><h4 id="callGpxTitle">Importer des traces GPX</h4><p class="small muted">Ajoute des itinéraires habituels, zones déjà parcourues ou traces d’autres équipes. Elles restent distinctes du GPS du conducteur.</p></div><div class="call-gpx-fields"><label>Type de trace<select id="callGpxKind"><option value="habitual">Itinéraire habituel</option><option value="searched">Zone ou trajet déjà parcouru</option><option value="access">Accès équipe</option><option value="team">Trace d’une autre équipe</option><option value="reference">Autre référence</option></select></label><label>Nom facultatif<input id="callGpxName" maxlength="80" placeholder="Ex. Parcours quotidien"></label><input id="callGpxFileInput" class="hidden" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml"><button id="callGpxImportBtn" class="secondary" type="button">＋ Importer un GPX</button></div><p id="callGpxStatus" class="small muted">Jusqu’à 5 couches GPX, 10 Mo maximum par fichier.</p><div id="callGpxList" class="call-gpx-list"><p class="muted small">Aucune trace GPX importée.</p></div></section>
+        <div id="operationalCallMap"></div>
         <div class="call-marker-tools"><label>Repère à ajouter<select id="callMarkerType"><option value="habit">🏠 Lieu habituel</option><option value="route">↝ Passage habituel</option><option value="sighting">👁 Dernier signalement</option><option value="danger">⚠️ Danger</option><option value="access">🚗 Accès équipe</option><option value="note">📍 Note</option></select></label><label>Précision<input id="callMarkerNote" maxlength="250" placeholder="Puis touche la carte"></label></div><div id="callMarkerList" class="call-marker-list"></div>
         <div id="callEnvironmentAnalysis" class="call-analysis"><p class="muted">L’analyse est lancée uniquement sur demande et utilise OpenStreetMap et Open-Meteo.</p></div>
       </div><div class="card call-summary-card"><div class="card-title-row"><div><small class="section-kicker">SYNTHÈSE</small><h3>Préparation de l’engagement</h3></div><button id="copyCallSummaryBtn" class="secondary" type="button">Copier</button></div><pre id="operationalCallSummary">Complète la fiche pour générer la synthèse.</pre></div></section>
@@ -693,7 +695,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1037"></script>
+<script type="module" src="./app.js?v=1038"></script>
 <script src="./v2.js?v=2012"></script>
 </body>
 </html>

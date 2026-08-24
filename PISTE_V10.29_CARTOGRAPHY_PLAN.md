@@ -24,6 +24,9 @@ le double aveugle, la comparaison des parcours et le débrief chronologique.
    - flèches de sens, mesure, zones et profil d'altitude.
 4. **GPX et double aveugle**
    - import/export séparé des différentes traces ;
+   - import de cinq couches GPX maximum dans la fiche d'appel opérationnelle ;
+   - classement en itinéraire habituel, zone déjà parcourue, accès équipe, autre équipe ou référence ;
+   - visibilité, couleur et annotation indépendantes, conservées au démarrage du GPS opérationnel ;
    - masquage strict du tracé au conducteur jusqu'à la fin ;
    - comparaison d'un GPX importé avec le parcours réalisé.
 5. **Annotations et débrief**
