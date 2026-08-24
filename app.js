@@ -6,7 +6,7 @@ const $=id=>document.getElementById(id);
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
 let currentStatsScope='mine';
 let liveMap=null, liveLine=null, liveMarker=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingChannel=null;
-let wakeLock=null,fakeLockPressTimer=null;
+let wakeLock=null,fakeLockPressTimer=null,fakeLockUnlockReady=false;
 let plannerPoints=[], plannerWaypoints=[], plannerTool='route', coachingSessions=[], activeCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, liveMarkerTool='off', coachingAutoMetrics=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
@@ -41,9 +41,10 @@ async function requestWakeLock(){try{if('wakeLock' in navigator&&!wakeLock)wakeL
 async function releaseWakeLock(){try{if(wakeLock){await wakeLock.release();wakeLock=null}}catch{}}
 function updateFakeLock(){if(!$('fakeLockScreen'))return;$('fakeLockDuration').textContent=$('liveDuration')?.textContent||'00:00:00';$('fakeLockDistance').textContent=($('liveDistance')?.textContent||'0.00')+' km';$('fakeLockAccuracy').textContent=$('liveAccuracy')?.textContent||'—'}
 async function openFakeLock(){if(!gps.start||gps.paused)return;$('fakeLockScreen').classList.remove('hidden');document.body.classList.add('fake-lock-active');updateFakeLock();await requestWakeLock()}
-function closeFakeLock(){$('fakeLockScreen')?.classList.add('hidden');$('fakeUnlockBtn')?.classList.remove('holding');document.body.classList.remove('fake-lock-active');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null}
-function beginFakeUnlock(event){event.preventDefault();if(fakeLockPressTimer)return;$('fakeUnlockBtn').classList.add('holding');fakeLockPressTimer=setTimeout(closeFakeLock,1400)}
-function cancelFakeUnlock(){$('fakeUnlockBtn')?.classList.remove('holding');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null}
+function closeFakeLock(){$('fakeLockScreen')?.classList.add('hidden');$('fakeUnlockBtn')?.classList.remove('holding','ready');document.body.classList.remove('fake-lock-active');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;fakeLockUnlockReady=false}
+function beginFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockPressTimer)return;fakeLockUnlockReady=false;$('fakeUnlockBtn').classList.add('holding');fakeLockPressTimer=setTimeout(()=>{fakeLockUnlockReady=true;$('fakeUnlockBtn').classList.add('ready')},1400)}
+function finishFakeUnlock(event){event.preventDefault();event.stopPropagation();if(fakeLockUnlockReady){closeFakeLock();return}cancelFakeUnlock()}
+function cancelFakeUnlock(event){event?.preventDefault();event?.stopPropagation();$('fakeUnlockBtn')?.classList.remove('holding','ready');clearTimeout(fakeLockPressTimer);fakeLockPressTimer=null;fakeLockUnlockReady=false}
 function serializeDraft(){return {user_id:session?.user?.id,mode:recordMode,start:gps.start,points:gps.points,distance:gps.distance,startPoint:gps.startPoint,startPlace:gps.startPlace,paused:gps.paused,pauseStarted:gps.pauseStarted,pausedMs:gps.pausedMs,form:formSnapshot(),savedAt:Date.now()}}
 function formSnapshot(){const f=$('pisteForm');if(!f)return {};const o={};new FormData(f).forEach((v,k)=>o[k]=v);return o}
 function saveDraft(force=false){if(!gps.start||!session)return;const now=Date.now();if(!force&&now-gps.lastSaved<3000)return;gps.lastSaved=now;try{localStorage.setItem(DRAFT_KEY,JSON.stringify(serializeDraft()));if($('savedStatus'))$('savedStatus').textContent='Sauvegarde locale : '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}catch{}}
@@ -997,7 +998,9 @@ $('stopGpsBtn').onclick=()=>{
 };
 $('fakeLockBtn').onclick=openFakeLock;
 $('fakeUnlockBtn').addEventListener('pointerdown',beginFakeUnlock);
-['pointerup','pointercancel','pointerleave'].forEach(type=>$('fakeUnlockBtn').addEventListener(type,cancelFakeUnlock));
+$('fakeUnlockBtn').addEventListener('pointerup',finishFakeUnlock);
+['pointercancel','pointerleave'].forEach(type=>$('fakeUnlockBtn').addEventListener(type,cancelFakeUnlock));
+$('fakeUnlockBtn').addEventListener('click',event=>{event.preventDefault();event.stopPropagation()});
 $('fakeUnlockBtn').addEventListener('contextmenu',event=>event.preventDefault());
 
 function calcDelay(){
