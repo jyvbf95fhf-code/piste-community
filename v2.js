@@ -56,7 +56,7 @@
 
     const header = document.createElement('section');
     header.className = 'v2-home-header';
-    header.innerHTML = '<div class="v2-private-badge">PRIVÉ • V2</div><p class="v2-quote">« Chaque piste raconte une histoire. »</p>';
+    header.innerHTML = '<div class="v2-private-badge">BÊTA • LIVE</div><p class="v2-quote">Terrain, équipe et analyse réunis.</p>';
     if(heroBrand) header.insertBefore(heroBrand, header.firstChild);
 
     const actionSection = document.createElement('section');
@@ -64,13 +64,21 @@
     actionSection.innerHTML = `
       <div class="v2-action-card">
         <div class="v2-action-copy">
-          <span class="v2-action-icon">◎</span>
-          <div><b>Prêt pour le terrain</b><small>Opérationnel, entraînement et coaching au même endroit.</small></div>
+          <span class="v2-action-icon">⌖</span>
+          <div><b>Choisir une mission</b><small>Trois accès directs, toutes les fonctions restent disponibles.</small></div>
         </div>
         <div class="v2-action-buttons"></div>
       </div>`;
     const actionButtons = q('.v2-action-buttons', actionSection);
-    if(terrainBtn) actionButtons.appendChild(terrainBtn);
+    const opsBtn = document.createElement('button');
+    opsBtn.id = 'homeOpsBtn';opsBtn.className = 'v10-30-quick ops';opsBtn.type = 'button';
+    opsBtn.innerHTML = '<span>⚡</span><span><b>OPS</b><small>Appel & opérationnel</small></span>';
+    const coachingBtn = document.createElement('button');
+    coachingBtn.id = 'homeCoachingBtn';coachingBtn.className = 'v10-30-quick coaching';coachingBtn.type = 'button';
+    coachingBtn.innerHTML = '<span>◉</span><span><b>COACHING</b><small>Session en équipe</small></span>';
+    actionButtons.appendChild(opsBtn);
+    if(terrainBtn){terrainBtn.classList.add('v10-30-quick','activity');terrainBtn.querySelector('b').textContent='TERRAIN';terrainBtn.querySelector('small').textContent='Libre ou préparé';actionButtons.appendChild(terrainBtn)}
+    actionButtons.appendChild(coachingBtn);
 
     const dogSection = document.createElement('section');
     dogSection.className = 'v2-section';
@@ -185,8 +193,9 @@
     rebuildNav();
     monitorDynamicData();
 
-    document.documentElement.dataset.pisteVersion = '2';
-    console.info('PISTE Community V2 UI shell active');
+    document.documentElement.dataset.pisteVersion = '10.30';
+    document.body.classList.add('v10-30-aurora');
+    console.info('PISTE Community V10.30 UI shell active');
   }
 
   if(document.readyState === 'loading') {
@@ -201,8 +210,8 @@
    ========================================================================== */
 window.PISTE_COACHING = Object.freeze({
   enabled: true,
-  version: '10.22',
-  roles: ['driver','coach','observer'],
+  version: '10.30',
+  roles: ['driver','coach','traceur','observer','solo'],
   capabilities: {
     liveLocation: true,
     liveTrack: true,

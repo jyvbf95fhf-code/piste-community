@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2036">
+<link rel="stylesheet" href="./v2.css?v=2037">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -367,7 +367,7 @@
 
   <!-- V10.27_OPERATIONAL_CALL -->
   <section id="operationalCallPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>📞 J’ai reçu un appel</h2></div>
+    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>⚡ OPS</h2></div>
     <div class="call-privacy-notice"><span>🔒</span><p><b>Fiche confidentielle</b><small>Utilise des initiales et limite les informations identifiantes au strict nécessaire. Tests Preview uniquement avec des données fictives.</small></p></div>
     <nav class="call-stepper" aria-label="Étapes de la prise d’appel">
       <button type="button" class="active" data-call-step="1"><span>1</span>Appel</button><button type="button" data-call-step="2"><span>2</span>Personne</button><button type="button" data-call-step="3"><span>3</span>Environnement</button><button type="button" data-call-step="4"><span>4</span>Carte & synthèse</button>
@@ -424,7 +424,7 @@
   <section id="trainingPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Terrain</h2></div>
     <div class="training-hero terrain-hub">
-      <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div><button id="receivedCallBtn" class="received-call-btn" type="button"><span>📞</span><span><b>J’AI REÇU UN APPEL</b><small>Préparer l’engagement et le dernier point connu</small></span><em>›</em></button></div>
+      <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div><button id="receivedCallBtn" class="received-call-btn" type="button"><span>⚡</span><span><b>OPS</b><small>Préparer l’appel, l’engagement et le dernier point connu</small></span><em>›</em></button></div>
       <div class="terrain-group prepared"><small class="section-kicker">SESSION PRÉPARÉE</small><h3>Préparer, réaliser, débriefer</h3><div class="terrain-choice-grid"><button id="openPlannerBtn" class="terrain-choice planner"><span>🗺️</span><b>Créer une session</b><small>Tracé, signes et odeur</small></button><button id="openCoachingBtn" class="terrain-choice coaching"><span>🎧</span><b>Ouvrir le coaching</b><small>Créer, rejoindre ou reprendre</small></button></div></div>
       <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Voir mes pistages opérationnels ›</button>
       <p class="muted">Choisis une activité. Les statistiques opérationnelles et d’entraînement restent séparées.</p>
@@ -539,13 +539,15 @@
     <div id="coachingLivePanel" class="card hidden">
       <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode">—</strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
       <div class="session-preflight"><small class="section-kicker">AVANT DE COMMENCER</small><div id="coachingPreflight" class="preflight-grid"></div></div>
-      <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Réalisé</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div></div><div class="coaching-legend"><span>🟢 zone olfactive principale</span><span>🟠 dispersion possible</span><span>〰️ prévu</span><span>🔵 réalisé</span></div>
+      <div id="coachingParticipants" class="coaching-participants" aria-live="polite"><span class="participant-chip waiting"><i></i>En attente des positions GPS</span></div>
+      <div class="coaching-map-shell"><div id="coachingMap"></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Toute l’équipe</button><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div></div><div class="coaching-legend"><span><b class="legend-dot driver"></b> Conducteur</span><span><b class="legend-dot coach"></b> Coach</span><span><b class="legend-dot traceur"></b> Traceur</span><span>🟢 zone olfactive</span><span>〰️ prévu</span></div>
       <div id="coachingReplayPanel" class="coaching-replay hidden"><div class="coaching-replay-head"><div><small class="section-kicker">REPLAY SYNCHRONISÉ</small><strong id="coachingReplayAge">Vieillissement au départ : —</strong></div><span id="coachingReplayClock">—</span></div><input id="coachingReplayRange" type="range" min="0" max="1000" value="1000" aria-label="Progression du Replay"><button id="coachingReplayPlay" class="secondary" type="button">▶ Rejouer</button><p class="small muted">Le traceur, le conducteur, les annotations et l’influence olfactive estimée évoluent sur la même ligne du temps.</p></div>
       <div id="coachAnnotationTools" class="coach-tools hidden"><small class="section-kicker">ANNOTER EN DIRECT</small><p class="small muted">Choisis un événement puis touche la carte.</p><div class="quick-coaching"><button data-live-marker="loss">❌ Perte</button><button data-live-marker="recovery">↩️ Reprise</button><button data-live-marker="decision">↪️ Décision</button><button data-live-marker="success">✓ Réussite</button><button data-live-marker="note">📍 Note</button><button data-live-marker="off">✋ Arrêter d’annoter</button></div></div>
       <div id="traceurTools" class="traceur-tools hidden"><small class="section-kicker">POSE DE PISTE</small><p id="traceurStatus" class="small muted">Prêt à enregistrer le chemin réellement posé.</p><div class="coaching-actions"><button id="startTraceurTrack" class="primary">Démarrer la pose</button><button id="stopTraceurTrack" class="secondary" disabled>Terminer la pose</button></div></div>
       <div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div>
       <div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div>
-      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Démarrer avec mon chien</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
+      <p id="coachingGpsState" class="coaching-gps-state">Position non partagée</p>
+      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Départ de piste</button><button id="endCoachingLive" class="danger-button hidden">Terminer la piste</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
       <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button></div>
       <form id="coachingDebriefForm" class="form-grid hidden"><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><button class="primary full" type="submit">Terminer et enregistrer le débrief</button></form></div>
@@ -703,7 +705,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1043"></script>
-<script src="./v2.js?v=2012"></script>
+<script type="module" src="./app.js?v=1044"></script>
+<script src="./v2.js?v=2013"></script>
 </body>
 </html>

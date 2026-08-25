@@ -495,6 +495,49 @@ input:focus,select:focus,textarea:focus{
   *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
 }
 
+/* ---- V10.30 Aurora — navigation simplifiée et Coaching multi-équipe ---- */
+body.v10-30-aurora{
+  background:
+    radial-gradient(circle at 12% 8%,rgba(39,183,255,.16),transparent 26rem),
+    radial-gradient(circle at 92% 24%,rgba(169,134,255,.16),transparent 28rem),
+    radial-gradient(circle at 45% 78%,rgba(88,214,164,.08),transparent 30rem),
+    linear-gradient(180deg,#050c15,#07131a 48%,#060c13);
+}
+.v10-30-aurora .topbar{border-bottom-color:rgba(79,207,255,.17);background:rgba(4,12,19,.84)}
+.v10-30-aurora .brand-mini small,.v10-30-aurora .section-kicker{color:#70dcff}
+.v10-30-aurora .v2-home-header{
+  border-color:rgba(95,209,255,.2);
+  background:
+    linear-gradient(180deg,rgba(3,10,18,.05),rgba(3,10,18,.86)),
+    radial-gradient(circle at 84% 8%,rgba(169,134,255,.34),transparent 19rem),
+    radial-gradient(circle at 8% 82%,rgba(38,188,255,.2),transparent 18rem),
+    linear-gradient(145deg,#0a2030,#071019 65%);
+}
+.v10-30-aurora .v2-home-header::after{opacity:.32;background:linear-gradient(120deg,transparent 10%,rgba(60,202,255,.35) 49%,rgba(170,126,255,.38) 51%,transparent 90%);filter:blur(24px)}
+.v10-30-aurora .v2-private-badge{color:#d8caff;border-color:rgba(169,134,255,.28);background:rgba(169,134,255,.12)}
+.v10-30-aurora .v2-action-card{border-color:rgba(74,204,255,.22);background:linear-gradient(145deg,rgba(11,32,44,.98),rgba(11,18,34,.98))}
+.v10-30-aurora .v2-action-card::before{content:"ACCÈS TERRAIN";color:#70dcff}
+.v10-30-aurora .v2-action-icon{background:linear-gradient(145deg,rgba(42,193,255,.2),rgba(169,134,255,.18));border-color:rgba(101,213,255,.24)}
+.v10-30-aurora .v2-action-buttons{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.v10-30-aurora .v2-action-buttons .v10-30-quick{display:flex;align-items:center;justify-content:flex-start;gap:9px;min-width:0;min-height:68px;padding:11px;border-radius:16px;text-align:left;color:#f6fbff;border:1px solid rgba(255,255,255,.1);box-shadow:inset 0 1px rgba(255,255,255,.07)}
+.v10-30-aurora .v2-action-buttons .v10-30-quick>span:first-child{font-size:22px}.v10-30-aurora .v2-action-buttons .v10-30-quick b{display:block;font-size:12px;letter-spacing:.04em}.v10-30-aurora .v2-action-buttons .v10-30-quick small{display:block;margin-top:3px;color:#a9b9c5;font-size:9px;line-height:1.2}
+.v10-30-aurora .v10-30-quick.ops{background:linear-gradient(145deg,#126988,#17415d)}
+.v10-30-aurora .v10-30-quick.activity{background:linear-gradient(145deg,#176f5d,#16453f);margin:0!important}
+.v10-30-aurora .v10-30-quick.coaching{background:linear-gradient(145deg,#624ca3,#352f6f)}
+.v10-30-aurora .v2-tools-card .module-icon{display:grid;place-items:center;width:38px;height:38px;margin:auto auto 7px;border-radius:13px;background:linear-gradient(145deg,rgba(39,183,255,.12),rgba(169,134,255,.12));filter:none}
+.v10-30-aurora .bottom-nav button.v2-nav-active{color:#72dcff;background:linear-gradient(145deg,rgba(39,183,255,.13),rgba(169,134,255,.1))}
+
+.coaching-participants{display:flex;gap:7px;overflow-x:auto;margin:12px 0 7px;padding-bottom:2px}.participant-chip{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 10px;border:1px solid var(--v2-line);border-radius:999px;background:#0c1821;color:#dce6ed;font-size:10px}.participant-chip i,.legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#83908f;box-shadow:0 0 12px currentColor}.participant-chip small{color:#8fa0aa}.participant-chip.driver i,.participant-chip.solo i,.legend-dot.driver{background:#27b7ff;color:#27b7ff}.participant-chip.coach i,.legend-dot.coach{background:#a986ff;color:#a986ff}.participant-chip.traceur i,.legend-dot.traceur{background:#58d6a4;color:#58d6a4}.participant-map-icon{background:transparent!important;border:0!important}.participant-map-icon span{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#071119;color:#fff;border:3px solid var(--participant-color);font-weight:950;box-shadow:0 0 0 4px rgba(5,15,23,.72),0 0 18px var(--participant-color)}
+.coaching-recenter{position:absolute;z-index:720;right:10px;top:10px;padding:9px 11px;border:1px solid rgba(102,216,255,.28);border-radius:12px;background:rgba(5,17,25,.9);color:#dff7ff;font-weight:800}.coaching-gps-state{margin:12px 0 0;padding:9px 11px;border-radius:11px;background:rgba(39,183,255,.08);border:1px solid rgba(39,183,255,.16);color:#a9dff2;font-size:11px}.coaching-legend span{display:inline-flex;align-items:center;gap:5px}
+.v10-30-aurora #coachingMap{height:min(64vh,650px);min-height:500px;border:1px solid rgba(72,201,255,.2);filter:saturate(.9) brightness(.94)}
+
+@media(max-width:700px){
+  .v10-30-aurora .v2-action-buttons{grid-template-columns:1fr 1fr}
+  .v10-30-aurora .v2-action-buttons .v10-30-quick.ops{grid-column:1/-1}
+  .v10-30-aurora #coachingMap{height:58vh;min-height:430px}
+  .coaching-layer-controls{max-height:92px;overflow:auto}
+}
+
 /* V10.22.1 — cases des couches de carte lisibles sur mobile */
 .coaching-layer-controls label{
   min-width:0;
