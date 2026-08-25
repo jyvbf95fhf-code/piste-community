@@ -12,8 +12,9 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2044">
+<link rel="stylesheet" href="./v2.css?v=2045">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
 <body>
 <header class="topbar">
@@ -63,10 +64,11 @@
     </div>
 
     <div id="resumeBanner" class="resume-banner hidden"><div><b>Enregistrement interrompu détecté</b><span id="resumeInfo">Une activité locale peut être reprise.</span></div><div class="resume-actions"><button id="resumeDraftBtn" class="primary">Reprendre</button><button id="discardDraftBtn" class="secondary">Effacer</button></div></div>
+    <div id="activeSessionBanner" class="active-session-banner hidden"><span>●</span><div><b id="activeSessionTitle">Session en cours</b><small id="activeSessionInfo">Reprendre là où vous étiez</small></div><button id="resumeActiveSessionBtn" class="primary" type="button">Reprendre</button></div>
     <div id="syncBanner" class="sync-banner hidden">⏳ <b id="syncCount">0</b> enregistrement(s) en attente de synchronisation.</div>
 
     <div class="kpi-grid v8-kpis">
-      <article class="kpi-clickable" data-page="historyPage" role="button" tabindex="0" aria-label="Ouvrir mes pistages"><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistages</span><small>Voir mes activités ›</small></article>
+      <article class="kpi-clickable" data-page="libraryPage" role="button" tabindex="0" aria-label="Ouvrir toutes mes pistes"><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistages</span><small>Toutes mes pistes ›</small></article>
       <article class="kpi-clickable" data-page="trainingPage" role="button" tabindex="0" aria-label="Ouvrir mes entraînements"><span class="kpi-icon">🐾</span><strong id="tHomeCount">0</strong><span>Entraînements</span><small>Voir mes activités ›</small></article>
       <article><span class="kpi-icon">↗</span><strong id="kKm">0</strong><span>km opérationnels</span></article>
       <article><span class="kpi-icon">✓</span><strong id="kUseful">0%</strong><span>Résultats utiles</span></article>
@@ -75,14 +77,14 @@
     <div class="module-grid">
       <button data-page="feedPage"><span class="module-icon">🔔</span><b>Actualités</b><small>Partages, likes & commentaires</small></button>
       <button id="homeStatsBtn" type="button" data-page="statsPage"><span class="module-icon">▥</span><b>Statistiques</b><small>Personnelles & communauté</small></button>
-      <button data-page="mapPage"><span class="module-icon">🗺️</span><b>Carte</b><small>Tous mes tracés</small></button>
+      <button data-page="libraryPage"><span class="module-icon">🗂️</span><b>Toutes mes pistes</b><small>Liste, calendrier et carte</small></button>
       <button data-page="analysisPage"><span class="module-icon">🐾</span><b>Analyse cynophile</b><small>Tendances & résultats</small></button>
       <button data-page="dogPage"><span class="module-icon">🐕</span><b>Fiche chien</b><small>Santé, rappels & permanences</small></button>
       <button data-page="friendsPage"><span class="module-icon">👥</span><b>Mes amis</b><small>Invitations</small></button>
     </div>
 
     <div class="card v8-card">
-      <div class="card-title-row"><h2>Activité récente</h2><button class="text-btn" data-page="historyPage">Tout voir</button></div>
+      <div class="card-title-row"><h2>Activité récente</h2><button class="text-btn" data-page="libraryPage">Tout voir</button></div>
       <div id="homeRecent"></div>
     </div>
   </section>
@@ -116,13 +118,14 @@
         <button id="stopGpsBtn" class="stop-btn" disabled>TERMINER</button>
       </div>
       <button id="fakeLockBtn" class="fake-lock-launch" type="button" disabled>🔒 Mode écran verrouillé</button>
+      <div class="field-marker-box"><div><b>Repères terrain</b><small id="fieldMarkerCount">0 repère</small></div><div class="quick-field-markers"><button data-field-marker="loss">❌ Perte</button><button data-field-marker="recovery">↩ Reprise</button><button data-field-marker="behavior">🐕 Comportement</button><button data-field-marker="direction">↗ Direction</button><button data-field-marker="clue">🔎 Indice</button><button data-field-marker="danger">⚠ Danger</button><button data-field-marker="note">📍 Note</button></div></div>
       <div class="gps-status-row"><span id="gpsStatusBadge" class="status-pill idle">Prêt</span><span id="offlineStatus" class="status-pill">Réseau : —</span><span id="savedStatus" class="status-pill">Sauvegarde locale : prête</span></div>
       <p class="small muted">Pendant le suivi, garde PISTE Community ouverte. Si le réseau coupe, le tracé continue d’être conservé localement.</p>
       <p id="gpsMsg" class="msg"></p>
     </div>
 
     <div id="fakeLockScreen" class="fake-lock-screen hidden" role="dialog" aria-modal="true" aria-label="Mode écran verrouillé">
-      <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b>GPS ACTIF</b><small id="fakeLockWakeStatus">Vérification du maintien d’écran…</small><strong id="fakeLockGpsStatus" class="fake-lock-gps warn">GPS en attente…</strong></div>
+      <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b id="fakeLockTitle">GPS ACTIF</b><small id="fakeLockRole">Enregistrement terrain</small><small id="fakeLockWakeStatus">Vérification du maintien d’écran…</small><strong id="fakeLockGpsStatus" class="fake-lock-gps warn">GPS en attente…</strong></div>
       <div class="fake-lock-stats"><article><strong id="fakeLockDuration">00:00:00</strong><span>durée</span></article><article><strong id="fakeLockDistance">0.00 km</strong><span>distance</span></article><article><strong id="fakeLockAccuracy">—</strong><span>précision GPS</span></article></div>
       <p>Écran simulé pour éviter les manipulations accidentelles.<br>Ne verrouille pas l’iPhone avec son bouton latéral.</p>
       <button id="fakeUnlockBtn" type="button"><span>Maintenir pour déverrouiller</span><i></i></button>
@@ -420,13 +423,28 @@
     </div>
   </section>
 
+  <section id="libraryPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Toutes mes pistes</h2></div>
+    <div class="card library-toolbar">
+      <div class="segmented three" aria-label="Affichage de la bibliothèque"><button class="active" data-library-view="list">☰ Liste</button><button data-library-view="calendar">▦ Calendrier</button><button data-library-view="map">🗺️ Carte</button></div>
+      <div class="library-filters"><input id="librarySearch" type="search" placeholder="Nom, lieu, chien, étiquette…"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">Opérationnel</option><option value="training">Entraînement</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label></div>
+      <div class="library-compare-bar"><span id="libraryCompareInfo">Sélectionnez deux pistes pour les comparer.</span><button id="compareActivities" class="secondary" type="button" disabled>Comparer</button></div>
+    </div>
+    <div id="activityLibraryCompare" class="library-comparison hidden"></div>
+    <div id="activityLibraryList" class="activity-library"></div>
+    <div id="activityLibraryCalendar" class="activity-calendar hidden"></div>
+    <div id="activityLibraryMap" class="library-map hidden"></div>
+  </section>
+
 
   <section id="trainingPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Terrain</h2></div>
     <div class="training-hero terrain-hub">
+      <div class="terrain-launch-title"><span>＋</span><div><small class="section-kicker">NOUVELLE ACTIVITÉ</small><h3>Que voulez-vous faire ?</h3></div></div>
+      <button id="quickStartLastActivity" class="quick-start-last hidden" type="button"><span>⚡</span><div><b>Départ express</b><small id="quickStartLastInfo">Reprendre vos derniers réglages</small></div><em>›</em></button>
       <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div><button id="receivedCallBtn" class="received-call-btn" type="button"><span>⚡</span><span><b>OPS</b><small>Préparer l’appel, l’engagement et le dernier point connu</small></span><em>›</em></button></div>
       <div class="terrain-group prepared"><small class="section-kicker">SESSION PRÉPARÉE</small><h3>Préparer, réaliser, débriefer</h3><div class="terrain-choice-grid"><button id="openPlannerBtn" class="terrain-choice planner"><span>🗺️</span><b>Créer une session</b><small>Tracé, signes et odeur</small></button><button id="openCoachingBtn" class="terrain-choice coaching"><span>🎧</span><b>Ouvrir le coaching</b><small>Créer, rejoindre ou reprendre</small></button></div></div>
-      <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Voir mes pistages opérationnels ›</button>
+      <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Ouvrir Toutes mes pistes ›</button>
       <p class="muted">Choisis une activité. Les statistiques opérationnelles et d’entraînement restent séparées.</p>
     </div>
     <div class="card">
@@ -475,6 +493,7 @@
       </div>
       <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
       <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
+      <div class="planner-mode-guide"><button class="active" data-planner-mode="draw"><span>1</span><b>Dessiner</b><small>Points et chemins</small></button><button data-planner-mode="follow"><span>2</span><b>Marcher</b><small>GPS en direct</small></button><button data-planner-mode="gpx"><span>3</span><b>Importer</b><small>Fichier GPX</small></button><button data-planner-mode="draft"><span>4</span><b>Brouillon</b><small>Reprendre</small></button></div>
       <details id="plannerAssistantPanel" class="route-suggestion-card planner-feature-panel" open>
         <summary>✨ Assistant de tracé <small>Nouvelle proposition</small></summary>
         <div class="planner-panel-heading"><span>✨</span><div><small class="section-kicker">ASSISTANT DE TRACÉ</small><h3>Créer ou importer un parcours</h3></div></div>
@@ -520,7 +539,10 @@
       <div id="plannerScenarioList" class="scenario-list"></div>
       <div class="planner-actions">
         <button id="undoPlannerPoint" class="secondary">↶ Annuler le dernier point</button>
+        <button id="redoPlannerPoint" class="secondary">↷ Rétablir</button>
+        <button id="navigatePlannerStart" class="secondary">🚗 Rejoindre le départ</button>
         <button id="clearPlanner" class="secondary">Effacer</button>
+        <button id="updateTrainingRoute" class="secondary hidden">Mettre à jour l’original</button>
         <button id="saveTrainingRoute" class="primary">💾 Enregistrer la préparation</button>
       </div>
       <small id="plannerDraftStatus" class="muted">Le brouillon est sauvegardé automatiquement sur cet appareil.</small>
@@ -532,26 +554,27 @@
     <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🎧 Coaching</h2></div>
     <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
     <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
-      <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session</h3><label>Je crée cette session comme<select id="coachingCreatorRole"><option value="coach">Coach — je prépare et dirige</option><option value="solo">Solo — je prépare et conduis</option></select></label><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Mode de visibilité<select id="coachingVisibility"><option value="coach">Double aveugle — conducteur sans tracé ni traceur</option><option value="progressive">Progressif — indices révélés à proximité</option><option value="all">Partagé — tracé et équipe visibles</option></select></label><p class="small muted">En double aveugle, seul le coach conserve la vue complète. Les données sont révélées à toute l’équipe après la clôture.</p><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
+      <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session</h3><label>Je crée cette session comme<select id="coachingCreatorRole"><option value="coach">Coach — je prépare et dirige</option><option value="solo">Solo — je prépare et conduis</option></select></label><label>Chien concerné<select id="coachingDogSelect"><option value="">À choisir</option></select></label><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Mode de visibilité<select id="coachingVisibility"><option value="coach">Double aveugle — conducteur sans tracé ni traceur</option><option value="progressive">Progressif — indices révélés à proximité</option><option value="all">Partagé — tracé et équipe visibles</option></select></label><p class="small muted">En double aveugle, seul le coach conserve la vue complète. Les données sont révélées à toute l’équipe après la clôture.</p><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
       <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="driver">Conducteur — je travaille avec le chien</option><option value="traceur">Traceur — je pose la piste</option><option value="observer">Observateur — je suis la séance</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
     </div>
-    <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><h3>Mes sessions</h3><button id="refreshCoaching" class="secondary">Actualiser</button></div><div id="coachingSessionsList"></div></div>
+    <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><div><small class="section-kicker">ORGANISATION</small><h3>Mes sessions</h3></div><button id="refreshCoaching" class="secondary">Actualiser</button></div><div class="segmented three coaching-session-filters"><button class="active" data-session-filter="upcoming">À venir</button><button data-session-filter="live">En cours</button><button data-session-filter="ended">Terminées</button></div><div id="coachingSessionsList"></div></div>
     <div id="coachingLivePanel" class="card hidden">
       <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode">—</strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
       <div id="coachingPhase" class="coaching-phase waiting">ÉQUIPE EN ATTENTE</div>
       <div id="coachingParticipants" class="coaching-participants" aria-live="polite"><span class="participant-chip waiting"><i></i>En attente des positions GPS</span></div>
       <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small>DISTANCE</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Toute l’équipe</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div></div>
-      <nav class="coaching-tabs" aria-label="Informations de la session"><button class="active" data-coaching-tab="team" aria-selected="true">Équipe</button><button data-coaching-tab="session">Session</button><button data-coaching-tab="markers">Repères</button><button data-coaching-tab="weather">Météo</button></nav>
+      <div class="coaching-departure"><div><small class="section-kicker">DÉPART DE PISTE</small><b id="coachingDepartureLabel">Position du départ en attente</b><span id="coachingDepartureDistance">Distance : —</span></div><div><button id="locateCoachingDeparture" class="secondary" type="button">⌖ Afficher</button><button id="navigateCoachingDeparture" class="secondary" type="button">🚗 Itinéraire</button><button id="startCoachingLive" class="primary" type="button">Démarrer la piste</button></div></div>
+      <nav class="coaching-tabs" aria-label="Informations de la session"><button class="active" data-coaching-tab="team" aria-selected="true">Équipe</button><button data-coaching-tab="session">Préparation</button><button data-coaching-tab="markers">Repères</button><button data-coaching-tab="weather">Conditions</button></nav>
       <div class="coaching-tab-panel active" data-coaching-panel="team"><div class="session-preflight"><small class="section-kicker">AVANT DE COMMENCER</small><div id="coachingPreflight" class="preflight-grid"></div></div><p class="small muted">Les positions apparaissent dès l’entrée dans la salle d’attente. Vérifie que chaque rôle et chaque GPS sont prêts avant le départ.</p></div>
       <div class="coaching-tab-panel" data-coaching-panel="weather"><div class="coaching-legend"><span><b class="legend-dot driver"></b> Conducteur</span><span><b class="legend-dot coach"></b> Coach</span><span><b class="legend-dot traceur"></b> Traceur</span><span>🟢 zone olfactive estimée</span><span>〰️ tracé prévu</span></div><p class="small muted">Le couloir olfactif évolue avec le délai entre le traceur et le conducteur. Il reste une estimation pédagogique.</p></div>
       <div id="coachingReplayPanel" class="coaching-replay hidden"><div class="coaching-replay-head"><div><small class="section-kicker">REPLAY SYNCHRONISÉ</small><strong id="coachingReplayAge">Vieillissement au départ : —</strong></div><span id="coachingReplayClock">—</span></div><input id="coachingReplayRange" type="range" min="0" max="1000" value="1000" aria-label="Progression du Replay"><button id="coachingReplayPlay" class="secondary" type="button">▶ Rejouer</button><p class="small muted">Le traceur, le conducteur, les annotations et l’influence olfactive estimée évoluent sur la même ligne du temps.</p></div>
-      <div class="coaching-tab-panel" data-coaching-panel="markers"><div id="coachAnnotationTools" class="coach-tools hidden"><small class="section-kicker">ANNOTER EN DIRECT</small><p class="small muted">Choisis un événement puis touche la carte.</p><div class="quick-coaching"><button data-live-marker="loss">❌ Perte</button><button data-live-marker="recovery">↩️ Reprise</button><button data-live-marker="decision">↪️ Décision</button><button data-live-marker="success">✓ Réussite</button><button data-live-marker="note">📍 Note</button><button data-live-marker="off">✋ Arrêter d’annoter</button></div></div></div>
+      <div class="coaching-tab-panel" data-coaching-panel="markers"><div id="coachAnnotationTools" class="coach-tools hidden"><small class="section-kicker">ANNOTER EN DIRECT</small><p class="small muted">Choisis un événement puis touche la carte.</p><div class="quick-coaching"><button data-live-marker="loss">❌ Perte</button><button data-live-marker="recovery">↩️ Reprise</button><button data-live-marker="behavior">🐕 Comportement</button><button data-live-marker="direction">↗ Direction</button><button data-live-marker="clue">🔎 Indice</button><button data-live-marker="danger">⚠ Danger</button><button data-live-marker="success">✓ Réussite</button><button data-live-marker="note">📍 Note</button><button data-live-marker="off">✋ Arrêter</button></div></div></div>
       <div class="coaching-tab-panel" data-coaching-panel="session">
       <div id="traceurTools" class="traceur-tools hidden"><small class="section-kicker">POSE DE PISTE</small><p id="traceurStatus" class="small muted">Prêt à enregistrer le chemin réellement posé.</p><div class="coaching-actions"><button id="startTraceurTrack" class="primary">Démarrer la pose</button><button id="stopTraceurTrack" class="secondary" disabled>Terminer la pose</button></div></div>
       <div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div>
       <div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div>
       <p id="coachingGpsState" class="coaching-gps-state">Position non partagée</p>
-      <div class="coaching-actions"><button id="startCoachingLive" class="primary">Départ de piste</button><button id="endCoachingLive" class="danger-button hidden">Terminer la piste</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
+      <div class="coaching-actions"><button id="coachingFakeLockBtn" class="fake-lock-launch" type="button">🔒 Écran noir</button><button id="endCoachingLive" class="danger-button hidden">Terminer la piste</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
       </div>
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
       <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button></div>
@@ -678,6 +701,7 @@
     </div>
   </section>
 
+  <button id="activeSessionDock" class="active-session-dock hidden" type="button"><span>●</span><b id="activeSessionDockTitle">Session active</b><small>Reprendre ›</small></button>
   <nav class="bottom-nav">
     <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
     <button data-page="dogPage"><span class="nav-icon">🐕</span><span>Chien</span></button>
@@ -710,7 +734,8 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1051"></script>
-<script src="./v2.js?v=2013"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
+<script type="module" src="./app.js?v=1052"></script>
+<script src="./v2.js?v=2014"></script>
 </body>
 </html>
