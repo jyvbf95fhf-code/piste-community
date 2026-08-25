@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2034">
+<link rel="stylesheet" href="./v2.css?v=2036">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 </head>
 <body>
@@ -100,7 +100,7 @@
       <button id="detachPlannedRoute" class="secondary">Retirer</button>
     </div>
     <div class="card gps-card">
-      <div class="live-map-shell"><div id="liveMap"></div><button id="recenterLiveMapBtn" class="map-recenter hidden" type="button">⌖ Recentrer</button></div>
+      <div class="live-map-shell"><div id="liveMap"></div><div class="live-map-actions"><button id="recenterLiveMapBtn" class="map-recenter hidden" type="button">⌖ Me localiser</button><button id="showFullLiveTrackBtn" class="map-recenter" type="button">↗ Voir tout</button></div></div>
       <div class="gps-kpis">
         <div><strong id="liveDistance">0.00</strong><span>km</span></div>
         <div><strong id="liveDuration">00:00:00</strong><span>durée</span></div>
@@ -122,9 +122,9 @@
     </div>
 
     <div id="fakeLockScreen" class="fake-lock-screen hidden" role="dialog" aria-modal="true" aria-label="Mode écran verrouillé">
-      <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b>GPS ACTIF</b><small>PISTE Community reste ouverte</small></div>
+      <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b>GPS ACTIF</b><small id="fakeLockWakeStatus">Vérification du maintien d’écran…</small><strong id="fakeLockGpsStatus" class="fake-lock-gps warn">GPS en attente…</strong></div>
       <div class="fake-lock-stats"><article><strong id="fakeLockDuration">00:00:00</strong><span>durée</span></article><article><strong id="fakeLockDistance">0.00 km</strong><span>distance</span></article><article><strong id="fakeLockAccuracy">—</strong><span>précision GPS</span></article></div>
-      <p>Écran simulé pour éviter les manipulations accidentelles.<br>Le téléphone n’est pas réellement verrouillé.</p>
+      <p>Écran simulé pour éviter les manipulations accidentelles.<br>Ne verrouille pas l’iPhone avec son bouton latéral.</p>
       <button id="fakeUnlockBtn" type="button"><span>Maintenir pour déverrouiller</span><i></i></button>
     </div>
 
@@ -703,7 +703,7 @@
 
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script type="module" src="./app.js?v=1041"></script>
+<script type="module" src="./app.js?v=1043"></script>
 <script src="./v2.js?v=2012"></script>
 </body>
 </html>
