@@ -49,6 +49,7 @@
     const heroBrand = q('.hero-brand', legacyHero);
     const terrainBtn = q('#openTerrainHomeBtn');
     const resume = q('#resumeBanner');
+    const activeSession = q('#activeSessionBanner');
     const sync = q('#syncBanner');
     const kpis = q('.v8-kpis', home);
     const modules = q('.module-grid', home);
@@ -116,6 +117,7 @@
     home.innerHTML = '';
     home.append(header);
     if(resume) home.append(resume);
+    if(activeSession) home.append(activeSession);
     if(sync) home.append(sync);
     home.append(actionSection, dogSection, progressSection, recentSection, toolsSection);
 

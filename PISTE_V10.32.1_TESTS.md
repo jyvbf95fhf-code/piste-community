@@ -38,6 +38,8 @@
 8. Revenir à l'accueil puis toucher « Reprendre » : vérifier l'ouverture directe de cette session et de l'étape Réaliser avec carte, code, rôles, participants et données disponibles.
 9. A termine la session après confirmation : vérifier le statut `ended`, la disparition du bandeau et la consultation dans Terminées.
 10. Répéter en coupant le réseau au moment de créer, ouvrir et démarrer : chaque échec doit produire un message explicite et aucun bouton ne doit rester désactivé ou sans réaction.
+11. Après reconstruction V2 de l'accueil, exécuter `node scripts/check-session-dom.js` et vérifier que `activeSessionBanner`, `activeSessionTitle`, `activeSessionInfo` et le bouton Reprendre sont toujours présents.
+12. Provoquer une erreur d'affichage juste après le retour Supabase : vérifier que le message indique « Session … créée avec le statut En attente », puis retoucher le bouton et confirmer que la même session est récupérée sans doublon.
 
 ## Cycle de vie et autorisations
 
