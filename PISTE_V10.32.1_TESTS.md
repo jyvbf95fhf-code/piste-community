@@ -34,6 +34,19 @@
 4. Vérifier que B ne voit jamais les actions « Annuler », « Supprimer » ou « Terminer » réservées à A.
 5. Supprimer ou terminer côté serveur une session mémorisée localement, actualiser l'autre appareil et vérifier que seul le raccourci correspondant est nettoyé.
 
+## Raccourci de session active
+
+1. Avec seulement des sessions en attente, terminées ou annulées, actualiser l'accueil : le bandeau « Session active — Reprendre » ne doit jamais apparaître, même brièvement.
+2. Injecter une ancienne référence `piste_active_coaching_v10_32_<utilisateur>` dans le stockage local sans session `live` correspondante, puis actualiser : la référence est supprimée après validation et le bandeau reste masqué.
+3. Ouvrir une session en attente puis revenir à l'accueil : elle ne doit pas créer de raccourci actif.
+4. Démarrer une session avec A et B : après validation serveur, le bandeau apparaît sur les deux comptes avec le rôle correct.
+5. Actualiser l'iPhone puis toucher « Reprendre » : la session exacte s'ouvre avec le même identifiant, le code, le rôle, les participants, l'étape `live`, la carte et les données disponibles.
+6. Entre l'affichage du bandeau et le clic, terminer ou supprimer la session avec A. Au clic sur B, vérifier que la page Coaching ne s'ouvre pas, que le bandeau disparaît et qu'un message indique que la session n'est plus active ou accessible.
+7. Faire quitter B : vérifier immédiatement la disparition de sa référence locale et du bandeau, sans suppression de la session de A.
+8. Terminer, annuler et supprimer successivement des sessions de test : vérifier après chaque action que la référence correspondante est supprimée et que le bandeau est masqué.
+9. Se déconnecter pendant une session active, puis se reconnecter avec un autre compte sur le même iPhone : aucune référence ni aucun bandeau du premier compte ne doit apparaître.
+10. Simuler une erreur réseau pendant le chargement initial : aucun bandeau Coaching ne doit être affiché à partir du seul stockage local.
+
 ## iPhone, GPS et écran noir
 
 1. En Safari puis en PWA installée, vérifier portrait et paysage, avec les zones sûres (encoche et indicateur d'accueil).
@@ -52,4 +65,3 @@
 - Console : aucune exception, fonction inexistante, gestionnaire manquant ni rejet de promesse lors du parcours complet.
 - HTML : aucun identifiant dupliqué.
 - Cache : après publication future, l'iPhone reçoit les nouvelles versions de `app.js`, `v2.css` et du service worker.
-
