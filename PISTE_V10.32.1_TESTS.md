@@ -26,6 +26,19 @@
 8. Démarrer la session, vérifier le passage à « En direct », les positions autorisées et le raccourci actif.
 9. A termine la session après confirmation. Vérifier que le raccourci disparaît et que la session reste consultable dans « Terminées » avec son débrief.
 
+## Transition création → préparation → session active
+
+1. A touche « Créer et obtenir le code » et vérifie dans les données que la nouvelle session possède explicitement le statut `waiting`.
+2. Vérifier que la salle de préparation de cette session exacte s'ouvre immédiatement, sans afficher le bandeau « Session active ».
+3. Contrôler dans la salle : nom, code partageable, organisateur, chien, tracé, participants et rôles.
+4. Vérifier que seul A voit « Démarrer la session », « Annuler la session » et « Supprimer la session » ; B ne peut pas déclencher le démarrage.
+5. B rejoint avec le code. Actualiser la salle sur A et vérifier que B apparaît même avant toute position GPS.
+6. Revenir à Mes sessions puis toucher « Préparer » : la même session `waiting`, avec le même identifiant et le même code, doit rouvrir sa salle de préparation.
+7. A touche « Démarrer la session ». Vérifier le passage réel à `live`, l'ouverture de l'étape Réaliser et l'apparition du bandeau actif.
+8. Revenir à l'accueil puis toucher « Reprendre » : vérifier l'ouverture directe de cette session et de l'étape Réaliser avec carte, code, rôles, participants et données disponibles.
+9. A termine la session après confirmation : vérifier le statut `ended`, la disparition du bandeau et la consultation dans Terminées.
+10. Répéter en coupant le réseau au moment de créer, ouvrir et démarrer : chaque échec doit produire un message explicite et aucun bouton ne doit rester désactivé ou sans réaction.
+
 ## Cycle de vie et autorisations
 
 1. A crée une session en attente puis teste « Annuler » après confirmation : elle passe dans les sessions terminées/annulées.
