@@ -48,6 +48,11 @@
 3. B rejoint une session de A puis la quitte après confirmation : seule l'adhésion de B disparaît ; la session de A existe toujours.
 4. Vérifier que B ne voit jamais les actions « Annuler », « Supprimer » ou « Terminer » réservées à A.
 5. Supprimer ou terminer côté serveur une session mémorisée localement, actualiser l'autre appareil et vérifier que seul le raccourci correspondant est nettoyé.
+6. Créer une session dont A est `owner_id` mais dont la ligne `coaching_members` porte le rôle `observer`. Vérifier que A peut tout de même terminer la session active.
+7. Vérifier que le même propriétaire observateur peut supprimer définitivement la session après deux confirmations, dont la première annonce la suppression des positions, messages, repères et débrief.
+8. Vérifier qu'un coach, conducteur ou solo non propriétaire ne voit ni clôture ni suppression et ne peut pas les déclencher en appelant les fonctions d'interface.
+9. Depuis B non propriétaire, toucher « Quitter la session » : seule la participation de B disparaît, le raccourci local est nettoyé et la session de A reste intacte.
+10. Après fin, suppression ou départ, vérifier le retour à Mes sessions, la disparition immédiate du bandeau et le rafraîchissement cohérent des onglets À venir, En cours et Terminées.
 
 ## Raccourci de session active
 
