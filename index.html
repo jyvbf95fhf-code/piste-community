@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2045">
+<link rel="stylesheet" href="./v2.css?v=2046">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -552,14 +552,14 @@
 
   <section id="coachingPage" class="page">
     <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🎧 Coaching</h2></div>
-    <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
+    <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Créer / Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
     <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
       <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session</h3><label>Je crée cette session comme<select id="coachingCreatorRole"><option value="coach">Coach — je prépare et dirige</option><option value="solo">Solo — je prépare et conduis</option></select></label><label>Chien concerné<select id="coachingDogSelect"><option value="">À choisir</option></select></label><label>Scénario préparé<select id="coachingRouteSelect"></select></label><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Mode de visibilité<select id="coachingVisibility"><option value="coach">Double aveugle — conducteur sans tracé ni traceur</option><option value="progressive">Progressif — indices révélés à proximité</option><option value="all">Partagé — tracé et équipe visibles</option></select></label><p class="small muted">En double aveugle, seul le coach conserve la vue complète. Les données sont révélées à toute l’équipe après la clôture.</p><button id="createCoachingSession" class="primary">Créer et obtenir le code</button><p id="coachingCreateMsg" class="msg"></p></div>
       <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="driver">Conducteur — je travaille avec le chien</option><option value="traceur">Traceur — je pose la piste</option><option value="observer">Observateur — je suis la séance</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
     </div>
     <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><div><small class="section-kicker">ORGANISATION</small><h3>Mes sessions</h3></div><button id="refreshCoaching" class="secondary">Actualiser</button></div><div class="segmented three coaching-session-filters"><button class="active" data-session-filter="upcoming">À venir</button><button data-session-filter="live">En cours</button><button data-session-filter="ended">Terminées</button></div><div id="coachingSessionsList"></div></div>
     <div id="coachingLivePanel" class="card hidden">
-      <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode">—</strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
+      <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode"></strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
       <div id="coachingPhase" class="coaching-phase waiting">ÉQUIPE EN ATTENTE</div>
       <div id="coachingParticipants" class="coaching-participants" aria-live="polite"><span class="participant-chip waiting"><i></i>En attente des positions GPS</span></div>
       <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small>DISTANCE</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Toute l’équipe</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div></div>
@@ -574,7 +574,7 @@
       <div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div>
       <div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div>
       <p id="coachingGpsState" class="coaching-gps-state">Position non partagée</p>
-      <div class="coaching-actions"><button id="coachingFakeLockBtn" class="fake-lock-launch" type="button">🔒 Écran noir</button><button id="endCoachingLive" class="danger-button hidden">Terminer la piste</button><button id="leaveCoachingLive" class="secondary">Fermer</button></div>
+      <div class="coaching-actions"><button id="coachingFakeLockBtn" class="fake-lock-launch" type="button">🔒 Écran noir</button><button id="cancelCoachingSession" class="danger-button hidden" type="button">Annuler la session</button><button id="deleteCoachingSession" class="danger-button hidden" type="button">Supprimer la session</button><button id="endCoachingLive" class="danger-button hidden" type="button">Terminer la session</button><button id="leaveCoachingSession" class="danger-button hidden" type="button">Quitter la session</button><button id="leaveCoachingLive" class="secondary" type="button">Fermer</button></div>
       </div>
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
       <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button></div>
@@ -735,7 +735,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1052"></script>
+<script type="module" src="./app.js?v=1053"></script>
 <script src="./v2.js?v=2014"></script>
 </body>
 </html>
