@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2050">
+<link rel="stylesheet" href="./v2.css?v=2051">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -584,8 +584,8 @@
       <div class="coaching-actions"><button id="cancelCoachingSession" class="danger-button hidden" type="button">Annuler la session</button><button id="deleteCoachingSession" class="danger-button hidden" type="button" title="Efface aussi les positions, messages, repères et débrief associés">Supprimer définitivement</button><button id="leaveCoachingSession" class="danger-button hidden" type="button">Quitter la session</button><button id="leaveCoachingLive" class="secondary" type="button">Fermer</button></div>
       </div>
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
-      <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button></div>
-      <form id="coachingDebriefForm" class="form-grid hidden"><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><label class="full">Données statistiques complémentaires<textarea name="statistics_notes" maxlength="2500" rows="3" placeholder="Conditions, observations ou mesures ajoutées après la séance"></textarea></label><div class="full debrief-save-actions"><button id="saveDebriefDraft" class="secondary" type="button">Enregistrer le brouillon</button><button class="primary" type="submit">Publier le débrief</button></div></form></div>
+      <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="backToCoachingSessions" class="ghost-dark" type="button">Retour à Mes sessions</button></div>
+      <form id="coachingDebriefForm" class="form-grid hidden"><p id="coachingDebriefState" class="full coaching-debrief-state" aria-live="polite">Aucun brouillon chargé.</p><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><label class="full">Données statistiques complémentaires<textarea name="statistics_notes" maxlength="2500" rows="3" placeholder="Conditions, observations ou mesures ajoutées après la séance"></textarea></label><div class="full debrief-save-actions"><button id="saveDebriefDraft" class="secondary" type="button">Enregistrer le brouillon</button><button class="primary" type="submit">Publier le débrief</button></div></form></div>
     </div>
   </section>
 
@@ -742,7 +742,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1059"></script>
+<script type="module" src="./app.js?v=1060"></script>
 <script src="./v2.js?v=2015"></script>
 </body>
 </html>
