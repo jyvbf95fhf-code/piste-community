@@ -124,13 +124,6 @@
       <p id="gpsMsg" class="msg"></p>
     </div>
 
-    <div id="fakeLockScreen" class="fake-lock-screen hidden" role="dialog" aria-modal="true" aria-label="Mode écran verrouillé">
-      <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b id="fakeLockTitle">GPS ACTIF</b><small id="fakeLockRole">Enregistrement terrain</small><small id="fakeLockWakeStatus">Vérification du maintien d’écran…</small><strong id="fakeLockGpsStatus" class="fake-lock-gps warn">GPS en attente…</strong></div>
-      <div class="fake-lock-stats"><article><strong id="fakeLockDuration">00:00:00</strong><span>durée</span></article><article><strong id="fakeLockDistance">0.00 km</strong><span>distance</span></article><article><strong id="fakeLockAccuracy">—</strong><span>précision GPS</span></article></div>
-      <p>Écran simulé pour éviter les manipulations accidentelles.<br>Ne verrouille pas l’iPhone avec son bouton latéral.</p>
-      <div class="fake-lock-exit"><button id="fakeUnlockBtn" type="button"><span>Maintenir pour déverrouiller</span><i></i></button><button id="fakeUnlockEmergency" class="fake-lock-emergency" type="button">Sortie de secours</button></div>
-    </div>
-
     <div id="finishFormCard" class="card hidden">
       <h2 id="finishTitle">Terminer l’enregistrement</h2>
       <p class="muted small">Le GPS a déjà renseigné la durée, la distance et le lieu de départ.</p>
@@ -739,10 +732,17 @@
   </div>
 </div>
 
+<div id="fakeLockScreen" class="fake-lock-screen hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Mode écran verrouillé">
+  <div class="fake-lock-top"><span class="fake-lock-pulse"></span><b id="fakeLockTitle">GPS ACTIF</b><small id="fakeLockRole">Enregistrement terrain</small><small id="fakeLockWakeStatus">Vérification du maintien d’écran…</small><strong id="fakeLockGpsStatus" class="fake-lock-gps warn">GPS en attente…</strong></div>
+  <div class="fake-lock-stats"><article><strong id="fakeLockDuration">00:00:00</strong><span>durée</span></article><article><strong id="fakeLockDistance">0.00 km</strong><span>distance</span></article><article><strong id="fakeLockAccuracy">—</strong><span>précision GPS</span></article></div>
+  <p>Écran simulé pour éviter les manipulations accidentelles.<br>Ne verrouille pas l’iPhone avec son bouton latéral.</p>
+  <div class="fake-lock-exit"><button id="fakeUnlockBtn" type="button"><span>Maintenir pour déverrouiller</span><i></i></button><button id="fakeUnlockEmergency" class="fake-lock-emergency" type="button">Sortie de secours</button></div>
+</div>
+
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1060"></script>
+<script type="module" src="./app.js?v=1061"></script>
 <script src="./v2.js?v=2015"></script>
 </body>
 </html>

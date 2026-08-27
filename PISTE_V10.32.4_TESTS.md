@@ -4,7 +4,7 @@
 
 - Installer la Preview comme application sur l’écran d’accueil d’un ancien iPhone et la tester aussi dans Safari.
 - Utiliser deux comptes distincts lorsque le scénario exige un propriétaire et un participant.
-- Vérifier avant chaque parcours qu’aucune ancienne Preview n’est encore chargée (versions `app.js?v=1060`, `v2.css?v=2051`, cache `piste-community-v2060`).
+- Vérifier avant chaque parcours qu’aucune ancienne Preview n’est encore chargée (versions `app.js?v=1061`, `v2.css?v=2051`, cache `piste-community-v2061`).
 - Contrôler la console Safari distante pendant les scénarios écran noir, GPS et débrief.
 
 ## Démarrage et GPS
@@ -30,6 +30,8 @@
 8. Arrêter le GPS pendant l’écran noir : vérifier la fermeture immédiate et le message explicatif.
 9. Après chaque fermeture, vérifier le défilement, le focus, les quatre commandes, le zoom, la rotation, le recentrage et le déplacement de la carte.
 10. Vérifier que le suivi GPS continue à enregistrer pendant l’affichage de la surcouche.
+11. Cas de sécurité « body verrouillé mais surcouche invisible » : masquer artificiellement la surcouche ou son ancêtre pendant l’ouverture et vérifier que l’ouverture est annulée, que le body reste déverrouillé, qu’un message apparaît et que la carte demeure utilisable.
+12. Déclencher rapidement plusieurs clics sur « Activer l’écran noir » : une seule ouverture doit aboutir, sans écouteurs ni styles résiduels après fermeture.
 
 ## Flèche du conducteur
 
