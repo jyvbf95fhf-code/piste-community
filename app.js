@@ -10,7 +10,7 @@ let currentStatsScope='mine';
 let liveMap=null, liveLine=null, liveMarker=null, livePositionMarker=null, liveAccuracyCircle=null, historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingParticipantMarkers=new Map(), coachingChannel=null;
 let wakeLock=null,wakeLockSupported='wakeLock' in navigator,fakeLockBlockUntil=0,fakeLockContext='record';
 let fakeLockState={open:false,opening:false,closing:false,sequence:0,pressTimer:null,visibilityTimer:null,pointerId:null,previousFocus:null,scrollY:0,bodyStyle:null,controller:null};
-let plannerPoints=[], plannerWaypoints=[], plannerRedoStack=[], plannerTool='route', coachingSessions=[], activeCoachingSession=null, verifiedActiveCoachingSession=null, coachingShortcutValidated=false, pendingCreatedCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, coachingPresenceWatch=null, coachingPresenceLastPointAt=0, coachingOwnPosition=null, coachingGpsError='', coachingGpsReady=false, coachingMapRefreshTimer=null, coachingKeepViewport=false, liveMarkerTool='off', coachingAutoMetrics=null, coachingPanel='team', coachingSessionFilter='upcoming';
+let plannerPoints=[], plannerWaypoints=[], plannerRedoStack=[], plannerTool='route', coachingSessions=[], coachingDebriefs=[], activeCoachingSession=null, verifiedActiveCoachingSession=null, coachingShortcutValidated=false, pendingCreatedCoachingSession=null, coachingLastPointAt=0, traceurLastPointAt=0, traceurWatch=null, coachingPresenceWatch=null, coachingPresenceLastPointAt=0, coachingOwnPosition=null, coachingGpsError='', coachingGpsReady=false, coachingMapRefreshTimer=null, coachingKeepViewport=false, liveMarkerTool='off', coachingAutoMetrics=null, coachingPanel='team', coachingSessionFilter='upcoming';
 let coachingOrientation={permission:'unknown',listening:false,deviceHeading:null,lastReliable:null,smoothed:null};
 let coachingFriendInvites=[],coachingAcceptedFriends=[],coachingRouteReturn=false,coachingLongPressTimer=null,coachingLongPressOrigin=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
@@ -343,15 +343,36 @@ function applySelectedTrainingRoute(){
 
 function coachingCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='PISTE-';for(let i=0;i<4;i++)s+=chars[Math.floor(Math.random()*chars.length)];return s}
 async function loadCoachingHub(){
- if(!session)return;coachingShortcutValidated=false;verifiedActiveCoachingSession=null;refreshActiveSessionShortcut();await loadTrainingRoutes();
+ if(!session)return;coachingShortcutValidated=false;verifiedActiveCoachingSession=null;coachingDebriefs=[];updateHomeCoachingState('loading');refreshActiveSessionShortcut();await loadTrainingRoutes();
  const select=$('coachingRouteSelect');if(select)select.innerHTML='<option value="">Choisir un tracé…</option>'+trainingRoutes.map(r=>`<option value="${r.id}">${esc(r.name)} — ${fmt(r.planned_distance_km,2)} km / ${Array.isArray(r.waypoints)?r.waypoints.length:0} signes</option>`).join('');
  const dogSelect=$('coachingDogSelect');if(dogSelect){const current=dogSelect.value;dogSelect.innerHTML='<option value="">Chien à choisir</option>'+dogs.map(d=>`<option value="${d.id}">${esc(d.alias)}</option>`).join('');dogSelect.value=current||dogs.find(d=>d.active)?.id||dogs[0]?.id||''}
  const friends=await supabase.rpc('get_friends');coachingAcceptedFriends=(friends.data||[]).filter(x=>x.status==='accepted');renderCoachingFriendInvites();
  const {data,error}=await supabase.rpc('get_my_coaching_sessions');
  coachingSessions=error?[]:(Array.isArray(data)?data:[]);
+ try{let debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,is_finalized,updated_at').eq('owner_id',session.user.id);if(debriefs.error)debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,updated_at').eq('owner_id',session.user.id);coachingDebriefs=debriefs.error?[]:(debriefs.data||[])}catch{coachingDebriefs=[]}
  if(!error){const saved=readActiveCoachingRef(),savedLive=saved&&coachingSessions.find(s=>s.id===saved.id&&s.status==='live'),live=savedLive||coachingSessions.find(s=>s.status==='live')||null;if(saved&&!savedLive)clearActiveCoachingRef(saved.id);verifiedActiveCoachingSession=live;if(live)saveActiveCoachingRef(live);if(activeCoachingSession&&!coachingSessions.some(s=>s.id===activeCoachingSession.id))activeCoachingSession=null}
  coachingShortcutValidated=true;
  renderCoachingSessions();
+ updateHomeCoachingState();
+}
+function updateHomeCoachingState(mode='ready'){
+ const state=$('homeCoachingState'),info=$('homeCoachingStateInfo'),action=$('homeCoachingStateAction');
+ if(!state||!action)return;
+ if(mode==='loading'){state.textContent='Vérification en cours…';info.textContent='';action.textContent='Ouvrir le Coaching';action.dataset.coachingHomeAction='open';return}
+ const active=coachingShortcutValidated&&verifiedActiveCoachingSession?.status==='live'?verifiedActiveCoachingSession:null;
+ const invitation=coachingSessions.find(s=>s.status!=='cancelled'&&s.status!=='ended'&&s.coaching_members?.some(m=>m.user_id===session?.user?.id&&m.invitation_status==='invited'));
+ const draft=coachingDebriefs.find(d=>d.publication_status==='draft'&&d.is_finalized!==true);
+ if(active){state.textContent='Session en cours';info.textContent=`${active.name||'Session Coaching'} · ${coachingRoleLabel(isSoloCoaching(active)?'solo':myCoachingRole(active))}`;action.textContent='Reprendre la session';action.dataset.coachingHomeAction='resume';return}
+ if(invitation){const member=invitation.coaching_members.find(m=>m.user_id===session?.user?.id);state.textContent='Invitation Coaching';info.textContent=`${invitation.name||'Session Coaching'} · ${coachingRoleLabel(member?.role||'observer')}`;action.textContent='Voir l’invitation';action.dataset.coachingHomeAction='invitation';return}
+ if(draft){const linked=coachingSessions.find(s=>s.id===draft.session_id);state.textContent='Débrief à finaliser';info.textContent=linked?.name||'Session Coaching';action.textContent='Continuer le débrief';action.dataset.coachingHomeAction='draft';return}
+ state.textContent='Préparer ou rejoindre une session';info.textContent='Aucune session active';action.textContent='Ouvrir le Coaching';action.dataset.coachingHomeAction='open';
+}
+window.refreshHomeCoachingCard=updateHomeCoachingState;
+async function handleHomeCoachingAction(action){
+ if(action==='resume'&&verifiedActiveCoachingSession?.id){await openCoachingSession(verifiedActiveCoachingSession.id,{resume:true});return}
+ if(action==='invitation'){const invite=coachingSessions.find(s=>s.coaching_members?.some(m=>m.user_id===session?.user?.id&&m.invitation_status==='invited'));if(invite){showPage('coachingPage');await openCoachingSession(invite.id);return}}
+ if(action==='draft'){const draft=coachingDebriefs.find(d=>d.publication_status==='draft'&&d.is_finalized!==true);if(draft){showPage('coachingPage');await openCoachingSession(draft.session_id);setCoachingStage('debrief');return}}
+ showPage('coachingPage');setCoachingStage('prepare');
 }
 function activeCoachingStorageKey(){return `${ACTIVE_COACHING_KEY}_${session?.user?.id||'anonymous'}`}
 function readActiveCoachingRef(){try{return JSON.parse(localStorage.getItem(activeCoachingStorageKey())||'null')}catch{return null}}
@@ -1896,6 +1917,7 @@ $('newOperationalTerrainBtn').addEventListener('click',()=>{activeOperationalCal
 $('quickStartLastActivity').onclick=quickStartLastActivity;
 $('receivedCallBtn').onclick=()=>{showPage('operationalCallPage');resetOperationalCall()};
 document.addEventListener('click',e=>{if(e.target.closest('#homeOpsBtn')){showPage('operationalCallPage');resetOperationalCall()}if(e.target.closest('#homeCoachingBtn')){showPage('coachingPage');setCoachingStage('prepare')}});
+document.addEventListener('click',e=>{const state=e.target.closest('#homeCoachingStateAction'),prepare=e.target.closest('#homeCoachingPrepare'),join=e.target.closest('#homeCoachingJoin');if(state){e.preventDefault();handleHomeCoachingAction(state.dataset.coachingHomeAction||'open')}else if(prepare){e.preventDefault();showPage('coachingPage');setCoachingStage('prepare')}else if(join){e.preventDefault();showPage('coachingPage');setCoachingStage('prepare');setTimeout(()=>$('coachingInviteInput')?.focus(),120)}});
 $('detachOperationalCall').onclick=()=>{activeOperationalCallId=null;activeOperationalGpxTracks=[];renderOperationalLiveGpx();$('operationalCallBanner').classList.add('hidden')};
 document.querySelectorAll('[data-call-step]').forEach(b=>b.onclick=()=>setOperationalCallStep(b.dataset.callStep));
 $('callPrevBtn').onclick=()=>setOperationalCallStep(operationalCallStep-1);$('callNextBtn').onclick=()=>setOperationalCallStep(operationalCallStep+1);
