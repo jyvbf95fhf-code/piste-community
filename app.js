@@ -349,7 +349,7 @@ async function loadCoachingHub(){
  const friends=await supabase.rpc('get_friends');coachingAcceptedFriends=(friends.data||[]).filter(x=>x.status==='accepted');renderCoachingFriendInvites();
  const {data,error}=await supabase.rpc('get_my_coaching_sessions');
  coachingSessions=error?[]:(Array.isArray(data)?data:[]);
- try{let debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,is_finalized,updated_at').eq('owner_id',session.user.id);if(debriefs.error)debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,updated_at').eq('owner_id',session.user.id);coachingDebriefs=debriefs.error?[]:(debriefs.data||[])}catch{coachingDebriefs=[]}
+ try{let debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,published_at,is_finalized,finalized_at,completed_at,updated_at').eq('owner_id',session.user.id);if(debriefs.error)debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,published_at,is_finalized,finalized_at,updated_at').eq('owner_id',session.user.id);if(debriefs.error)debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,published_at,updated_at').eq('owner_id',session.user.id);coachingDebriefs=debriefs.error?[]:(debriefs.data||[])}catch{coachingDebriefs=[]}
  if(!error){const saved=readActiveCoachingRef(),savedLive=saved&&coachingSessions.find(s=>s.id===saved.id&&s.status==='live'),live=savedLive||coachingSessions.find(s=>s.status==='live')||null;if(saved&&!savedLive)clearActiveCoachingRef(saved.id);verifiedActiveCoachingSession=live;if(live)saveActiveCoachingRef(live);if(activeCoachingSession&&!coachingSessions.some(s=>s.id===activeCoachingSession.id))activeCoachingSession=null}
  coachingShortcutValidated=true;
  renderCoachingSessions();
@@ -361,17 +361,24 @@ function updateHomeCoachingState(mode='ready'){
  if(mode==='loading'){state.textContent='Vérification en cours…';info.textContent='';action.textContent='Ouvrir le Coaching';action.dataset.coachingHomeAction='open';return}
  const active=coachingShortcutValidated&&verifiedActiveCoachingSession?.status==='live'?verifiedActiveCoachingSession:null;
  const invitation=coachingSessions.find(s=>s.status!=='cancelled'&&s.status!=='ended'&&s.coaching_members?.some(m=>m.user_id===session?.user?.id&&m.invitation_status==='invited'));
- const draft=coachingDebriefs.find(d=>d.publication_status==='draft'&&d.is_finalized!==true);
+ const draft=coachingDebriefs.find(isReliableCoachingDraft);
  if(active){state.textContent='Session en cours';info.textContent=`${active.name||'Session Coaching'} · ${coachingRoleLabel(isSoloCoaching(active)?'solo':myCoachingRole(active))}`;action.textContent='Reprendre la session';action.dataset.coachingHomeAction='resume';return}
  if(invitation){const member=invitation.coaching_members.find(m=>m.user_id===session?.user?.id);state.textContent='Invitation Coaching';info.textContent=`${invitation.name||'Session Coaching'} · ${coachingRoleLabel(member?.role||'observer')}`;action.textContent='Voir l’invitation';action.dataset.coachingHomeAction='invitation';return}
  if(draft){const linked=coachingSessions.find(s=>s.id===draft.session_id);state.textContent='Débrief à finaliser';info.textContent=linked?.name||'Session Coaching';action.textContent='Continuer le débrief';action.dataset.coachingHomeAction='draft';return}
  state.textContent='Préparer ou rejoindre une session';info.textContent='Aucune session active';action.textContent='Ouvrir le Coaching';action.dataset.coachingHomeAction='open';
 }
+function isPublishedCoachingDebrief(d){return d?.publication_status==='published'||!!d?.published_at}
+function isReliableCoachingDraft(d){
+ if(!d||isPublishedCoachingDebrief(d)||d.publication_status!=='draft')return false;
+ if(Object.prototype.hasOwnProperty.call(d,'is_finalized'))return d.is_finalized===false;
+ for(const key of ['completed_at','finalized_at'])if(Object.prototype.hasOwnProperty.call(d,key))return !d[key];
+ return false;
+}
 window.refreshHomeCoachingCard=updateHomeCoachingState;
 async function handleHomeCoachingAction(action){
  if(action==='resume'&&verifiedActiveCoachingSession?.id){await openCoachingSession(verifiedActiveCoachingSession.id,{resume:true});return}
  if(action==='invitation'){const invite=coachingSessions.find(s=>s.coaching_members?.some(m=>m.user_id===session?.user?.id&&m.invitation_status==='invited'));if(invite){showPage('coachingPage');await openCoachingSession(invite.id);return}}
- if(action==='draft'){const draft=coachingDebriefs.find(d=>d.publication_status==='draft'&&d.is_finalized!==true);if(draft){showPage('coachingPage');await openCoachingSession(draft.session_id);setCoachingStage('debrief');return}}
+ if(action==='draft'){const draft=coachingDebriefs.find(isReliableCoachingDraft);if(draft){showPage('coachingPage');await openCoachingSession(draft.session_id);setCoachingStage('debrief');return}}
  showPage('coachingPage');setCoachingStage('prepare');
 }
 function activeCoachingStorageKey(){return `${ACTIVE_COACHING_KEY}_${session?.user?.id||'anonymous'}`}

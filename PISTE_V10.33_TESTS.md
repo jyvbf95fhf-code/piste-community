@@ -7,6 +7,7 @@
 - [ ] Invitation réelle : rôle proposé et « Voir l’invitation » ouvrent la bonne session.
 - [ ] Brouillon réel `publication_status=draft` : « Débrief à finaliser » et reprise du bon débrief.
 - [ ] Débrief publié/finalisé ou session terminée seule : aucun faux raccourci de brouillon.
+- [ ] Un débrief terminé mais encore stocké comme `draft` sans marqueur fiable n’est pas présenté comme « À finaliser ».
 - [ ] Absence de données et erreur de chargement : carte utilisable, sans donnée fictive ni blocage de l’accueil.
 - [ ] Changement de compte : aucun état Coaching du compte précédent n’est conservé.
 
