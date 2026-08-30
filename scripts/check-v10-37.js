@@ -1,0 +1,14 @@
+const fs=require('fs');
+const html=fs.readFileSync('index.html','utf8');
+const app=fs.readFileSync('app.js','utf8');
+const sw=fs.readFileSync('sw.js','utf8');
+const ids=[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m=>m[1]);
+const dup=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
+if(dup.length)throw new Error(`Identifiants dupliqués : ${dup.join(', ')}`);
+for(const id of ['activityDetailPage','blackBoxTabs','blackBoxSummary','blackBoxReplay','blackBoxAnalysis','blackBoxDebrief'])if(!ids.includes(id))throw new Error(`Élément boîte noire absent : ${id}`);
+for(const token of ['TerrainBlackBox','BLACK_BOX_VERSION','blackBoxActivity','renderBlackBox','setBlackBoxTab','active_duration_ms','deviation'])if(!app.includes(token))throw new Error(`Moteur V10.37 incomplet : ${token}`);
+if(!/data-blackbox-tab="summary"/.test(html)||!/data-blackbox-tab="replay"/.test(html)||!/data-blackbox-tab="analysis"/.test(html)||!/data-blackbox-tab="debrief"/.test(html))throw new Error('Sous-onglets incomplets');
+if(/openai\.com|anthropic\.com|generativelanguage\.googleapis\.com/i.test(app))throw new Error('Service IA externe inattendu détecté');
+if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté');
+if(!/piste-community-v2074/.test(sw)||!/app\.js\?v=1074/.test(html+sw))throw new Error('Cache V10.37 incohérent');
+console.log(`Contrôle V10.37 OK : ${ids.length} IDs uniques, boîte noire commune et quatre sous-onglets présents.`);
