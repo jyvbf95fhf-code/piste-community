@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2052">
+<link rel="stylesheet" href="./v2.css?v=2053">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -56,11 +56,23 @@
   </div>
 </section>
 
+<section id="publicShareScreen" class="hidden public-share-screen">
+  <div class="public-share-brand"><span>🐕</span><div><small>PISTE COMMUNITY</small><h1 id="publicShareTitle">Piste partagée</h1></div></div>
+  <div id="publicShareContent" class="card"><p>Chargement de la piste partagée…</p></div>
+  <div id="publicShareMap" class="public-share-map hidden"></div>
+  <p class="public-share-notice">Cette vue publique ne contient ni identité personnelle, ni données réservées au coach. Les activités OPS sont automatiquement nettoyées.</p>
+  <button id="publicShareLogin" class="primary" type="button">Ouvrir PISTE Community</button>
+</section>
+
+<div id="opsChoiceDialog" class="simple-choice-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="opsChoiceTitle">
+  <div class="simple-choice-card"><button id="closeOpsChoice" class="dialog-close" type="button" aria-label="Fermer">×</button><small class="section-kicker">NOUVELLE ACTIVITÉ</small><h2 id="opsChoiceTitle">OPS</h2><p>Choisissez le départ adapté à la situation.</p><button id="opsImmediateStart" class="choice-action" type="button"><span>🐕</span><div><b>Démarrer immédiatement</b><small>Lancer directement le suivi GPS terrain</small></div><em>›</em></button><button id="opsPrepareStart" class="choice-action" type="button"><span>⚡</span><div><b>Préparer l’intervention</b><small>Appel, dernier point connu, dangers et GPX</small></div><em>›</em></button></div>
+</div>
+
 <section id="appScreen" class="hidden">
   <section id="homePage" class="page active">
     <div class="v8-hero">
       <div class="hero-brand"><span id="heroDogPhoto" class="hero-dog hero-dog-photo">🐕</span><div><small>PISTE COMMUNITY</small><b id="helloUser">Bonjour</b><span id="heroDogLine">Prêt pour le terrain.</span></div></div>
-      <button id="openTerrainHomeBtn" class="start-main v8-start" data-page="trainingPage"><span class="start-dog">◎</span><span><b>DÉMARRER UNE ACTIVITÉ</b><small>Opérationnel • entraînement • coaching</small></span></button>
+      <button id="openTerrainHomeBtn" class="start-main v8-start"><span class="start-dog">◎</span><span><b>ENTRAÎNEMENT</b><small>Démarrer une piste libre</small></span></button>
     </div>
 
     <div id="resumeBanner" class="resume-banner hidden"><div><b>Enregistrement interrompu détecté</b><span id="resumeInfo">Une activité locale peut être reprise.</span></div><div class="resume-actions"><button id="resumeDraftBtn" class="primary">Reprendre</button><button id="discardDraftBtn" class="secondary">Effacer</button></div></div>
@@ -68,30 +80,22 @@
     <div id="syncBanner" class="sync-banner hidden">⏳ <b id="syncCount">0</b> enregistrement(s) en attente de synchronisation.</div>
 
     <div class="kpi-grid v8-kpis">
-      <article class="kpi-clickable" data-page="libraryPage" role="button" tabindex="0" aria-label="Ouvrir toutes mes pistes"><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistages</span><small>Toutes mes pistes ›</small></article>
-      <article class="kpi-clickable" data-page="trainingPage" role="button" tabindex="0" aria-label="Ouvrir mes entraînements"><span class="kpi-icon">🐾</span><strong id="tHomeCount">0</strong><span>Entraînements</span><small>Voir mes activités ›</small></article>
+      <article class="kpi-clickable" data-page="libraryPage" data-library-filter="operational" role="button" tabindex="0" aria-label="Ouvrir mes pistes OPS"><span class="kpi-icon">🐕</span><strong id="kPistes">0</strong><span>Pistes OPS</span><small>Voir dans Mes pistes ›</small></article>
+      <article class="kpi-clickable" data-page="libraryPage" data-library-filter="training" role="button" tabindex="0" aria-label="Ouvrir mes entraînements"><span class="kpi-icon">🐾</span><strong id="tHomeCount">0</strong><span>Entraînements</span><small>Voir dans Mes pistes ›</small></article>
       <article><span class="kpi-icon">↗</span><strong id="kKm">0</strong><span>km opérationnels</span></article>
       <article><span class="kpi-icon">✓</span><strong id="kUseful">0%</strong><span>Résultats utiles</span></article>
     </div>
 
     <div class="module-grid">
-      <button data-page="feedPage"><span class="module-icon">🔔</span><b>Actualités</b><small>Partages, likes & commentaires</small></button>
-      <button id="homeStatsBtn" type="button" data-page="statsPage"><span class="module-icon">▥</span><b>Statistiques</b><small>Personnelles & communauté</small></button>
-      <button data-page="libraryPage"><span class="module-icon">🗂️</span><b>Toutes mes pistes</b><small>Liste, calendrier et carte</small></button>
-      <button data-page="analysisPage"><span class="module-icon">🐾</span><b>Analyse cynophile</b><small>Tendances & résultats</small></button>
-      <button data-page="dogPage"><span class="module-icon">🐕</span><b>Fiche chien</b><small>Santé, rappels & permanences</small></button>
-      <button data-page="friendsPage"><span class="module-icon">👥</span><b>Mes amis</b><small>Invitations</small></button>
+      <button id="homeStatsBtn" type="button" data-page="statsPage"><span class="module-icon">▥</span><b>Analyses & statistiques</b><small>OPS, entraînement, communauté et chien</small></button>
+      <button id="homeHelpBtn" type="button"><span class="module-icon">?</span><b>Aide</b><small>Fonctionnement et sécurité</small></button>
     </div>
 
-    <div class="card v8-card">
-      <div class="card-title-row"><h2>Activité récente</h2><button class="text-btn" data-page="libraryPage">Tout voir</button></div>
-      <div id="homeRecent"></div>
-    </div>
   </section>
 
   <section id="recordPage" class="page">
     <div class="record-head">
-      <button class="back" data-page="trainingPage">‹ Terrain</button>
+      <button class="back" data-page="libraryPage">‹ Mes pistes</button>
       <h2 id="recordTitle">Nouveau pistage opérationnel</h2>
     </div>
 
@@ -193,8 +197,8 @@
           <p class="small muted">Choisis avant l’enregistrement. Le mode privé reste sélectionné par défaut.</p>
           <div class="visibility-options">
             <label><input type="radio" name="visibility" value="private" checked><span><b>🔒 Privé</b><small>Uniquement moi</small></span></label>
-            <label><input type="radio" name="visibility" value="friends"><span><b>👥 Amis</b><small>Visible dans leurs Actualités</small></span></label>
-            <label><input type="radio" name="visibility" value="community"><span><b>🌍 Communauté</b><small>Statistiques anonymes uniquement</small></span></label>
+            <label><input type="radio" name="visibility" value="community"><span><b>🌐 Communauté</b><small>Visible dans les Actualités PISTE</small></span></label>
+            <label><input type="radio" name="visibility" value="public"><span><b>🔗 Public</b><small>Lien partageable, données protégées</small></span></label>
           </div>
         </fieldset>
 
@@ -324,8 +328,9 @@
 
   <section id="feedPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🔔 Actualités</h2></div>
+    <div class="segmented social-section-tabs"><button class="active" type="button">Fil</button><button type="button" data-page="friendsPage">Mes amis</button></div>
     <div class="card feed-shell">
-      <div class="feed-intro"><span>🐾</span><div><b>Le fil de ta communauté</b><small>Activités partagées, réactions et commentaires de tes amis.</small></div></div>
+      <div class="feed-intro"><span>🐾</span><div><b>Le fil de votre communauté</b><small>Activités de vos amis, partages communautaires et débriefs Coaching publiés.</small></div></div>
       <div id="friendFeed"></div>
     </div>
   </section>
@@ -336,6 +341,7 @@
       <button type="button" data-stats-scope="mine" class="active">Pistage opérationnel</button>
       <button type="button" data-stats-scope="training">Entraînements</button>
       <button type="button" data-stats-scope="community">Communauté</button>
+      <button type="button" data-page="analysisPage">Analyse cynophile</button>
     </div>
     <div class="card">
       <div id="statsError" class="stats-error hidden"></div>
@@ -345,7 +351,8 @@
   </section>
 
   <section id="friendsPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Amis</h2></div>
+    <div class="record-head"><button class="back" data-page="feedPage">‹ Actualités</button><h2>🔔 Actualités</h2></div>
+    <div class="segmented social-section-tabs"><button type="button" data-page="feedPage">Fil</button><button class="active" type="button">Mes amis</button></div>
     <div class="card">
       <h3>Ajouter un ami</h3>
       <form id="friendForm" class="friend-add">
@@ -363,7 +370,7 @@
 
   <!-- V10.27_OPERATIONAL_CALL -->
   <section id="operationalCallPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>⚡ OPS</h2></div>
+    <div class="record-head"><button class="back" data-page="libraryPage">‹ Mes pistes</button><h2>⚡ OPS</h2></div>
     <div class="call-privacy-notice"><span>🔒</span><p><b>Fiche confidentielle</b><small>Utilise des initiales et limite les informations identifiantes au strict nécessaire. Tests Preview uniquement avec des données fictives.</small></p></div>
     <nav class="call-stepper" aria-label="Étapes de la prise d’appel">
       <button type="button" class="active" data-call-step="1"><span>1</span>Appel</button><button type="button" data-call-step="2"><span>2</span>Personne</button><button type="button" data-call-step="3"><span>3</span>Environnement</button><button type="button" data-call-step="4"><span>4</span>Carte & synthèse</button>
@@ -417,10 +424,12 @@
   </section>
 
   <section id="libraryPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Toutes mes pistes</h2></div>
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Mes pistes</h2></div>
+    <div class="library-intro"><div><small>CENTRE DE GESTION</small><h3>Toutes vos activités au même endroit</h3><p>Consultez, modifiez, partagez, dupliquez, archivez ou supprimez vos pistes.</p></div><div class="library-create-actions"><button id="libraryNewTraining" class="primary" type="button">＋ Entraînement</button><button id="libraryNewOps" class="secondary" type="button">＋ OPS</button><button id="libraryNewCoaching" class="secondary" type="button">＋ Coaching</button><button id="libraryNewRoute" class="secondary" type="button">＋ Tracé préparé</button></div></div>
     <div class="card library-toolbar">
       <div class="segmented three" aria-label="Affichage de la bibliothèque"><button class="active" data-library-view="list">☰ Liste</button><button data-library-view="calendar">▦ Calendrier</button><button data-library-view="map">🗺️ Carte</button></div>
-      <div class="library-filters"><input id="librarySearch" type="search" placeholder="Nom, lieu, chien, étiquette…"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">Opérationnel</option><option value="training">Entraînement</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label></div>
+      <div class="library-filters"><input id="librarySearch" type="search" placeholder="Nom, lieu, chien, étiquette…"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">OPS</option><option value="training">Entraînement</option><option value="coaching">Coaching</option><option value="prepared">Tracés préparés</option></select><select id="libraryStatus"><option value="active">Actives et terminées</option><option value="archived">Archivées</option><option value="all">Tous les statuts</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label></div>
+      <div class="library-bulk-bar"><label><input id="librarySelectAll" type="checkbox"> Tout sélectionner</label><span id="librarySelectionInfo">Aucune sélection</span><button id="archiveSelectedActivities" class="secondary" type="button" disabled>Archiver</button><button id="deleteSelectedActivities" class="danger-button" type="button" disabled>Supprimer</button></div>
       <div class="library-compare-bar"><span id="libraryCompareInfo">Sélectionnez deux pistes pour les comparer.</span><button id="compareActivities" class="secondary" type="button" disabled>Comparer</button></div>
     </div>
     <div id="activityLibraryCompare" class="library-comparison hidden"></div>
@@ -437,20 +446,20 @@
       <button id="quickStartLastActivity" class="quick-start-last hidden" type="button"><span>⚡</span><div><b>Départ express</b><small id="quickStartLastInfo">Reprendre vos derniers réglages</small></div><em>›</em></button>
       <div class="terrain-group"><small class="section-kicker">ACTIVITÉ IMMÉDIATE</small><h3>Partir maintenant</h3><div class="terrain-choice-grid"><button id="newOperationalTerrainBtn" class="terrain-choice operational"><span>🐕</span><b>Pistage opérationnel</b><small>Démarrer un suivi terrain</small></button><button id="newTrainingBtn" class="terrain-choice training"><span>🐾</span><b>Entraînement libre</b><small>Démarrer sans scénario</small></button></div><button id="receivedCallBtn" class="received-call-btn" type="button"><span>⚡</span><span><b>OPS</b><small>Préparer l’appel, l’engagement et le dernier point connu</small></span><em>›</em></button></div>
       <div class="terrain-group prepared"><small class="section-kicker">SESSION PRÉPARÉE</small><h3>Préparer, réaliser, débriefer</h3><div class="terrain-choice-grid"><button id="openPlannerBtn" class="terrain-choice planner"><span>🗺️</span><b>Créer une session</b><small>Tracé, signes et odeur</small></button><button id="openCoachingBtn" class="terrain-choice coaching"><span>🎧</span><b>Ouvrir le coaching</b><small>Créer, rejoindre ou reprendre</small></button></div></div>
-      <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Ouvrir Toutes mes pistes ›</button>
+      <button id="openOperationalHistoryTerrainBtn" class="text-btn" type="button">Ouvrir Mes pistes ›</button>
       <p class="muted">Choisis une activité. Les statistiques opérationnelles et d’entraînement restent séparées.</p>
     </div>
-    <div class="card">
+    <div class="card legacy-module-history hidden" aria-hidden="true">
       <div class="card-title-row"><h3>Mes tracés préparés</h3><span>🐾</span></div>
       <div id="trainingRoutesList"></div>
     </div>
-    <div class="kpi-grid">
+    <div class="kpi-grid legacy-module-history hidden" aria-hidden="true">
       <article><strong id="tCount">0</strong><span>Entraînements</span></article>
       <article><strong id="tKm">0</strong><span>km parcourus</span></article>
       <article><strong id="tFound">0</strong><span>Retrouvées</span></article>
       <article><strong id="tUseful">0%</strong><span>Résultats utiles</span></article>
     </div>
-    <div class="card">
+    <div class="card legacy-module-history hidden" aria-hidden="true">
       <div class="segmented stats-tabs">
         <button id="trainingHistoryTab" class="active">Historique</button>
         <button id="trainingStatsTab">Statistiques</button>
@@ -466,7 +475,7 @@
 
 
   <section id="plannerPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🗺️ Créateur de tracé</h2></div>
+    <div class="record-head"><button class="back" data-page="libraryPage">‹ Mes pistes</button><h2>🗺️ Créateur de tracé</h2></div>
     <div class="card planner-card">
       <!-- V10.26_ASSISTANT_GPX -->
       <nav class="planner-section-tabs" aria-label="Fonctions du créateur de tracé">
@@ -544,13 +553,13 @@
   </section>
 
   <section id="coachingPage" class="page">
-    <div class="record-head"><button class="back" data-page="trainingPage">‹ Terrain</button><h2>🎧 Coaching</h2></div>
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🎧 Coaching</h2></div>
     <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Créer / Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
     <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
       <div class="card"><small class="section-kicker">PRÉPARER</small><h3>Créer une session</h3><label>Je crée cette session comme<select id="coachingCreatorRole"><option value="coach">Coach — je prépare et dirige</option><option value="solo">Solo — je prépare et conduis</option></select></label><label>Chien concerné<select id="coachingDogSelect"><option value="">À choisir</option></select></label><label>Scénario préparé<select id="coachingRouteSelect"></select></label><div class="coaching-route-actions"><button id="createCoachingRoute" class="secondary" type="button">＋ Créer un tracé sur la carte</button><button id="refreshCoachingRoutes" class="secondary" type="button">↻ Actualiser</button></div><label>Nom de la session<input id="coachingSessionName" maxlength="100" placeholder="Ex. Travail des angles — mardi"></label><label>Mode de visibilité<select id="coachingVisibility"><option value="all" selected>Partagé — tracé et équipe visibles</option><option value="progressive">Progressif — indices révélés à proximité</option><option value="coach">Double aveugle — conducteur sans tracé ni traceur</option></select></label><p class="small muted">Le mode partagé est recommandé. En double aveugle, le conducteur ne voit que sa position, son trajet réel, sa distance et son temps.</p><div class="coaching-invites"><div class="card-title-row"><div><small class="section-kicker">ÉQUIPE</small><h4>Inviter mes amis</h4></div><button id="addCoachingFriend" class="secondary" type="button">+ Ajouter</button></div><p class="small muted">Choisis les personnes et leur rôle avant de créer la session. Le code restera disponible en solution de secours.</p><div id="coachingFriendInvites"></div></div><button id="createCoachingSession" class="primary">Créer la session</button><p id="coachingCreateMsg" class="msg"></p></div>
       <div class="card"><small class="section-kicker">REJOINDRE</small><h3>Code d’invitation</h3><label>Mon rôle<select id="coachingJoinRole"><option value="driver">Conducteur — je travaille avec le chien</option><option value="traceur">Traceur — je pose la piste</option><option value="observer">Observateur — je suis la séance</option></select></label><div class="join-row"><input id="coachingInviteInput" maxlength="12" autocomplete="off" placeholder="Ex. PISTE-AB12"><button id="joinCoachingSession" class="secondary">Rejoindre</button></div><p id="coachingJoinMsg" class="msg"></p></div>
     </div>
-    <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><div><small class="section-kicker">ORGANISATION</small><h3>Mes sessions</h3></div><button id="refreshCoaching" class="secondary">Actualiser</button></div><div class="segmented three coaching-session-filters"><button class="active" data-session-filter="upcoming">À venir</button><button data-session-filter="live">En cours</button><button data-session-filter="ended">Terminées</button></div><div id="coachingSessionsList"></div></div>
+    <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><div><small class="section-kicker">ORGANISATION</small><h3>Sessions à préparer ou en cours</h3></div><button id="refreshCoaching" class="secondary">Actualiser</button></div><div class="segmented coaching-session-filters"><button class="active" data-session-filter="upcoming">À venir</button><button data-session-filter="live">En cours</button></div><div id="coachingSessionsList"></div><button class="text-btn" type="button" data-page="libraryPage" data-library-filter="coaching">Voir les sessions terminées dans Mes pistes ›</button></div>
     <div id="coachingLivePanel" class="card hidden">
       <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode"></strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
       <div id="coachingPhase" class="coaching-phase waiting">ÉQUIPE EN ATTENTE</div>
@@ -577,7 +586,7 @@
       <div class="coaching-actions"><button id="cancelCoachingSession" class="danger-button hidden" type="button">Annuler la session</button><button id="deleteCoachingSession" class="danger-button hidden" type="button" title="Efface aussi les positions, messages, repères et débrief associés">Supprimer définitivement</button><button id="leaveCoachingSession" class="danger-button hidden" type="button">Quitter la session</button><button id="leaveCoachingLive" class="secondary" type="button">Fermer</button></div>
       </div>
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
-      <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="backToCoachingSessions" class="ghost-dark" type="button">Retour à Mes sessions</button></div>
+      <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="backToCoachingSessions" class="ghost-dark" type="button">Retour à Mes pistes</button></div>
       <form id="coachingDebriefForm" class="form-grid hidden"><p id="coachingDebriefState" class="full coaching-debrief-state" aria-live="polite">Aucun brouillon chargé.</p><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><label class="full">Données statistiques complémentaires<textarea name="statistics_notes" maxlength="2500" rows="3" placeholder="Conditions, observations ou mesures ajoutées après la séance"></textarea></label><div class="full debrief-save-actions"><button id="saveDebriefDraft" class="secondary" type="button">Enregistrer le brouillon</button><button class="primary" type="submit">Publier le débrief</button></div></form></div>
     </div>
   </section>
@@ -596,7 +605,7 @@
   </section>
 
   <section id="analysisPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🐾 Analyse cynophile</h2></div>
+    <div class="record-head"><button class="back" data-page="statsPage">‹ Analyses</button><h2>🐾 Analyse cynophile</h2></div>
     <div class="segmented">
       <button id="analysisMineTab" class="active">Mes données</button>
       <button id="analysisCommunityTab">Communauté</button>
@@ -622,7 +631,7 @@
   </section>
 
   <section id="profilePage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🐕 Profil & objectifs</h2></div>
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>⚙️ Profil & réglages</h2></div>
     <div class="profile-grid">
       <div class="card profile-card">
         <div class="profile-avatar">🐕</div>
@@ -669,7 +678,7 @@
       </div>
       <div class="card">
         <div class="card-title-row"><h3>Aide</h3><span>?</span></div>
-        <p class="small muted">Retrouve le fonctionnement de l’Accueil, du Terrain, du Coaching, de l’intelligence olfactive, du GPS et du mode hors ligne.</p>
+        <p class="small muted">Retrouve le fonctionnement de l’Accueil, de Mes pistes, du Coaching, de l’intelligence olfactive, du GPS et du mode hors ligne.</p>
         <button id="openHelpBtn" class="secondary big" type="button">Ouvrir le centre d’aide</button>
       </div>
       <div class="card danger-zone">
@@ -684,8 +693,8 @@
     <div class="record-head"><button class="back" data-page="profilePage">‹ Profil</button><h2>Centre d’aide</h2></div>
     <div class="card help-intro"><h3>Bien utiliser PISTE Community</h3><p class="muted">Des repères courts pour préparer, enregistrer et analyser une activité.</p><button id="reviewTutorialBtn" class="primary" type="button">Revoir la présentation guidée</button></div>
     <div class="help-grid">
-      <article class="card"><span>⌂</span><h3>Accueil</h3><p>Consulte les indicateurs, les activités récentes et accède rapidement aux principaux outils.</p></article>
-      <article class="card"><span>◎</span><h3>Terrain</h3><p>Démarre immédiatement un pistage opérationnel ou un entraînement, ou prépare une session complète.</p></article>
+      <article class="card"><span>⌂</span><h3>Accueil</h3><p>Lance directement Coaching, OPS ou Entraînement et consulte vos indicateurs essentiels.</p></article>
+      <article class="card"><span>🗂️</span><h3>Mes pistes</h3><p>Retrouve et gère OPS, Entraînement, Coaching et tracés préparés dans une bibliothèque unique.</p></article>
       <article class="card"><span>🎧</span><h3>Coaching</h3><p>Crée ou rejoins une session par code, suis la réalisation en direct puis enregistre le débrief.</p></article>
       <article class="card"><span>🌬️</span><h3>Intelligence olfactive</h3><p>Visualise une estimation pédagogique selon le vent, l’âge de piste et le milieu. Elle ne remplace pas l’analyse terrain.</p></article>
       <article class="card"><span>⌖</span><h3>GPS</h3><p>Autorise la localisation précise, garde l’application ouverte et vérifie l’indicateur de précision avant le départ.</p></article>
@@ -705,7 +714,7 @@
   <nav class="bottom-nav">
     <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
     <button data-page="dogPage"><span class="nav-icon">🐕</span><span>Chien</span></button>
-    <button id="navRecord" class="nav-paw" data-page="trainingPage"><span class="nav-icon">◎</span><span>Terrain</span></button>
+    <button id="navRecord" class="nav-paw" data-page="libraryPage"><span class="nav-icon">🗂️</span><span>Mes pistes</span></button>
     <button class="nav-social" data-page="feedPage"><span class="nav-icon">🔔</span><span>Actualités</span><b id="socialNavBadge" class="nav-notification hidden">0</b></button>
     <button data-page="profilePage"><span class="nav-icon">🐕</span><span>Profil</span></button>
   </nav>
@@ -742,7 +751,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1063"></script>
-<script src="./v2.js?v=2016"></script>
+<script type="module" src="./app.js?v=1064"></script>
+<script src="./v2.js?v=2017"></script>
 </body>
 </html>

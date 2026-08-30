@@ -70,7 +70,6 @@
           <div><b>Coaching</b><small>Préparez et suivez une piste avec votre équipe</small><em>Coach · Conducteur · Traceur</em></div>
         </div>
         <div class="v2-coaching-state" aria-live="polite"><span id="homeCoachingState">Chargement du Coaching…</span><small id="homeCoachingStateInfo"></small><button id="homeCoachingStateAction" class="primary" type="button" data-coaching-home-action="open">Ouvrir le Coaching</button></div>
-        <div class="v2-coaching-actions"><button id="homeCoachingPrepare" class="secondary" type="button">Préparer</button><button id="homeCoachingJoin" class="secondary" type="button">Rejoindre</button></div>
       </div>
       <div class="v2-action-buttons"></div>`;
     const actionButtons = q('.v2-action-buttons', actionSection);
@@ -78,7 +77,7 @@
     opsBtn.id = 'homeOpsBtn';opsBtn.className = 'v10-30-quick ops';opsBtn.type = 'button';
     opsBtn.innerHTML = '<span>⚡</span><span><b>OPS</b><small>Appel & opérationnel</small></span>';
     actionButtons.appendChild(opsBtn);
-    if(terrainBtn){terrainBtn.classList.add('v10-30-quick','activity');terrainBtn.querySelector('b').textContent='TERRAIN';terrainBtn.querySelector('small').textContent='Libre ou préparé';actionButtons.appendChild(terrainBtn)}
+    if(terrainBtn){terrainBtn.classList.add('v10-30-quick','activity');terrainBtn.removeAttribute('data-page');terrainBtn.querySelector('b').textContent='ENTRAÎNEMENT';terrainBtn.querySelector('small').textContent='Démarrer une piste libre';actionButtons.appendChild(terrainBtn)}
 
     const dogSection = document.createElement('section');
     dogSection.className = 'v2-section';
@@ -92,7 +91,7 @@
           <span id="v2DogMeta">Prêt pour le terrain</span>
         </div>
         <div class="v2-dog-state">● ACTIF</div>
-        <button class="v2-profile-link" data-page="profilePage">Voir la fiche du binôme ›</button>
+        <button class="v2-profile-link" data-page="dogPage">Voir la fiche du binôme ›</button>
       </div>`;
 
     const progressSection = document.createElement('section');
@@ -100,17 +99,9 @@
     progressSection.innerHTML = '<div class="v2-section-title"><h2>Résumé de progression</h2><span>Données réelles</span></div><div class="v2-progress-wrap"></div>';
     if(kpis) q('.v2-progress-wrap', progressSection).appendChild(kpis);
 
-    const recentSection = document.createElement('section');
-    recentSection.className = 'v2-section';
-    recentSection.innerHTML = '<div class="v2-section-title"><h2>Dernières activités</h2><span>Historique</span></div>';
-    if(recentCard){
-      recentCard.classList.add('v2-recent-card');
-      recentSection.appendChild(recentCard);
-    }
-
     const toolsSection = document.createElement('section');
     toolsSection.className = 'v2-section';
-    toolsSection.innerHTML = '<div class="v2-section-title"><h2>Outils</h2><span>Carte, statistiques, amis…</span></div><div class="v2-tools-card"></div>';
+    toolsSection.innerHTML = '<div class="v2-section-title"><h2>Boîte à outils</h2><span>Analyses et réglages secondaires</span></div><div class="v2-tools-card"></div>';
     if(modules) q('.v2-tools-card', toolsSection).appendChild(modules);
 
     home.innerHTML = '';
@@ -118,7 +109,7 @@
     if(resume) home.append(resume);
     if(activeSession) home.append(activeSession);
     if(sync) home.append(sync);
-    home.append(actionSection, dogSection, progressSection, recentSection, toolsSection);
+    home.append(actionSection, dogSection, progressSection, toolsSection);
 
     if(legacyHero) legacyHero.remove();
     syncDogMirror();
@@ -136,7 +127,7 @@
     const defs = [
       {page:'homePage', icon:'⌂', label:'Accueil'},
       {page:'dogPage', icon:'🐕', label:'Chien'},
-      {page:'trainingPage', icon:'◎', label:'Terrain'},
+      {page:'libraryPage', icon:'🗂️', label:'Mes pistes'},
       {page:'feedPage', icon:'🔔', label:'Actualités'},
       {page:'profilePage', icon:'○', label:'Profil'}
     ];
@@ -156,13 +147,13 @@
       buttons.forEach(b => b.classList.remove('v2-nav-active'));
       const match = buttons.find(b => b.dataset.page === page);
       if(match) match.classList.add('v2-nav-active');
-      if(page === 'recordPage' && buttons[2]) buttons[2].classList.add('v2-nav-active');
+      if(['recordPage','activityDetailPage','plannerPage','coachingPage','operationalCallPage'].includes(page) && buttons[2]) buttons[2].classList.add('v2-nav-active');
     };
 
     document.addEventListener('click', e => {
       const btn = e.target.closest('[data-page]');
       if(btn?.dataset?.page) setTimeout(() => setActive(btn.dataset.page), 0);
-      if(e.target.closest('#navRecord')) setTimeout(() => setActive('trainingPage'), 0);
+      if(e.target.closest('#navRecord')) setTimeout(() => setActive('libraryPage'), 0);
     }, true);
 
     const pages = qa('.page');
@@ -180,6 +171,17 @@
     if(terrain) terrain.textContent = 'DÉMARRER UNE ACTIVITÉ';
   }
 
+  function consolidateDogManagement(){
+    const dogPage=q('#dogPage'),dogsList=q('#dogsList'),card=dogsList?.closest('.card');
+    if(!dogPage||!card||card.dataset.dogCentralized==='1') return;
+    card.dataset.dogCentralized='1';
+    card.classList.add('dog-management-card');
+    const hero=q('#dogHubHero',dogPage);
+    if(hero) hero.insertAdjacentElement('afterend',card); else dogPage.appendChild(card);
+    const top=q('.dog-hub-top',dogPage);
+    qa('button[data-page="friendsPage"],button[data-page="profilePage"]',top).forEach(button=>button.remove());
+  }
+
   function monitorDynamicData(){
     const targets = [q('#topDogAlias'), q('#topDogPhoto'), q('#heroDogPhoto')].filter(Boolean);
     if(!targets.length) return;
@@ -193,11 +195,12 @@
     premiumLabels();
     buildHome();
     rebuildNav();
+    consolidateDogManagement();
     monitorDynamicData();
 
-    document.documentElement.dataset.pisteVersion = '10.30';
+    document.documentElement.dataset.pisteVersion = '10.34';
     document.body.classList.add('v10-30-aurora');
-    console.info('PISTE Community V10.30 UI shell active');
+    console.info('PISTE Community V10.34 UI shell active');
   }
 
   if(document.readyState === 'loading') {
@@ -212,7 +215,7 @@
    ========================================================================== */
 window.PISTE_COACHING = Object.freeze({
   enabled: true,
-  version: '10.30',
+  version: '10.34',
   roles: ['driver','coach','traceur','observer','solo'],
   capabilities: {
     liveLocation: true,

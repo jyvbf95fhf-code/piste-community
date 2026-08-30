@@ -21,7 +21,7 @@ let dogHealthEvents=[],dogDuties=[],dogShares=[],dogHubFriends=[]; // V10.25_DOG
 let operationalCalls=[],activeOperationalCallId=null,currentOperationalCall=null,operationalCallMap=null,operationalCallLayers=[],operationalCallPoint=null,operationalCallMarkers=[],operationalCallGpxTracks=[],operationalCallWeather={},operationalCallAnalysis={},operationalCallStep=1; // V10.27_OPERATIONAL_CALL
 let activeOperationalGpxTracks=[],operationalLiveGpxLayers=[]; // V10.29_OPERATIONAL_GPX
 let plannerRoutingMode='trail',plannerRoutingBusy=false,liveMapFollow=true,liveMapProgrammatic=false;
-let fieldMarkers=[],activityLibraryView='list',activityLibraryFilters={type:'all',favorite:false,query:''},activityCompare=[];
+let fieldMarkers=[],activityLibraryView='list',activityLibraryFilters={type:'all',status:'active',favorite:false,query:''},activityCompare=[],activityLibrarySelection=[];
 const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{icon:'📦',label:'Objet déposé'},direction:{icon:'↪️',label:'Changement de direction'},crossing:{icon:'🔀',label:'Croisement'},contamination:{icon:'👥',label:'Contamination'},danger:{icon:'⚠️',label:'Danger'},subject:{icon:'👤',label:'Personne recherchée'},note:{icon:'📍',label:'Note'}};
 const LIVE_MARKERS={loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},behavior:{icon:'🐕',label:'Comportement'},direction:{icon:'↗️',label:'Direction'},clue:{icon:'🔎',label:'Indice'},danger:{icon:'⚠️',label:'Danger'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
 const OPERATIONAL_GPX_KINDS={habitual:{label:'Itinéraire habituel',icon:'↝'},searched:{label:'Zone ou trajet déjà parcouru',icon:'✓'},access:{label:'Accès équipe',icon:'🚗'},team:{label:'Trace d’une autre équipe',icon:'👥'},reference:{label:'Autre référence',icon:'🗺️'}};
@@ -36,7 +36,7 @@ const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&
 const fmt=(v,d=1)=>Number(v||0).toLocaleString('fr-FR',{maximumFractionDigits:d});
 const today=()=>new Date().toISOString().slice(0,10);
 const useful=x=>x.resultat==="Personne retrouvée par le chien"||x.resultat==="Orientation positive";
-const visibilityLabel=v=>v==="friends"?"Amis":v==="community"?"Communauté":"Privé";
+const visibilityLabel=v=>v==="friends"?"Amis":v==="community"?"Communauté":v==="public"?"Public":"Privé";
 const pad=n=>String(n).padStart(2,'0');
 const formatExactDuration=ms=>{ms=Math.max(0,Number(ms)||0);const total=Math.floor(ms/1000),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return `${h?h+' h ':''}${pad(m)} min ${pad(s)} s`};
 const msDuration=()=>gps.start?Math.max(0,Date.now()-gps.start-gps.pausedMs-(gps.paused&&gps.pauseStarted?Date.now()-gps.pauseStarted:0)):0;
@@ -163,8 +163,8 @@ if($('mainStatsTabs'))$('mainStatsTabs').onclick=e=>{
 
 if($('trackBackBtn'))$('trackBackBtn').onclick=()=>showPage($('trackBackBtn').dataset.page);
 if($('activityDetailBack'))$('activityDetailBack').onclick=()=>showPage($('activityDetailBack').dataset.page);
-$('openTerrainHomeBtn').onclick=()=>showPage('trainingPage');
-$('navRecord').onclick=()=>showPage('trainingPage');
+$('openTerrainHomeBtn').onclick=()=>{selectedTrainingRoute=null;beginNewPiste('training')};
+$('navRecord').onclick=()=>showPage('libraryPage');
 
 async function ensureProfile(){
  let {data,error}=await supabase.from('profiles').select('*').eq('user_id',session.user.id).single();
@@ -316,7 +316,7 @@ async function savePlanner(mode='copy'){
  if(error){$('plannerMsg').textContent='Erreur : '+error.message;return}
  window.editingTrainingRouteId=null;clearPlannerDraft();$('plannerMsg').textContent='Tracé enregistré.';await loadTrainingRoutes();
  if(coachingRouteReturn){coachingRouteReturn=false;showPage('coachingPage');setTimeout(()=>{if(saved?.id)$('coachingRouteSelect').value=saved.id;setUiText('coachingCreateMsg','Nouveau tracé sélectionné. Vous pouvez terminer la préparation de la session.')},180);return}
- showPage('trainingPage');
+ activityLibraryFilters.type='prepared';if($('libraryType'))$('libraryType').value='prepared';showPage('libraryPage');
 }
 function editTrainingRoute(id){
  const r=trainingRoutes.find(x=>x.id===id);if(!r)return;
@@ -639,30 +639,160 @@ function updateV8Home(){
 function readLastActivity(){try{return JSON.parse(localStorage.getItem(LAST_ACTIVITY_KEY)||'null')}catch{return null}}
 function saveLastActivity(o){try{localStorage.setItem(LAST_ACTIVITY_KEY,JSON.stringify({mode:recordMode,dog_id:o.dog_id||null,milieu:o.milieu||null,visibility:o.visibility||'private'}))}catch{}}
 function quickStartLastActivity(){const last=readLastActivity();if(!last)return;beginNewPiste(last.mode||'training');setTimeout(()=>{const form=$('pisteForm');if(last.dog_id&&form.elements.dog_id)form.elements.dog_id.value=last.dog_id;if(last.milieu&&form.elements.milieu)form.elements.milieu.value=last.milieu;if(form.elements.visibility)form.elements.visibility.value=last.visibility||'private'},80)}
+function openOpsChoice(){if($('opsChoiceDialog')){$('opsChoiceDialog').classList.remove('hidden');document.body.style.overflow='hidden'}}
+function closeOpsChoice(){if($('opsChoiceDialog')){$('opsChoiceDialog').classList.add('hidden');document.body.style.overflow=''}}
 function currentActiveShortcut(){const draft=getDraft();if(draft?.start&&draft.user_id===session?.user?.id)return{kind:'record',title:draft.mode==='training'?'Entraînement en cours':'Pistage en cours',info:`${fmt(Number(draft.distance||0)/1000,2)} km • reprendre le GPS`};const coaching=coachingShortcutValidated&&verifiedActiveCoachingSession?.status==='live'?verifiedActiveCoachingSession:null;return coaching?{kind:'coaching',id:coaching.id,title:coaching.name||'Session coaching',info:`En direct • ${coachingRoleLabel(isSoloCoaching(coaching)?'solo':myCoachingRole(coaching))}`} : null}
 function refreshActiveSessionShortcut(){const active=currentActiveShortcut(),insideCoaching=document.querySelector('.page.active')?.id==='coachingPage'&&active?.kind==='coaching'&&activeCoachingSession?.id===active.id,banner=$('activeSessionBanner'),dock=$('activeSessionDock'),title=$('activeSessionTitle'),info=$('activeSessionInfo'),dockTitle=$('activeSessionDockTitle'),show=!!active&&!insideCoaching;banner?.classList.toggle('hidden',!show);dock?.classList.toggle('hidden',!show);document.body.classList.toggle('has-active-session',show);if(!active)return;if(title)title.textContent=active.title;if(info)info.textContent=active.info;if(dockTitle)dockTitle.textContent=active.title;if(banner){banner.dataset.kind=active.kind;banner.dataset.id=active.id||''}if(dock){dock.dataset.kind=active.kind;dock.dataset.id=active.id||''}}
 async function resumeActiveSession(){const active=currentActiveShortcut();if(!active)return;if(active.kind==='record'){$('resumeDraftBtn').click();return}await openCoachingSession(active.id,{resume:true})}
-function activityLibraryRows(){const q=activityLibraryFilters.query.toLowerCase();return[...mine.map(x=>({...x,_type:'operational'})),...trainings.map(x=>({...x,_type:'training'}))].filter(x=>activityLibraryFilters.type==='all'||x._type===activityLibraryFilters.type).filter(x=>!activityLibraryFilters.favorite||x.is_favorite).filter(x=>!q||[x.activity_name,x.commune_depart,x.resultat,dogDisplay(x.dog_id),...(x.tags||[])].some(v=>String(v||'').toLowerCase().includes(q))).sort((a,b)=>new Date(b.date||b.created_at)-new Date(a.date||a.created_at))}
-function activityDate(x){const raw=x.date||x.created_at;return new Date(String(raw).length===10?raw+'T12:00:00':raw)}
-function activityLibraryCard(x){const type=x._type==='training'?'Entraînement':'Opérationnel',date=activityDate(x).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}),tags=(x.tags||[]).map(t=>`<em>${esc(t)}</em>`).join(''),key=`${x._type}:${x.id}`;return `<article class="library-card activity-open" data-id="${x.id}" data-type="${x._type}"><label class="library-compare-check"><input type="checkbox" data-compare-key="${key}" ${activityCompare.includes(key)?'checked':''}> Comparer</label><button class="library-favorite ${x.is_favorite?'active':''}" data-favorite-id="${x.id}" data-favorite-type="${x._type}" aria-label="Favori">★</button><div class="library-track-preview">${feedTrackPreview(x.track)}</div><div class="library-card-body"><small>${x._type==='training'?'🟣':'🔵'} ${type} • ${date}</small><h3>${esc(x.activity_name||x.commune_depart||type)}</h3><p>🐕 ${esc(dogDisplay(x.dog_id))} • 📍 ${esc(x.commune_depart||'Lieu non renseigné')}</p><div class="library-stats"><span><b>${fmt(x.distance_km,2)}</b> km</span><span><b>${fmt(x.duree_h,2)}</b> h</span><span>${esc(x.resultat||'Sans résultat')}</span></div>${tags?`<div class="library-tags">${tags}</div>`:''}<div class="library-actions"><button class="secondary manageActivity" type="button">Nom & étiquettes</button><button class="secondary duplicateActivity" type="button">Dupliquer</button></div></div></article>`}
-async function toggleActivityFavorite(type,id){const table=type==='training'?'entrainements':'pistes',row=(type==='training'?trainings:mine).find(x=>x.id===id);if(!row)return;const value=!row.is_favorite,{error}=await supabase.from(table).update({is_favorite:value}).eq('id',id).eq('owner_id',session.user.id);if(error){alert('Favori indisponible : exécute d’abord le SQL V10.32.');return}row.is_favorite=value;renderActivityLibrary()}
-async function manageActivity(type,id){const table=type==='training'?'entrainements':'pistes',row=(type==='training'?trainings:mine).find(x=>x.id===id);if(!row)return;const name=prompt('Nom de la piste :',row.activity_name||row.commune_depart||'');if(name===null)return;const tags=prompt('Étiquettes séparées par des virgules :',(row.tags||[]).join(', '));if(tags===null)return;const collection=prompt('Collection facultative :',row.collection_name||'');if(collection===null)return;const payload={activity_name:name.trim()||null,tags:tags.split(',').map(x=>x.trim()).filter(Boolean).slice(0,12),collection_name:collection.trim()||null},{error}=await supabase.from(table).update(payload).eq('id',id).eq('owner_id',session.user.id);if(error)return alert('Organisation indisponible : exécute d’abord le SQL V10.32.');Object.assign(row,payload);renderActivityLibrary()}
-async function duplicateActivity(type,id){const table=type==='training'?'entrainements':'pistes',row=(type==='training'?trainings:mine).find(x=>x.id===id);if(!row||!confirm('Dupliquer cette fiche et son tracé ?'))return;const copy={...row};delete copy.id;delete copy.created_at;delete copy.updated_at;copy.activity_name=`Copie — ${row.activity_name||row.commune_depart||'activité'}`;copy.date=today();copy.is_favorite=false;const {error}=await supabase.from(table).insert(copy);if(error)return alert('Duplication impossible : '+error.message);await Promise.all([refreshMine(),refreshTrainings()]);renderActivityLibrary()}
+function librarySource(type){
+ if(type==='training')return trainings;
+ if(type==='operational')return mine;
+ if(type==='coaching')return coachingSessions;
+ if(type==='prepared')return trainingRoutes;
+ return [];
+}
+function libraryRow(type,id){return librarySource(type).find(x=>x.id===id)}
+function libraryTypeMeta(type){return ({operational:{icon:'🔵',label:'OPS'},training:{icon:'🟣',label:'Entraînement'},coaching:{icon:'🎧',label:'Coaching'},prepared:{icon:'🗺️',label:'Tracé préparé'}})[type]||{icon:'•',label:'Activité'}}
+function libraryTrack(x){return x._type==='coaching'?(x.planned_route||[]):x._type==='prepared'?(x.route||[]):(x.track||[])}
+function libraryTrackDistanceKm(points){return Array.isArray(points)?points.slice(1).reduce((sum,p,i)=>sum+hav(points[i],p),0)/1000:0}
+function libraryName(x){return x.activity_name||x.name||x.commune_depart||libraryTypeMeta(x._type).label}
+function libraryVisibility(x){const value=x._type==='coaching'?x.visibility_scope:x.visibility;return value==='friends'?'community':(value||'private')}
+function libraryVisibilityLabel(value){return value==='public'?'Public':value==='community'?'Communauté':'Privé'}
+function libraryOwned(x){return x.owner_id===session?.user?.id}
+function activityDate(x){const raw=x.date||x.started_at||x.created_at||new Date().toISOString();return new Date(String(raw).length===10?raw+'T12:00:00':raw)}
+function activityLibraryRows(){
+ const q=activityLibraryFilters.query.toLowerCase(),rows=[
+  ...mine.map(x=>({...x,_type:'operational'})),
+  ...trainings.map(x=>({...x,_type:'training'})),
+  ...coachingSessions.map(x=>({...x,_type:'coaching'})),
+  ...trainingRoutes.map(x=>({...x,_type:'prepared'}))
+ ];
+ return rows.filter(x=>activityLibraryFilters.type==='all'||x._type===activityLibraryFilters.type)
+  .filter(x=>activityLibraryFilters.status==='all'||(activityLibraryFilters.status==='archived'?!!x.archived_at:!x.archived_at))
+  .filter(x=>!activityLibraryFilters.favorite||x.is_favorite)
+  .filter(x=>!q||[libraryName(x),x.commune_depart,x.resultat,x.status,dogDisplay(x.dog_id),...(x.tags||[])].some(v=>String(v||'').toLowerCase().includes(q)))
+  .sort((a,b)=>activityDate(b)-activityDate(a));
+}
+function libraryStatsHtml(x){
+ if(x._type==='prepared')return `<span><b>${fmt(x.planned_distance_km,2)}</b> km prévus</span><span><b>${Array.isArray(x.waypoints)?x.waypoints.length:0}</b> repères</span>`;
+ if(x._type==='coaching')return `<span><b>${esc(coachingStatusLabel(x.status))}</b></span><span><b>${x.coaching_members?.length||0}</b> participant(s)</span>`;
+ return `<span><b>${fmt(x.distance_km,2)}</b> km</span><span><b>${fmt(x.duree_h,2)}</b> h</span><span>${esc(x.resultat||'Sans résultat')}</span>`;
+}
+function activityLibraryCard(x){
+ const meta=libraryTypeMeta(x._type),date=activityDate(x).toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'}),tags=(x.tags||[]).map(t=>`<em>${esc(t)}</em>`).join(''),key=`${x._type}:${x.id}`,owned=libraryOwned(x),compare=['operational','training'].includes(x._type),visibility=libraryVisibility(x),archived=!!x.archived_at;
+ return `<article class="library-card activity-open ${archived?'archived':''}" data-id="${x.id}" data-type="${x._type}">
+  ${owned?`<label class="library-select-check"><input type="checkbox" data-library-select="${key}" ${activityLibrarySelection.includes(key)?'checked':''}> Sélectionner</label>`:''}
+  ${compare?`<label class="library-compare-check"><input type="checkbox" data-compare-key="${key}" ${activityCompare.includes(key)?'checked':''}> Comparer</label>`:''}
+  ${owned?`<button class="library-favorite ${x.is_favorite?'active':''}" data-favorite-id="${x.id}" data-favorite-type="${x._type}" aria-label="Favori">★</button>`:''}
+  <div class="library-track-preview">${feedTrackPreview(libraryTrack(x))}</div>
+  <div class="library-card-body"><small>${meta.icon} ${meta.label} • ${date}${archived?' • ARCHIVÉE':''}</small><h3>${esc(libraryName(x))}</h3><p>🐕 ${esc(dogDisplay(x.dog_id))}${x.commune_depart?` • 📍 ${esc(x.commune_depart)}`:''}</p><div class="library-stats">${libraryStatsHtml(x)}</div>${tags?`<div class="library-tags">${tags}</div>`:''}
+  ${owned?`<label class="library-visibility">Visibilité<select data-library-visibility="${key}"><option value="private" ${visibility==='private'?'selected':''}>🔒 Privé</option><option value="community" ${visibility==='community'?'selected':''}>🌐 Communauté</option><option value="public" ${visibility==='public'?'selected':''}>🔗 Public</option></select></label>`:`<span class="pill private">Participant • consultation autorisée</span>`}
+  <div class="library-actions"><button class="primary openLibraryItem" type="button">Ouvrir</button>${owned?`<button class="secondary manageLibraryItem" type="button">Modifier</button><button class="secondary duplicateLibraryItem" type="button">Dupliquer</button><button class="secondary archiveLibraryItem" type="button">${archived?'Désarchiver':'Archiver'}</button>${visibility==='public'?'<button class="secondary copyLibraryLink" type="button">Copier le lien</button>':''}<button class="danger-button deleteLibraryItem" type="button">Supprimer</button>`:'<button class="danger-button deleteLibraryItem" type="button">Quitter</button>'}</div></div></article>`;
+}
+async function toggleActivityFavorite(type,id){
+ const tables={training:'entrainements',operational:'pistes',coaching:'coaching_sessions',prepared:'training_routes'},row=libraryRow(type,id);if(!row||!libraryOwned(row))return;
+ const value=!row.is_favorite,{error}=await supabase.from(tables[type]).update({is_favorite:value}).eq('id',id).eq('owner_id',session.user.id);if(error)return alert('Favori indisponible : '+error.message);row.is_favorite=value;renderActivityLibrary();
+}
+async function manageActivity(type,id){
+ const table=type==='training'?'entrainements':'pistes',row=libraryRow(type,id);if(!row)return;
+ const name=prompt('Nom de la piste :',row.activity_name||row.commune_depart||'');if(name===null)return;
+ const date=prompt('Date (AAAA-MM-JJ) :',row.date||today());if(date===null)return;
+ const place=prompt('Lieu ou commune :',row.commune_depart||'');if(place===null)return;
+ const result=prompt('Résultat :',row.resultat||'');if(result===null)return;
+ const observation=prompt('Observation modifiable :',row.observation||'');if(observation===null)return;
+ const tags=prompt('Étiquettes séparées par des virgules :',(row.tags||[]).join(', '));if(tags===null)return;
+ const collection=prompt('Collection facultative :',row.collection_name||'');if(collection===null)return;
+ const payload={activity_name:name.trim()||null,date:date.trim()||row.date,commune_depart:place.trim()||null,resultat:result.trim()||row.resultat,observation:observation.trim()||null,tags:tags.split(',').map(x=>x.trim()).filter(Boolean).slice(0,12),collection_name:collection.trim()||null},{error}=await supabase.from(table).update(payload).eq('id',id).eq('owner_id',session.user.id);if(error)return alert('Modification impossible : '+error.message);Object.assign(row,payload);renderActivityLibrary();
+}
+async function duplicateActivity(type,id){
+ const table=type==='training'?'entrainements':'pistes',row=libraryRow(type,id);if(!row||!confirm('Dupliquer cette fiche et son tracé ?'))return;
+ const copy={...row};['_type','id','created_at','updated_at','archived_at','share_token'].forEach(k=>delete copy[k]);copy.activity_name=`Copie — ${row.activity_name||row.commune_depart||'activité'}`;copy.date=today();copy.is_favorite=false;copy.visibility='private';
+ const {error}=await supabase.from(table).insert(copy);if(error)return alert('Duplication impossible : '+error.message);await Promise.all([refreshMine(),refreshTrainings()]);renderActivityLibrary();
+}
+async function openLibraryItem(type,id){
+ if(type==='coaching')return openCoachingSession(id);
+ if(type==='prepared')return editTrainingRoute(id);
+ showActivityStats(id,type,'libraryPage');
+}
+async function manageLibraryItem(type,id){
+ const row=libraryRow(type,id);if(!row||!libraryOwned(row))return;
+ if(type==='prepared')return editTrainingRoute(id);
+ if(type==='coaching'){
+  const name=prompt('Nom de la session :',row.name||'Session Coaching');if(name===null)return;const {error}=await supabase.from('coaching_sessions').update({name:name.trim()||row.name}).eq('id',id).eq('owner_id',session.user.id);if(error)return alert('Modification impossible : '+error.message);row.name=name.trim()||row.name;renderActivityLibrary();return;
+ }
+ return manageActivity(type,id);
+}
+async function duplicateLibraryItem(type,id){
+ const row=libraryRow(type,id);if(!row||!libraryOwned(row))return;
+ if(type==='training'||type==='operational')return duplicateActivity(type,id);
+ if(!confirm('Créer une copie privée de ce tracé ?'))return;
+ const source=type==='prepared'?row:{name:row.name,route:row.planned_route,waypoints:row.planned_markers,odor_model:row.odor_model};
+ const payload={owner_id:session.user.id,name:`Copie — ${source.name||'tracé'}`,route:source.route||[],planned_distance_km:Number(source.planned_distance_km||libraryTrackDistanceKm(source.route||[])),waypoints:source.waypoints||[],odor_model:source.odor_model||{},visibility:'private'};
+ const {data,error}=await supabase.from('training_routes').insert(payload).select().single();if(error)return alert('Duplication impossible : '+error.message);trainingRoutes.unshift(data);renderActivityLibrary();
+}
+async function archiveLibraryItem(type,id,forceValue){
+ const row=libraryRow(type,id);if(!row||!libraryOwned(row))return false;if(type==='coaching'&&row.status==='live'){alert('Terminez la session Coaching avant de l’archiver.');return false}const tables={operational:'pistes',training:'entrainements',coaching:'coaching_sessions',prepared:'training_routes'},archived=forceValue??!row.archived_at,payload={archived_at:archived?new Date().toISOString():null};
+ const {error}=await supabase.from(tables[type]).update(payload).eq('id',id).eq('owner_id',session.user.id);if(error){alert('Archivage impossible : '+error.message);return false}Object.assign(row,payload);return true;
+}
+async function deleteLibraryItem(type,id){
+ const row=libraryRow(type,id);if(!row)return;
+ if(type==='coaching'&&!libraryOwned(row)){
+  if(!confirm('Quitter cette session Coaching ? La session et les données de l’organisateur seront conservées.'))return;const {error}=await supabase.from('coaching_members').delete().eq('session_id',id).eq('user_id',session.user.id);if(error)return alert('Impossible de quitter : '+error.message);coachingSessions=coachingSessions.filter(x=>x.id!==id);renderActivityLibrary();return;
+ }
+ if(!libraryOwned(row))return;
+ const meta=libraryTypeMeta(type),warning=type==='operational'?'Cette suppression OPS est définitive. Les données terrain associées seront perdues.':`Supprimer définitivement « ${libraryName({...row,_type:type})} » ?`;
+ if(!confirm(warning))return;if(type==='operational'&&!confirm('Confirmation renforcée OPS : supprimer définitivement ?'))return;
+ const tables={operational:'pistes',training:'entrainements',coaching:'coaching_sessions',prepared:'training_routes'},{error}=await supabase.from(tables[type]).delete().eq('id',id).eq('owner_id',session.user.id);if(error)return alert(`Suppression ${meta.label} impossible : ${error.message}`);
+ if(type==='operational')mine=mine.filter(x=>x.id!==id);if(type==='training')trainings=trainings.filter(x=>x.id!==id);if(type==='coaching')coachingSessions=coachingSessions.filter(x=>x.id!==id);if(type==='prepared')trainingRoutes=trainingRoutes.filter(x=>x.id!==id);activityLibrarySelection=activityLibrarySelection.filter(x=>x!==`${type}:${id}`);renderActivityLibrary();updateV8Home();
+}
+async function setLibraryVisibility(type,id,value){
+ const row=libraryRow(type,id);if(!row||!libraryOwned(row))return;
+ if(type==='coaching'&&value!=='private'&&(row.status!=='ended'||!coachingDebriefs.some(d=>d.session_id===id&&d.publication_status==='published'))){alert('Une session Coaching ne peut être partagée qu’après sa fin et la publication du débrief.');renderActivityLibrary();return}
+ if(type==='operational'&&value!=='private'&&!confirm('Une piste OPS peut contenir un lieu sensible. Le partage public ou communautaire utilisera uniquement la version nettoyée prévue par PISTE. Continuer ?')){renderActivityLibrary();return}
+ const tables={operational:'pistes',training:'entrainements',coaching:'coaching_sessions',prepared:'training_routes'},field=type==='coaching'?'visibility_scope':'visibility',payload={[field]:value};
+ if(value==='public'&&!row.share_token)payload.share_token=crypto.randomUUID();
+ const {data,error}=await supabase.from(tables[type]).update(payload).eq('id',id).eq('owner_id',session.user.id).select().single();if(error){alert('Visibilité non modifiée : '+error.message);renderActivityLibrary();return}Object.assign(row,data||payload);renderActivityLibrary();if(value==='public')await copyLibraryPublicLink(type,id);
+}
+async function copyLibraryPublicLink(type,id){
+ const row=libraryRow(type,id);if(!row?.share_token)return alert('Le lien public n’est pas encore disponible.');const url=`${location.origin}${location.pathname}?share=${encodeURIComponent(type+'.'+row.share_token)}`;try{await navigator.clipboard.writeText(url);alert('Lien public copié.')}catch{prompt('Copiez ce lien public :',url)}
+}
+function updateLibrarySelection(key,checked){activityLibrarySelection=checked?[...new Set([...activityLibrarySelection,key])]:activityLibrarySelection.filter(x=>x!==key);renderActivityLibrary()}
+function updateLibrarySelectionUi(rows){const visibleOwned=rows.filter(libraryOwned).map(x=>`${x._type}:${x.id}`),selected=activityLibrarySelection.filter(x=>visibleOwned.includes(x));if($('librarySelectionInfo'))$('librarySelectionInfo').textContent=selected.length?`${selected.length} sélectionnée(s)`:'Aucune sélection';if($('archiveSelectedActivities'))$('archiveSelectedActivities').disabled=!selected.length;if($('deleteSelectedActivities'))$('deleteSelectedActivities').disabled=!selected.length;if($('librarySelectAll')){$('librarySelectAll').checked=visibleOwned.length>0&&selected.length===visibleOwned.length;$('librarySelectAll').indeterminate=selected.length>0&&selected.length<visibleOwned.length}}
+async function archiveSelectedActivities(){const keys=[...activityLibrarySelection];if(!keys.length||!confirm(`Archiver ${keys.length} élément(s) ?`))return;for(const key of keys){const [type,id]=key.split(':');await archiveLibraryItem(type,id,true)}activityLibrarySelection=[];renderActivityLibrary()}
+async function deleteSelectedActivities(){const keys=[...activityLibrarySelection];if(!keys.length||!confirm(`Supprimer définitivement ${keys.length} élément(s) ?`))return;if(keys.some(k=>k.startsWith('operational:'))&&!confirm('Confirmation renforcée : la sélection contient au moins une piste OPS. Continuer ?'))return;for(const key of keys){const [type,id]=key.split(':'),row=libraryRow(type,id);if(!row||!libraryOwned(row))continue;const table={operational:'pistes',training:'entrainements',coaching:'coaching_sessions',prepared:'training_routes'}[type],{error}=await supabase.from(table).delete().eq('id',id).eq('owner_id',session.user.id);if(error){alert(`Suppression interrompue : ${error.message}`);break}if(type==='operational')mine=mine.filter(x=>x.id!==id);if(type==='training')trainings=trainings.filter(x=>x.id!==id);if(type==='coaching')coachingSessions=coachingSessions.filter(x=>x.id!==id);if(type==='prepared')trainingRoutes=trainingRoutes.filter(x=>x.id!==id)}activityLibrarySelection=[];renderActivityLibrary();updateV8Home()}
 function updateCompareSelection(key,checked){if(checked&&!activityCompare.includes(key)){if(activityCompare.length===2)activityCompare.shift();activityCompare.push(key)}else if(!checked)activityCompare=activityCompare.filter(x=>x!==key);$('libraryCompareInfo').textContent=activityCompare.length===2?'Deux pistes prêtes à comparer.':`${activityCompare.length}/2 piste sélectionnée`;$('compareActivities').disabled=activityCompare.length!==2;renderActivityLibrary()}
-function compareActivities(){const rows=activityCompare.map(key=>{const [type,id]=key.split(':');const row=(type==='training'?trainings:mine).find(x=>x.id===id);return row&&{...row,_type:type}}).filter(Boolean);if(rows.length!==2)return;const metrics=[['Distance','distance_km','km'],['Durée','duree_h','h'],['Délai','delai_h','h']];$('activityLibraryCompare').classList.remove('hidden');$('activityLibraryCompare').innerHTML=`<div class="card-title-row"><h3>Comparaison de pistes</h3><button id="closeActivityCompare" class="ghost-dark">×</button></div><div class="comparison-head"><b>${esc(rows[0].activity_name||rows[0].commune_depart||'Piste 1')}</b><span>contre</span><b>${esc(rows[1].activity_name||rows[1].commune_depart||'Piste 2')}</b></div>${metrics.map(([label,key,unit])=>`<div class="comparison-row"><span>${label}</span><b>${fmt(rows[0][key],2)} ${unit}</b><b>${fmt(rows[1][key],2)} ${unit}</b></div>`).join('')}<div class="comparison-row"><span>Résultat</span><b>${esc(rows[0].resultat||'—')}</b><b>${esc(rows[1].resultat||'—')}</b></div>`;$('closeActivityCompare').onclick=()=>$('activityLibraryCompare').classList.add('hidden');$('activityLibraryCompare').scrollIntoView({behavior:'smooth'})}
-function renderActivityLibrary(){const rows=activityLibraryRows(),list=$('activityLibraryList'),calendar=$('activityLibraryCalendar'),map=$('activityLibraryMap');if(!list)return;list.classList.toggle('hidden',activityLibraryView!=='list');calendar.classList.toggle('hidden',activityLibraryView!=='calendar');map.classList.toggle('hidden',activityLibraryView!=='map');document.querySelectorAll('[data-library-view]').forEach(b=>b.classList.toggle('active',b.dataset.libraryView===activityLibraryView));if(activityLibraryView==='list'){list.innerHTML=rows.length?rows.map(activityLibraryCard).join(''):'<div class="empty-state">🗂️<b>Aucune piste trouvée</b><span>Modifie les filtres ou démarre une activité.</span></div>';list.querySelectorAll('.activity-open').forEach(card=>card.onclick=e=>{if(e.target.closest('button,label,input'))return;showActivityStats(card.dataset.id,card.dataset.type,'libraryPage')});list.querySelectorAll('[data-favorite-id]').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleActivityFavorite(b.dataset.favoriteType,b.dataset.favoriteId)});list.querySelectorAll('[data-compare-key]').forEach(input=>input.onchange=e=>{e.stopPropagation();updateCompareSelection(input.dataset.compareKey,input.checked)});list.querySelectorAll('.manageActivity').forEach(b=>b.onclick=e=>{e.stopPropagation();const card=b.closest('.activity-open');manageActivity(card.dataset.type,card.dataset.id)});list.querySelectorAll('.duplicateActivity').forEach(b=>b.onclick=e=>{e.stopPropagation();const card=b.closest('.activity-open');duplicateActivity(card.dataset.type,card.dataset.id)})}else if(activityLibraryView==='calendar'){const months={};rows.forEach(x=>{const key=(x.date||x.created_at||'').slice(0,7);(months[key]??=[]).push(x)});calendar.innerHTML=Object.entries(months).map(([month,items])=>`<section><h3>${new Date(month+'-01T12:00:00').toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</h3><div>${items.map(x=>`<button data-calendar-id="${x.id}" data-calendar-type="${x._type}"><b>${activityDate(x).getDate()}</b><span>${x._type==='training'?'🟣':'🔵'} ${esc(x.activity_name||x.commune_depart||'Activité')}</span><small>${fmt(x.distance_km,2)} km</small></button>`).join('')}</div></section>`).join('')||'<p class="muted">Aucune activité.</p>';calendar.querySelectorAll('[data-calendar-id]').forEach(b=>b.onclick=()=>showActivityStats(b.dataset.calendarId,b.dataset.calendarType,'libraryPage'))}else{setTimeout(()=>{if(globalMap){globalMap.remove();globalMap=null}globalMap=createPisteMap('activityLibraryMap').setView([48.3,7.45],8);addCleanBaseLayers(globalMap);const layers=[];rows.filter(x=>Array.isArray(x.track)&&x.track.length>1).forEach(x=>{const line=L.polyline(x.track.map(p=>[p.lat,p.lon]),{weight:4,color:activityColor(x._type),opacity:.86}).addTo(globalMap).bindPopup(`<b>${esc(x.activity_name||x.commune_depart||'Activité')}</b><br>${fmt(x.distance_km,2)} km`);layers.push(line)});if(layers.length)globalMap.fitBounds(L.featureGroup(layers).getBounds(),{padding:[24,24]})},60)}}
+function compareActivities(){const rows=activityCompare.map(key=>{const [type,id]=key.split(':');const row=libraryRow(type,id);return row&&{...row,_type:type}}).filter(Boolean);if(rows.length!==2)return;const metrics=[['Distance','distance_km','km'],['Durée','duree_h','h'],['Délai','delai_h','h']];$('activityLibraryCompare').classList.remove('hidden');$('activityLibraryCompare').innerHTML=`<div class="card-title-row"><h3>Comparaison de pistes</h3><button id="closeActivityCompare" class="ghost-dark">×</button></div><div class="comparison-head"><b>${esc(libraryName(rows[0]))}</b><span>contre</span><b>${esc(libraryName(rows[1]))}</b></div>${metrics.map(([label,key,unit])=>`<div class="comparison-row"><span>${label}</span><b>${fmt(rows[0][key],2)} ${unit}</b><b>${fmt(rows[1][key],2)} ${unit}</b></div>`).join('')}<div class="comparison-row"><span>Résultat</span><b>${esc(rows[0].resultat||'—')}</b><b>${esc(rows[1].resultat||'—')}</b></div>`;$('closeActivityCompare').onclick=()=>$('activityLibraryCompare').classList.add('hidden');$('activityLibraryCompare').scrollIntoView({behavior:'smooth'})}
+function bindLibraryCards(root){
+ root.querySelectorAll('.activity-open').forEach(card=>card.onclick=e=>{if(e.target.closest('button,label,input,select'))return;openLibraryItem(card.dataset.type,card.dataset.id)});
+ root.querySelectorAll('.openLibraryItem').forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest('.activity-open');openLibraryItem(c.dataset.type,c.dataset.id)});
+ root.querySelectorAll('.manageLibraryItem').forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest('.activity-open');manageLibraryItem(c.dataset.type,c.dataset.id)});
+ root.querySelectorAll('.duplicateLibraryItem').forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest('.activity-open');duplicateLibraryItem(c.dataset.type,c.dataset.id)});
+ root.querySelectorAll('.archiveLibraryItem').forEach(b=>b.onclick=async e=>{e.stopPropagation();const c=b.closest('.activity-open');if(await archiveLibraryItem(c.dataset.type,c.dataset.id))renderActivityLibrary()});
+ root.querySelectorAll('.deleteLibraryItem').forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest('.activity-open');deleteLibraryItem(c.dataset.type,c.dataset.id)});
+ root.querySelectorAll('.copyLibraryLink').forEach(b=>b.onclick=e=>{e.stopPropagation();const c=b.closest('.activity-open');copyLibraryPublicLink(c.dataset.type,c.dataset.id)});
+ root.querySelectorAll('[data-favorite-id]').forEach(b=>b.onclick=e=>{e.stopPropagation();toggleActivityFavorite(b.dataset.favoriteType,b.dataset.favoriteId)});
+ root.querySelectorAll('[data-compare-key]').forEach(input=>input.onchange=e=>{e.stopPropagation();updateCompareSelection(input.dataset.compareKey,input.checked)});
+ root.querySelectorAll('[data-library-select]').forEach(input=>input.onchange=e=>{e.stopPropagation();updateLibrarySelection(input.dataset.librarySelect,input.checked)});
+ root.querySelectorAll('[data-library-visibility]').forEach(select=>select.onchange=e=>{e.stopPropagation();const [type,id]=select.dataset.libraryVisibility.split(':');setLibraryVisibility(type,id,select.value)});
+}
+function renderActivityLibrary(){
+ const rows=activityLibraryRows(),list=$('activityLibraryList'),calendar=$('activityLibraryCalendar'),map=$('activityLibraryMap');if(!list)return;updateLibrarySelectionUi(rows);list.classList.toggle('hidden',activityLibraryView!=='list');calendar.classList.toggle('hidden',activityLibraryView!=='calendar');map.classList.toggle('hidden',activityLibraryView!=='map');document.querySelectorAll('[data-library-view]').forEach(b=>b.classList.toggle('active',b.dataset.libraryView===activityLibraryView));
+ if(activityLibraryView==='list'){list.innerHTML=rows.length?rows.map(activityLibraryCard).join(''):'<div class="empty-state">🗂️<b>Aucune piste trouvée</b><span>Modifiez les filtres ou démarrez une activité.</span></div>';bindLibraryCards(list);return}
+ if(activityLibraryView==='calendar'){const months={};rows.forEach(x=>{const key=activityDate(x).toISOString().slice(0,7);(months[key]??=[]).push(x)});calendar.innerHTML=Object.entries(months).map(([month,items])=>`<section><h3>${new Date(month+'-01T12:00:00').toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</h3><div>${items.map(x=>{const m=libraryTypeMeta(x._type);return `<button data-calendar-id="${x.id}" data-calendar-type="${x._type}"><b>${activityDate(x).getDate()}</b><span>${m.icon} ${esc(libraryName(x))}</span><small>${m.label}</small></button>`}).join('')}</div></section>`).join('')||'<p class="muted">Aucune activité.</p>';calendar.querySelectorAll('[data-calendar-id]').forEach(b=>b.onclick=()=>openLibraryItem(b.dataset.calendarType,b.dataset.calendarId));return}
+ setTimeout(()=>{if(globalMap){globalMap.remove();globalMap=null}globalMap=createPisteMap('activityLibraryMap').setView([48.3,7.45],8);addCleanBaseLayers(globalMap);const layers=[];rows.forEach(x=>{const track=libraryTrack(x);if(!Array.isArray(track)||track.length<2)return;const line=L.polyline(track.map(p=>[p.lat,p.lon]),{weight:4,color:activityColor(x._type),opacity:.86}).addTo(globalMap).bindPopup(`<b>${esc(libraryName(x))}</b><br>${esc(libraryTypeMeta(x._type).label)}`);layers.push(line)});if(layers.length)globalMap.fitBounds(L.featureGroup(layers).getBounds(),{padding:[24,24]})},60);
+}
 
 const TUTORIAL_STEPS=[
  {icon:'🐕',label:'BIENVENUE',title:'Découvrir PISTE Community',text:'En quelques écrans, découvre les fonctions essentielles avant ta première activité.'},
- {icon:'⌂',label:'ACCUEIL',title:'Tes repères en un coup d’œil',text:'Retrouve tes indicateurs, ton chien actif, tes activités récentes et les raccourcis vers les principaux outils.'},
- {icon:'◎',label:'TERRAIN',title:'Préparer ou partir immédiatement',text:'Lance un pistage opérationnel, un entraînement libre ou prépare un scénario complet avant de rejoindre le terrain.'},
+ {icon:'⌂',label:'ACCUEIL',title:'Lancer une activité sans détour',text:'Démarre directement un entraînement, une activité OPS ou une session Coaching, sans écran intermédiaire.'},
+ {icon:'🗂️',label:'MES PISTES',title:'Tout gérer au même endroit',text:'Retrouve OPS, Entraînement, Coaching et tracés préparés pour les consulter, modifier, partager, archiver ou supprimer.'},
  {icon:'🎧',label:'COACHING',title:'Travailler à plusieurs',text:'Crée une session, partage son code, suis la réalisation en direct et conserve un débrief clair.'},
  {icon:'🌬️',label:'INTELLIGENCE OLFACTIVE',title:'Visualiser une estimation',text:'Le couloir olfactif aide à réfléchir au vent, à l’âge de piste et au milieu. Il reste pédagogique et ne remplace jamais l’analyse terrain.'},
  {icon:'⌖',label:'GPS',title:'Enregistrer le tracé',text:'Autorise la position précise, attends une précision correcte et garde l’application ouverte pendant le suivi.'},
  {icon:'⇄',label:'MODE HORS LIGNE',title:'Continuer sans réseau',text:'Le tracé et les brouillons restent sur cet appareil. Ils seront synchronisés automatiquement dès le retour du réseau.'}
 ];
 let tutorialIndex=0;
-function tutorialStorageKey(){return `piste_tutorial_v10_23_${session?.user?.id||'guest'}`}
+function tutorialStorageKey(){return `piste_tutorial_v10_34_${session?.user?.id||'guest'}`}
 function renderTutorial(){
  const step=TUTORIAL_STEPS[tutorialIndex],progress=Math.round((tutorialIndex+1)/TUTORIAL_STEPS.length*100);
  $('tutorialIcon').textContent=step.icon;$('tutorialStepLabel').textContent=step.label;$('tutorialTitle').textContent=step.title;$('tutorialText').textContent=step.text;
@@ -689,6 +819,17 @@ async function exportAccountData(){
 function clearLocalAccountData(){
  ['piste_sync_queue','piste_active_draft','piste_planner_draft',tutorialStorageKey(),activeCoachingStorageKey()].forEach(key=>localStorage.removeItem(key));
 }
+async function loadPublicShareFromUrl(){
+ const raw=new URLSearchParams(location.search).get('share');if(!raw)return false;
+ const separator=raw.indexOf('.'),type=raw.slice(0,separator),token=raw.slice(separator+1);if(separator<1||!['operational','training','coaching','prepared'].includes(type)||!/^[0-9a-f-]{36}$/i.test(token))return false;
+ $('authScreen').classList.add('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');$('publicShareScreen').classList.remove('hidden');
+ const {data,error}=await supabase.rpc('get_public_activity',{p_type:type,p_token:token}),content=$('publicShareContent');
+ if(error||!data){content.innerHTML='<div class="empty-state">🔒<b>Lien indisponible</b><span>Cette piste n’est plus publique ou le lien a expiré.</span></div>';return true}
+ const meta=libraryTypeMeta(data.type||type),track=Array.isArray(data.track)?data.track:[];$('publicShareTitle').textContent=data.name||'Piste partagée';
+ content.innerHTML=`<small class="section-kicker">${meta.icon} ${esc(meta.label)}</small><h2>${esc(data.name||'Piste partagée')}</h2><p>${esc(data.commune_depart||'Lieu non communiqué')} • ${data.date?new Date(data.date).toLocaleDateString('fr-FR'):'Date non communiquée'}</p><div class="public-share-kpis"><div><strong>${data.distance_km==null?'—':fmt(data.distance_km,2)+' km'}</strong><small>Distance</small></div><div><strong>${data.duree_h==null?'—':fmt(data.duree_h,2)+' h'}</strong><small>Durée</small></div><div><strong>${esc(data.resultat||'—')}</strong><small>Résultat</small></div></div>`;
+ if(track.length>1){$('publicShareMap').classList.remove('hidden');setTimeout(()=>{const map=createPisteMap('publicShareMap'),line=L.polyline(track.map(p=>[p.lat,p.lon]),{weight:5,color:activityColor(type),opacity:.9}).addTo(map);addCleanBaseLayers(map);map.fitBounds(line.getBounds(),{padding:[28,28]})},80)}
+ return true;
+}
 async function deleteCurrentAccount(){
  const confirmation=$('deleteAccountConfirmation').value.trim().toUpperCase(),msg=$('deleteAccountMsg'),button=$('confirmDeleteAccountBtn');
  if(confirmation!=='SUPPRIMER')return;
@@ -698,6 +839,7 @@ async function deleteCurrentAccount(){
  clearLocalAccountData();await supabase.auth.signOut({scope:'local'});alert('Ton compte et les données associées ont été supprimés définitivement.');location.reload();
 }
 async function boot(){
+ if(await loadPublicShareFromUrl())return;
  const {data:{session:s}}=await supabase.auth.getSession();
  session=s;
  if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
@@ -749,8 +891,6 @@ async function refreshMine(){
  $('kKm').textContent=fmt(mine.reduce((s,x)=>s+Number(x.distance_km||0),0),1);
  if($('kFound'))$('kFound').textContent=mine.filter(x=>x.resultat?.startsWith("Personne retrouvée")).length;
  $('kUseful').textContent=mine.length?fmt(mine.filter(useful).length/mine.length*100,0)+"%":"0%";
- $('homeRecent').innerHTML=mine.length?mine.slice(0,5).map(p=>pisteItem(p,false)).join(""):'<p class="muted">Aucun pistage opérationnel enregistré.</p>';
- bindOperationalActivityCards($('homeRecent'));
  renderHistory();updateV8Home();
 }
 
@@ -866,7 +1006,7 @@ function addSavedFieldMarkers(map,p){(p.field_markers||[]).forEach(m=>{const def
 
 function showActivityStats(id,type,origin){
  const list=type==='training'?trainings:mine,p=list.find(x=>x.id===id);if(!p)return;
- $('activityDetailBack').dataset.page=origin||(type==='training'?'trainingPage':'historyPage');$('activityDetailBack').textContent=origin==='libraryPage'?'‹ Toutes mes pistes':type==='training'?'‹ Entraînements':'‹ Pistages opérationnels';
+ $('activityDetailBack').dataset.page=origin||'libraryPage';$('activityDetailBack').textContent=origin==='libraryPage'?'‹ Mes pistes':type==='training'?'‹ Entraînements':'‹ Pistes OPS';
  $('activityDetailTitle').textContent=type==='training'?'📊 Statistiques entraînement':'📊 Statistiques pistage opérationnel';
  $('activityDetailHeader').innerHTML=`<div class="detail-hero ${type==='training'?'training-detail':'operational-detail'}"><span>${type==='training'?'🐾':'🐕'}</span><div><small>${type==='training'?'ENTRAÎNEMENT':'PISTAGE OPÉRATIONNEL'}</small><b>${esc(p.resultat||'Activité')}</b><p>🐕 ${esc(dogDisplay(p.dog_id))} • ${esc(p.date||'')} • ${esc(p.commune_depart||'Lieu non renseigné')}</p><div class="detail-summary"><span>${fmt(p.distance_km,2)} km</span><span>${fmt(p.duree_h,2)} h</span><span>${fmt(p.delai_h,1)} h de délai</span></div></div></div>`;
  $('activityDetailStats').innerHTML=`<div class="detail-stats-grid">${activityStatsRows(p,type).map(([k,v])=>`<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>`;
@@ -1248,12 +1388,13 @@ function showActivitySavedToast(message){
 $('pisteForm').onsubmit=async e=>{
  e.preventDefault();$('pisteMsg').textContent="Enregistrement…";
  const f=new FormData(e.target),o={};f.forEach((v,k)=>o[k]=v);
+ if(recordMode!=='training'&&o.visibility!=='private'&&!confirm('Cette activité OPS peut contenir des informations sensibles. PISTE utilisera une version nettoyée pour le partage. Confirmer ce niveau de visibilité ?')){$('pisteMsg').textContent='Partage annulé : choisissez Privé ou confirmez à nouveau.';return}
  ['delai_h','duree_h','distance_km'].forEach(k=>o[k]=Number(o[k]||0));
  ['temperature_c','difficulte','concentration','autonomie','motivation','precision_travail','fatigue'].forEach(k=>{
    o[k]=o[k]===''?null:Number(o[k]);
  });
  ['meteo','vent','humidite','sol','distractions','comportement'].forEach(k=>{if(o[k]==='')o[k]=null});
- o.owner_id=session.user.id;o.track=gps.points;o.field_markers=fieldMarkers;if(!o.dog_id)o.dog_id=null;
+ o.owner_id=session.user.id;o.track=gps.points;o.field_markers=fieldMarkers;if(o.visibility==='public')o.share_token=crypto.randomUUID();if(!o.dog_id)o.dog_id=null;
  if(!o.disparition_at)o.disparition_at=null;if(!o.depart_at)o.depart_at=null;
  let error=null;
  if(recordMode==='training'){
@@ -1268,11 +1409,10 @@ $('pisteForm').onsubmit=async e=>{
    $('pisteMsg').textContent="Erreur : "+error.message;return
  }
  const activityName=recordMode==='training'?'Entraînement':'Pistage opérationnel';
- const sharing=o.visibility==='friends'?'Partagé avec tes amis.':o.visibility==='community'?'Ajouté aux statistiques anonymes de la communauté.':'Conservé en privé.';
+ const sharing=o.visibility==='public'?'Lien public disponible depuis Mes pistes.':o.visibility==='community'?'Publié dans les Actualités de la communauté.':'Conservé en privé.';
  saveLastActivity(o);clearDraft();$('pisteMsg').textContent=activityName+' enregistré. '+sharing;
  showActivitySavedToast(sharing);
- if(recordMode==='training'){await refreshTrainings();resetGpsUI(false);showPage('trainingPage')}
- else{await refreshMine();resetGpsUI(false);showPage('homePage')}
+ if(recordMode==='training')await refreshTrainings();else await refreshMine();resetGpsUI(false);activityLibraryFilters.type=recordMode==='training'?'training':'operational';if($('libraryType'))$('libraryType').value=activityLibraryFilters.type;showPage('libraryPage')
 };
 
 
@@ -1409,22 +1549,25 @@ function feedTrackPreview(track){
 
 async function loadFeed(){
  $('friendFeed').innerHTML='<div class="feed-loading"><span>🐾</span><p>Chargement des actualités…</p></div>';
- const [op,tra]=await Promise.all([
-   supabase.from('pistes').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
-   supabase.from('entrainements').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track').eq('visibility','friends').order('created_at',{ascending:false}).limit(50)
+ const [op,tra,community]=await Promise.all([
+   supabase.from('pistes').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track,visibility').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
+   supabase.from('entrainements').select('id,owner_id,dog_id,date,distance_km,duree_h,delai_h,commune_depart,age,milieu,resultat,created_at,track,visibility').eq('visibility','friends').order('created_at',{ascending:false}).limit(50),
+   supabase.rpc('get_community_activity_feed')
  ]);
  if(op.error||tra.error){$('friendFeed').innerHTML=`<p>${esc(op.error?.message||tra.error?.message||'Erreur')}</p>`;return}
+ const communityRows=community.error?[]:(Array.isArray(community.data)?community.data:[]),seen=new Set();
  friendFeedRows=[
    ...(op.data||[]).map(x=>({...x,activity_type:'operational'})),
-   ...(tra.data||[]).map(x=>({...x,activity_type:'training'}))
- ].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
+   ...(tra.data||[]).map(x=>({...x,activity_type:'training'})),
+   ...communityRows
+ ].filter(x=>{const key=`${x.activity_type}:${x.id}`;if(seen.has(key))return false;seen.add(key);return true}).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,100);
 
  const ownerIds=[...new Set(friendFeedRows.map(x=>x.owner_id).filter(Boolean))];
  const dogIds=[...new Set(friendFeedRows.map(x=>x.dog_id).filter(Boolean))];
  const [{data:profiles=[]},{data:friendDogs=[]},socials]=await Promise.all([
    ownerIds.length?supabase.from('profiles').select('user_id,display_name').in('user_id',ownerIds):Promise.resolve({data:[]}),
    dogIds.length?supabase.rpc('get_friend_dog_cards',{dog_ids:dogIds}):Promise.resolve({data:[]}),
-   Promise.all(friendFeedRows.map(x=>socialSummary(x.activity_type,x.id)))
+   Promise.all(friendFeedRows.map(x=>x.activity_type==='coaching'||x.visibility!=='friends'?Promise.resolve({}):socialSummary(x.activity_type,x.id)))
  ]);
  const profileMap=Object.fromEntries((profiles||[]).map(p=>[p.user_id,p]));
  const dogMap=Object.fromEntries((friendDogs||[]).map(d=>[d.id,d]));
@@ -1432,21 +1575,20 @@ async function loadFeed(){
  const photoMap=Object.fromEntries(signed);
 
  $('friendFeed').innerHTML=friendFeedRows.length?friendFeedRows.map((x,i)=>{
-   const training=x.activity_type==='training',key=`${x.activity_type}-${x.id}`,s=socials[i]||{};
-   const badge=training?'<span class="type-badge training-type">🟣 Entraînement</span>':'<span class="type-badge operational-type">🔵 Pistage opérationnel</span>';
+   const training=x.activity_type==='training',coaching=x.activity_type==='coaching',socialEnabled=x.visibility==='friends',key=`${x.activity_type}-${x.id}`,s=socials[i]||{};
+   const badge=coaching?'<span class="type-badge coaching-type">🎧 Coaching</span>':training?'<span class="type-badge training-type">🟣 Entraînement</span>':'<span class="type-badge operational-type">🔵 OPS</span>';
    const mineActivity=x.owner_id===session.user.id;
    const owner=mineActivity?'Moi':(profileMap[x.owner_id]?.display_name||'Pisteur');
    const dog=dogMap[x.dog_id],dogAlias=dog?.alias||'Chien non renseigné',photo=photoMap[x.dog_id]||'';
    return `<div class="item social-activity">
      <div class="feed-author"><div class="feed-dog-photo">${photo?`<img src="${esc(photo)}" alt="Photo de ${esc(dogAlias)}">`:'🐕'}</div><div><b>${esc(owner)}</b><span>avec ${esc(dogAlias)}</span></div><small>${new Date(x.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</small></div>
-     <div class="item-title"><div>${badge}<b>${new Date(x.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</b></div><span class="pill friends">${mineActivity?'Mon partage':'Ami'}</span></div>
+     <div class="item-title"><div>${badge}<b>${new Date(x.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'})}</b></div><span class="pill ${x.visibility==='public'?'community':'friends'}">${x.visibility==='public'?'Public':x.visibility==='community'?'Communauté':mineActivity?'Mon partage':'Ami'}</span></div>
      ${feedTrackPreview(x.track)}
      <div class="feed-result"><span>RÉSULTAT</span><b>${esc(x.resultat)}</b></div>
      <div class="feed-meta">📍 ${esc(x.commune_depart||"Lieu non renseigné")}</div>
      <div class="feed-mini-stats"><span><small>DISTANCE</small><b>↗ ${fmt(x.distance_km,2)} km</b></span><span><small>DURÉE</small><b>⏱ ${fmt(x.duree_h,2)} h</b></span><span><small>BINÔME</small><b>🐕 ${esc(dogAlias)}</b></span></div>
      <div class="social-actions">
-       <button id="like-${key}" class="social-btn like-btn ${s.liked_by_me?'liked':''}" data-liked="${s.liked_by_me?'1':'0'}" data-type="${x.activity_type}" data-id="${x.id}">👍 <span>${s.likes_count||0}</span></button>
-       <button class="social-btn comments-btn" data-type="${x.activity_type}" data-id="${x.id}">💬 <span id="comments-count-${key}">${s.comments_count||0}</span></button>
+       ${socialEnabled&&!coaching?`<button id="like-${key}" class="social-btn like-btn ${s.liked_by_me?'liked':''}" data-liked="${s.liked_by_me?'1':'0'}" data-type="${x.activity_type}" data-id="${x.id}">👍 <span>${s.likes_count||0}</span></button><button class="social-btn comments-btn" data-type="${x.activity_type}" data-id="${x.id}">💬 <span id="comments-count-${key}">${s.comments_count||0}</span></button>`:''}
        ${Array.isArray(x.track)&&x.track.length>1?`<button class="social-btn showFriendTrack" data-id="${x.id}" data-type="${x.activity_type}">🗺️ Tracé</button>`:''}
      </div><div id="comments-${key}" class="comments-box hidden"></div>
    </div>`;
@@ -1532,7 +1674,7 @@ async function renderCanineAnalysis(scope='mine'){
    <div class="stat-card"><h3>🟣 Entraînement</h3>${b.map(x=>`<div class="stat-row"><span>${x.annee}</span><b>${x.entrainements} activités • ${x.taux_utile_pct??0}% utiles</b></div>`).join('')||'<p>Aucune donnée.</p>'}</div></div>`;
  }
 }
-function activityColor(type){return type==='training'?'#7a5cc7':'#156db2'}
+function activityColor(type){return ({training:'#7a5cc7',operational:'#156db2',coaching:'#58d6a4',prepared:'#c6a768'})[type]||'#156db2'}
 function renderGlobalMap(filter='all'){
  setTimeout(()=>{
   if(!$('globalMap'))return;
@@ -1559,8 +1701,8 @@ function renderDogHub(){
  const dog=dogHubSelected(),select=$('dogHubSelect');if(!select)return;
  const current=select.value;select.innerHTML=dogs.map(d=>`<option value="${d.id}">${esc(d.alias)}${d.active?' • actif':''}</option>`).join('');if(dog)select.value=dogs.some(d=>d.id===current)?current:dog.id;
  const active=dogHubSelected(),identity=active?dogIdentityParts(active):[];
- $('dogHubHero').innerHTML=active?`<div class="dog-hub-avatar">🐕</div><div><small>FICHE ACTIVE</small><h2>${esc(active.alias)}</h2><p>${identity.length?identity.map(esc).join(' • '):'Informations physiques à compléter'}</p><span>${esc(active.specialty||'Technicité non renseignée')}</span></div><button id="dogHubEdit" class="secondary" type="button">Modifier la fiche</button>`:'<div class="empty-state">🐕<b>Aucun chien</b><span>Ajoute ton premier chien depuis Profil.</span><button data-page="profilePage" class="primary">Ouvrir Profil</button></div>';
- if($('dogHubEdit'))$('dogHubEdit').onclick=()=>{showPage('profilePage');setTimeout(()=>openDogForm(active),150)};
+ $('dogHubHero').innerHTML=active?`<div class="dog-hub-avatar">🐕</div><div><small>FICHE ACTIVE</small><h2>${esc(active.alias)}</h2><p>${identity.length?identity.map(esc).join(' • '):'Informations physiques à compléter'}</p><span>${esc(active.specialty||'Technicité non renseignée')}</span></div><button id="dogHubEdit" class="secondary" type="button">Modifier la fiche</button>`:'<div class="empty-state">🐕<b>Aucun chien</b><span>Ajoutez votre premier chien ci-dessous.</span><button id="dogHubAdd" class="primary" type="button">Ajouter un chien</button></div>';
+ if($('dogHubEdit'))$('dogHubEdit').onclick=()=>openDogForm(active);if($('dogHubAdd'))$('dogHubAdd').onclick=()=>openDogForm();
  const rows=active?dogHealthEvents.filter(x=>x.dog_id===active.id):[];
  $('dogHealthList').innerHTML=rows.length?rows.map(x=>{const state=dueState(x.due_on,x.completed_at);return `<article class="dog-health-row"><span>${x.kind==='medication'?'💊':x.kind==='illness'?'🩺':x.kind==='vaccine'?'💉':'🛡️'}</span><div><small>${esc(healthKindLabel(x.kind))}</small><b>${esc(x.title)}</b><p>${x.details?esc(x.details):'Aucune précision'}</p></div><em class="due-chip ${state.cls}">${esc(state.label)}</em><div class="dog-row-actions">${!x.completed_at?'<button class="secondary completeHealth" data-id="'+x.id+'">✓</button>':''}<button class="ghost-dark deleteHealth" data-id="${x.id}">×</button></div></article>`}).join(''):'<p class="muted small">Aucun traitement ni rappel pour ce chien.</p>';
  document.querySelectorAll('.completeHealth').forEach(b=>b.onclick=async()=>{await supabase.from('dog_health_events').update({completed_at:new Date().toISOString(),updated_at:new Date().toISOString()}).eq('id',b.dataset.id).eq('owner_id',session.user.id);loadDogHub()});
@@ -1911,6 +2053,11 @@ $('exportCsvBtn').onclick=exportCSV;
 $('exportAccountBtn').onclick=exportAccountData;
 $('printReportBtn').onclick=printReport;
 $('openHelpBtn').onclick=()=>showPage('helpPage');
+$('homeHelpBtn').onclick=()=>showPage('helpPage');
+$('publicShareLogin').onclick=()=>{history.replaceState({},'',location.pathname);location.reload()};
+$('closeOpsChoice').onclick=closeOpsChoice;
+$('opsImmediateStart').onclick=()=>{closeOpsChoice();activeOperationalCallId=null;activeOperationalGpxTracks=[];beginNewPiste('piste')};
+$('opsPrepareStart').onclick=()=>{closeOpsChoice();showPage('operationalCallPage');resetOperationalCall()};
 $('reviewTutorialBtn').onclick=()=>openTutorial(true);
 $('skipTutorialBtn').onclick=closeTutorial;
 $('tutorialPrevBtn').onclick=()=>{if(tutorialIndex>0){tutorialIndex--;renderTutorial()}};
@@ -1923,7 +2070,8 @@ $('confirmDeleteAccountBtn').onclick=deleteCurrentAccount;
 $('newOperationalTerrainBtn').addEventListener('click',()=>{activeOperationalCallId=null;activeOperationalGpxTracks=[];beginNewPiste('piste')});
 $('quickStartLastActivity').onclick=quickStartLastActivity;
 $('receivedCallBtn').onclick=()=>{showPage('operationalCallPage');resetOperationalCall()};
-document.addEventListener('click',e=>{if(e.target.closest('#homeOpsBtn')){showPage('operationalCallPage');resetOperationalCall()}if(e.target.closest('#homeCoachingBtn')){showPage('coachingPage');setCoachingStage('prepare')}});
+document.addEventListener('click',e=>{if(e.target.closest('#homeOpsBtn'))openOpsChoice();if(e.target.closest('#homeCoachingBtn')){showPage('coachingPage');setCoachingStage('prepare')}});
+$('openTerrainHomeBtn').onclick=e=>{e.preventDefault();selectedTrainingRoute=null;beginNewPiste('training')};
 document.addEventListener('click',e=>{const state=e.target.closest('#homeCoachingStateAction'),prepare=e.target.closest('#homeCoachingPrepare'),join=e.target.closest('#homeCoachingJoin');if(state){e.preventDefault();handleHomeCoachingAction(state.dataset.coachingHomeAction||'open')}else if(prepare){e.preventDefault();showPage('coachingPage');setCoachingStage('prepare')}else if(join){e.preventDefault();showPage('coachingPage');setCoachingStage('prepare');setTimeout(()=>$('coachingInviteInput')?.focus(),120)}});
 $('detachOperationalCall').onclick=()=>{activeOperationalCallId=null;activeOperationalGpxTracks=[];renderOperationalLiveGpx();$('operationalCallBanner').classList.add('hidden')};
 document.querySelectorAll('[data-call-step]').forEach(b=>b.onclick=()=>setOperationalCallStep(b.dataset.callStep));
@@ -1964,12 +2112,23 @@ document.querySelectorAll('[data-coaching-stage]').forEach(b=>b.onclick=()=>{if(
 document.querySelectorAll('[data-coaching-layer]').forEach(input=>input.onchange=()=>{coachingLayerVisibility[input.dataset.coachingLayer]=input.checked;renderCoachingMap()});
 $('coachingReplayRange').oninput=e=>setReplayProgress(e.target.value);
 $('coachingReplayPlay').onclick=toggleCoachingReplay;
-$('createCoachingSession').onclick=createCoaching;$('joinCoachingSession').onclick=joinCoaching;$('refreshCoaching').onclick=loadCoachingHub;$('addCoachingFriend').onclick=addCoachingFriendInvite;$('refreshCoachingRoutes').onclick=async()=>{await loadTrainingRoutes();await loadCoachingHub()};$('createCoachingRoute').onclick=()=>{coachingRouteReturn=true;window.editingTrainingRouteId=null;$('saveTrainingRoute').textContent='💾 Enregistrer et revenir au Coaching';$('updateTrainingRoute').classList.add('hidden');showPage('plannerPage')};$('copyCoachingCode').onclick=async()=>{if(activeCoachingSession?.invite_code){await navigator.clipboard?.writeText(activeCoachingSession.invite_code);$('copyCoachingCode').textContent='Copié ✓';setTimeout(()=>$('copyCoachingCode').textContent='Copier',1200)}};$('startCoachingLive').onclick=startActiveCoaching;$('toggleCoachingGps').onclick=toggleCoachingGpsTracking;$('endCoachingLive').onclick=finishActiveCoaching;$('cancelCoachingSession').onclick=cancelActiveCoaching;$('deleteCoachingSession').onclick=deleteActiveCoaching;$('cancelCoachingWaiting').onclick=cancelActiveCoaching;$('deleteCoachingWaiting').onclick=deleteActiveCoaching;$('leaveCoachingSession').onclick=leaveActiveCoaching;$('recenterCoachingMap').onclick=()=>{coachingKeepViewport=false;renderCoachingMap()};$('leaveCoachingLive').onclick=()=>{stopTraceurTracking();clearCoachingRealtime();$('coachingLivePanel').classList.add('hidden');activeCoachingSession=null;refreshActiveSessionShortcut()};$('sendCoachingMessage').onclick=()=>sendCoachingMessage($('coachingMessageInput').value);document.querySelectorAll('[data-coaching-quick]').forEach(b=>b.onclick=()=>sendCoachingMessage(b.dataset.coachingQuick,'quick'));document.querySelectorAll('[data-live-marker]').forEach(b=>b.onclick=()=>{liveMarkerTool=b.dataset.liveMarker;document.querySelectorAll('[data-live-marker]').forEach(x=>x.classList.toggle('active',x===b))});$('calculateCoachingDebrief').onclick=calculateCoachingDebrief;$('coachingDebriefForm').onsubmit=e=>saveCoachingDebrief(e,'published');$('saveDebriefDraft').onclick=()=>saveCoachingDebrief(null,'draft');$('backToCoachingSessions').onclick=()=>returnToCoachingSessions('ended');
+$('createCoachingSession').onclick=createCoaching;$('joinCoachingSession').onclick=joinCoaching;$('refreshCoaching').onclick=loadCoachingHub;$('addCoachingFriend').onclick=addCoachingFriendInvite;$('refreshCoachingRoutes').onclick=async()=>{await loadTrainingRoutes();await loadCoachingHub()};$('createCoachingRoute').onclick=()=>{coachingRouteReturn=true;window.editingTrainingRouteId=null;$('saveTrainingRoute').textContent='💾 Enregistrer et revenir au Coaching';$('updateTrainingRoute').classList.add('hidden');showPage('plannerPage')};$('copyCoachingCode').onclick=async()=>{if(activeCoachingSession?.invite_code){await navigator.clipboard?.writeText(activeCoachingSession.invite_code);$('copyCoachingCode').textContent='Copié ✓';setTimeout(()=>$('copyCoachingCode').textContent='Copier',1200)}};$('startCoachingLive').onclick=startActiveCoaching;$('toggleCoachingGps').onclick=toggleCoachingGpsTracking;$('endCoachingLive').onclick=finishActiveCoaching;$('cancelCoachingSession').onclick=cancelActiveCoaching;$('deleteCoachingSession').onclick=deleteActiveCoaching;$('cancelCoachingWaiting').onclick=cancelActiveCoaching;$('deleteCoachingWaiting').onclick=deleteActiveCoaching;$('leaveCoachingSession').onclick=leaveActiveCoaching;$('recenterCoachingMap').onclick=()=>{coachingKeepViewport=false;renderCoachingMap()};$('leaveCoachingLive').onclick=()=>{stopTraceurTracking();clearCoachingRealtime();$('coachingLivePanel').classList.add('hidden');activeCoachingSession=null;refreshActiveSessionShortcut()};$('sendCoachingMessage').onclick=()=>sendCoachingMessage($('coachingMessageInput').value);document.querySelectorAll('[data-coaching-quick]').forEach(b=>b.onclick=()=>sendCoachingMessage(b.dataset.coachingQuick,'quick'));document.querySelectorAll('[data-live-marker]').forEach(b=>b.onclick=()=>{liveMarkerTool=b.dataset.liveMarker;document.querySelectorAll('[data-live-marker]').forEach(x=>x.classList.toggle('active',x===b))});$('calculateCoachingDebrief').onclick=calculateCoachingDebrief;$('coachingDebriefForm').onsubmit=e=>saveCoachingDebrief(e,'published');$('saveDebriefDraft').onclick=()=>saveCoachingDebrief(null,'draft');$('backToCoachingSessions').onclick=()=>{stopCoachingPresence();stopTraceurTracking();clearCoachingRealtime();closeFakeLock();activeCoachingSession=null;activityLibraryFilters.type='coaching';$('libraryType').value='coaching';showPage('libraryPage')};
 document.querySelectorAll('[data-coaching-tab]').forEach(b=>b.onclick=()=>setCoachingPanel(b.dataset.coachingTab));$('fullscreenCoachingMap').onclick=toggleCoachingFullscreen;
 document.querySelectorAll('[data-session-filter]').forEach(b=>b.onclick=()=>{coachingSessionFilter=b.dataset.sessionFilter;renderCoachingSessions()});
 $('locateCoachingDeparture').onclick=locateCoachingDeparture;$('navigateCoachingDeparture').onclick=()=>navigateToPoint(coachingDeparture());$('coachingFakeLockBtn').onclick=event=>{event.preventDefault();event.stopPropagation();openFakeLock('coaching')};
 document.querySelectorAll('[data-field-marker]').forEach(b=>b.onclick=()=>addFieldMarker(b.dataset.fieldMarker));
-document.querySelectorAll('[data-library-view]').forEach(b=>b.onclick=()=>{activityLibraryView=b.dataset.libraryView;renderActivityLibrary()});$('librarySearch').oninput=e=>{activityLibraryFilters.query=e.target.value;renderActivityLibrary()};$('libraryType').onchange=e=>{activityLibraryFilters.type=e.target.value;renderActivityLibrary()};$('libraryFavorites').onchange=e=>{activityLibraryFilters.favorite=e.target.checked;renderActivityLibrary()};
+document.querySelectorAll('[data-library-view]').forEach(b=>b.onclick=()=>{activityLibraryView=b.dataset.libraryView;renderActivityLibrary()});
+$('librarySearch').oninput=e=>{activityLibraryFilters.query=e.target.value;renderActivityLibrary()};
+$('libraryType').onchange=e=>{activityLibraryFilters.type=e.target.value;renderActivityLibrary()};
+$('libraryStatus').onchange=e=>{activityLibraryFilters.status=e.target.value;activityLibrarySelection=[];renderActivityLibrary()};
+$('libraryFavorites').onchange=e=>{activityLibraryFilters.favorite=e.target.checked;renderActivityLibrary()};
+$('librarySelectAll').onchange=e=>{const keys=activityLibraryRows().filter(libraryOwned).map(x=>`${x._type}:${x.id}`);activityLibrarySelection=e.target.checked?[...new Set([...activityLibrarySelection,...keys])]:activityLibrarySelection.filter(x=>!keys.includes(x));renderActivityLibrary()};
+$('archiveSelectedActivities').onclick=archiveSelectedActivities;$('deleteSelectedActivities').onclick=deleteSelectedActivities;
+$('libraryNewTraining').onclick=()=>{selectedTrainingRoute=null;beginNewPiste('training')};
+$('libraryNewOps').onclick=openOpsChoice;
+$('libraryNewCoaching').onclick=()=>{showPage('coachingPage');setCoachingStage('prepare')};
+$('libraryNewRoute').onclick=()=>{window.editingTrainingRouteId=null;showPage('plannerPage')};
+document.addEventListener('click',e=>{const target=e.target.closest('[data-library-filter]');if(!target)return;activityLibraryFilters.type=target.dataset.libraryFilter;$('libraryType').value=activityLibraryFilters.type;showPage('libraryPage')});
 $('compareActivities').onclick=compareActivities;
 bindClick('resumeActiveSessionBtn',resumeActiveSession);bindClick('activeSessionDock',resumeActiveSession);
 document.querySelectorAll('[data-planner-mode]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-planner-mode]').forEach(x=>x.classList.toggle('active',x===b));if(b.dataset.plannerMode==='follow')togglePlannerFollow();else if(b.dataset.plannerMode==='gpx'){$('chooseGpxBtn').click();setPlannerSection('assistant')}else if(b.dataset.plannerMode==='draft'){const draft=readPlannerDraft();if(draft)initPlanner(draft);else $('plannerMsg').textContent='Aucun brouillon enregistré.'}else setPlannerSection('map')});
