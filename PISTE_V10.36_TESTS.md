@@ -25,6 +25,16 @@
 12. Tester le double aveugle, les rôles coach/conducteur/traceur/observateur et la confidentialité OPS avec plusieurs comptes.
 13. Tester ancien iPhone, petit écran, portrait, zones sûres et reprise après arrière-plan.
 
+## Terrain allégé et météo prioritaire
+
+- Salle d'attente : organisateur, chien, tracé, statut et commandes de préparation restent accessibles.
+- Session active : le bandeau compact (météo/vent, âge, durée, distance, qualité GPS) apparaît sans défilement et la carte occupe l'espace restant.
+- Les blocs Organisateur, Chien, Tracé, Statut, départ, équipe, repères détaillés, messages et pré-vol sont masqués sur l'écran actif puis accessibles dans Plus → Informations de la session.
+- La météo affiche « Actualisation… » dès l'ouverture de la salle ou du Terrain, puis direction, vitesse, rafales, température et heure; le bouton de rafraîchissement ne bloque jamais GPS/session.
+- Sans réseau, « Météo indisponible » ou la dernière mesure horodatée est conservée; la météo de pose reste distincte de la météo en direct.
+- Plus s'ouvre sans recréer la carte; Terminer/Abandonner y demande confirmation; Écran noir revient sur Terrain.
+- Session terminée : aucun bandeau actif, débrief et informations restent consultables.
+
 ## Compatibilité V10.34/V10.34.1
 
 Vérifier les anciennes pistes, sessions, débriefs et GPX après actualisation; aucune donnée existante ne doit disparaître.

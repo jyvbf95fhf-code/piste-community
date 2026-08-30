@@ -10,9 +10,12 @@ for(const id of ['homePage','recordPage','plannerPage','coachingPage','libraryPa
 const destinations=[...html.matchAll(/data-page=["']([^"']+)["']/g)].map(m=>m[1]);
 const missing=[...new Set(destinations.filter(x=>!ids.includes(x)))];if(missing.length)throw new Error(`Destination absente : ${missing.join(', ')}`);
 for(const token of ['TerrainEngine','activeDuration','ageMs','piste-terrain-draft-v10_36','plannerFollowWatch','gpxFileInput','pausedMs','function savePlannerDraft','function appendPlannerGpsPoint'])if(!app.includes(token))throw new Error(`Élément Terrain manquant : ${token}`);
+for(const token of ['coachingLiveWeather','fetchCoachingLiveWeather','coachingTerrainCommandBar','terrainPauseBtn','terrainQuickMarkerBtn','terrainBlackScreenBtn','terrainPlusBtn','active-terrain','coachingSessionInfo'])if(!app.includes(token)&&!html.includes(token)&&!sw.includes(token))throw new Error(`Simplification Terrain manquante : ${token}`);
+for(const id of ['coachingLiveWeather','coachingTerrainStatus','coachingTerrainCommandBar','terrainPauseBtn','terrainQuickMarkerBtn','terrainBlackScreenBtn','terrainPlusBtn','coachingSessionInfo'])if(!ids.includes(id))throw new Error(`Élément Terrain absent : ${id}`);
+if(!/active-terrain[\s\S]*display:none!important/.test(require('fs').readFileSync('v2.css','utf8')))throw new Error('Masquage Terrain actif absent');
 for(const token of ['draft','ready','placing','waiting','active','paused','ended','abandoned'])if(!app.includes(`'${token}'`))throw new Error(`État Terrain manquant : ${token}`);
 if(!/function\s+sendActiveCoachingPoint/.test(app)||!/function\s+beginWatch/.test(app))throw new Error('Séparation GPS Coaching/OPS absente');
 if((app.match(/navigator\.geolocation\.watchPosition/g)||[]).length<2)throw new Error('GPS des modules existants absent');
-if(!/const C='piste-community-v2067'/.test(sw)||!/app\.js\?v=1066/.test(html)||!/app\.js\?v=1066/.test(sw)||!/v2\.css\?v=2054/.test(html)||!/v2\.css\?v=2054/.test(sw))throw new Error('Cache V10.36 incohérent');
+if(!/const C='piste-community-v2068'/.test(sw)||!/app\.js\?v=1067/.test(html)||!/app\.js\?v=1067/.test(sw)||!/v2\.css\?v=2055/.test(html)||!/v2\.css\?v=2055/.test(sw))throw new Error('Cache V10.36 incohérent');
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté');
 console.log(`Contrôle V10.36 OK : ${ids.length} IDs uniques, ${pages.length} pages, ${destinations.length} destinations, moteur Terrain partagé présent.`);

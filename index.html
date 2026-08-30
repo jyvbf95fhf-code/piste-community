@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2054">
+<link rel="stylesheet" href="./v2.css?v=2055">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -564,11 +564,14 @@
     <div id="coachingSessionsCard" class="card coaching-stage"><div class="card-title-row"><div><small class="section-kicker">ORGANISATION</small><h3>Sessions à préparer ou en cours</h3></div><button id="refreshCoaching" class="secondary">Actualiser</button></div><div class="segmented coaching-session-filters"><button class="active" data-session-filter="upcoming">À venir</button><button data-session-filter="live">En cours</button></div><div id="coachingSessionsList"></div><button class="text-btn" type="button" data-page="libraryPage" data-library-filter="coaching">Voir les sessions terminées dans Mes pistes ›</button></div>
     <div id="coachingLivePanel" class="card hidden">
       <div class="coaching-live-head"><div><small id="coachingRole" class="section-kicker"></small><h3 id="coachingLiveTitle">Session</h3><p id="coachingLiveStatus" class="muted small"></p></div><div class="invite-chip"><small>CODE</small><strong id="coachingLiveCode"></strong><button id="copyCoachingCode" class="ghost-dark">Copier</button></div></div>
+      <div id="coachingLiveWeather" class="coaching-live-weather" aria-live="polite"><span class="terrain-weather-loading">Actualisation…</span></div>
+      <div id="coachingTerrainStatus" class="coaching-terrain-status" aria-live="polite"><span>GPS —</span><span>Âge —</span><span>Actif 00:00</span><span>Distance 0,00 km</span></div>
       <div id="coachingPhase" class="coaching-phase waiting">ÉQUIPE EN ATTENTE</div>
       <div id="coachingParticipants" class="coaching-participants" aria-live="polite"><span class="participant-chip waiting"><i></i>En attente des positions GPS</span></div>
       <div id="coachingPreparationDetails" class="coaching-preparation-details"></div>
       <div id="coachingWaitingActions" class="coaching-waiting-actions hidden"><small>La suppression définitive efface aussi les positions, messages, repères et débrief associés.</small><button id="cancelCoachingWaiting" class="danger-button" type="button">Annuler la session</button><button id="deleteCoachingWaiting" class="danger-button" type="button">Supprimer définitivement</button></div>
       <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small id="coachingMetricRole">CONDUCTEUR</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Me suivre</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div><div id="coachingMapContext" class="map-context-menu hidden" role="menu"></div></div>
+      <div id="coachingTerrainCommandBar" class="coaching-terrain-command-bar" aria-label="Commandes Terrain"><button id="terrainPauseBtn" class="secondary" type="button">Pause</button><button id="terrainQuickMarkerBtn" class="secondary" type="button">Repère rapide</button><button id="terrainBlackScreenBtn" class="secondary" type="button">Écran noir</button><button id="terrainPlusBtn" class="secondary" type="button">Plus</button></div>
       <div id="coachingPrimaryActions" class="coaching-primary-actions" aria-label="Commandes principales de la session">
         <div><button id="startCoachingLive" class="primary" type="button">Démarrer la session</button><small id="startCoachingReason" aria-live="polite"></small></div>
         <div><button id="toggleCoachingGps" class="secondary" type="button">Démarrer le suivi GPS</button><small id="coachingGpsReason" aria-live="polite"></small></div>
@@ -582,6 +585,7 @@
       <div class="coaching-tab-panel" data-coaching-panel="markers"><div id="coachAnnotationTools" class="coach-tools hidden"><small class="section-kicker">ANNOTER EN DIRECT</small><p class="small muted">Choisis un événement puis touche la carte.</p><div class="quick-coaching"><button data-live-marker="loss">❌ Perte</button><button data-live-marker="recovery">↩️ Reprise</button><button data-live-marker="behavior">🐕 Comportement</button><button data-live-marker="direction">↗ Direction</button><button data-live-marker="clue">🔎 Indice</button><button data-live-marker="danger">⚠ Danger</button><button data-live-marker="success">✓ Réussite</button><button data-live-marker="note">📍 Note</button><button data-live-marker="off">✋ Arrêter</button></div></div></div>
       <div class="coaching-tab-panel" data-coaching-panel="messages"><div class="quick-coaching"><button data-coaching-quick="Bonne décision">✓ Bonne décision</button><button data-coaching-quick="Reviens au dernier indice">↩ Dernier indice</button><button data-coaching-quick="Prends le temps d’observer">👁 Observe</button><button data-coaching-quick="Attention à la sécurité">⚠ Sécurité</button></div><div class="join-row"><input id="coachingMessageInput" maxlength="500" placeholder="Message au binôme"><button id="sendCoachingMessage" class="secondary">Envoyer</button></div><div id="coachingMessages" class="coaching-messages"></div></div>
       <div class="coaching-tab-panel" data-coaching-panel="session">
+      <div id="coachingSessionInfo" class="coaching-session-info"></div>
       <div id="traceurTools" class="traceur-tools hidden"><small class="section-kicker">POSE DE PISTE</small><p id="traceurStatus" class="small muted">Utilisez la commande de suivi GPS placée sous la carte.</p></div>
       <div class="coaching-legend"><span><b class="legend-dot driver"></b> Conducteur</span><span><b class="legend-dot coach"></b> Coach</span><span><b class="legend-dot traceur"></b> Traceur</span><span><b class="legend-dot observer"></b> Observateur</span></div>
       <p id="coachingGpsState" class="coaching-gps-state">Position non partagée</p>
@@ -753,7 +757,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1066"></script>
+<script type="module" src="./app.js?v=1067"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>
