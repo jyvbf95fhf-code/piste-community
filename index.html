@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2055">
+<link rel="stylesheet" href="./v2.css?v=2056">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -570,8 +570,8 @@
       <div id="coachingParticipants" class="coaching-participants" aria-live="polite"><span class="participant-chip waiting"><i></i>En attente des positions GPS</span></div>
       <div id="coachingPreparationDetails" class="coaching-preparation-details"></div>
       <div id="coachingWaitingActions" class="coaching-waiting-actions hidden"><small>La suppression définitive efface aussi les positions, messages, repères et débrief associés.</small><button id="cancelCoachingWaiting" class="danger-button" type="button">Annuler la session</button><button id="deleteCoachingWaiting" class="danger-button" type="button">Supprimer définitivement</button></div>
-      <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small id="coachingMetricRole">CONDUCTEUR</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Me suivre</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div><div id="coachingMapContext" class="map-context-menu hidden" role="menu"></div></div>
-      <div id="coachingTerrainCommandBar" class="coaching-terrain-command-bar" aria-label="Commandes Terrain"><button id="terrainPauseBtn" class="secondary" type="button">Pause</button><button id="terrainQuickMarkerBtn" class="secondary" type="button">Repère rapide</button><button id="terrainBlackScreenBtn" class="secondary" type="button">Écran noir</button><button id="terrainPlusBtn" class="secondary" type="button">Plus</button></div>
+      <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small id="coachingMetricRole">CONDUCTEUR</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Me localiser</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Odeur</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label></div><div id="coachingMapContext" class="map-context-menu hidden" role="menu"></div></div>
+      <div id="coachingTerrainCommandBar" class="coaching-terrain-command-bar" aria-label="Commandes Terrain"><button id="terrainPauseBtn" class="secondary" type="button">Pause</button><button id="terrainBlackScreenBtn" class="secondary" type="button">Écran noir</button><button id="terrainFinishBtn" class="danger-button" type="button">Terminer la session<small>Maintenir 2 secondes pour terminer</small></button><button id="terrainPlusBtn" class="secondary" type="button">Plus</button></div>
       <div id="coachingPrimaryActions" class="coaching-primary-actions" aria-label="Commandes principales de la session">
         <div><button id="startCoachingLive" class="primary" type="button">Démarrer la session</button><small id="startCoachingReason" aria-live="polite"></small></div>
         <div><button id="toggleCoachingGps" class="secondary" type="button">Démarrer le suivi GPS</button><small id="coachingGpsReason" aria-live="polite"></small></div>
@@ -757,7 +757,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1067"></script>
+<script type="module" src="./app.js?v=1068"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>
