@@ -13,10 +13,12 @@ for(const token of ['TerrainEngine','activeDuration','ageMs','piste-terrain-draf
 for(const token of ['coachingLiveWeather','fetchCoachingLiveWeather','coachingTerrainCommandBar','terrainPauseBtn','terrainBlackScreenBtn','terrainPlusBtn','terrainFinishBtn','locateCoachingUser','active-terrain','coachingSessionInfo'])if(!app.includes(token)&&!html.includes(token)&&!sw.includes(token))throw new Error(`Simplification Terrain manquante : ${token}`);
 for(const id of ['coachingLiveWeather','coachingTerrainStatus','coachingTerrainCommandBar','terrainPauseBtn','terrainBlackScreenBtn','terrainFinishBtn','terrainPlusBtn','coachingSessionInfo'])if(!ids.includes(id))throw new Error(`Élément Terrain absent : ${id}`);
 if(ids.includes('terrainQuickMarkerBtn'))throw new Error('Ancien bouton Repère rapide encore présent');
+if(!/function\s+completeCoachingDebriefReturnHome/.test(app)||!/clearVerifiedActiveCoaching\(id\)/.test(app)||!/showPage\('homePage'\)/.test(app))throw new Error('Retour accueil après débrief non sécurisé');
+if(!/finishHoldStart/.test(app)||!/2000/.test(app))throw new Error('Maintien 2 secondes de clôture absent');
 if(!/active-terrain[\s\S]*display:none!important/.test(require('fs').readFileSync('v2.css','utf8')))throw new Error('Masquage Terrain actif absent');
 for(const token of ['draft','ready','placing','waiting','active','paused','ended','abandoned'])if(!app.includes(`'${token}'`))throw new Error(`État Terrain manquant : ${token}`);
 if(!/function\s+sendActiveCoachingPoint/.test(app)||!/function\s+beginWatch/.test(app))throw new Error('Séparation GPS Coaching/OPS absente');
 if((app.match(/navigator\.geolocation\.watchPosition/g)||[]).length<2)throw new Error('GPS des modules existants absent');
-if(!/const C='piste-community-v2069'/.test(sw)||!/app\.js\?v=1068/.test(html)||!/app\.js\?v=1068/.test(sw)||!/v2\.css\?v=2056/.test(html)||!/v2\.css\?v=2056/.test(sw))throw new Error('Cache V10.36 incohérent');
+if(!/const C='piste-community-v2070'/.test(sw)||!/app\.js\?v=1069/.test(html)||!/app\.js\?v=1069/.test(sw)||!/v2\.css\?v=2056/.test(html)||!/v2\.css\?v=2056/.test(sw))throw new Error('Cache V10.36 incohérent');
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté');
 console.log(`Contrôle V10.36 OK : ${ids.length} IDs uniques, ${pages.length} pages, ${destinations.length} destinations, moteur Terrain partagé présent.`);
