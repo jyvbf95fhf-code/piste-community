@@ -26,7 +26,7 @@ const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{ico
 const LIVE_MARKERS={loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},behavior:{icon:'🐕',label:'Comportement'},direction:{icon:'↗️',label:'Direction'},clue:{icon:'🔎',label:'Indice'},danger:{icon:'⚠️',label:'Danger'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
 const OPERATIONAL_GPX_KINDS={habitual:{label:'Itinéraire habituel',icon:'↝'},searched:{label:'Zone ou trajet déjà parcouru',icon:'✓'},access:{label:'Accès équipe',icon:'🚗'},team:{label:'Trace d’une autre équipe',icon:'👥'},reference:{label:'Autre référence',icon:'🗺️'}};
 const OPERATIONAL_GPX_COLORS=['#a98be8','#4db6ac','#ef9a55','#64a7e8','#d86f8c'];
-let gps={watch:null,start:null,timer:null,points:[],distance:0,distanceAnchor:null,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0,lastFixAt:0,lastWatchRestartAt:0};
+let gps={watch:null,start:null,timer:null,points:[],distance:0,distanceAnchor:null,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0,lastFixAt:0,lastWatchRestartAt:0,terrainMode:'operational',terrainStartedAt:null,terrainEndedAt:null};
 const DRAFT_KEY='piste_active_draft_v4';
 const QUEUE_KEY='piste_sync_queue_v4';
 const LAST_ACTIVITY_KEY='piste_last_activity_v10_32';
@@ -39,7 +39,29 @@ const useful=x=>x.resultat==="Personne retrouvée par le chien"||x.resultat==="O
 const visibilityLabel=v=>v==="friends"?"Amis":v==="community"?"Communauté":v==="public"?"Public":"Privé";
 const pad=n=>String(n).padStart(2,'0');
 const formatExactDuration=ms=>{ms=Math.max(0,Number(ms)||0);const total=Math.floor(ms/1000),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return `${h?h+' h ':''}${pad(m)} min ${pad(s)} s`};
-const msDuration=()=>gps.start?Math.max(0,Date.now()-gps.start-gps.pausedMs-(gps.paused&&gps.pauseStarted?Date.now()-gps.pauseStarted:0)):0;
+const msDuration=()=>TerrainEngine.activeDuration(gps);
+const TERRAIN_STATES=Object.freeze(['draft','ready','placing','waiting','active','paused','ended','abandoned']);
+const TerrainEngine={
+ state:'draft',mode:'operational',configure(mode){this.mode=mode||'operational';this.state='draft';return this.state},
+ transition(next){if(!TERRAIN_STATES.includes(next))return false;this.state=next;return true},
+ start(target){if(target){target.terrainStartedAt=target.terrainStartedAt||Date.now();target.terrainEndedAt=null}this.state='active';return this.state},
+ pause(target){if(!target||!target.start||target.paused)return false;target.paused=true;target.pauseStarted=Date.now();this.state='paused';return true},
+ resume(target){if(!target||!target.start||!target.paused)return false;target.pausedMs=(target.pausedMs||0)+Date.now()-(target.pauseStarted||Date.now());target.pauseStarted=null;target.paused=false;this.state='active';return true},
+ finish(target){if(target){if(target.paused&&target.pauseStarted)target.pausedMs=(target.pausedMs||0)+Date.now()-target.pauseStarted;target.paused=false;target.pauseStarted=null;target.terrainEndedAt=Date.now()}this.state='ended';return this.state},
+ elapsed(target,now){return target?.start?Math.max(0,(now||Date.now())-target.start):0},
+ activeDuration(target,now){if(!target?.start)return 0;const end=now||Date.now(),paused=(target.paused&&target.pauseStarted?end-target.pauseStarted:0)+(target.pausedMs||0);return Math.max(0,end-target.start-paused)},
+ ageMs(reference,now){return reference?Math.max(0,(now||Date.now())-new Date(reference).getTime()):null},
+ draftKey(userId){return `piste-terrain-draft-v10_36-${userId||'local'}`}
+};
+function updateTerrainCommonStatus(){
+ const state=TerrainEngine.state,labels={draft:'Brouillon',ready:'Prêt',placing:'Pose en cours',waiting:'En attente',active:'Actif',paused:'En pause',ended:'Terminé',abandoned:'Abandonné'};
+ setUiText('terrainLiveState',labels[state]||'Terrain');
+ const activeSeconds=Math.floor(TerrainEngine.activeDuration(gps)/1000),activeClock=`${pad(Math.floor(activeSeconds/60))}:${pad(activeSeconds%60)}`;
+ setUiText('terrainActiveDuration',`Actif : ${activeClock}`);
+ const reference=activeCoachingSession?.track_finished_at||activeCoachingSession?.created_at||null;
+ setUiText('terrainLiveAge',reference?`Âge de piste : ${formatExactDuration(TerrainEngine.ageMs(reference))}`:'Âge de piste : —');
+ setUiText('terrainPlannerAge',plannerPoints.length?`Points : ${plannerPoints.length}`:'Âge : —');
+}
 const getQueue=()=>{try{return JSON.parse(localStorage.getItem(QUEUE_KEY)||'[]')}catch{return []}};
 const setQueue=q=>{localStorage.setItem(QUEUE_KEY,JSON.stringify(q));updateSyncBanner()};
 function updateNetworkStatus(){if(!$('offlineStatus'))return;const online=navigator.onLine;$('offlineStatus').textContent='Réseau : '+(online?'en ligne':'hors ligne');$('offlineStatus').classList.toggle('offline',!online)}
@@ -229,6 +251,7 @@ function initPlanner(route=null){
   plannerMap=createPisteMap('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
   addCleanBaseLayers(plannerMap);
   const draft=!route?readPlannerDraft():null,source=route||draft;
+  TerrainEngine.configure('planner');updateTerrainCommonStatus();
   plannerPoints=source&&Array.isArray(source.route)?source.route.map(x=>({lat:Number(x.lat),lon:Number(x.lon)})):[];plannerRedoStack=[];
   plannerWaypoints=source&&Array.isArray(source.waypoints)?source.waypoints.map(x=>({...x})):[];plannerTool='route';setPlannerTool('route');
   plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual',...(source?.odor_model||{})};setOdorForm(plannerOdorModel);
@@ -1210,7 +1233,7 @@ function redrawLiveRecordingMap(){
 function resetGpsUI(clear=true){
  if(gps.watch!==null&&navigator.geolocation)navigator.geolocation.clearWatch(gps.watch);clearInterval(gps.timer);releaseWakeLock();
  closeFakeLock();
- gps={watch:null,start:null,timer:null,points:[],distance:0,distanceAnchor:null,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0,lastFixAt:0,lastWatchRestartAt:0};fieldMarkers=[];renderFieldMarkers();
+ gps={watch:null,start:null,timer:null,points:[],distance:0,distanceAnchor:null,startPoint:null,startPlace:"",paused:false,pauseStarted:null,pausedMs:0,lastSaved:0,lastFixAt:0,lastWatchRestartAt:0,terrainMode:recordMode==='training'?'training':'operational',terrainStartedAt:null,terrainEndedAt:null};TerrainEngine.configure(gps.terrainMode);updateTerrainCommonStatus();fieldMarkers=[];renderFieldMarkers();
  liveMapFollow=true;$('recenterLiveMapBtn')?.classList.add('hidden');
  $('liveDistance').textContent="0.00";$('liveDuration').textContent="00:00:00";$('liveAccuracy').textContent="—";$('liveLocation').textContent="En attente du GPS";$('gpsMsg').textContent="";
  $('startGpsBtn').disabled=false;$('startGpsBtn').classList.remove('hidden');$('pauseGpsBtn').disabled=true;$('pauseGpsBtn').textContent='PAUSE';$('stopGpsBtn').disabled=true;$('fakeLockBtn').disabled=true;$('finishFormCard').classList.add('hidden');setGpsStatus('Prêt','idle');
@@ -1285,7 +1308,7 @@ async function saveOperationalCall(event){event?.preventDefault();const msg=$('o
 async function startOperationalCallTracking(){let row=currentOperationalCall;if(!row?.id)row=await saveOperationalCall();if(!row)return;await supabase.from('operational_calls').update({status:'engaged',updated_at:new Date().toISOString()}).eq('id',row.id).eq('owner_id',session.user.id);activeOperationalCallId=row.id;activeOperationalGpxTracks=(row.imported_tracks||operationalCallGpxTracks||[]).filter(track=>track.visible!==false);beginNewPiste('piste');const f=$('pisteForm');if(row.disappearance_at)f.elements.disparition_at.value=localDateTime(new Date(row.disappearance_at));if(row.last_known_label)f.elements.commune_depart.value=row.last_known_label;$('operationalCallBanner').classList.remove('hidden');$('operationalCallBannerTitle').textContent=row.subject?.initials?`Engagement • ${row.subject.initials}`:'Engagement préparé';$('operationalCallBannerInfo').textContent=(row.last_known_label||'Dernier point connu positionné')+(activeOperationalGpxTracks.length?` • ${activeOperationalGpxTracks.length} GPX`:``);redrawLiveRecordingMap()}
 
 function beginNewPiste(mode='piste'){
- recordMode=mode;if(mode!=='training')selectedTrainingRoute=null;resetGpsUI();showPage('recordPage');$('pisteForm').reset();$('pisteForm').elements.date.value=today();if(!activeOperationalCallId)$('operationalCallBanner')?.classList.add('hidden');
+ recordMode=mode;TerrainEngine.configure(mode==='training'?'training':'operational');if(mode!=='training')selectedTrainingRoute=null;resetGpsUI();updateTerrainCommonStatus();showPage('recordPage');$('pisteForm').reset();$('pisteForm').elements.date.value=today();if(!activeOperationalCallId)$('operationalCallBanner')?.classList.add('hidden');
  const training=mode==='training';
  $('recordTitle').textContent=training?'Nouvel entraînement':'Nouveau pistage opérationnel';
  $('finishTitle').textContent=training?'Terminer l’entraînement':'Terminer l’enregistrement';
@@ -1312,10 +1335,10 @@ function addGpsDistancePoint(p){
 }
 function renderFieldMarkers(){if($('fieldMarkerCount'))$('fieldMarkerCount').textContent=`${fieldMarkers.length} repère${fieldMarkers.length>1?'s':''}`}
 function addFieldMarker(type){if(!gps.start||gps.paused){$('gpsMsg').textContent='Démarre le GPS avant d’ajouter un repère.';return}const point=gps.points.at(-1);if(!point){$('gpsMsg').textContent='Attends la première position GPS.';return}const def=LIVE_MARKERS[type]||LIVE_MARKERS.note,note=prompt(`${def.label} — note facultative :`,'');if(note===null)return;fieldMarkers.push({id:crypto.randomUUID?.()||String(Date.now()),type,lat:point.lat,lon:point.lon,note:note.trim()||null,recorded_at:new Date(point.t||Date.now()).toISOString(),elapsed_ms:msDuration(),distance_m:Math.round(gps.distance),accuracy_m:Math.round(point.acc||0)});renderFieldMarkers();saveDraft(true);$('gpsMsg').textContent=`${def.icon} ${def.label} enregistré à ${fmt(gps.distance/1000,2)} km.`}
-function gpsTick(){
+ function gpsTick(){
  if(!gps.start)return;const s=Math.floor(msDuration()/1000),h=pad(Math.floor(s/3600)),m=pad(Math.floor((s%3600)/60)),ss=pad(s%60);$('liveDuration').textContent=`${h}:${m}:${ss}`;saveDraft();
  const liveHours=msDuration()/3600000;if($('liveAvgSpeed'))$('liveAvgSpeed').textContent=(liveHours>0?fmt((gps.distance/1000)/liveHours,2):'0.00')+' km/h';
- updateFakeLock();updateGpsHealth();
+ updateFakeLock();updateGpsHealth();updateTerrainCommonStatus();
 }
 async function reverseCommune(lat,lon){
  try{
@@ -1347,17 +1370,18 @@ function beginWatch(isRecovery=false){
  },err=>{$('gpsMsg').textContent="GPS : "+err.message;setGpsStatus('Erreur GPS','bad');updateGpsHealth()},{enableHighAccuracy:true,maximumAge:1000,timeout:15000});
 }
 $('startGpsBtn').onclick=()=>{
- if(!gps.start){gps.start=Date.now();gps.lastFixAt=Date.now();gps.timer=setInterval(gpsTick,1000)}
+ if(!gps.start){gps.start=Date.now();gps.terrainStartedAt=gps.start;gps.lastFixAt=Date.now();gps.timer=setInterval(gpsTick,1000)}
+ TerrainEngine.start(gps);
  gps.paused=false;gps.pauseStarted=null;$('startGpsBtn').disabled=true;$('startGpsBtn').classList.add('hidden');$('pauseGpsBtn').disabled=false;$('stopGpsBtn').disabled=false;$('fakeLockBtn').disabled=false;$('gpsMsg').textContent="Acquisition GPS…";setGpsStatus('Recherche GPS','warn');requestWakeLock();beginWatch();saveDraft(true);
 };
 $('pauseGpsBtn').onclick=()=>{
  if(!gps.start)return;
- if(!gps.paused){gps.paused=true;gps.pauseStarted=Date.now();gps.distanceAnchor=null;if(gps.watch!==null){navigator.geolocation.clearWatch(gps.watch);gps.watch=null}$('pauseGpsBtn').textContent='REPRENDRE';$('fakeLockBtn').disabled=true;closeFakeLock();setGpsStatus('En pause','paused');$('gpsMsg').textContent='Suivi GPS en pause.';releaseWakeLock();saveDraft(true)}
- else{gps.pausedMs+=Date.now()-gps.pauseStarted;gps.pauseStarted=null;gps.paused=false;$('pauseGpsBtn').textContent='PAUSE';$('fakeLockBtn').disabled=false;setGpsStatus('Reprise GPS','warn');requestWakeLock();beginWatch();saveDraft(true)}
+ if(!gps.paused){TerrainEngine.pause(gps);gps.distanceAnchor=null;if(gps.watch!==null){navigator.geolocation.clearWatch(gps.watch);gps.watch=null}$('pauseGpsBtn').textContent='REPRENDRE';$('fakeLockBtn').disabled=true;closeFakeLock();setGpsStatus('En pause','paused');$('gpsMsg').textContent='Suivi GPS en pause.';releaseWakeLock();saveDraft(true)}
+ else{TerrainEngine.resume(gps);$('pauseGpsBtn').textContent='PAUSE';$('fakeLockBtn').disabled=false;setGpsStatus('Reprise GPS','warn');requestWakeLock();beginWatch();saveDraft(true)}
 };
 $('stopGpsBtn').onclick=()=>{
  if(gps.watch!==null)navigator.geolocation.clearWatch(gps.watch);gps.watch=null;clearInterval(gps.timer);releaseWakeLock();if(gps.paused&&gps.pauseStarted){gps.pausedMs+=Date.now()-gps.pauseStarted;gps.pauseStarted=null;gps.paused=false}
- $('startGpsBtn').disabled=false;$('startGpsBtn').classList.add('hidden');$('pauseGpsBtn').disabled=true;$('stopGpsBtn').disabled=true;$('fakeLockBtn').disabled=true;closeFakeLock();setGpsStatus('Terminé','idle');
+ TerrainEngine.finish(gps);$('startGpsBtn').disabled=false;$('startGpsBtn').classList.add('hidden');$('pauseGpsBtn').disabled=true;$('stopGpsBtn').disabled=true;$('fakeLockBtn').disabled=true;closeFakeLock();setGpsStatus('Terminé','idle');
  const h=msDuration()/3600000;const f=$('pisteForm');f.elements.duree_h.value=h.toFixed(2);f.elements.distance_km.value=(gps.distance/1000).toFixed(2);f.elements.commune_depart.value=gps.startPlace||"";f.elements.depart_at.value=new Date(gps.start).toISOString().slice(0,16);f.elements.date.value=today();$('finishFormCard').classList.remove('hidden');updatePreSaveSummary();$('gpsMsg').textContent="Suivi terminé. Complète les informations puis enregistre.";saveDraft(true);setTimeout(()=>$('finishFormCard').scrollIntoView({behavior:'smooth'}),150);
 };
 $('fakeLockBtn').onclick=()=>openFakeLock('record');

@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2053">
+<link rel="stylesheet" href="./v2.css?v=2054">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -112,6 +112,7 @@
         <div><strong id="liveDuration">00:00:00</strong><span>durée</span></div>
         <div><strong id="liveAccuracy">—</strong><span>précision</span></div>
       </div>
+      <div id="terrainLiveStatus" class="terrain-common-bar" role="status"><span class="terrain-state-dot"></span><span><b id="terrainLiveState">Prêt</b><small id="terrainLiveAge">Âge de piste : —</small></span><strong id="terrainActiveDuration">Actif : 00:00</strong></div>
       <div class="location-box">
         <span>Départ</span>
         <b id="liveLocation">En attente du GPS</b>
@@ -489,6 +490,7 @@
         </label>
         <div class="planner-distance"><small>DISTANCE PRÉVUE</small><strong id="plannedDistance">0.00 km</strong></div>
       </div>
+      <div id="terrainPlannerStatus" class="terrain-common-bar" role="status"><span class="terrain-state-dot"></span><span><b>Terrain commun</b><small>Préparation · brouillon local par utilisateur</small></span><strong id="terrainPlannerAge">Âge : —</strong></div>
       <p class="small muted">Choisis « Tracé », puis touche la carte pour dessiner. Choisis ensuite un signe pour scénariser la piste.</p>
       <div id="plannerTools" class="planner-tools" aria-label="Outils de création du scénario">
         <button class="active" data-planner-tool="route">〰️ Tracé</button><button data-planner-tool="pause">⏳ Attente</button><button data-planner-tool="object">📦 Objet</button><button data-planner-tool="direction">↪️ Direction</button><button data-planner-tool="crossing">🔀 Croisement</button><button data-planner-tool="contamination">👥 Contamination</button><button data-planner-tool="danger">⚠️ Danger</button><button data-planner-tool="subject">👤 Personne</button><button data-planner-tool="note">📍 Note</button>
@@ -751,7 +753,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1065"></script>
+<script type="module" src="./app.js?v=1066"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>

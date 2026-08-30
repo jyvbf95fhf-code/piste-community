@@ -731,6 +731,9 @@ body.v10-30-aurora{
 @media(max-width:700px){.coaching-primary-actions{grid-template-columns:1fr;margin-left:0;margin-right:0;padding:11px}.coaching-primary-actions>div{gap:5px}.coaching-primary-actions button{min-height:50px}.coaching-primary-actions small{min-height:0}.coaching-departure>div:last-child{grid-template-columns:1fr 1fr}.fake-lock-exit{padding-bottom:env(safe-area-inset-bottom,0px)}}
 
 /* V10.34 — Mes pistes et navigation simplifiée */
+.terrain-common-bar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px;margin:10px 0;padding:9px 11px;border:1px solid var(--v2-line);border-radius:13px;background:rgba(255,255,255,.03);color:var(--v2-text)}
+.terrain-common-bar>span:nth-child(2){display:grid;gap:2px;min-width:0}.terrain-common-bar small{color:var(--v2-muted);font-size:9px}.terrain-common-bar strong{font-size:10px;color:var(--v2-accent);white-space:nowrap}.terrain-state-dot{width:9px;height:9px;border-radius:50%;background:var(--v2-accent);box-shadow:0 0 0 4px rgba(185,214,108,.12)}
+@media(max-width:420px){.terrain-common-bar{grid-template-columns:auto 1fr}.terrain-common-bar strong{grid-column:2;white-space:normal}}
 #libraryPage{padding-bottom:125px}
 .library-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;margin-bottom:13px;padding:18px;border:1px solid rgba(112,220,255,.22);border-radius:20px;background:linear-gradient(135deg,rgba(20,57,70,.92),rgba(12,30,38,.98));box-shadow:0 14px 36px #0004}
 .library-intro small{color:#70dcff;font-size:8px;letter-spacing:.16em}.library-intro h3{margin:5px 0 4px;font-size:21px}.library-intro p{margin:0;color:var(--v2-muted);font-size:11px}.library-create-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.library-create-actions button{padding:10px 12px;white-space:nowrap}
