@@ -694,6 +694,26 @@ function libraryRow(type,id){return librarySource(type).find(x=>x.id===id)}
 function libraryTypeMeta(type){return ({operational:{icon:'🔵',label:'OPS'},training:{icon:'🟣',label:'Entraînement'},coaching:{icon:'🎧',label:'Coaching'},prepared:{icon:'🗺️',label:'Tracé préparé'}})[type]||{icon:'•',label:'Activité'}}
 function libraryTrack(x){return x._type==='coaching'?(x.planned_route||[]):x._type==='prepared'?(x.route||[]):(x.track||[])}
 function libraryTrackDistanceKm(points){return Array.isArray(points)?points.slice(1).reduce((sum,p,i)=>sum+hav(points[i],p),0)/1000:0}
+/* V10.37 — boîte noire factuelle commune aux trois modules. Les points sont
+   toujours lus depuis leur source historique; aucun calcul ne les réécrit. */
+const BLACK_BOX_VERSION='10.37.0';
+const TerrainBlackBox={
+  version:BLACK_BOX_VERSION,
+  point(p){if(!p)return null;const lat=Number(p.lat??p.latitude),lon=Number(p.lon??p.lng??p.longitude);return Number.isFinite(lat)&&Number.isFinite(lon)?{...p,lat,lon}:null},
+  points(value){return Array.isArray(value)?value.map(this.point.bind(this)).filter(Boolean):[]},
+  distance(points){return libraryTrackDistanceKm(points)},
+  duration(points){if(points.length<2)return 0;const a=Date.parse(points[0].recorded_at||points[0].timestamp||points[0].created_at),b=Date.parse(points[points.length-1].recorded_at||points[points.length-1].timestamp||points[points.length-1].created_at);return Number.isFinite(a)&&Number.isFinite(b)?Math.max(0,b-a):0},
+  pauses(points){const result=[];for(let i=1;i<points.length;i+=1){const a=Date.parse(points[i-1].recorded_at||points[i-1].timestamp),b=Date.parse(points[i].recorded_at||points[i].timestamp);if(Number.isFinite(a)&&Number.isFinite(b)&&b-a>=60000)result.push({from:new Date(a).toISOString(),to:new Date(b).toISOString(),duration_ms:b-a,kind:'gap'})}return result},
+  age(reference,now=Date.now()){const t=reference?Date.parse(reference):NaN;return Number.isFinite(t)?Math.max(0,now-t):null},
+  quality(points){if(!points.length)return{label:'Données insuffisantes',confidence:'none',accuracy_m:null};const values=points.map(p=>Number(p.accuracy_m)).filter(Number.isFinite);if(!values.length)return{label:'Qualité non renseignée',confidence:'low',accuracy_m:null};const avg=values.reduce((a,b)=>a+b,0)/values.length;return{label:avg<=20?'GPS fiable':avg<=60?'GPS exploitable':'GPS imprécis',confidence:avg<=20?'high':avg<=60?'medium':'low',accuracy_m:Number(avg.toFixed(1))}},
+  deviation(actual,reference){const a=this.points(actual),r=this.points(reference);if(a.length<1||r.length<2)return{average_m:null,max_m:null};const distances=a.map(point=>Math.min(...r.map(ref=>hav(point,ref))));return{average_m:Number((distances.reduce((x,y)=>x+y,0)/distances.length).toFixed(1)),max_m:Number(Math.max(...distances).toFixed(1))}},
+  analyse(input){const raw=this.points(input.raw),planned=this.points(input.planned),pauses=this.pauses(raw),duration=this.duration(raw);return{version:this.version,source:input.source||'unknown',raw_points:raw.length,planned_points:planned.length,distance_km:Number(this.distance(raw).toFixed(3)),planned_distance_km:Number(this.distance(planned).toFixed(3)),duration_ms:duration,active_duration_ms:Math.max(0,duration-pauses.reduce((sum,p)=>sum+p.duration_ms,0)),pauses,age_ms:this.age(input.track_finished_at||input.started_at||input.created_at),quality:this.quality(raw),deviation:this.deviation(raw,planned),facts:[]}},
+  facts(metrics){const facts=[];if(metrics.raw_points)facts.push(`${metrics.raw_points} positions GPS conservées`);if(metrics.distance_km)facts.push(`${fmt(metrics.distance_km,2)} km parcourus`);if(metrics.pauses.length)facts.push(`${metrics.pauses.length} pause(s) détectée(s) par intervalle temporel`);if(metrics.quality.label!=='Données insuffisantes')facts.push(metrics.quality.label);return facts},
+  summary(metrics){const facts=this.facts(metrics);return facts.length?facts:['Données insuffisantes pour produire une synthèse fiable.']}
+};
+function blackBoxActivity(type,id){const row=libraryRow(type,id);if(!row)return null;const raw=type==='coaching'?[]:TerrainBlackBox.points(row.track||[]),planned=type==='coaching'?TerrainBlackBox.points(row.planned_route||[]):TerrainBlackBox.points(row.route||[]);const metrics=TerrainBlackBox.analyse({raw,planned,source:type,created_at:row.created_at,started_at:row.depart_at||row.started_at,track_finished_at:row.track_finished_at});metrics.facts=TerrainBlackBox.facts(metrics);return{row,raw,planned,metrics}}
+function setBlackBoxTab(tab){document.querySelectorAll('[data-blackbox-tab]').forEach(button=>button.classList.toggle('active',button.dataset.blackboxTab===tab));document.querySelectorAll('[data-blackbox-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.blackboxPanel!==tab))}
+function renderBlackBox(id,type){const data=blackBoxActivity(type,id),summary=$('blackBoxSummary');if(!data||!summary)return;const m=data.metrics,age=m.age_ms===null?'—':formatExactDuration(m.age_ms),duration=m.duration_ms?formatExactDuration(m.duration_ms):'—',active=m.active_duration_ms?formatExactDuration(m.active_duration_ms):'—';summary.innerHTML=`<div class="black-box-facts"><span><b>${fmt(m.distance_km,2)} km</b><small>Distance GPS</small></span><span><b>${duration}</b><small>Temps total</small></span><span><b>${active}</b><small>Temps actif</small></span><span><b>${age}</b><small>Âge de piste</small></span></div><div class="black-box-note"><b>Boîte noire factuelle · v${esc(BLACK_BOX_VERSION)}</b><ul>${m.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><small>Les calculs sont reproductibles et ne modifient jamais la trace GPS brute.</small></div>`;const replay=$('blackBoxReplay'),analysis=$('blackBoxAnalysis'),debrief=$('blackBoxDebrief');if(replay)replay.innerHTML=data.raw.length>1?`<div class="black-box-replay"><b>Replay disponible</b><p>${data.raw.length} positions GPS, source <strong>${esc(type)}</strong>. La trace brute est affichée séparément du tracé préparé.</p><button type="button" class="secondary" data-blackbox-replay="${id}">Lire le replay</button></div>`:'<p class="muted">Replay indisponible : trace GPS insuffisante.</p>';if(analysis)analysis.innerHTML=`<div class="black-box-analysis"><p><b>Qualité :</b> ${esc(m.quality.label)}${m.quality.accuracy_m===null?'':` · précision moyenne ${fmt(m.quality.accuracy_m,1)} m`}</p><p><b>Écart au tracé de référence :</b> ${m.deviation.average_m===null?'non calculable':`${fmt(m.deviation.average_m,1)} m en moyenne, ${fmt(m.deviation.max_m,1)} m maximum`}</p><p><b>Événements proposés :</b> ${m.pauses.length?'pauses à confirmer':'aucune hypothèse automatique'}. Toute proposition reste modifiable et soumise à validation humaine.</p></div>`;if(debrief)debrief.innerHTML=type==='coaching'?'<p class="muted">Le débrief Coaching conserve ses droits de rôle et son double aveugle. Ouvrez la session pour le modifier.</p>':'<p class="muted">Aucun débrief intelligent externe : la synthèse factuelle locale est disponible dans Résumé et Analyse.</p>';setBlackBoxTab('summary')}
 function libraryName(x){return x.activity_name||x.name||x.commune_depart||libraryTypeMeta(x._type).label}
 function libraryVisibility(x){const value=x._type==='coaching'?x.visibility_scope:x.visibility;return value==='friends'?'community':(value||'private')}
 function libraryVisibilityLabel(value){return value==='public'?'Public':value==='community'?'Communauté':'Privé'}
@@ -749,7 +769,7 @@ async function duplicateActivity(type,id){
  const {error}=await supabase.from(table).insert(copy);if(error)return alert('Duplication impossible : '+error.message);await Promise.all([refreshMine(),refreshTrainings()]);renderActivityLibrary();
 }
 async function openLibraryItem(type,id){
- if(type==='coaching')return openCoachingSession(id);
+ if(type==='coaching'){const row=libraryRow(type,id);if(row?.status==='ended'||row?.status==='cancelled')return showCoachingActivityDetail(id);return openCoachingSession(id)}
  if(type==='prepared')return editTrainingRoute(id);
  showActivityStats(id,type,'libraryPage');
 }
@@ -1055,7 +1075,10 @@ function showActivityStats(id,type,origin){
  $('activityDetailField').innerHTML=fieldAssessmentHTML(p);
  $('activityDetailAnalysis').innerHTML=activityAnalysisHTML(p,type);
  $('activityDetailObservation').innerHTML=p.observation?`<div class="detail-observation"><h3>Observation</h3><p>${esc(p.observation)}</p></div>`:'';
- showPage('activityDetailPage');setTimeout(()=>renderActivityDetailMap(p),100);
+ showPage('activityDetailPage');renderBlackBox(id,type);setTimeout(()=>renderActivityDetailMap(p),100);
+}
+function showCoachingActivityDetail(id){
+ const row=libraryRow('coaching',id);if(!row)return;const title=$('activityDetailTitle'),header=$('activityDetailHeader');if(title)title.textContent='Boîte noire et débrief Coaching';if(header)header.innerHTML=`<div class="detail-hero coaching-detail"><span>◎</span><div><small>COACHING</small><b>${esc(row.name||'Session Coaching')}</b><p>${esc(coachingStatusLabel(row.status))} • ${dateTimeFr(row.started_at||row.created_at)}</p></div></div>`;$('activityDetailStats').innerHTML='';$('activityDetailField').innerHTML='';$('activityDetailAnalysis').innerHTML='';$('activityDetailObservation').innerHTML='';showPage('activityDetailPage');renderBlackBox(id,'coaching');
 }
 function renderActivityDetailMap(p){
  const el=$('activityDetailMap');if(activityDetailMap){try{activityDetailMap.remove()}catch{}activityDetailMap=null}
@@ -2174,6 +2197,8 @@ $('libraryNewCoaching').onclick=()=>{showPage('coachingPage');setCoachingStage('
 $('libraryNewRoute').onclick=()=>{window.editingTrainingRouteId=null;showPage('plannerPage')};
 document.addEventListener('click',e=>{const target=e.target.closest('[data-library-filter]');if(!target)return;activityLibraryFilters.type=target.dataset.libraryFilter;$('libraryType').value=activityLibraryFilters.type;showPage('libraryPage')});
 $('compareActivities').onclick=compareActivities;
+document.querySelectorAll('[data-blackbox-tab]').forEach(button=>button.addEventListener('click',()=>setBlackBoxTab(button.dataset.blackboxTab)));
+document.addEventListener('click',event=>{const replay=event.target.closest('[data-blackbox-replay]');if(replay){event.preventDefault();setUiText('blackBoxReplay','Replay local prêt : utilisez la chronologie de la session pour parcourir les événements.')}});
 bindClick('resumeActiveSessionBtn',resumeActiveSession);bindClick('activeSessionDock',resumeActiveSession);
 document.querySelectorAll('[data-planner-mode]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-planner-mode]').forEach(x=>x.classList.toggle('active',x===b));if(b.dataset.plannerMode==='follow')togglePlannerFollow();else if(b.dataset.plannerMode==='gpx'){$('chooseGpxBtn').click();setPlannerSection('assistant')}else if(b.dataset.plannerMode==='draft'){const draft=readPlannerDraft();if(draft)initPlanner(draft);else $('plannerMsg').textContent='Aucun brouillon enregistré.'}else setPlannerSection('map')});
 

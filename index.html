@@ -319,6 +319,16 @@
     </div>
     <div class="card activity-detail-card">
       <div id="activityDetailHeader"></div>
+      <nav id="blackBoxTabs" class="black-box-tabs" aria-label="Analyse de l’activité">
+        <button type="button" class="active" data-blackbox-tab="summary">Résumé</button>
+        <button type="button" data-blackbox-tab="replay">Replay</button>
+        <button type="button" data-blackbox-tab="analysis">Analyse</button>
+        <button type="button" data-blackbox-tab="debrief">Débrief</button>
+      </nav>
+      <section id="blackBoxSummary" class="black-box-panel" data-blackbox-panel="summary"></section>
+      <section id="blackBoxReplay" class="black-box-panel hidden" data-blackbox-panel="replay"></section>
+      <section id="blackBoxAnalysis" class="black-box-panel hidden" data-blackbox-panel="analysis"></section>
+      <section id="blackBoxDebrief" class="black-box-panel hidden" data-blackbox-panel="debrief"></section>
       <div id="activityDetailMap" class="hidden"></div>
       <div id="activityDetailStats"></div>
       <div id="activityDetailField"></div>
@@ -757,7 +767,7 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1069"></script>
+<script type="module" src="./app.js?v=1074"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>
