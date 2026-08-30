@@ -1,0 +1,23 @@
+const fs=require('fs');
+const html=fs.readFileSync('index.html','utf8');
+const app=fs.readFileSync('app.js','utf8');
+const sw=fs.readFileSync('sw.js','utf8');
+
+const ids=[...html.matchAll(/\bid=["']([^"']+)["']/g)].map(m=>m[1]);
+const duplicates=[...new Set(ids.filter((id,i)=>ids.indexOf(id)!==i))];
+if(duplicates.length)throw new Error(`Identifiants dupliqués : ${duplicates.join(', ')}`);
+const pages=[...html.matchAll(/<section\s+id=["']([^"']+)["'][^>]*class=["'][^"']*\bpage\b[^"']*["']/g)].map(m=>m[1]);
+if(!pages.includes('homePage')||!pages.includes('libraryPage')||!pages.includes('coachingPage'))throw new Error('Pages principales V10.34 incomplètes');
+const targets=[...html.matchAll(/data-page=["']([^"']+)["']/g)].map(m=>m[1]);
+const missing=[...new Set(targets.filter(id=>!ids.includes(id)))];
+if(missing.length)throw new Error(`Destinations data-page absentes : ${missing.join(', ')}`);
+if(!/function\s+archiveLibraryItem\s*\(/.test(app)||!/function\s+boot\s*\(/.test(app))throw new Error('Fonctions de stabilisation absentes');
+const deleteFn=(app.match(/async function deleteLibraryItem[\s\S]*?(?=\n(?:async )?function |\nconst |\nlet |\nvar |$)/)||[''])[0];
+const bulkFn=(app.match(/async function deleteSelectedActivities[\s\S]*?(?=\n(?:async )?function |\nconst |\nlet |\nvar |$)/)||[''])[0];
+if(/\.from\(tables\[type\]\)\.delete\(/.test(deleteFn)||/\.from\(table\)\.delete\(/.test(bulkFn))throw new Error('Suppression physique encore accessible depuis la bibliothèque');
+if(!/Promise\.all\(bootTasks\.map/.test(app))throw new Error('Boot non isolé par module');
+const cache=sw.match(/const C='([^']+)'/);if(!cache||!/piste-community-v2065/.test(cache[1]))throw new Error('Cache V10.34.1 inattendu');
+if(!/app\.js\?v=1065/.test(html)||!/app\.js\?v=1065/.test(sw))throw new Error('Version app.js incohérente');
+for(const file of ['app.js','v2.js','sw.js'])if(!fs.existsSync(file))throw new Error(`Fichier manquant : ${file}`);
+if(/(service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_)/i.test([app,sw].join('\n')))throw new Error('Secret détecté');
+console.log(`Audit V10.34.1 OK : ${ids.length} IDs uniques, ${pages.length} pages, ${targets.length} destinations valides, bibliothèque sans suppression physique.`);
