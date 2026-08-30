@@ -752,3 +752,11 @@ body.v10-30-aurora{
 .coaching-terrain-command-bar #terrainFinishBtn::before{content:"";position:absolute;inset:0 auto 0 0;width:var(--finish-progress,0%);background:rgba(255,255,255,.2);pointer-events:none}
 .coaching-recenter.active{outline:2px solid var(--v2-green);outline-offset:2px}
 .coaching-live-weather b::before{content:"◌ ";color:var(--v2-cyan,#70dcff)}
+/* Écran noir et fin : mêmes dimensions, empilés sous la carte */
+#coachingLivePanel.active-terrain .coaching-terrain-command-bar{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+#coachingLivePanel.active-terrain #terrainPauseBtn{order:1;flex:1 1 calc(50% - 4px)}
+#coachingLivePanel.active-terrain #terrainPlusBtn{order:4;flex:1 1 calc(50% - 4px)}
+#coachingLivePanel.active-terrain #terrainBlackScreenBtn,#coachingLivePanel.active-terrain #terrainFinishBtn{flex:1 1 100%;width:100%;min-height:48px;box-sizing:border-box;border-radius:12px;font-size:12px}
+#coachingLivePanel.active-terrain #terrainBlackScreenBtn{order:2;background:linear-gradient(135deg,#26343a,#090d10 58%,#39464b);border:1px solid rgba(218,236,234,.45);color:#f4fbfa;box-shadow:0 0 0 1px rgba(112,220,255,.12),0 5px 16px rgba(0,0,0,.28)}
+#coachingLivePanel.active-terrain #terrainBlackScreenBtn:active{transform:translateY(1px);filter:brightness(1.2)}
+#coachingLivePanel.active-terrain #terrainFinishBtn{order:3}

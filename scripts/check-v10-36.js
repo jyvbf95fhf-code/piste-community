@@ -19,6 +19,6 @@ if(!/active-terrain[\s\S]*display:none!important/.test(require('fs').readFileSyn
 for(const token of ['draft','ready','placing','waiting','active','paused','ended','abandoned'])if(!app.includes(`'${token}'`))throw new Error(`État Terrain manquant : ${token}`);
 if(!/function\s+sendActiveCoachingPoint/.test(app)||!/function\s+beginWatch/.test(app))throw new Error('Séparation GPS Coaching/OPS absente');
 if((app.match(/navigator\.geolocation\.watchPosition/g)||[]).length<2)throw new Error('GPS des modules existants absent');
-if(!/const C='piste-community-v2070'/.test(sw)||!/app\.js\?v=1069/.test(html)||!/app\.js\?v=1069/.test(sw)||!/v2\.css\?v=2056/.test(html)||!/v2\.css\?v=2056/.test(sw))throw new Error('Cache V10.36 incohérent');
+if(!/const C='piste-community-v2071'/.test(sw)||!/app\.js\?v=1069/.test(html)||!/app\.js\?v=1069/.test(sw)||!/v2\.css\?v=2057/.test(html)||!/v2\.css\?v=2057/.test(sw))throw new Error('Cache V10.36 incohérent');
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté');
 console.log(`Contrôle V10.36 OK : ${ids.length} IDs uniques, ${pages.length} pages, ${destinations.length} destinations, moteur Terrain partagé présent.`);
