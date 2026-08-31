@@ -1,9 +1,9 @@
-const C='piste-community-v2076';
+const C='piste-community-v2077';
 const A=[
   './',
   './index.html',
   './styles.css?v=1027',
-  './v2.css?v=2059',
+  './v2.css?v=2060',
   './app.js?v=1076',
   './v2.js?v=2017',
   './config.js',
