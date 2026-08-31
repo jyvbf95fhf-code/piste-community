@@ -29,8 +29,10 @@ for(const marker of ['object','clue','danger','loss','recovery','note']){
 }
 
 if(/CENTRE DE GESTION/i.test(html))throw new Error('Le Centre de gestion doit être supprimé.');
+if(/>Comparer<|libraryCompare|data-compare-key|library-actions-menu/i.test(html+app+css))throw new Error('Comparer ou menu natif incompatible encore présent dans Mes pistes.');
+for(const token of ['library-actions-toggle','library-actions-panel','deleteSelectedActivities'])if(!(app+css).includes(token))throw new Error(`Interaction Mes pistes absente : ${token}`);
 if(!/data-blackbox-tab="report"/.test(html)||!/jspdf@2\.5\.2/.test(html))throw new Error('Onglet ou moteur PDF absent.');
-if(!/library-selection-mode/.test(css)||!/piste-community-v2075/.test(sw)||!/app\.js\?v=1075/.test(html+sw)||!/styles\.css\?v=1026/.test(html+sw)||!/v2\.css\?v=2058/.test(html+sw))throw new Error('Cache V10.38 incohérent.');
+if(!/library-selection-mode/.test(css)||!/piste-community-v2076/.test(sw)||!/app\.js\?v=1076/.test(html+sw)||!/styles\.css\?v=1027/.test(html+sw)||!/v2\.css\?v=2059/.test(html+sw))throw new Error('Cache V10.38 incohérent.');
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté.');
 
 console.log(`Contrôle V10.38 OK : ${ids.length} IDs uniques, OPS direct, sélection multiple et rapports PDF présents.`);

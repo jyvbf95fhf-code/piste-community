@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1026">
-<link rel="stylesheet" href="./v2.css?v=2058">
+<link rel="stylesheet" href="./styles.css?v=1027">
+<link rel="stylesheet" href="./v2.css?v=2059">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -439,13 +439,11 @@
 
   <section id="libraryPage" class="page">
     <div class="record-head library-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Mes pistes</h2><button id="librarySelectionToggle" class="secondary" type="button">Sélectionner</button></div>
+    <div id="libraryBulkBar" class="library-bulk-bar hidden"><label><input id="librarySelectAll" type="checkbox"> Tout sélectionner</label><span id="librarySelectionInfo">Aucune sélection</span><button id="archiveSelectedActivities" class="secondary" type="button" disabled>Archiver</button><button id="deleteSelectedActivities" class="danger-button" type="button" disabled>Supprimer</button></div>
     <div class="card library-toolbar">
       <div class="segmented three" aria-label="Affichage de la bibliothèque"><button class="active" data-library-view="list">☰ Liste</button><button data-library-view="calendar">▦ Calendrier</button><button data-library-view="map">🗺️ Carte</button></div>
       <div class="library-filters"><input id="librarySearch" type="search" placeholder="Nom, lieu, chien, étiquette…"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">OPS</option><option value="training">Entraînement</option><option value="coaching">Coaching</option><option value="prepared">Tracés préparés</option></select><select id="libraryStatus"><option value="active">Actives et terminées</option><option value="archived">Archivées</option><option value="all">Tous les statuts</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label></div>
-      <div id="libraryBulkBar" class="library-bulk-bar hidden"><label><input id="librarySelectAll" type="checkbox"> Tout sélectionner</label><span id="librarySelectionInfo">Aucune sélection</span><button id="archiveSelectedActivities" class="secondary" type="button" disabled>Archiver</button><button id="deleteSelectedActivities" class="danger-button" type="button" disabled>Supprimer</button></div>
-      <div class="library-compare-bar"><span id="libraryCompareInfo">Sélectionnez deux pistes pour les comparer.</span><button id="compareActivities" class="secondary" type="button" disabled>Comparer</button></div>
     </div>
-    <div id="activityLibraryCompare" class="library-comparison hidden"></div>
     <div id="activityLibraryList" class="activity-library"></div>
     <div id="activityLibraryCalendar" class="activity-calendar hidden"></div>
     <div id="activityLibraryMap" class="library-map hidden"></div>
@@ -784,7 +782,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1075"></script>
+<script type="module" src="./app.js?v=1076"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>
