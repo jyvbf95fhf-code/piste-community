@@ -11,8 +11,8 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
-<link rel="stylesheet" href="./styles.css?v=1025">
-<link rel="stylesheet" href="./v2.css?v=2057">
+<link rel="stylesheet" href="./styles.css?v=1027">
+<link rel="stylesheet" href="./v2.css?v=2060">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -107,6 +107,7 @@
     </div>
     <div class="card gps-card">
       <div class="live-map-shell"><div id="liveMap"></div><div class="live-map-actions"><button id="recenterLiveMapBtn" class="map-recenter hidden" type="button">⌖ Me localiser</button><button id="showFullLiveTrackBtn" class="map-recenter" type="button">↗ Voir tout</button></div></div>
+      <div id="operationalLiveWeather" class="operational-live-weather hidden" aria-live="polite"></div>
       <div class="gps-kpis">
         <div><strong id="liveDistance">0.00</strong><span>km</span></div>
         <div><strong id="liveDuration">00:00:00</strong><span>durée</span></div>
@@ -123,7 +124,7 @@
         <button id="stopGpsBtn" class="stop-btn" disabled>TERMINER</button>
       </div>
       <button id="fakeLockBtn" class="fake-lock-launch" type="button" disabled>🔒 Mode écran verrouillé</button>
-      <div class="field-marker-box"><div><b>Repères terrain</b><small id="fieldMarkerCount">0 repère</small></div><div class="quick-field-markers"><button data-field-marker="loss">❌ Perte</button><button data-field-marker="recovery">↩ Reprise</button><button data-field-marker="behavior">🐕 Comportement</button><button data-field-marker="direction">↗ Direction</button><button data-field-marker="clue">🔎 Indice</button><button data-field-marker="danger">⚠ Danger</button><button data-field-marker="note">📍 Note</button></div></div>
+      <div class="field-marker-box"><div><b>Repères terrain</b><small id="fieldMarkerCount">0 repère · appui long sur la carte</small></div><div class="quick-field-markers"><button data-field-marker="object">📦 Objet</button><button data-field-marker="clue">🔎 Indice</button><button data-field-marker="danger">⚠ Danger</button><button data-field-marker="loss">❌ Perte</button><button data-field-marker="recovery">↩ Reprise</button><button data-field-marker="note">📍 Note</button></div></div>
       <div class="gps-status-row"><span id="gpsStatusBadge" class="status-pill idle">Prêt</span><span id="offlineStatus" class="status-pill">Réseau : —</span><span id="savedStatus" class="status-pill">Sauvegarde locale : prête</span></div>
       <p class="small muted">Pendant le suivi, garde PISTE Community ouverte. Si le réseau coupe, le tracé continue d’être conservé localement.</p>
       <p id="gpsMsg" class="msg"></p>
@@ -324,11 +325,13 @@
         <button type="button" data-blackbox-tab="replay">Replay</button>
         <button type="button" data-blackbox-tab="analysis">Analyse</button>
         <button type="button" data-blackbox-tab="debrief">Débrief</button>
+        <button type="button" data-blackbox-tab="report">Rapport PDF</button>
       </nav>
       <section id="blackBoxSummary" class="black-box-panel" data-blackbox-panel="summary"></section>
       <section id="blackBoxReplay" class="black-box-panel hidden" data-blackbox-panel="replay"></section>
       <section id="blackBoxAnalysis" class="black-box-panel hidden" data-blackbox-panel="analysis"></section>
       <section id="blackBoxDebrief" class="black-box-panel hidden" data-blackbox-panel="debrief"></section>
+      <section id="blackBoxReport" class="black-box-panel hidden" data-blackbox-panel="report"></section>
       <div id="activityDetailMap" class="hidden"></div>
       <div id="activityDetailStats"></div>
       <div id="activityDetailField"></div>
@@ -435,15 +438,12 @@
   </section>
 
   <section id="libraryPage" class="page">
-    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Mes pistes</h2></div>
-    <div class="library-intro"><div><small>CENTRE DE GESTION</small><h3>Toutes vos activités au même endroit</h3><p>Consultez, modifiez, partagez, dupliquez, archivez ou supprimez vos pistes.</p></div><div class="library-create-actions"><button id="libraryNewTraining" class="primary" type="button">＋ Entraînement</button><button id="libraryNewOps" class="secondary" type="button">＋ OPS</button><button id="libraryNewCoaching" class="secondary" type="button">＋ Coaching</button><button id="libraryNewRoute" class="secondary" type="button">＋ Tracé préparé</button></div></div>
+    <div class="record-head library-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Mes pistes</h2><button id="librarySelectionToggle" class="secondary" type="button">Sélectionner</button></div>
+    <div id="libraryBulkBar" class="library-bulk-bar hidden"><label><input id="librarySelectAll" type="checkbox"> Tout sélectionner</label><span id="librarySelectionInfo">Aucune sélection</span><button id="archiveSelectedActivities" class="secondary" type="button" disabled>Archiver</button><button id="deleteSelectedActivities" class="danger-button" type="button" disabled>Supprimer</button></div>
     <div class="card library-toolbar">
       <div class="segmented three" aria-label="Affichage de la bibliothèque"><button class="active" data-library-view="list">☰ Liste</button><button data-library-view="calendar">▦ Calendrier</button><button data-library-view="map">🗺️ Carte</button></div>
       <div class="library-filters"><input id="librarySearch" type="search" placeholder="Nom, lieu, chien, étiquette…"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">OPS</option><option value="training">Entraînement</option><option value="coaching">Coaching</option><option value="prepared">Tracés préparés</option></select><select id="libraryStatus"><option value="active">Actives et terminées</option><option value="archived">Archivées</option><option value="all">Tous les statuts</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label></div>
-      <div class="library-bulk-bar"><label><input id="librarySelectAll" type="checkbox"> Tout sélectionner</label><span id="librarySelectionInfo">Aucune sélection</span><button id="archiveSelectedActivities" class="secondary" type="button" disabled>Archiver</button><button id="deleteSelectedActivities" class="danger-button" type="button" disabled>Supprimer</button></div>
-      <div class="library-compare-bar"><span id="libraryCompareInfo">Sélectionnez deux pistes pour les comparer.</span><button id="compareActivities" class="secondary" type="button" disabled>Comparer</button></div>
     </div>
-    <div id="activityLibraryCompare" class="library-comparison hidden"></div>
     <div id="activityLibraryList" class="activity-library"></div>
     <div id="activityLibraryCalendar" class="activity-calendar hidden"></div>
     <div id="activityLibraryMap" class="library-map hidden"></div>
@@ -746,6 +746,20 @@
   </div>
 </div>
 
+<div id="fieldMarkerDialog" class="guided-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="fieldMarkerDialogTitle">
+  <form id="fieldMarkerForm" class="guided-card field-marker-dialog">
+    <small>REPÈRE OPS</small><h2 id="fieldMarkerDialogTitle">Ajouter un repère</h2>
+    <div class="form-grid">
+      <label>Type<select id="fieldMarkerType"><option value="object">📦 Objet</option><option value="clue">🔎 Indice</option><option value="danger">⚠ Danger</option><option value="loss">❌ Perte</option><option value="recovery">↩ Reprise</option><option value="note">📍 Note</option></select></label>
+      <label>Nom facultatif<input id="fieldMarkerName" maxlength="80" placeholder="Ex. objet retrouvé"></label>
+      <label class="full">Commentaire facultatif<textarea id="fieldMarkerComment" rows="3" maxlength="1200"></textarea></label>
+      <label class="full">Photo facultative<input id="fieldMarkerPhoto" type="file" accept="image/*" capture="environment"></label>
+    </div>
+    <p id="fieldMarkerMeta" class="small muted"></p><img id="fieldMarkerPhotoPreview" class="marker-photo-preview hidden" alt="Aperçu de la photo">
+    <div class="guided-actions"><button id="deleteFieldMarkerBtn" class="danger-button hidden" type="button">Supprimer</button><button id="cancelFieldMarkerBtn" class="secondary" type="button">Annuler</button><button class="primary" type="submit">Enregistrer</button></div>
+  </form>
+</div>
+
 <div id="deleteAccountDialog" class="guided-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="deleteAccountTitle">
   <div class="guided-card delete-card">
     <small>ZONE SENSIBLE</small><h2 id="deleteAccountTitle">Supprimer définitivement le compte ?</h2>
@@ -767,7 +781,8 @@
 <script src="./config.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
-<script type="module" src="./app.js?v=1074"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script type="module" src="./app.js?v=1076"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>
