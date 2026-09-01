@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1027">
-<link rel="stylesheet" href="./v2.css?v=2062">
+<link rel="stylesheet" href="./v2.css?v=2063">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -488,8 +488,15 @@
   <section id="plannerPage" class="page">
     <div class="record-head"><button class="back" data-page="libraryPage">‹ Mes pistes</button><h2>🗺️ Créateur de tracé</h2></div>
     <div class="card planner-card">
+      <div class="planner-quick-start" aria-label="Création rapide du tracé">
+        <div><small class="section-kicker">V10.39 · CRÉATEUR TERRAIN</small><h3 id="plannerContextTitle">Préparer une piste</h3><p id="plannerContextHelp">Le même tracé peut servir en Entraînement, Coaching ou OPS.</p></div>
+        <div class="planner-contexts" role="group" aria-label="Utilisation du tracé"><button type="button" class="active" data-planner-context="training">🐕 Entraînement</button><button type="button" data-planner-context="coaching">🎧 Coaching</button><button type="button" data-planner-context="operational">🔵 OPS</button></div>
+        <div class="planner-primary-modes"><button id="plannerFreeMode" class="primary" type="button">✏️ Dessiner librement</button><button id="plannerRouteMode" class="secondary" type="button">🥾 Suivre chemins / rues</button><button id="plannerAdvancedToggle" class="ghost-dark" type="button" aria-expanded="false">Outils avancés</button></div>
+        <div id="plannerNetworkState" class="planner-network-state" role="status">● En ligne · sauvegarde locale active</div>
+      </div>
       <!-- V10.26_ASSISTANT_GPX -->
-      <nav class="planner-section-tabs" aria-label="Fonctions du créateur de tracé">
+      <div id="plannerAdvancedArea" class="planner-advanced-area hidden">
+      <nav class="planner-section-tabs" aria-label="Fonctions avancées du créateur de tracé">
         <button type="button" class="active" data-planner-section="map" aria-selected="true"><span>🗺️</span><b>Carte</b><small>Dessiner et ajuster</small></button>
         <button type="button" data-planner-section="assistant" aria-selected="false"><span>✨</span><b>Assistant</b><small>Suggérer ou importer</small></button>
         <button type="button" data-planner-section="odor" aria-selected="false"><span>🌬️</span><b>Intelligence olfactive</b><small>Météo et couloir</small></button>
@@ -548,6 +555,7 @@
         <p id="odorSummary" class="odor-summary">Simulation désactivée.</p>
         <p class="odor-disclaimer">Modèle pédagogique indicatif : il estime une zone cohérente à partir des paramètres saisis. Il ne mesure pas l’odeur et ne remplace ni l’observation du terrain ni l’analyse du coach.</p>
       </details>
+      </div>
       <div class="planner-routing-bar" aria-label="Mode de calcul du tracé"><button id="routingTrailBtn" class="active" type="button">🥾 Chemins</button><button id="routingStreetBtn" type="button">🚶 Rues</button><button id="routingFreeBtn" type="button">✏️ Libre</button><span id="routingStatus">Les nouveaux segments suivront les voies cartographiées.</span></div>
       <div id="plannerMap"></div>
       <div id="plannerScenarioList" class="scenario-list"></div>
@@ -558,11 +566,16 @@
         <button id="clearPlanner" class="secondary">Effacer</button>
         <button id="updateTrainingRoute" class="secondary hidden">Mettre à jour l’original</button>
         <button id="saveTrainingRoute" class="primary">💾 Enregistrer la préparation</button>
+        <button id="saveAndStartRoute" class="primary">▶ Démarrer avec mon chien</button>
       </div>
       <small id="plannerDraftStatus" class="muted">Le brouillon est sauvegardé automatiquement sur cet appareil.</small>
       <p id="plannerMsg" class="msg"></p>
     </div>
   </section>
+
+  <div id="plannerLongPressMenu" class="planner-marker-sheet hidden" role="dialog" aria-modal="true" aria-labelledby="plannerMarkerTitle">
+    <div class="planner-marker-sheet-card"><div class="planner-marker-sheet-head"><div><small class="section-kicker">REPÈRE TERRAIN</small><h3 id="plannerMarkerTitle">Ajouter à cet endroit</h3></div><button id="closePlannerMarkerMenu" class="dialog-close" type="button" aria-label="Fermer">×</button></div><div class="planner-marker-choices"><button type="button" data-planner-marker="object">📦 Objet</button><button type="button" data-planner-marker="clue">🔎 Indice</button><button type="button" data-planner-marker="danger">⚠️ Danger</button><button type="button" data-planner-marker="pause">⏳ Attente</button><button type="button" data-planner-marker="note">📍 Note</button></div><p class="small muted">Le repère reste modifiable et déplaçable sur la carte.</p></div>
+  </div>
 
   <section id="coachingPage" class="page">
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🎧 Coaching</h2></div>
@@ -782,7 +795,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1078"></script>
+<script type="module" src="./app.js?v=1079"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>
