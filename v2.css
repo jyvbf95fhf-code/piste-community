@@ -540,6 +540,7 @@ body.v10-30-aurora{
 .v10-30-aurora .v2-action-buttons .v10-30-quick>span:first-child{font-size:22px}.v10-30-aurora .v2-action-buttons .v10-30-quick b{display:block;font-size:12px;letter-spacing:.04em}.v10-30-aurora .v2-action-buttons .v10-30-quick small{display:block;margin-top:3px;color:#a9b9c5;font-size:9px;line-height:1.2}
 .v10-30-aurora .v10-30-quick.ops{background:linear-gradient(145deg,#126988,#17415d)}
 .v10-30-aurora .v10-30-quick.activity{background:linear-gradient(145deg,#176f5d,#16453f);margin:0!important}
+.v10-30-aurora .v10-30-quick.planner{background:linear-gradient(145deg,#3d5578,#273a5b);margin:0!important}
 .v10-30-aurora .v10-30-quick.coaching{background:linear-gradient(145deg,#624ca3,#352f6f)}
 .v10-30-aurora .v2-tools-card .module-icon{display:grid;place-items:center;width:38px;height:38px;margin:auto auto 7px;border-radius:13px;background:linear-gradient(145deg,rgba(39,183,255,.12),rgba(169,134,255,.12));filter:none}
 .v10-30-aurora .bottom-nav button.v2-nav-active{color:#72dcff;background:linear-gradient(145deg,rgba(39,183,255,.13),rgba(169,134,255,.1))}
