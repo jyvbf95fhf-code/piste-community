@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1027">
-<link rel="stylesheet" href="./v2.css?v=2063">
+<link rel="stylesheet" href="./v2.css?v=2064">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -72,7 +72,7 @@
   <section id="homePage" class="page active">
     <div class="v8-hero">
       <div class="hero-brand"><span id="heroDogPhoto" class="hero-dog hero-dog-photo">🐕</span><div><small>PISTE COMMUNITY</small><b id="helloUser">Bonjour</b><span id="heroDogLine">Prêt pour le terrain.</span></div></div>
-      <button id="openTerrainHomeBtn" class="start-main v8-start"><span class="start-dog">◎</span><span><b>ENTRAÎNEMENT</b><small>Démarrer une piste libre</small></span></button>
+      <div class="home-primary-actions"><button id="openTerrainHomeBtn" class="start-main v8-start"><span class="start-dog">◎</span><span><b>ENTRAÎNEMENT</b><small>Démarrer une piste libre</small></span></button><button id="openPlannerHomeBtn" class="start-main v8-start planner-home-start" type="button"><span class="start-dog">🗺️</span><span><b>CRÉATEUR DE TRACÉ</b><small>Préparer avant la session</small></span></button></div>
     </div>
 
     <div id="resumeBanner" class="resume-banner hidden"><div><b>Enregistrement interrompu détecté</b><span id="resumeInfo">Une activité locale peut être reprise.</span></div><div class="resume-actions"><button id="resumeDraftBtn" class="primary">Reprendre</button><button id="discardDraftBtn" class="secondary">Effacer</button></div></div>
@@ -489,31 +489,21 @@
     <div class="record-head"><button class="back" data-page="libraryPage">‹ Mes pistes</button><h2>🗺️ Créateur de tracé</h2></div>
     <div class="card planner-card">
       <div class="planner-quick-start" aria-label="Création rapide du tracé">
-        <div><small class="section-kicker">V10.39 · CRÉATEUR TERRAIN</small><h3 id="plannerContextTitle">Préparer une piste</h3><p id="plannerContextHelp">Le même tracé peut servir en Entraînement, Coaching ou OPS.</p></div>
-        <div class="planner-contexts" role="group" aria-label="Utilisation du tracé"><button type="button" class="active" data-planner-context="training">🐕 Entraînement</button><button type="button" data-planner-context="coaching">🎧 Coaching</button><button type="button" data-planner-context="operational">🔵 OPS</button></div>
-        <div class="planner-primary-modes"><button id="plannerFreeMode" class="primary" type="button">✏️ Dessiner librement</button><button id="plannerRouteMode" class="secondary" type="button">🥾 Suivre chemins / rues</button><button id="plannerAdvancedToggle" class="ghost-dark" type="button" aria-expanded="false">Outils avancés</button></div>
+        <div><small class="section-kicker">V10.39 · CRÉATEUR TERRAIN</small><h3 id="plannerContextTitle">Préparer une piste</h3><p id="plannerContextHelp">Prépare un tracé pour un entraînement ou une session Coaching.</p></div>
+        <div class="planner-contexts" role="group" aria-label="Utilisation du tracé"><button type="button" class="active" data-planner-context="training">🐕 Entraînement</button><button type="button" data-planner-context="coaching">🎧 Coaching</button></div>
+        <div class="planner-primary-modes"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="plannerAdvancedToggle" class="ghost-dark" type="button" aria-expanded="false">Outils avancés</button></div>
+        <span id="plannerLocationStatus" class="small muted">Position non demandée</span>
         <div id="plannerNetworkState" class="planner-network-state" role="status">● En ligne · sauvegarde locale active</div>
       </div>
       <!-- V10.26_ASSISTANT_GPX -->
       <div id="plannerAdvancedArea" class="planner-advanced-area hidden">
       <nav class="planner-section-tabs" aria-label="Fonctions avancées du créateur de tracé">
-        <button type="button" class="active" data-planner-section="map" aria-selected="true"><span>🗺️</span><b>Carte</b><small>Dessiner et ajuster</small></button>
         <button type="button" data-planner-section="assistant" aria-selected="false"><span>✨</span><b>Assistant</b><small>Suggérer ou importer</small></button>
         <button type="button" data-planner-section="odor" aria-selected="false"><span>🌬️</span><b>Intelligence olfactive</b><small>Météo et couloir</small></button>
       </nav>
-      <div class="planner-top">
-        <label>Nom du tracé
-          <input id="routeName" maxlength="80" placeholder="Ex. Forêt 3 km – angles">
-        </label>
-        <div class="planner-distance"><small>DISTANCE PRÉVUE</small><strong id="plannedDistance">0.00 km</strong></div>
-      </div>
       <div id="terrainPlannerStatus" class="terrain-common-bar" role="status"><span class="terrain-state-dot"></span><span><b>Terrain commun</b><small>Préparation · brouillon local par utilisateur</small></span><strong id="terrainPlannerAge">Âge : —</strong></div>
-      <p class="small muted">Choisis « Tracé », puis touche la carte pour dessiner. Choisis ensuite un signe pour scénariser la piste.</p>
-      <div id="plannerTools" class="planner-tools" aria-label="Outils de création du scénario">
-        <button class="active" data-planner-tool="route">〰️ Tracé</button><button data-planner-tool="pause">⏳ Attente</button><button data-planner-tool="object">📦 Objet</button><button data-planner-tool="direction">↪️ Direction</button><button data-planner-tool="crossing">🔀 Croisement</button><button data-planner-tool="contamination">👥 Contamination</button><button data-planner-tool="danger">⚠️ Danger</button><button data-planner-tool="subject">👤 Personne</button><button data-planner-tool="note">📍 Note</button>
-      </div>
       <div class="planner-search-row"><input id="plannerSearchInput" maxlength="120" placeholder="Rechercher une commune ou une adresse"><button id="plannerSearchBtn" class="secondary" type="button">Rechercher</button></div>
-      <div class="planner-location-row"><button id="locatePlannerBtn" class="secondary" type="button">◎ Me localiser</button><button id="followPlannerBtn" class="secondary" type="button">⌖ Suivre</button><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button><span id="plannerLocationStatus" class="small muted">Position non demandée</span></div>
+      <div class="planner-location-row"><button id="fullscreenPlannerBtn" class="secondary" type="button">⛶ Plein écran</button></div>
       <div class="planner-mode-guide"><button class="active" data-planner-mode="draw"><span>1</span><b>Dessiner</b><small>Points et chemins</small></button><button data-planner-mode="follow"><span>2</span><b>Marcher</b><small>GPS en direct</small></button><button data-planner-mode="gpx"><span>3</span><b>Importer</b><small>Fichier GPX</small></button><button data-planner-mode="draft"><span>4</span><b>Brouillon</b><small>Reprendre</small></button></div>
       <details id="plannerAssistantPanel" class="route-suggestion-card planner-feature-panel" open>
         <summary>✨ Assistant de tracé <small>Nouvelle proposition</small></summary>
@@ -559,10 +549,10 @@
       <div class="planner-routing-bar" aria-label="Mode de calcul du tracé"><button id="routingTrailBtn" class="active" type="button">🥾 Chemins</button><button id="routingStreetBtn" type="button">🚶 Rues</button><button id="routingFreeBtn" type="button">✏️ Libre</button><span id="routingStatus">Les nouveaux segments suivront les voies cartographiées.</span></div>
       <div id="plannerMap"></div>
       <div id="plannerScenarioList" class="scenario-list"></div>
+      <div class="planner-finalize"><label>Nom du tracé<input id="routeName" maxlength="80" placeholder="Ex. Forêt 3 km – angles"></label><div class="planner-distance"><small>DISTANCE PRÉVUE</small><strong id="plannedDistance">0.00 km</strong></div></div>
       <div class="planner-actions">
         <button id="undoPlannerPoint" class="secondary">↶ Annuler le dernier point</button>
         <button id="redoPlannerPoint" class="secondary">↷ Rétablir</button>
-        <button id="navigatePlannerStart" class="secondary">🚗 Rejoindre le départ</button>
         <button id="clearPlanner" class="secondary">Effacer</button>
         <button id="updateTrainingRoute" class="secondary hidden">Mettre à jour l’original</button>
         <button id="saveTrainingRoute" class="primary">💾 Enregistrer la préparation</button>
@@ -795,7 +785,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1079"></script>
+<script type="module" src="./app.js?v=1080"></script>
 <script src="./v2.js?v=2017"></script>
 </body>
 </html>

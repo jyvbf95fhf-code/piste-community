@@ -2,12 +2,12 @@
 
 ## Périmètre
 
-- Créateur Terrain commun à Entraînement, Coaching et OPS.
-- Accès rapide au tracé libre et au suivi des chemins/rues.
+- Créateur de tracé accessible depuis l’accueil et commun à Entraînement et Coaching.
+- Barre flottante Chemins / Rues / Libre conservée avec la carte.
 - Ancien assistant conservé dans « Outils avancés » comme solution de repli.
 - Appui long tactile pour ajouter Objet, Indice, Danger, Attente ou Note.
 - Brouillon local enrichi et reprise après fermeture, mise en veille ou perte réseau.
-- Démarrage avec le tracé préparé en Entraînement ou OPS et retour correct vers Coaching.
+- Démarrage avec le tracé préparé en Entraînement et retour correct vers Coaching.
 
 ## Contrôles automatiques
 
@@ -25,16 +25,17 @@ git diff --check
 
 ## Tests manuels obligatoires
 
-1. Sur ancien iPhone/Safari, ouvrir le créateur depuis Entraînement, Coaching puis OPS.
+1. Sur ancien iPhone/Safari, ouvrir le créateur depuis l’accueil, Entraînement puis Coaching.
 2. Dessiner librement, déplacer et supprimer un point, annuler puis rétablir.
 3. Faire un appui long de 650 ms sur la carte et ajouter chacun des cinq repères.
-4. Vérifier que déplacer la carte n’ouvre pas le menu d’appui long.
+4. Vérifier que déplacer la carte n’ouvre pas le menu et que l’appui long n’ajoute aucun point de tracé parasite.
 5. Passer hors réseau, ajouter des points libres, fermer l’application puis reprendre le brouillon.
 6. Revenir en ligne et vérifier que le routage chemins/rues redevient utilisable.
 7. Importer un GPX et vérifier que l’ancien assistant reste accessible dans les outils avancés.
 8. Enregistrer depuis Coaching : retour dans la préparation avec le tracé sélectionné.
-9. Démarrer avec mon chien depuis Entraînement puis OPS : tracé préparé visible pendant la session.
-10. Vérifier les zones tactiles, débordements et zones sûres en mode portrait avec faible luminosité.
+9. En Entraînement, vérifier les deux actions Enregistrer et Démarrer avec mon chien. En Coaching, vérifier que seule l’action de retour vers Coaching est proposée.
+10. Vérifier que le nom du tracé est placé juste avant les actions, que Rejoindre le départ et les anciennes barres d’objets sont absents.
+11. Vérifier que la navigation inférieure ne masque plus la carte, le nom ou les actions en mode portrait.
 
 ## Limites assumées
 
