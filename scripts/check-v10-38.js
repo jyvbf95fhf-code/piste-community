@@ -32,7 +32,7 @@ if(/CENTRE DE GESTION/i.test(html))throw new Error('Le Centre de gestion doit ê
 if(/>Comparer<|libraryCompare|data-compare-key|library-actions-menu/i.test(html+app+css))throw new Error('Comparer ou menu natif incompatible encore présent dans Mes pistes.');
 for(const token of ['library-actions-toggle','library-actions-panel','deleteSelectedActivities'])if(!(app+css).includes(token))throw new Error(`Interaction Mes pistes absente : ${token}`);
 if(!/data-blackbox-tab="report"/.test(html)||!/jspdf@2\.5\.2/.test(html))throw new Error('Onglet ou moteur PDF absent.');
-if(!/library-selection-mode/.test(css)||!/piste-community-v2078/.test(sw)||!/app\.js\?v=1077/.test(html+sw)||!/styles\.css\?v=1027/.test(html+sw)||!/v2\.css\?v=2061/.test(html+sw))throw new Error('Cache V10.38 incohérent.');
+if(!/library-selection-mode/.test(css)||!/piste-community-v2079/.test(sw)||!/app\.js\?v=1078/.test(html+sw)||!/styles\.css\?v=1027/.test(html+sw)||!/v2\.css\?v=2062/.test(html+sw))throw new Error('Cache V10.38 incohérent.');
 if(!/activity-analysis-card \.analysis-title b/.test(fs.readFileSync('v2.css','utf8'))||!/activity-analysis-card \.analysis-metric-grid small/.test(fs.readFileSync('v2.css','utf8')))throw new Error('Contraste de l’analyse détaillée absent.');
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté.');
 

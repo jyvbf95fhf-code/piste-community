@@ -611,7 +611,7 @@ body.v10-30-aurora{
 
 /* V10.24 — cartographie olfactive premium */
 +.leaflet-overlay-pane .odor-zone{mix-blend-mode:multiply}.leaflet-overlay-pane .odor-zone-inner{filter:drop-shadow(0 1px 2px rgba(84,118,61,.16))}.leaflet-overlay-pane .odor-zone-outer{filter:blur(.15px)}
-.leaflet-overlay-pane .map-route-planned{filter:drop-shadow(0 1px 1px rgba(34,55,29,.24))}.leaflet-overlay-pane .map-route-trace{filter:drop-shadow(0 1px 1px rgba(91,50,24,.2))}.leaflet-overlay-pane .map-route-actual{filter:drop-shadow(0 0 3px rgba(45,142,208,.42))}
+.leaflet-overlay-pane .map-route-planned{filter:drop-shadow(0 1px 1px rgba(34,55,29,.24))}.leaflet-overlay-pane .map-route-trace{filter:drop-shadow(0 1px 1px rgba(91,50,24,.2))}.leaflet-overlay-pane .map-route-actual{filter:drop-shadow(0 0 4px rgba(22,141,226,.68))}.leaflet-overlay-pane .coaching-driver-trail{stroke:#168de2;stroke-width:7;stroke-opacity:1}
 .coaching-layer-controls{gap:6px!important;padding:8px!important;border:1px solid rgba(225,238,228,.12)!important;border-radius:14px!important;background:rgba(7,19,24,.9)!important;box-shadow:0 8px 22px rgba(0,0,0,.2)!important;backdrop-filter:blur(9px)}
 .coaching-layer-controls label{padding:7px 9px!important;border-radius:9px!important;background:rgba(255,255,255,.045)!important;color:#dce6e1!important;font-size:11px!important;font-weight:750!important}.coaching-layer-controls input{accent-color:#8faf62}
 .coaching-legend{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin-top:9px!important}.coaching-legend span{padding:6px 9px!important;border:1px solid var(--v2-line)!important;border-radius:999px!important;background:rgba(10,24,30,.76)!important;color:#aebbb7!important;font-size:10px!important}
