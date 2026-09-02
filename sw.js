@@ -1,10 +1,10 @@
-const C='piste-community-v2082';
+const C='piste-community-v2083';
 const A=[
   './',
   './index.html',
   './styles.css?v=1027',
   './v2.css?v=2065',
-  './app.js?v=1081',
+  './app.js?v=1082',
   './v2.js?v=2018',
   './config.js',
   './manifest.webmanifest',
@@ -18,3 +18,4 @@ self.addEventListener('fetch',e=>{
  if(e.request.mode==='navigate'){e.respondWith(Promise.race([fetch(e.request,{cache:'no-store'}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))]).then(r=>{const x=r.clone();caches.open(C).then(c=>c.put('./',x));return r}).catch(()=>caches.match('./')));return}
  e.respondWith(caches.match(e.request).then(cached=>{const fresh=fetch(e.request,{cache:'no-store'}).then(r=>{if(r.ok){const x=r.clone();caches.open(C).then(c=>c.put(e.request,x))}return r}).catch(()=>cached);return cached||fresh}))
 });
+self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs[0];if(c){c.focus();c.postMessage({type:'coaching-notification-click'})}else{return self.clients.openWindow('./')}}))});
