@@ -762,6 +762,7 @@ body.v10-30-aurora{
 .coaching-terrain-command-bar #terrainFinishBtn::before{content:"";position:absolute;inset:0 auto 0 0;width:var(--finish-progress,0%);background:rgba(255,255,255,.2);pointer-events:none}
 #startLayingBtn,#finishLayingBtn{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 #startLayingBtn.holding,#finishLayingBtn.holding{filter:brightness(1.14);transform:translateY(1px);box-shadow:0 0 0 2px rgba(159,189,101,.42),0 8px 24px rgba(159,189,101,.2)}
+#coachingHoldDebug{display:block;min-height:1.2em;margin-top:4px;font-size:11px;line-height:1.35;color:var(--v2-cyan,#70dcff);overflow-wrap:anywhere}
 .coaching-recenter.active{outline:2px solid var(--v2-green);outline-offset:2px}
 .coaching-live-weather b::before{content:"◌ ";color:var(--v2-cyan,#70dcff)}
 /* Écran noir et fin : mêmes dimensions, empilés sous la carte */
