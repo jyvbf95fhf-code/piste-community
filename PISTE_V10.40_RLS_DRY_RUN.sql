@@ -112,16 +112,26 @@ as $$ declare r public.coaching_sessions; role_name text; begin
   return r;
 end $$;
 
-create or replace function public.finish_coaching_session(p_session_id uuid)
-returns public.coaching_sessions language plpgsql security definer set search_path = ''
+create or replace function private.finish_coaching_session(p_session_id uuid)
+returns boolean language plpgsql security definer set search_path = ''
 as $$ declare r public.coaching_sessions; begin
+  if (select auth.uid()) is null then raise exception 'Authentification requise'; end if;
   select * into r from public.coaching_sessions where id=p_session_id for update;
-  if r.workflow_version<>2 then raise exception 'Session legacy : utilisez le parcours historique'; end if;
+  if r.id is null then raise exception 'Session introuvable'; end if;
   if r.owner_id<>(select auth.uid()) then raise exception 'Seul le créateur peut clôturer la session'; end if;
-  if r.status<>'live' or r.phase<>'completed' then raise exception 'La fin normale exige la phase completed'; end if;
-  perform set_config('piste.v1040_transition','on',true); update public.coaching_sessions set status='ended', phase='completed', ended_at=coalesce(ended_at,now()) where id=r.id returning * into r;
-  return r;
+  if coalesce(r.workflow_version,1)>=2 then
+    if r.status<>'live' or r.phase<>'completed' then raise exception 'La fin normale exige la phase completed'; end if;
+  elsif r.status<>'live' then
+    raise exception 'Session legacy non active';
+  end if;
+  perform set_config('piste.v1040_transition','on',true);
+  update public.coaching_sessions set status='ended', phase=case when coalesce(r.workflow_version,1)>=2 then 'completed' else phase end, ended_at=coalesce(ended_at,now()) where id=r.id;
+  return true;
 end $$;
+
+create or replace function public.finish_coaching_session(p_session_id uuid)
+returns boolean language sql security definer set search_path = ''
+as $$ select private.finish_coaching_session(p_session_id) $$;
 
 revoke execute on function public.start_coaching_laying(uuid) from public, anon;
 revoke execute on function public.finish_coaching_laying(uuid) from public, anon;
