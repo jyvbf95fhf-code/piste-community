@@ -21,7 +21,7 @@ const checks=[
  ['release modal et historique',/releaseNotesModal/.test(html)&&/releaseNotesHistory/.test(html)&&/showReleaseNotesIfNeeded/.test(app)],
  ['version lue une fois',/RELEASE_SEEN_KEY/.test(app)&&/acknowledgeReleaseNotes/.test(app)],
  ['SQL DRY RUN/APPLY',fs.existsSync('PISTE_V10.42_RELEASE_NOTES_DRY_RUN.sql')&&fs.existsSync('PISTE_V10.42_RELEASE_NOTES_APPLY.sql')],
- ['cache PWA V10.42',/piste-community-v2094/.test(sw)&&/app\.js\?v=1042-6/.test(sw+html)&&/v2\.css\?v=2067/.test(sw+html)]
+ ['cache PWA V10.42',/piste-community-v2095/.test(sw)&&/app\.js\?v=1042-7/.test(sw+html)&&/v2\.css\?v=2067/.test(sw+html)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}
 if(!ok)process.exit(1);console.log('\nV10.42 — contrôles statiques terminés. Les appels météo et la persistance serveur nécessitent validation terrain/SQL.');
