@@ -48,6 +48,8 @@ const useful=x=>x.resultat==="Personne retrouvée par le chien"||x.resultat==="O
 const visibilityLabel=v=>v==="friends"?"Amis":v==="community"?"Communauté":v==="public"?"Public":"Privé";
 const pad=n=>String(n).padStart(2,'0');
 const formatExactDuration=ms=>{ms=Math.max(0,Number(ms)||0);const total=Math.floor(ms/1000),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return `${h?h+' h ':''}${pad(m)} min ${pad(s)} s`};
+function isOperationalRecordMode(mode=recordMode){return mode==='piste'||mode==='operational'}
+function isTerrainOlfactionMode(mode=recordMode){return isOperationalRecordMode(mode)||mode==='training'}
 function formatOperationalTrackAge(ms){if(!Number.isFinite(Number(ms))||Number(ms)<0)return '—';const total=Math.floor(Number(ms)/60000),days=Math.floor(total/1440),hours=Math.floor(total%1440/60),minutes=total%60;return days?`${days} j ${pad(hours)} h ${pad(minutes)} min`:hours?`${hours} h ${pad(minutes)} min`:`${minutes} min`}
 const msDuration=()=>TerrainEngine.activeDuration(gps);
 const TERRAIN_STATES=Object.freeze(['draft','ready','placing','waiting','active','paused','ended','abandoned']);
@@ -69,8 +71,8 @@ function updateTerrainCommonStatus(){
  setUiText('terrainLiveState',labels[state]||'Terrain');
  const activeSeconds=Math.floor(TerrainEngine.activeDuration(gps)/1000),activeClock=`${pad(Math.floor(activeSeconds/60))}:${pad(activeSeconds%60)}`;
  setUiText('terrainActiveDuration',`Actif : ${activeClock}`);
- const reference=recordMode==='operational'||recordMode==='training'?operationalTrackAgeReference():(activeCoachingSession?.track_finished_at||activeCoachingSession?.created_at||null),ageMs=recordMode==='operational'||recordMode==='training'?getOperationalTrackAgeMs():(reference?TerrainEngine.ageMs(reference):null);
- if(recordMode==='operational'||recordMode==='training'){const future=reference&&new Date(reference).getTime()>Date.now();setUiText('opsAgeDisplay',future?'Heure future — à corriger':formatOperationalTrackAge(ageMs));setUiText('opsDisappearanceDisplay',formatTerrainDisappearance(reference));}
+ const reference=isTerrainOlfactionMode()?operationalTrackAgeReference():(activeCoachingSession?.track_finished_at||activeCoachingSession?.created_at||null),ageMs=isTerrainOlfactionMode()?getOperationalTrackAgeMs():(reference?TerrainEngine.ageMs(reference):null);
+ if(isTerrainOlfactionMode()){const future=reference&&new Date(reference).getTime()>Date.now();setUiText('opsAgeDisplay',future?'Heure future — à corriger':formatOperationalTrackAge(ageMs));setUiText('opsDisappearanceDisplay',formatTerrainDisappearance(reference));}
  setUiText('terrainPlannerAge',plannerPoints.length?`Points : ${plannerPoints.length}`:'Âge : —');
 }
 function coachingWeatherPoint(){const p=coachingOwnPosition||coachingDeparture();return p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))?{lat:Number(p.lat),lon:Number(p.lon)}:null}
