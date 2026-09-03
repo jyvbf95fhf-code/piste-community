@@ -14,6 +14,7 @@ const checks=[
  ['couloir estimé OPS',/Couloir olfactif estimé/.test(app+html)&&/operationalCorridorVisible/.test(app)],
  ['âge OPS raccordé',/formatOperationalTrackAge/.test(app)&&/id="opsAgeDisplay"/.test(html)&&!/Âge actuel de la piste : \$\{fmt\(operationalTrackAgeHours\(\),1\)/.test(app)],
  ['âge OPS source unique',/function getOperationalTrackAgeMs\(/.test(app)&&/getOperationalTrackAgeMs\(\)/.test(app)&&!/id="terrainLiveAge"/.test(html)],
+ ['heure validée conservée',/terrainDisappearanceAt=null/.test(app)&&/terrainDisappearanceAt=value/.test(app)&&/function terrainDisappearanceReference\(\)\{const value=terrainDisappearanceAt/.test(app)],
  ['âge OPS formats',(()=>{const f=ms=>{const t=Math.floor(ms/60000),d=Math.floor(t/1440),h=Math.floor(t%1440/60),m=t%60,p=n=>String(n).padStart(2,'0');return d?`${d} j ${p(h)} h ${p(m)} min`:h?`${h} h ${p(m)} min`:`${m} min`};return f(5*60000)==='5 min'&&f(65*60000)==='1 h 05 min'&&f(120*60000)==='2 h 00 min'&&f(1501*60000)==='1 j 01 h 01 min'})()],
  ['modes Coaching',/value="normal"/.test(html)&&/value="simple_blind"/.test(html)&&/value="full_blind"/.test(html)],
  ['release modal et historique',/releaseNotesModal/.test(html)&&/releaseNotesHistory/.test(html)&&/showReleaseNotesIfNeeded/.test(app)],
