@@ -3,7 +3,7 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const checks=[
- ['version centralisée',/const APP_VERSION=['"]10\.42['"]/.test(app)&&/APP_RELEASE_NOTES/.test(app)],
+ ['version centralisée',/const APP_VERSION=['"]10\.42\.1['"]/.test(app)&&/APP_RELEASE_NOTES/.test(app)],
  ['moteur olfactif partagé',/function sharedOlfactionEngine\(/.test(app)&&/module:(?:'ops'|recordMode===.*?'training':'ops')/.test(app)&&/module:'coaching'/.test(app)&&/module:'training'/.test(app)],
  ['niveaux qualitatifs',/Favorables/.test(app)&&/Fortement perturbées/.test(app)&&!/pourcentage d.?odeur restante/i.test(app)],
  ['heure disparition OPS',/id="opsDisappearanceAt"/.test(html)&&/operationalTrackAgeReference/.test(app)],
@@ -23,7 +23,7 @@ const checks=[
  ['release modal et historique',/releaseNotesModal/.test(html)&&/releaseNotesHistory/.test(html)&&/showReleaseNotesIfNeeded/.test(app)],
  ['version lue une fois',/RELEASE_SEEN_KEY/.test(app)&&/acknowledgeReleaseNotes/.test(app)],
  ['SQL DRY RUN/APPLY',fs.existsSync('PISTE_V10.42_RELEASE_NOTES_DRY_RUN.sql')&&fs.existsSync('PISTE_V10.42_RELEASE_NOTES_APPLY.sql')],
- ['cache PWA V10.42',/piste-community-v2097/.test(sw)&&/app\.js\?v=1042-9/.test(sw+html)&&/v2\.css\?v=2067/.test(sw+html)]
+ ['cache PWA V10.42.1',/piste-community-v2098/.test(sw)&&/app\.js\?v=1042-10/.test(sw+html)&&/v2\.css\?v=2067/.test(sw+html)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}
 if(!ok)process.exit(1);console.log('\nV10.42 — contrôles statiques terminés. Les appels météo et la persistance serveur nécessitent validation terrain/SQL.');
