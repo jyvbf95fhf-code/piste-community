@@ -70,7 +70,7 @@ function updateTerrainCommonStatus(){
  const activeSeconds=Math.floor(TerrainEngine.activeDuration(gps)/1000),activeClock=`${pad(Math.floor(activeSeconds/60))}:${pad(activeSeconds%60)}`;
  setUiText('terrainActiveDuration',`Actif : ${activeClock}`);
  const reference=recordMode==='operational'?operationalTrackAgeReference():(activeCoachingSession?.track_finished_at||activeCoachingSession?.created_at||null),ageMs=recordMode==='operational'?getOperationalTrackAgeMs():(reference?TerrainEngine.ageMs(reference):null);
- if(recordMode==='operational'||recordMode==='training'){const future=reference&&new Date(reference).getTime()>Date.now();setUiText('opsAgeDisplay',future?'Heure future — à corriger':formatOperationalTrackAge(ageMs));setUiText('opsDisappearanceDisplay',formatTerrainDisappearance($('opsDisappearanceAt')?.value||$('pisteForm')?.elements?.disparition_at?.value));}
+ if(recordMode==='operational'||recordMode==='training'){const future=reference&&new Date(reference).getTime()>Date.now();setUiText('opsAgeDisplay',future?'Heure future — à corriger':formatOperationalTrackAge(ageMs));setUiText('opsDisappearanceDisplay',formatTerrainDisappearance(reference));}
  setUiText('terrainPlannerAge',plannerPoints.length?`Points : ${plannerPoints.length}`:'Âge : —');
 }
 function coachingWeatherPoint(){const p=coachingOwnPosition||coachingDeparture();return p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))?{lat:Number(p.lat),lon:Number(p.lon)}:null}
@@ -81,7 +81,8 @@ function scheduleCoachingLiveWeather(){clearInterval(coachingWeatherTimer);coach
 function operationalWeatherKey(){return `piste-ops-live-weather-${session?.user?.id||'local'}`}
 function operationalWeatherPoint(){const p=gps.points.at(-1)||gps.startPoint;return p&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon))?{lat:Number(p.lat),lon:Number(p.lon)}:null}
 function operationalTrackReference(){if(selectedTrainingRoute?.route?.length>1)return selectedTrainingRoute.route;if(gps.points.length>1)return gps.points;return []}
-function operationalTrackAgeReference(){const form=$('pisteForm'),opsValue=$('opsDisappearanceAt')?.value,value=opsValue||form?.elements?.disparition_at?.value;const date=value?new Date(value):null;return date&&Number.isFinite(date.getTime())?date:null}
+function terrainDisappearanceReference(){const values=[$('opsDisappearanceAt')?.value,$('pisteForm')?.elements?.disparition_at?.value].filter(Boolean),dates=values.map(value=>new Date(value)).filter(date=>Number.isFinite(date.getTime()));if(!dates.length)return null;const date=recordMode==='training'?new Date(Math.min(...dates.map(item=>item.getTime()))):dates[0];return date}
+function operationalTrackAgeReference(){return terrainDisappearanceReference()}
 function getOperationalTrackAgeMs(){const reference=operationalTrackAgeReference(),timestamp=reference?.getTime();return Number.isFinite(timestamp)?Math.max(0,Date.now()-timestamp):null}
 function operationalTrackAgeHours(){const ageMs=getOperationalTrackAgeMs();return ageMs===null?0:ageMs/36e5}
 function renderOperationalOdorCorridor(){operationalWeatherOdorLayers.forEach(layer=>{try{layer.remove()}catch{}});operationalWeatherOdorLayers=[];if(!operationalCorridorVisible||!liveMap)return;const weather=operationalLiveWeather?.status==='ready'?operationalLiveWeather:(recordMode==='training'?{...plannerOdorModel,status:'ready'}:null);if(!weather)return;const route=operationalTrackReference();if(route.length<2)return;const result=sharedOlfactionEngine({referenceTrack:route,referenceTime:operationalTrackAgeReference(),currentTime:new Date(),weatherHistory:operationalWeatherHistory,liveWeather:weather,module:recordMode==='training'?'training':'ops',terrainContext:{environment:weather.environment||'mixed'}});if(result.dispersionGeometry)addOdorLayers(liveMap,route,{enabled:true,...weather,wind_direction_deg:weather.wind_direction_deg??0,wind_speed_kmh:weather.wind_speed_kmh??5,gust_kmh:weather.wind_gusts_kmh??null,age_hours:operationalTrackAgeHours(),environment:weather.environment||'mixed'},operationalWeatherOdorLayers)}
@@ -91,7 +92,7 @@ async function fetchOperationalLiveWeather(){const point=operationalWeatherPoint
 function scheduleOperationalLiveWeather(){clearInterval(operationalWeatherTimer);if(recordMode==='training')return;operationalWeatherTimer=setInterval(()=>{if(gps.start&&!gps.paused)fetchOperationalLiveWeather()},420000)}
 // OPS et Entraînement partagent la même surface météo/couloir; l'ancien renderer est conservé comme implémentation.
 const renderTerrainWeatherLegacy=renderOperationalLiveWeather;
-renderOperationalLiveWeather=function(){const training=recordMode==='training';if(training)recordMode='operational';try{return renderTerrainWeatherLegacy()}finally{if(training)recordMode='training'}};
+renderOperationalLiveWeather=function(){const training=recordMode==='training';if(training)recordMode='operational';try{const result=renderTerrainWeatherLegacy();if(training&&$('operationalLiveWeather')?.querySelector('b'))$('operationalLiveWeather').querySelector('b').textContent='Météo';return result}finally{if(training)recordMode='training'}};
 const fetchTerrainWeatherLegacy=fetchOperationalLiveWeather;
 fetchOperationalLiveWeather=function(){const training=recordMode==='training';if(training)recordMode='operational';try{return fetchTerrainWeatherLegacy()}finally{if(training)recordMode='training'}};
 const scheduleTerrainWeatherLegacy=scheduleOperationalLiveWeather;
@@ -1527,9 +1528,12 @@ function calcDelay(){
  const f=$('pisteForm'),a=f.elements.disparition_at.value,b=f.elements.depart_at.value;
  if(a&&b){const d=(new Date(b)-new Date(a))/3600000;f.elements.delai_h.value=Math.max(0,d).toFixed(1)}
 }
-$('pisteForm').elements.disparition_at.onchange=calcDelay;$('pisteForm').elements.depart_at.onchange=calcDelay;
-if($('opsDisappearanceAt'))$('opsDisappearanceAt').addEventListener('change',e=>{const input=$('pisteForm')?.elements?.disparition_at;if(input){input.value=e.target.value;calcDelay();updateTerrainCommonStatus();renderOperationalLiveWeather()}});
-if($('editOpsDisappearance'))$('editOpsDisappearance').addEventListener('click',()=>{$('opsDisappearanceAt')?.focus();$('opsDisappearanceAt')?.showPicker?.()});
+$('pisteForm').elements.disparition_at.onchange=e=>{calcDelay();if($('opsDisappearanceAt')&&recordMode==='training')$('opsDisappearanceAt').value=e.target.value;updateTerrainCommonStatus();renderOperationalLiveWeather()};$('pisteForm').elements.depart_at.onchange=calcDelay;
+function setTerrainDisappearanceEditing(editing){const card=$('opsDisappearanceAt')?.closest('.terrain-disappearance-card');card?.classList.toggle('is-editing',editing);$('opsDisappearanceAt')?.classList.toggle('hidden',!editing);$('saveOpsDisappearance')?.classList.toggle('hidden',!editing);$('opsDisappearanceDisplay')?.classList.toggle('hidden',editing);$('editOpsDisappearance')?.classList.toggle('hidden',editing)}
+if($('opsDisappearanceAt'))$('opsDisappearanceAt').addEventListener('change',e=>{const input=$('pisteForm')?.elements?.disparition_at;if(input)input.value=e.target.value;calcDelay();updateTerrainCommonStatus();renderOperationalLiveWeather()});
+if($('editOpsDisappearance'))$('editOpsDisappearance').addEventListener('click',()=>{const input=$('opsDisappearanceAt'),value=$('pisteForm')?.elements?.disparition_at?.value;if(input&&value&&!input.value)input.value=value;setTerrainDisappearanceEditing(true);input?.focus();input?.showPicker?.()});
+if($('saveOpsDisappearance'))$('saveOpsDisappearance').addEventListener('click',()=>{const value=$('opsDisappearanceAt')?.value,date=value?new Date(value):null;if(!date||!Number.isFinite(date.getTime())){setUiText('opsAgeDisplay','Heure invalide — à corriger');return}if(date.getTime()>Date.now()){setUiText('opsAgeDisplay','Heure future — à corriger');return}if($('pisteForm')?.elements?.disparition_at) $('pisteForm').elements.disparition_at.value=value;setTerrainDisappearanceEditing(false);calcDelay();updateTerrainCommonStatus();renderOperationalLiveWeather();saveDraft(true)});
+setTerrainDisappearanceEditing(false);
 
 
 function updatePreSaveSummary(){

@@ -8,6 +8,7 @@ const checks=[
  ['niveaux qualitatifs',/Favorables/.test(app)&&/Fortement perturbées/.test(app)&&!/pourcentage d.?odeur restante/i.test(app)],
  ['heure disparition OPS',/id="opsDisappearanceAt"/.test(html)&&/operationalTrackAgeReference/.test(app)],
  ['surface âge commune OPS/Entraînement',/terrain-disappearance-card/.test(html)&&/recordMode==='operational'\|\|recordMode==='training'/.test(app)&&/formatTerrainDisappearance/.test(app)],
+ ['édition heure disparition commune',/saveOpsDisappearance/.test(html)&&/setTerrainDisappearanceEditing/.test(app)&&/terrainDisappearanceReference/.test(app)],
  ['météo Entraînement partagée',/renderTerrainWeatherLegacy/.test(app)&&/fetchTerrainWeatherLegacy/.test(app)],
  ['météo OPS actualisable',/(Météo · Actualiser|↻ Actualiser)/.test(app)&&/fetchOperationalLiveWeather/.test(app)],
  ['couloir estimé OPS',/Couloir olfactif estimé/.test(app+html)&&/operationalCorridorVisible/.test(app)],
