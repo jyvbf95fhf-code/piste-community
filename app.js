@@ -69,7 +69,7 @@ function updateTerrainCommonStatus(){
  setUiText('terrainLiveState',labels[state]||'Terrain');
  const activeSeconds=Math.floor(TerrainEngine.activeDuration(gps)/1000),activeClock=`${pad(Math.floor(activeSeconds/60))}:${pad(activeSeconds%60)}`;
  setUiText('terrainActiveDuration',`Actif : ${activeClock}`);
- const reference=recordMode==='operational'?operationalTrackAgeReference():(activeCoachingSession?.track_finished_at||activeCoachingSession?.created_at||null),ageMs=recordMode==='operational'?getOperationalTrackAgeMs():(reference?TerrainEngine.ageMs(reference):null);
+ const reference=recordMode==='operational'||recordMode==='training'?operationalTrackAgeReference():(activeCoachingSession?.track_finished_at||activeCoachingSession?.created_at||null),ageMs=recordMode==='operational'||recordMode==='training'?getOperationalTrackAgeMs():(reference?TerrainEngine.ageMs(reference):null);
  if(recordMode==='operational'||recordMode==='training'){const future=reference&&new Date(reference).getTime()>Date.now();setUiText('opsAgeDisplay',future?'Heure future — à corriger':formatOperationalTrackAge(ageMs));setUiText('opsDisappearanceDisplay',formatTerrainDisappearance(reference));}
  setUiText('terrainPlannerAge',plannerPoints.length?`Points : ${plannerPoints.length}`:'Âge : —');
 }
@@ -153,7 +153,7 @@ function beginFakeUnlock(event){if(!fakeLockState.open)return;event.preventDefau
 function finishFakeUnlock(event){event.preventDefault();event.stopPropagation();if(!fakeLockState.open)return;if(event.pointerId!==undefined&&fakeLockState.pointerId!==null&&event.pointerId!==fakeLockState.pointerId)return;if(fakeLockState.pressTimer)cancelFakeUnlock(event)}
 function cancelFakeUnlock(event){event?.preventDefault();event?.stopPropagation();clearFakeLockPress()}
 function recoverFakeLockLifecycle(){if(fakeLockState.opening)return;if(!fakeLockState.open){restoreFakeLockBody();$('fakeLockScreen')?.classList.add('hidden');$('fakeLockScreen')?.setAttribute('aria-hidden','true');setTimeout(()=>{coachingMap?.invalidateSize();updateDriverMarkerOrientations()},80)}}
-function serializeDraft(){return {user_id:session?.user?.id,mode:recordMode,start:gps.start,points:gps.points,distance:gps.distance,startPoint:gps.startPoint,startPlace:gps.startPlace,paused:gps.paused,pauseStarted:gps.pauseStarted,pausedMs:gps.pausedMs,fieldMarkers,operationalLiveWeather,form:formSnapshot(),savedAt:Date.now()}}
+function serializeDraft(){return {user_id:session?.user?.id,mode:recordMode,start:gps.start,points:gps.points,distance:gps.distance,startPoint:gps.startPoint,startPlace:gps.startPlace,paused:gps.paused,pauseStarted:gps.pauseStarted,pausedMs:gps.pausedMs,fieldMarkers,operationalLiveWeather,terrainDisappearanceAt,form:formSnapshot(),savedAt:Date.now()}}
 function formSnapshot(){const f=$('pisteForm');if(!f)return {};const o={};new FormData(f).forEach((v,k)=>o[k]=v);return o}
 function saveDraft(force=false){if(!gps.start||!session)return;const now=Date.now();if(!force&&now-gps.lastSaved<3000)return;gps.lastSaved=now;try{localStorage.setItem(DRAFT_KEY,JSON.stringify(serializeDraft()));if($('savedStatus'))$('savedStatus').textContent='Sauvegarde locale : '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});refreshActiveSessionShortcut()}catch(error){if($('savedStatus'))$('savedStatus').textContent='Sauvegarde locale saturée · retirez une photo'}}
 function clearDraft(){localStorage.removeItem(DRAFT_KEY);if($('resumeBanner'))$('resumeBanner').classList.add('hidden');refreshActiveSessionShortcut()}
