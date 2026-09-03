@@ -107,6 +107,7 @@
     </div>
     <div class="card gps-card">
       <div class="live-map-shell"><div id="liveMap"></div><div class="live-map-actions"><button id="recenterLiveMapBtn" class="map-recenter hidden" type="button">⌖ Me localiser</button><button id="showFullLiveTrackBtn" class="map-recenter" type="button">↗ Voir tout</button></div></div>
+      <div class="ops-age-card"><label>Heure de disparition<input id="opsDisappearanceAt" type="datetime-local" aria-describedby="opsAgeHelp"></label><strong id="opsAgeDisplay">Âge actuel de la piste : —</strong><small id="opsAgeHelp">Renseigne uniquement l’heure de disparition ; l’âge évolue automatiquement.</small></div>
       <div id="operationalLiveWeather" class="operational-live-weather hidden" aria-live="polite"></div>
       <div class="gps-kpis">
         <div><strong id="liveDistance">0.00</strong><span>km</span></div>
@@ -717,6 +718,7 @@
   <section id="helpPage" class="page">
     <div class="record-head"><button class="back" data-page="profilePage">‹ Profil</button><h2>Centre d’aide</h2></div>
     <div class="card help-intro"><h3>Bien utiliser PISTE Community</h3><p class="muted">Des repères courts pour préparer, enregistrer et analyser une activité.</p><button id="reviewTutorialBtn" class="primary" type="button">Revoir la présentation guidée</button></div>
+    <div class="card release-history-card"><div class="card-title-row"><h3>Nouveautés</h3><span>✦</span></div><div id="releaseNotesHistory"></div></div>
     <div class="help-grid">
       <article class="card"><span>⌂</span><h3>Accueil</h3><p>Lance directement Coaching, OPS ou Entraînement et consulte vos indicateurs essentiels.</p></article>
       <article class="card"><span>🗂️</span><h3>Mes pistes</h3><p>Retrouve et gère OPS, Entraînement, Coaching et tracés préparés dans une bibliothèque unique.</p></article>
@@ -727,6 +729,10 @@
       <article class="card coaching-help-card"><span>?</span><h3>Comment fonctionne l’analyse olfactive ?</h3><p>PISTE met en regard l’âge de piste, le vent, l’humidité, la température, les précipitations et le terrain. Le couloir olfactif reste une estimation d’aide à l’interprétation.</p><p class="small muted">Aucune quantité d’odeur ni causalité météo n’est déduite. Les résultats doivent être confrontés à la lecture du chien.</p><details><summary>En savoir plus sur le modèle</summary><p class="small">Références : Jinn, Connor &amp; Jacobs (2020) · Goss (2019) · Kokocińska-Kusiak et al. (2021) · Salamon et al. (2024) · Silvestri et al. (2026) · Rothkoff et al. (2026).</p></details></article>
     </div>
   </section>
+
+  <div id="releaseNotesModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="releaseNotesTitle">
+    <div class="modal-card release-notes-modal"><div class="card-title-row"><div><small class="section-kicker">PISTE COMMUNITY</small><h2 id="releaseNotesTitle">Nouveautés V10.42</h2></div><button id="releaseNotesClose" class="dialog-close" type="button" aria-label="Fermer">×</button></div><ul id="releaseNotesItems"></ul><p class="small muted">Ces évolutions restent des aides à l’interprétation : le couloir olfactif n’est pas une localisation certaine.</p><button id="releaseNotesAcknowledge" class="primary" type="button">J’ai compris</button></div>
+  </div>
 
   <section id="trackPage" class="page">
     <div class="record-head"><button id="trackBackBtn" class="back" data-page="historyPage">‹ Mes pistages opérationnels</button><h2 id="trackTitle">Tracé</h2></div>
@@ -792,7 +798,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1082"></script>
+<script type="module" src="./app.js?v=1042"></script>
 <script src="./v2.js?v=2018"></script>
 </body>
 </html>
