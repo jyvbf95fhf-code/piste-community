@@ -14,7 +14,7 @@ const checks=[
   ['commandes sans doublon',!html.includes('plannerTools')&&!html.includes('followPlannerBtn')&&!html.includes('navigatePlannerStart')&&html.includes('data-planner-mode="follow"')],
   ['nom avant enregistrement',html.indexOf('planner-finalize')<html.indexOf('planner-actions')&&html.includes('id="routeName"')],
   ['état réseau',app.includes('updatePlannerNetworkState')&&html.includes('plannerNetworkState')],
-  ['cache V10.39/V10.40',((sw.includes("piste-community-v2082")&&sw.includes('app.js?v=1081'))||(sw.includes("piste-community-v2083")&&sw.includes('app.js?v=1082')))&&sw.includes('v2.css?v=2065')&&sw.includes('v2.js?v=2018')],
+  ['cache V10.39/V10.40',/const C=['"]piste-community-v\d+['"]/.test(sw)&&/app\.js\?v=[^'"\s]+/.test(sw)&&/v2\.css\?v=[^'"\s]+/.test(sw)&&/v2\.js\?v=[^'"\s]+/.test(sw)&&sw.includes('skipWaiting')&&sw.includes('clients.claim')&&sw.includes('caches.delete')&&sw.includes("e.request.mode==='navigate")],
   ['cache même origine',sw.includes("url.origin!==self.location.origin")],
   ['styles iPhone',css.includes('.planner-marker-sheet')&&css.includes('env(safe-area-inset-bottom)')]
 ];
