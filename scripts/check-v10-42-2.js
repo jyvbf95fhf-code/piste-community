@@ -1,5 +1,7 @@
 const fs=require('fs');
+const {execFileSync}=require('child_process');
 const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('sw.js','utf8'),sql=fs.readFileSync('PISTE_V10.42.2_TRACK_READY_APPLY.sql','utf8');
+const changedFiles=execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).split('\n').filter(Boolean).map(line=>line.slice(3));
 const checks=[
  ['version 10.42.2 et release note',/const APP_VERSION=['"]10\.42\.2['"]/.test(app)&&/version:'10\.42\.2'/.test(app)&&/Coach trace lui-même/.test(app)],
  ['poseur effectif centralisé',/function isCurrentUserLayingActor\(s=activeCoachingSession\)/.test(app)&&/role==='traceur'&&s\.laying_mode==='traceur'/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)],
@@ -9,6 +11,9 @@ const checks=[
  ['conducteur attente explicite',/En attente : le Coach prépare la piste/.test(app)&&/Pose de la piste en cours/.test(app)&&/La piste est prête/.test(app)],
  ['conducteur départ et fin',/driverStartBtn/.test(app)&&/start_driver_run/.test(app)&&/driverFinishBtn/.test(app)&&/finish_driver_run/.test(app)],
  ['realtime phases',/const nextPhase=coachingPhase\(activeCoachingSession\)/.test(app)&&/updateCoachingPrimaryActions\(\)/.test(app)&&/renderCoachingMap\(\)/.test(app)],
+ ['fin conducteur visible en realtime côté Coach',/justCompleted.*role==='driver'.*coachingToast\('Parcours terminé'\).*role==='coach'\|\|owner.*coachingToast\('Parcours du Conducteur terminé'\)/s.test(app)&&/Parcours du Conducteur terminé • vous pouvez terminer la session/.test(app)&&/updateCoachingPrimaryActions\(\);applyV1040RoleSurface\(\);await renderCoachingMap\(\)/.test(app)],
+ ['clôture uniquement après completed',/function finishHoldStart\(e\).*coachingPhase\(s\)==='completed'.*finishCoachingSessionV1040\(\)/s.test(app)&&/async function finishCoachingSessionV1040\(\).*isCoachingOwner\(s\).*Number\(s\.workflow_version\)<2.*coachingPhase\(s\)!=='completed'.*finish_coaching_session/s.test(app)&&/if\(v1040&&completed\).*terrainFinishBtn/s.test(app)&&!/owner&&phase==='driver_running'\)show\('terrainFinishBtn'\)/.test(app)],
+ ['aucun SQL ajouté ou modifié',!changedFiles.some(file=>/\.sql$/i.test(file))],
  ['Piste prête poseur effectif et rafraîchissement',/async function markCoachingTrackReady\(\).*isCurrentUserLayingActor\(s\).*stopTraceurTracking\(\)/s.test(app)&&/updateCoachingPreparationDetails\(\)/.test(app)&&/await renderCoachingMap\(\)/.test(app)],
  ['RPC track ready live/laying idempotente',/r\.status<>'live'\s+or r\.phase<>'laying'/.test(sql)&&/r\.status='waiting' and r\.phase='waiting_ready'/.test(sql)&&/set status='waiting', phase='waiting_ready'/.test(sql)&&/track_finished_at=coalesce\(track_finished_at,now\(\)/.test(sql)],
  ['modes aveugles conservés',/simple_blind/.test(app)&&/full_blind/.test(app)&&/coachingDbVisibility/.test(app)],
