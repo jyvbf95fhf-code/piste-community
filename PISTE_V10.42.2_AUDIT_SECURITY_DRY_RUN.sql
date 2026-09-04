@@ -163,7 +163,7 @@ as $$
     'blind_mode',coalesce(s.blind_mode,'normal'),
     'planned_route',case
       when (coalesce(s.workflow_version,1)<2 and not (s.status<>'ended' and s.visibility_mode='coach' and me.role='driver'))
-        or (coalesce(s.workflow_version,1)>=2 and (s.status='ended'
+        or (coalesce(s.workflow_version,1)>=2 and me.invitation_status in ('accepted','active') and (s.status='ended'
         or coalesce(s.phase,'preparation')='completed'
         or coalesce(s.blind_mode,'normal')='normal'
         or (s.blind_mode='simple_blind' and me.role in ('coach','traceur'))
@@ -173,7 +173,7 @@ as $$
       else '[]'::jsonb end,
     'planned_markers',case
       when (coalesce(s.workflow_version,1)<2 and not (s.status<>'ended' and s.visibility_mode='coach' and me.role='driver'))
-        or (coalesce(s.workflow_version,1)>=2 and (s.status='ended'
+        or (coalesce(s.workflow_version,1)>=2 and me.invitation_status in ('accepted','active') and (s.status='ended'
         or coalesce(s.phase,'preparation')='completed'
         or coalesce(s.blind_mode,'normal')='normal'
         or (s.blind_mode='simple_blind' and me.role in ('coach','traceur'))
@@ -183,7 +183,7 @@ as $$
       else '[]'::jsonb end,
     'odor_model',case
       when (coalesce(s.workflow_version,1)<2 and not (s.status<>'ended' and s.visibility_mode='coach' and me.role='driver'))
-        or (coalesce(s.workflow_version,1)>=2 and (s.status='ended'
+        or (coalesce(s.workflow_version,1)>=2 and me.invitation_status in ('accepted','active') and (s.status='ended'
         or coalesce(s.phase,'preparation')='completed'
         or coalesce(s.blind_mode,'normal')='normal'
         or (s.blind_mode='simple_blind' and me.role in ('coach','traceur'))
@@ -258,12 +258,17 @@ begin
     if tg_op='INSERT' then new.last_editor_id:=null; new.created_at:=statement_timestamp(); end if;
     new.updated_at:=statement_timestamp();
   elsif role_name in ('coach','solo') or uid=session_owner then
+    if tg_op='UPDATE' and (new.session_id is distinct from old.session_id or new.owner_id is distinct from old.owner_id
+      or new.created_at is distinct from old.created_at or new.revision is distinct from old.revision)
+    then raise exception 'Métadonnées structurelles du débrief immuables'; end if;
     if tg_op='INSERT' and new.driver_notes is not null
       then raise exception 'Retour du Conducteur protégé'; end if;
     if tg_op='UPDATE' and new.driver_notes is distinct from old.driver_notes
       then raise exception 'Retour du Conducteur protégé'; end if;
-    if new.coach_id is distinct from uid then raise exception 'coach_id doit correspondre à auth.uid()'; end if;
+    -- Identités et horodatages sont imposés côté serveur, jamais choisis par le client.
+    new.coach_id:=uid;
     new.last_editor_id:=uid;
+    if tg_op='INSERT' then new.created_at:=statement_timestamp(); new.revision:=1; end if;
     new.updated_at:=statement_timestamp();
   else
     raise exception 'Rôle non autorisé pour le débrief';
@@ -290,6 +295,20 @@ drop trigger if exists coaching_debrief_contributions_guard_v1042
 create trigger coaching_debrief_contributions_guard_v1042
 before insert or update on public.coaching_debriefs
 for each row execute function private.guard_coaching_debrief_contributions_v1042();
+
+drop trigger if exists coaching_debrief_revision on public.coaching_debriefs;
+create trigger coaching_debrief_revision before update on public.coaching_debriefs
+for each row execute function private.bump_coaching_debrief_revision();
+
+-- PostgreSQL déclenche les BEFORE UPDATE du même événement par nom : la garde précède la révision.
+do $$declare a text; b text;begin
+  select tgname into a from pg_catalog.pg_trigger where tgrelid='public.coaching_debriefs'::regclass and tgname='coaching_debrief_contributions_guard_v1042' and not tgisinternal;
+  select tgname into b from pg_catalog.pg_trigger where tgrelid='public.coaching_debriefs'::regclass and tgname='coaching_debrief_revision' and not tgisinternal;
+  if a is null or b is null or a>=b then raise exception 'Ordre des triggers débrief invalide : garde puis révision requis'; end if;
+  if not exists (select 1 from pg_catalog.pg_trigger where tgrelid='public.coaching_debriefs'::regclass and tgname=a and not tgisinternal and (tgtype & 2)<>0 and (tgtype & 16)<>0)
+    or not exists (select 1 from pg_catalog.pg_trigger where tgrelid='public.coaching_debriefs'::regclass and tgname=b and not tgisinternal and (tgtype & 2)<>0 and (tgtype & 16)<>0)
+  then raise exception 'Les deux triggers débrief doivent être BEFORE'; end if;
+end$$;
 
 drop policy if exists "coaching_debriefs_read" on public.coaching_debriefs;
 drop policy if exists "coaching_debriefs_insert" on public.coaching_debriefs;
