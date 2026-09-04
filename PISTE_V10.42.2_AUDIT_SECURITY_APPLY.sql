@@ -362,6 +362,7 @@ for update to authenticated using (
 
 -- Privilèges minimaux vérifiés contre les usages locaux : DELETE reste requis par la suppression de compte.
 revoke all on table public.coaching_live_points,public.coaching_trace_points,public.coaching_markers,public.coaching_debriefs from public,anon;
+revoke truncate,references,trigger on table public.coaching_live_points,public.coaching_trace_points,public.coaching_markers,public.coaching_debriefs from authenticated;
 revoke update on table public.coaching_live_points,public.coaching_trace_points,public.coaching_markers from authenticated;
 grant select,insert,delete on table public.coaching_live_points,public.coaching_trace_points,public.coaching_markers to authenticated;
 grant select,insert,update,delete on table public.coaching_debriefs to authenticated;
