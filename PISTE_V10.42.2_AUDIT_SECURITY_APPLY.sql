@@ -392,12 +392,26 @@ do $$declare bad text; n integer;begin
     and ((g.table_name in ('coaching_live_points','coaching_trace_points','coaching_markers') and g.privilege_type in ('SELECT','INSERT','DELETE')) or (g.table_name='coaching_debriefs' and g.privilege_type in ('SELECT','INSERT','UPDATE','DELETE')));
   if n<>13 then raise exception 'V10.42.2 annulée : 13 privilèges authenticated attendus, % trouvés',n; end if;
 
-  if has_function_privilege('PUBLIC','private.guard_coaching_debrief_contributions_v1042()','EXECUTE') or has_function_privilege('anon','private.guard_coaching_debrief_contributions_v1042()','EXECUTE')
-    or has_function_privilege('PUBLIC','private.can_read_coaching_live_point_v1042(uuid,uuid)','EXECUTE') or has_function_privilege('anon','private.can_read_coaching_live_point_v1042(uuid,uuid)','EXECUTE')
-    or has_function_privilege('PUBLIC','private.can_read_coaching_trace_point_v1042(uuid,uuid)','EXECUTE') or has_function_privilege('anon','private.can_read_coaching_trace_point_v1042(uuid,uuid)','EXECUTE')
-    or has_function_privilege('PUBLIC','private.can_read_coaching_marker_v1042(uuid,uuid)','EXECUTE') or has_function_privilege('anon','private.can_read_coaching_marker_v1042(uuid,uuid)','EXECUTE')
-    or has_function_privilege('PUBLIC','public.get_my_coaching_sessions(uuid)','EXECUTE') or has_function_privilege('anon','public.get_my_coaching_sessions(uuid)','EXECUTE')
-    or has_function_privilege('PUBLIC','private.bump_coaching_debrief_revision()','EXECUTE') or has_function_privilege('anon','private.bump_coaching_debrief_revision()','EXECUTE')
+  if exists (
+    select 1
+    from unnest(array[
+      'private.guard_coaching_debrief_contributions_v1042()'::regprocedure,
+      'private.can_read_coaching_live_point_v1042(uuid,uuid)'::regprocedure,
+      'private.can_read_coaching_trace_point_v1042(uuid,uuid)'::regprocedure,
+      'private.can_read_coaching_marker_v1042(uuid,uuid)'::regprocedure,
+      'public.get_my_coaching_sessions(uuid)'::regprocedure,
+      'private.bump_coaching_debrief_revision()'::regprocedure
+    ]) as f(fn)
+    join pg_catalog.pg_proc p on p.oid=f.fn
+    cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+    where acl.grantee=0 and acl.privilege_type='EXECUTE'
+  )
+    or has_function_privilege('anon','private.guard_coaching_debrief_contributions_v1042()','EXECUTE')
+    or has_function_privilege('anon','private.can_read_coaching_live_point_v1042(uuid,uuid)','EXECUTE')
+    or has_function_privilege('anon','private.can_read_coaching_trace_point_v1042(uuid,uuid)','EXECUTE')
+    or has_function_privilege('anon','private.can_read_coaching_marker_v1042(uuid,uuid)','EXECUTE')
+    or has_function_privilege('anon','public.get_my_coaching_sessions(uuid)','EXECUTE')
+    or has_function_privilege('anon','private.bump_coaching_debrief_revision()','EXECUTE')
   then raise exception 'V10.42.2 annulée : EXECUTE PUBLIC/anon résiduel'; end if;
 end$$;
 
