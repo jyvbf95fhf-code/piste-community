@@ -5,6 +5,9 @@ const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','ut
 const changedFiles=execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).split('\n').filter(Boolean).map(line=>line.slice(3));
 const trackedFiles=new Set(execFileSync('git',['ls-files'],{encoding:'utf8'}).split('\n').filter(Boolean));
 const sqlFiles=changedFiles.filter(file=>/\.sql$/i.test(file)).sort(),expectedSql=['PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql'],sqlListOk=sqlFiles.length?JSON.stringify(sqlFiles)===JSON.stringify(expectedSql):expectedSql.every(file=>trackedFiles.has(file));
+let postgresSyntaxOk=true;
+try{execFileSync(process.execPath,['scripts/check-postgres-sql.js',...expectedSql],{stdio:'inherit'})}
+catch{postgresSyntaxOk=false}
 function extractFunction(source,name){const start=source.indexOf(`function ${name}(`);if(start<0)return '';const brace=source.indexOf('{',start);let depth=0;for(let i=brace;i<source.length;i++){if(source[i]==='{')depth++;else if(source[i]==='}'&&--depth===0)return source.slice(start,i+1)}return ''}
 const visibilityContext={coachingBlindMode:s=>s.blind_mode||'normal',coachingPhase:s=>s.phase||'preparation',myCoachingRole:s=>s.role};vm.runInNewContext(extractFunction(app,'coachingDataVisibility'),visibilityContext);
 const visible=(blind_mode,role,laying_mode='traceur',phase='driver_running',status='live')=>visibilityContext.coachingDataVisibility({workflow_version:2,blind_mode,role,laying_mode,phase,status},role);
@@ -13,6 +16,7 @@ const visibilityMatrixOk=allVisible(visible('normal','observer'))&&JSON.stringif
 const migrationBody=s=>s.replace(/^--[^\n]*\n/,'').replace(/\n(?:rollback|commit);[\s\S]*$/,'').trim();
 const sqlLogicIdentical=migrationBody(auditDry)===migrationBody(auditApply);
 const checks=[
+ ['syntaxe PostgreSQL complète des deux audits',postgresSyntaxOk],
  ['version 10.42.2 et release note',/const APP_VERSION=['"]10\.42\.2['"]/.test(app)&&/version:'10\.42\.2'/.test(app)&&/Coach trace lui-même/.test(app)],
  ['poseur effectif centralisé',/function isCurrentUserLayingActor\(s=activeCoachingSession\)/.test(app)&&/role==='traceur'&&s\.laying_mode==='traceur'/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)],
  ['poseur coach préparation',/v1040&&layingActor&&phase==='preparation'.*startLayingBtn/s.test(app)&&/Je pars tracer/.test(app)],

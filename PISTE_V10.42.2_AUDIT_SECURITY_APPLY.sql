@@ -168,7 +168,7 @@ as $$
         or coalesce(s.blind_mode,'normal')='normal'
         or (s.blind_mode='simple_blind' and me.role in ('coach','traceur'))
         or (s.blind_mode='full_blind' and
-          (me.role='traceur' or (me.role='coach' and s.laying_mode='coach'))))
+          (me.role='traceur' or (me.role='coach' and s.laying_mode='coach')))))
       then coalesce(to_jsonb(s.planned_route),'[]'::jsonb)
       else '[]'::jsonb end,
     'planned_markers',case
@@ -178,7 +178,7 @@ as $$
         or coalesce(s.blind_mode,'normal')='normal'
         or (s.blind_mode='simple_blind' and me.role in ('coach','traceur'))
         or (s.blind_mode='full_blind' and
-          (me.role='traceur' or (me.role='coach' and s.laying_mode='coach'))))
+          (me.role='traceur' or (me.role='coach' and s.laying_mode='coach')))))
       then coalesce(to_jsonb(s.planned_markers),'[]'::jsonb)
       else '[]'::jsonb end,
     'odor_model',case
@@ -188,7 +188,7 @@ as $$
         or coalesce(s.blind_mode,'normal')='normal'
         or (s.blind_mode='simple_blind' and me.role in ('coach','traceur'))
         or (s.blind_mode='full_blind' and
-          (me.role='traceur' or (me.role='coach' and s.laying_mode='coach'))))
+          (me.role='traceur' or (me.role='coach' and s.laying_mode='coach')))))
       then coalesce(to_jsonb(s.odor_model),'{}'::jsonb)
       else '{}'::jsonb end,
     'coaching_members',coalesce((
