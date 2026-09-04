@@ -9,7 +9,7 @@ const checks=[
  ['blind_mode envoyé',/blind_mode:blindMode/.test(app)],
  ['visibility_mode historique conservé',/visibility_mode:'all'/.test(app)],
  ['piste prête reliée',/trackReadyBtn/.test(html)&&/markCoachingTrackReady/.test(app)],
- ['conducteur attend la piste',/En attente de la piste/.test(app)],
+ ['conducteur attend la piste',/En attente de la piste|En attente : le Coach prépare la piste/.test(app)],
  ['départ waiting_ready',/\['waiting_ready','coach_ready'\]/.test(app)],
  ['aucun maintien pose V10.40',!/bindV1040Hold\('startLayingBtn'/.test(app)],
  ['RPC piste prête',/mark_coaching_track_ready/.test(sql)],
