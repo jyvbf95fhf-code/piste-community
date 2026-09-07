@@ -3,7 +3,7 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const checks=[
- ['version 10.42.x',/const APP_VERSION=['"]10\.42\.2['"]/.test(app)&&/version:'10\.42\.2'/.test(app)],
+ ['version 10.42.x',/const APP_VERSION=['"]10\.42\.(?:2|3)['"]/.test(app)&&/version:'10\.42\.(?:2|3)'/.test(app)],
  ['session terrain active protégée',/function hasActiveTerrainSession\(\)/.test(app)&&/resetGpsUI\(clear=true,\{force=false\}=\{\}\)/.test(app)&&/!force&&hasActiveTerrainSession\(\)/.test(app)],
  ['restoreDraft non destructive',/async function restoreDraft\(\)\{if\(hasActiveTerrainSession\(\)\)/.test(app)&&/redrawLiveRecordingMap\(\);return/.test(app)],
  ['reprise active non destructive',/function resumeActiveSession\(\).*hasActiveTerrainSession\(\).*redrawLiveRecordingMap/s.test(app)],
@@ -15,7 +15,7 @@ const checks=[
  ['Conducteur transitions',/driverStartBtn/.test(app)&&/waiting_ready.*coach_ready/.test(app)&&/start_driver_run/.test(app)&&/finish_driver_run/.test(app)],
  ['phase realtime réévaluée',/const nextPhase=coachingPhase\(activeCoachingSession\).*nextPhase!==previousPhase/s.test(app)],
  ['GPS trace points',/coaching_trace_points/.test(app)&&/navigator\.geolocation\.watchPosition/.test(app)],
- ['PWA cache incrémenté',/piste-community-v2100/.test(sw)&&/app\.js\?v=1042-12/.test(sw+html)&&/skipWaiting\(\)/.test(sw)&&/clients\.claim\(\)/.test(sw)],
+ ['PWA cache incrémenté',/piste-community-v210(?:0|1)/.test(sw)&&/app\.js\?v=1042-(?:12|13)/.test(sw+html)&&/skipWaiting\(\)/.test(sw)&&/clients\.claim\(\)/.test(sw)],
  ['Coach propriétaire poseur',/function isCurrentUserLayingActor/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}

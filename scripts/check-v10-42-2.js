@@ -17,7 +17,7 @@ const migrationBody=s=>s.replace(/^--[^\n]*\n/,'').replace(/\n(?:rollback|commit
 const sqlLogicIdentical=migrationBody(auditDry)===migrationBody(auditApply);
 const checks=[
  ['syntaxe PostgreSQL complète des deux audits',postgresSyntaxOk],
- ['version 10.42.2 et release note',/const APP_VERSION=['"]10\.42\.2['"]/.test(app)&&/version:'10\.42\.2'/.test(app)&&/Coach trace lui-même/.test(app)],
+ ['version 10.42.x et release note',/const APP_VERSION=['"]10\.42\.(?:2|3)['"]/.test(app)&&/version:'10\.42\.(?:2|3)'/.test(app)&&/Coach trace lui-même/.test(app)],
  ['poseur effectif centralisé',/function isCurrentUserLayingActor\(s=activeCoachingSession\)/.test(app)&&/role==='traceur'&&s\.laying_mode==='traceur'/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)],
  ['poseur coach préparation',/v1040&&layingActor&&phase==='preparation'.*startLayingBtn/s.test(app)&&/Je pars tracer/.test(app)],
  ['poseur pose en cours',/v1040&&layingActor&&phase==='laying'.*trackReadyBtn/s.test(app)&&/Piste prête/.test(app)],
@@ -54,7 +54,7 @@ const checks=[
  ['Piste prête poseur effectif et rafraîchissement',/async function markCoachingTrackReady\(\).*isCurrentUserLayingActor\(s\).*stopTraceurTracking\(\)/s.test(app)&&/updateCoachingPreparationDetails\(\)/.test(app)&&/await renderCoachingMap\(\)/.test(app)],
  ['RPC track ready live/laying idempotente',/r\.status<>'live'\s+or r\.phase<>'laying'/.test(sql)&&/r\.status='waiting' and r\.phase='waiting_ready'/.test(sql)&&/set status='waiting', phase='waiting_ready'/.test(sql)&&/track_finished_at=coalesce\(track_finished_at,now\(\)/.test(sql)],
  ['modes aveugles conservés',/simple_blind/.test(app)&&/full_blind/.test(app)&&/coachingDbVisibility/.test(app)],
- ['cache v2100 assets',/piste-community-v2100/.test(sw)&&/app\.js\?v=1042-12/.test(sw+html)&&/v2\.css\?v=2067/.test(sw)],
+ ['cache v210x assets',/piste-community-v210(?:0|1)/.test(sw)&&/app\.js\?v=1042-(?:12|13)/.test(sw+html)&&/v2\.css\?v=206(?:7|8)/.test(sw)],
  ['anti perte OPS conservée',/function hasActiveTerrainSession/.test(app)&&/resetGpsUI\(clear=true,\{force=false\}=\{\}\)/.test(app)&&/restoreDraft\(\).*hasActiveTerrainSession/s.test(app)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}if(!ok)process.exit(1);console.log('\nV10.42.2 — contrôles Coach-poseur et attente Conducteur terminés.');
