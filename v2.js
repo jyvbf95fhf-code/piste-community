@@ -63,16 +63,7 @@
 
     const actionSection = document.createElement('section');
     actionSection.className = 'v2-section';
-    actionSection.innerHTML = `
-      <div class="v2-action-card coaching-home-card">
-        <div class="v2-coaching-art" aria-hidden="true"><span></span><i></i><b></b></div>
-        <div class="v2-action-copy">
-          <span class="v2-action-icon" aria-hidden="true">⌁</span>
-          <div><b>Coaching</b><small>Préparez et suivez une piste avec votre équipe</small><em>Coach · Conducteur · Traceur</em></div>
-        </div>
-        <div class="v2-coaching-state" aria-live="polite"><span id="homeCoachingState">Chargement du Coaching…</span><small id="homeCoachingStateInfo"></small><button id="homeCoachingStateAction" class="primary" type="button" data-coaching-home-action="open">Ouvrir le Coaching</button></div>
-      </div>
-      <div class="v2-action-buttons"></div>`;
+    actionSection.innerHTML = '<div class="v2-action-buttons"></div>';
     const actionButtons = q('.v2-action-buttons', actionSection);
     const opsBtn = document.createElement('button');
     opsBtn.id = 'homeOpsBtn';opsBtn.className = 'v10-30-quick ops';opsBtn.type = 'button';
