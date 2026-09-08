@@ -1,55 +1,25 @@
-# PISTE V10.42.3 — Tests
+# PISTE V10.42.3 — validation de la refonte Coaching finale
 
-Base obligatoire : `stable-v10.42.2` — `8f4173b65a4978d186aee62ed46a85c4e46e4d06`.
+Ce document suit la refonte par personnes, rôles et visibilité décrite dans le README et la PR #36. Les modes de création Seul / À deux / En équipe sont archivés ; Entraînement conserve son moteur individuel.
 
-## Automatiques
+## Vérifications automatiques
+
 ```bash
-node --check app.js
-node --check v2.js 2>/dev/null || true
-node scripts/check-postgres-sql.js
-node scripts/check-session-dom.js
-node scripts/check-v10-38.js
-node scripts/check-v10-39.js
-node scripts/check-v10-40.js
-node scripts/check-v10-41.js
-node scripts/check-v10-42.js
-node scripts/check-v10-42-1.js
-node scripts/check-v10-42-2.js
-node scripts/check-v10-42-3.js
-git diff --check
+node scripts/run-checks.js
 ```
 
-## Seul
-- Accueil → Entraînement & Coaching → **Seul**.
-- Le moteur Entraînement existant démarre sans régression GPS/sauvegarde.
-- Refresh Safari pendant le suivi : aucune donnée perdue.
+20 contrôles : syntaxe app.js, v2.js et sw.js, tous les scripts check-*.js et git diff --check. Le lanceur continue après un échec et termine avec un code non nul si nécessaire. Les SQL sont analysés, jamais exécutés. Les scripts historiques contrôlent les assets actuels, les accès Terrain actuels et l'absence de rendu de trace Coach/Observateur.
 
-## À deux
-Téléphone A = Traceur, téléphone B = Conducteur • Coach.
-- Exactement 2 personnes affichées, jamais 3 rôles comme 3 personnes.
-- A pose → Piste prête → B démarre → B termine.
-- B peut remplir Retour Conducteur + Analyse Coach.
-- Simple/double aveugle : B ne voit jamais une piste interdite malgré sa capacité Coach.
-- Résumé équipe, action attendue, synchronisation et états participant sont cohérents.
+Résultat du 8 septembre 2026 : 20/20 ; 452 IDs HTML uniques ; cas A–S et quatre doubles clics asynchrones réussis. Ces contrôles locaux ne prouvent pas les droits de la base distante.
 
-## En équipe
-A = Coach, B = Traceur, C = Conducteur, D = Observateur facultatif.
-- Création bloquée s'il n'y a pas exactement 1 Traceur + 1 Conducteur.
-- Observateur non bloquant à toutes les étapes.
-- États : Invité / Accepté / Connecté / GPS actif / Hors ligne.
-- Débrief Coach et Conducteur séparé.
+## Validation manuelle avant merge
 
-## Robustesse
-- double tap sur Piste prête / Démarrer / Terminer ;
-- perte réseau puis retour ;
-- fermeture/réouverture Safari ;
-- refresh sur chaque téléphone ;
-- invitation acceptée depuis l'autre téléphone ;
-- GPS refusé puis autorisé ;
-- aucun doublon `(session_id,user_id)`.
+- Création avec créateur Coach, Traceur puis Conducteur ; exactement un Traceur et un Conducteur, au maximum un Coach. Refuser doublons, amis non acceptés et compositions invalides, sans session partielle.
+- Départ visible au Conducteur dès la préparation. Traceur : Je démarre la piste → Piste tracée. Conducteur : Démarrer → Fin de parcours → Débrief. Observateurs non bloquants.
+- Prévisualisation GPS sans trace ni chrono ; Coach sans trace personnelle ; Observateur sans émission GPS. Prévu, GPS Traceur et GPS Conducteur restent séparés.
+- Normal : couches partagées. Simple aveugle : Conducteur limité au départ et à sa propre trace. Double aveugle : Coach/Observateur voient le Conducteur, aucun prévu, trace ni position Traceur. Révélation après fin du parcours.
+- Tester ces droits avec plusieurs comptes et requêtes directes après application manuelle du SQL VISIBILITY ; tester invitations en attente et rôles immuables.
+- Double tap sur chacune des quatre transitions, perte réseau/retour, GPS refusé/autorisé, refresh et fermeture/réouverture Safari à chaque phase ; invitation acceptée depuis un autre téléphone.
+- Vérifier contributions Conducteur/Coach, replay et outils de débrief, sessions historiques duo/team, Entraînement individuel et absence de régression OPS GPS/sauvegarde.
 
-## Sécurité obligatoire
-- le Conducteur • Coach du duo reste `role='driver'` côté serveur ;
-- `capabilities` ne doit jamais servir à autoriser la lecture de la piste ;
-- `get_my_coaching_sessions` conserve la matrice `blind_mode` V10.42.2 ;
-- tester `normal`, `simple_blind`, `full_blind` avant merge.
+SQL VISIBILITY requis pour les nouvelles sessions, préparé mais non exécuté par cette reprise. Ne pas réappliquer les archives CAPABILITIES/APPLY.py. Aucun merge ni tag avant validation iPhone.

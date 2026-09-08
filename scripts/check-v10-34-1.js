@@ -16,8 +16,7 @@ const deleteFn=(app.match(/async function deleteLibraryItem[\s\S]*?(?=\n(?:async
 const bulkFn=(app.match(/async function deleteSelectedActivities[\s\S]*?(?=\n(?:async )?function |\nconst |\nlet |\nvar |$)/)||[''])[0];
 if(/\.from\(tables\[type\]\)\.delete\(/.test(deleteFn)||/\.from\(table\)\.delete\(/.test(bulkFn))throw new Error('Suppression physique encore accessible depuis la bibliothèque');
 if(!/Promise\.all\(bootTasks\.map/.test(app))throw new Error('Boot non isolé par module');
-const cache=sw.match(/const C='([^']+)'/);if(!cache||!/piste-community-v2065/.test(cache[1]))throw new Error('Cache V10.34.1 inattendu');
-if(!/app\.js\?v=1065/.test(html)||!/app\.js\?v=1065/.test(sw))throw new Error('Version app.js incohérente');
+require('./verify-current-assets')();
 for(const file of ['app.js','v2.js','sw.js'])if(!fs.existsSync(file))throw new Error(`Fichier manquant : ${file}`);
 if(/(service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_)/i.test([app,sw].join('\n')))throw new Error('Secret détecté');
 console.log(`Audit V10.34.1 OK : ${ids.length} IDs uniques, ${pages.length} pages, ${targets.length} destinations valides, bibliothèque sans suppression physique.`);

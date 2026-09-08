@@ -10,5 +10,5 @@ for(const token of ['TerrainBlackBox','BLACK_BOX_VERSION','blackBoxActivity','re
 if(!/data-blackbox-tab="summary"/.test(html)||!/data-blackbox-tab="replay"/.test(html)||!/data-blackbox-tab="analysis"/.test(html)||!/data-blackbox-tab="debrief"/.test(html))throw new Error('Sous-onglets incomplets');
 if(/openai\.com|anthropic\.com|generativelanguage\.googleapis\.com/i.test(app))throw new Error('Service IA externe inattendu détecté');
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté');
-if(!/piste-community-v2074/.test(sw)||!/app\.js\?v=1074/.test(html+sw))throw new Error('Cache V10.37 incohérent');
+require('./verify-current-assets')();
 console.log(`Contrôle V10.37 OK : ${ids.length} IDs uniques, boîte noire commune et quatre sous-onglets présents.`);

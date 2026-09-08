@@ -44,6 +44,10 @@ La Preview peut être publiée pour revue du front. La création nouvelle néces
 
 ## Vérification
 
+Commande complète : `node scripts/run-checks.js` (20 contrôles : syntaxe app/v2/sw, tous les `check-*.js`, puis `git diff --check`). Le lanceur termine tous les contrôles et retourne un code non nul si l'un échoue. Aucun SQL n'est exécuté.
+
+Reprise du 8 septembre 2026 : dépôt initial propre au commit `a09bed3`. La refonte fonctionnelle était déjà commitée. Les six vérifications historiques V10.34–38.2 ont été actualisées pour les boutons Terrain actuels, les assets exacts V10.42.3 et le rendu réservé au Traceur ; les contrôles de sécurité sont conservés. Résultat : **20/20**, 452 IDs HTML uniques, cas A–S et quatre doubles clics simulés réussis. Les validations iPhone, réseau/GPS réels et RLS multi-comptes restent à effectuer après SQL manuel.
+
 `scripts/check-v10-42-3.js` exécute les cas A–S : configurations, matrice, legacy, absence de trace preview/Coach/Observateur, protections serveur et simulation asynchrone des doubles clics sur les quatre transitions. Les scripts précédents restent actifs ; seuls libellés, nouveaux chemins RPC et identifiants cache sont adaptés.
 
 Version applicative inchangée : **10.42.3**. Cache : **v2104**, `app.js?v=1042-16`, `v2.css?v=2070`.
