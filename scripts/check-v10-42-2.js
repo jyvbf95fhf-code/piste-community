@@ -54,7 +54,7 @@ const checks=[
  ['Piste prête poseur effectif et rafraîchissement',/async function markCoachingTrackReady\(\).*isCurrentUserLayingActor\(s\).*stopTraceurTracking\(\)/s.test(app)&&/updateCoachingPreparationDetails\(\)/.test(app)&&/await renderCoachingMap\(\)/.test(app)],
  ['RPC track ready live/laying idempotente',/r\.status<>'live'\s+or r\.phase<>'laying'/.test(sql)&&/r\.status='waiting' and r\.phase='waiting_ready'/.test(sql)&&/set status='waiting', phase='waiting_ready'/.test(sql)&&/track_finished_at=coalesce\(track_finished_at,now\(\)/.test(sql)],
  ['modes aveugles conservés',/simple_blind/.test(app)&&/full_blind/.test(app)&&/coachingDbVisibility/.test(app)],
- ['cache v210x assets',/piste-community-v210(?:0|1|2)/.test(sw)&&/app\.js\?v=1042-(?:12|13|14)/.test(sw+html)&&/v2\.css\?v=206(?:7|8|9)/.test(sw)],
+ ['cache v210x assets',/piste-community-v210(?:0|1|2|3)/.test(sw)&&/app\.js\?v=1042-(?:12|13|14|15)/.test(sw+html)&&/v2\.css\?v=206(?:7|8|9)/.test(sw)],
  ['anti perte OPS conservée',/function hasActiveTerrainSession/.test(app)&&/resetGpsUI\(clear=true,\{force=false\}=\{\}\)/.test(app)&&/restoreDraft\(\).*hasActiveTerrainSession/s.test(app)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}if(!ok)process.exit(1);console.log('\nV10.42.2 — contrôles Coach-poseur et attente Conducteur terminés.');
