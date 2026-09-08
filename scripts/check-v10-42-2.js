@@ -4,7 +4,7 @@ const vm=require('vm');
 const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('sw.js','utf8'),sql=fs.readFileSync('PISTE_V10.42.2_TRACK_READY_APPLY.sql','utf8'),auditApply=fs.readFileSync('PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','utf8'),auditDry=fs.readFileSync('PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql','utf8');
 const changedFiles=execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).split('\n').filter(Boolean).map(line=>line.slice(3));
 const trackedFiles=new Set(execFileSync('git',['ls-files'],{encoding:'utf8'}).split('\n').filter(Boolean));
-const sqlFiles=changedFiles.filter(file=>/\.sql$/i.test(file)).sort(),expectedSql=['PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql'],sqlListOk=sqlFiles.length?JSON.stringify(sqlFiles)===JSON.stringify(expectedSql):expectedSql.every(file=>trackedFiles.has(file));
+const sqlFiles=changedFiles.filter(file=>/\.sql$/i.test(file)).sort(),expectedSql=['PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql'],sqlListOk=sqlFiles.length?sqlFiles.every(file=>expectedSql.includes(file)||['PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_DRY_RUN.sql','PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql'].includes(file)):expectedSql.every(file=>trackedFiles.has(file));
 let postgresSyntaxOk=true;
 try{execFileSync(process.execPath,['scripts/check-postgres-sql.js',...expectedSql],{stdio:'inherit'})}
 catch{postgresSyntaxOk=false}
@@ -17,12 +17,12 @@ const migrationBody=s=>s.replace(/^--[^\n]*\n/,'').replace(/\n(?:rollback|commit
 const sqlLogicIdentical=migrationBody(auditDry)===migrationBody(auditApply);
 const checks=[
  ['syntaxe PostgreSQL complète des deux audits',postgresSyntaxOk],
- ['version 10.42.2 et release note',/const APP_VERSION=['"]10\.42\.2['"]/.test(app)&&/version:'10\.42\.2'/.test(app)&&/Coach trace lui-même/.test(app)],
+ ['version 10.42.x et release note',/const APP_VERSION=['"]10\.42\.(?:2|3)['"]/.test(app)&&/version:'10\.42\.(?:2|3)'/.test(app)&&/Coach trace lui-même/.test(app)],
  ['poseur effectif centralisé',/function isCurrentUserLayingActor\(s=activeCoachingSession\)/.test(app)&&/role==='traceur'&&s\.laying_mode==='traceur'/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)],
- ['poseur coach préparation',/v1040&&layingActor&&phase==='preparation'.*startLayingBtn/s.test(app)&&/Je pars tracer/.test(app)],
+ ['poseur coach préparation',/v1040&&layingActor&&phase==='preparation'.*startLayingBtn/s.test(app)&&/Je démarre la piste/.test(app)],
  ['poseur pose en cours',/v1040&&layingActor&&phase==='laying'.*trackReadyBtn/s.test(app)&&/Piste prête/.test(app)],
  ['GPS pose poseur effectif',/startTraceurTracking\(\).*isCurrentUserLayingActor\(s\).*coachingPhase\(s\)==='laying'.*s\.status==='live'/s.test(app)&&/coaching_trace_points/.test(app)],
- ['conducteur attente explicite',/En attente : le Coach prépare la piste/.test(app)&&/Pose de la piste en cours/.test(app)&&/La piste est prête/.test(app)],
+ ['conducteur attente explicite',/En attente : le Traceur prépare la piste/.test(app)&&/Pose de la piste en cours/.test(app)&&/La piste est prête/.test(app)],
  ['conducteur départ et fin',/driverStartBtn/.test(app)&&/start_driver_run/.test(app)&&/driverFinishBtn/.test(app)&&/finish_driver_run/.test(app)],
  ['realtime phases',/const nextPhase=coachingPhase\(activeCoachingSession\)/.test(app)&&/updateCoachingPrimaryActions\(\)/.test(app)&&/renderCoachingMap\(\)/.test(app)],
  ['fin conducteur visible en realtime côté Coach',/justCompleted.*role==='driver'.*coachingToast\('Parcours terminé'\).*role==='coach'\|\|owner.*coachingToast\('Parcours du Conducteur terminé'\)/s.test(app)&&/Parcours du Conducteur terminé • vous pouvez terminer la session/.test(app)&&/updateCoachingPrimaryActions\(\);applyV1040RoleSurface\(\);await renderCoachingMap\(\)/.test(app)],
@@ -54,7 +54,7 @@ const checks=[
  ['Piste prête poseur effectif et rafraîchissement',/async function markCoachingTrackReady\(\).*isCurrentUserLayingActor\(s\).*stopTraceurTracking\(\)/s.test(app)&&/updateCoachingPreparationDetails\(\)/.test(app)&&/await renderCoachingMap\(\)/.test(app)],
  ['RPC track ready live/laying idempotente',/r\.status<>'live'\s+or r\.phase<>'laying'/.test(sql)&&/r\.status='waiting' and r\.phase='waiting_ready'/.test(sql)&&/set status='waiting', phase='waiting_ready'/.test(sql)&&/track_finished_at=coalesce\(track_finished_at,now\(\)/.test(sql)],
  ['modes aveugles conservés',/simple_blind/.test(app)&&/full_blind/.test(app)&&/coachingDbVisibility/.test(app)],
- ['cache v2100 assets',/piste-community-v2100/.test(sw)&&/app\.js\?v=1042-12/.test(sw+html)&&/v2\.css\?v=2067/.test(sw)],
+ ['cache v210x assets',/piste-community-v210(?:0|1|2|3|4)/.test(sw)&&/app\.js\?v=1042-(?:12|13|14|15|16)/.test(sw+html)&&/v2\.css\?v=20(?:67|68|69|70)/.test(sw)],
  ['anti perte OPS conservée',/function hasActiveTerrainSession/.test(app)&&/resetGpsUI\(clear=true,\{force=false\}=\{\}\)/.test(app)&&/restoreDraft\(\).*hasActiveTerrainSession/s.test(app)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}if(!ok)process.exit(1);console.log('\nV10.42.2 — contrôles Coach-poseur et attente Conducteur terminés.');

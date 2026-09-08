@@ -1,0 +1,5 @@
+PISTE V10.42.3 PATCH PACK
+Base: stable-v10.42.2 / 8f4173b65a4978d186aee62ed46a85c4e46e4d06
+Application locale: python3 PISTE_V10.42.3_APPLY.py --check puis --apply
+SQL: manuel uniquement, DRY RUN avant APPLY
+Voir README_V10.42.3.md et PISTE_V10.42.3_CODEX_PROMPT.txt

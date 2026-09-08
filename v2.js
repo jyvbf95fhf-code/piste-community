@@ -78,7 +78,7 @@
     opsBtn.id = 'homeOpsBtn';opsBtn.className = 'v10-30-quick ops';opsBtn.type = 'button';
     opsBtn.innerHTML = '<span>⚡</span><span><b>OPS</b><small>Appel & opérationnel</small></span>';
     actionButtons.appendChild(opsBtn);
-    if(terrainBtn){terrainBtn.classList.add('v10-30-quick','activity');terrainBtn.removeAttribute('data-page');terrainBtn.querySelector('b').textContent='ENTRAÎNEMENT';terrainBtn.querySelector('small').textContent='Démarrer une piste libre';actionButtons.appendChild(terrainBtn)}
+    if(terrainBtn){terrainBtn.classList.add('v10-30-quick','activity');terrainBtn.removeAttribute('data-page');terrainBtn.querySelector('b').textContent='ENTRAÎNEMENT & COACHING';terrainBtn.querySelector('small').textContent='Travailler seul ou avec une équipe';actionButtons.appendChild(terrainBtn)}
     if(plannerBtn){plannerBtn.classList.add('v10-30-quick','planner');plannerBtn.removeAttribute('data-page');plannerBtn.querySelector('b').textContent='CRÉATEUR DE TRACÉ';plannerBtn.querySelector('small').textContent='Préparer avant la session';actionButtons.appendChild(plannerBtn)}
 
     const dogSection = document.createElement('section');
@@ -170,7 +170,7 @@
     if(title) title.textContent = 'PISTE Community V2';
 
     const terrain = q('#openTerrainHomeBtn b');
-    if(terrain) terrain.textContent = 'DÉMARRER UNE ACTIVITÉ';
+    if(terrain) terrain.textContent = 'ENTRAÎNEMENT & COACHING';
   }
 
   function consolidateDogManagement(){

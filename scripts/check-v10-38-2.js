@@ -11,8 +11,8 @@ if(!/const points=coachingDriverTrail\(liveGroups\)/.test(app))throw new Error('
 if(!/drawCoachingDriverTrail\(points\)/.test(app))throw new Error('Le calque conducteur dédié doit être rendu.');
 if(!/line\.bringToFront\(\)/.test(app))throw new Error('Le parcours conducteur doit rester visible au-dessus du tracé préparé.');
 if(!/ownOnly[\s\S]{0,500}userId===session\.user\.id/.test(app))throw new Error('Le parcours conducteur doit conserver la protection côté client du double aveugle.');
-if(!/!\['driver','solo'\]\.includes\(memberRole\)/.test(app))throw new Error('La boucle équipe ne doit pas redessiner le parcours conducteur.');
-if(!/piste-community-v20(?:79|80|81|82)/.test(sw)||!/app\.js\?v=10(?:78|79|80|81)/.test(html+sw)||!/v2\.css\?v=20(?:62|63|64|65)/.test(html+sw))throw new Error('Cache V10.38.2+ incohérent.');
+if(!app.includes("if(userPoints.length>1&&memberRole==='traceur')"))throw new Error('La boucle équipe doit tracer uniquement le Traceur, sans redessiner le Conducteur ni tracer Coach/Observateur.');
+require('./verify-current-assets')();
 if(/service_role|VAPID_PRIVATE|-----BEGIN (?:RSA|PRIVATE)|sk_live_/i.test(app+html+sw))throw new Error('Secret détecté.');
 
 console.log('Contrôle V10.38.2 OK : parcours conducteur Coaching dédié, progressif et au premier plan.');

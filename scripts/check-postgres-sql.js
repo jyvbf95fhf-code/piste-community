@@ -9,8 +9,7 @@ const {loadModule,parseSync}=parser;
 
 const files=process.argv.slice(2);
 if(!files.length){
-  console.error('Usage: node scripts/check-postgres-sql.js <fichier.sql> [...]');
-  process.exit(2);
+  files.push('PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_DRY_RUN.sql','PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql');
 }
 
 (async()=>{

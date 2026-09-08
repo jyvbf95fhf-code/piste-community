@@ -1,0 +1,77 @@
+Tu travailles dans le dépôt local ~/Downloads/piste-community.
+
+OBJECTIF
+Préparer V10.42.3 « Entraînement & Coaching unifiés » à partir du pack PISTE_V10.42.3_PATCH.zip.
+
+RÈGLES ABSOLUES
+- Ne modifie jamais main directement.
+- Ne merge rien et ne crée aucun tag sans mon accord après tests iPhone.
+- N'exécute aucun SQL automatiquement.
+- Aucune Edge Function.
+- Ne relâche jamais une règle de sécurité ou un audit pour faire passer un test.
+- Si la base locale n'est pas exactement la stable attendue : STOP.
+
+BASE ATTENDUE
+stable-v10.42.2
+8f4173b65a4978d186aee62ed46a85c4e46e4d06
+
+BRANCHE
+feature/v10-42-3-training-coaching-unified
+
+1. Vérifie :
+   git status --short
+   git branch --show-current
+   git rev-parse main
+   git rev-parse origin/main
+   git rev-list -n 1 stable-v10.42.2
+   Le dépôt doit être propre et les SHA doivent correspondre à la stable attendue.
+
+2. Crée la branche depuis la stable :
+   git switch -c feature/v10-42-3-training-coaching-unified stable-v10.42.2
+
+3. Décompresse le pack dans le dépôt.
+
+4. AVANT modification :
+   python3 PISTE_V10.42.3_APPLY.py --check
+   Si échec : STOP.
+
+5. Audite le script et les deux SQL. Vérifie en particulier :
+   - work_mode ;
+   - coaching_members.capabilities ;
+   - une seule personne par (session_id,user_id) ;
+   - duo = créateur affiché Traceur + invité Conducteur • Coach ;
+   - Conducteur • Coach reste role='driver' ;
+   - capabilities ne sert jamais aux fonctions de lecture blind_mode ;
+   - get_my_coaching_sessions conserve strictement la matrice V10.42.2 ;
+   - le guard de débrief permet les deux contributions du Conducteur • Coach sans élargir la lecture ;
+   - anciennes sessions legacy compatibles.
+   Si tu vois un risque, corrige d'abord le patch local et explique.
+
+6. Applique le front uniquement :
+   python3 PISTE_V10.42.3_APPLY.py --apply
+
+7. Ne lance PAS le SQL. Compare DRY RUN/APPLY et confirme qu'ils sont identiques hors ROLLBACK/COMMIT + message final. Donne-moi ensuite les commandes pbcopy exactes pour que JE lance le DRY RUN dans Supabase SQL Editor.
+
+8. Lance :
+   node --check app.js
+   node --check v2.js 2>/dev/null || true
+   node scripts/check-postgres-sql.js
+   node scripts/check-session-dom.js
+   node scripts/check-v10-38.js
+   node scripts/check-v10-39.js
+   node scripts/check-v10-40.js
+   node scripts/check-v10-41.js
+   node scripts/check-v10-42.js
+   node scripts/check-v10-42-1.js
+   node scripts/check-v10-42-2.js
+   node scripts/check-v10-42-3.js
+   git diff --check
+   Vérifie aussi les IDs HTML en double.
+
+9. Audit fonctionnel obligatoire : Seul / À deux / En équipe, résumé d'équipe, personnes uniques, observateurs non bloquants, action attendue, états participants, synchronisation, reprise après refresh/fermeture, double tap transitions, débrief, blind_mode normal/simple/full et absence de régression OPS.
+
+10. Si tout passe : commit sur la branche, push, PR DRAFT, Preview Vercel. NE MERGE PAS.
+Donne-moi SHA Preview, URL PR, URL Preview directe, statut READY, fichiers modifiés, résultats tests, SQL manuel restant et scénarios iPhone prioritaires.
+
+IMPORTANT
+Le mode Solo peut conserver sous le capot le moteur Entraînement mature V10.42.2. Ne force pas une migration du Solo vers Coaching si cela fragilise GPS/sauvegarde.

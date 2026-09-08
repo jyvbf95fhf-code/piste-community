@@ -6,7 +6,8 @@ const shell=fs.readFileSync('v2.js','utf8');
 const requiredIds=[
   'libraryPage','libraryType','libraryStatus','librarySelectAll',
   'archiveSelectedActivities','deleteSelectedActivities',
-  'libraryNewTraining','libraryNewOps','libraryNewCoaching','libraryNewRoute',
+  // Depuis la refonte Terrain, la création est accessible depuis Terrain.
+  'newTrainingBtn','newOperationalTerrainBtn','openCoachingBtn','openPlannerBtn',
   'opsChoiceDialog','publicShareScreen','publicShareMap'
 ];
 const missingIds=requiredIds.filter(id=>!new RegExp(`id=["']${id}["']`).test(html));
