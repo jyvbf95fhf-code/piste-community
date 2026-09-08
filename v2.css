@@ -806,3 +806,8 @@ body.v10-30-aurora{
 #coachingLivePanel.active-terrain .coaching-departure{display:grid!important}
 #coachingLivePanel.active-terrain #coachingParticipants{display:flex!important;flex-wrap:wrap;gap:6px}
 .coaching-team-summary span{display:block}
+
+/* V10.42.3 — état du parcours lisible sur mobile */
+.coaching-workflow-banner{display:block;padding:16px;margin:12px 0;border:2px solid #b9d66c;border-radius:14px;background:#233c2b;color:#f2ffd9;font-size:clamp(16px,4.5vw,20px);font-weight:800;line-height:1.4;overflow-wrap:anywhere}
+.coaching-phase.completed{background:#173126;color:#bdeaa8;border-color:#3d6b4d}
+.coaching-phase.completed small{display:block;margin-top:6px;font-size:14px;font-weight:600;letter-spacing:normal;text-transform:none}
