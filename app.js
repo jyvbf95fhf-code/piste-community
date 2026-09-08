@@ -805,19 +805,34 @@ async function cancelActiveCoaching(){const s=activeCoachingSession;if(!s||!isCo
 async function deleteActiveCoaching(){const s=activeCoachingSession;if(!s||!isCoachingOwner(s)){alert('Seul l’organisateur peut supprimer définitivement cette session.');return}const warning='La suppression définitive effacera aussi les positions GPS, messages, repères et débrief associés.';if(!confirm(`${warning}\n\nContinuer ?`))return;if(!confirm('Dernière confirmation : supprimer définitivement cette session et toutes ses données associées ?'))return;const id=s.id,{data,error}=await supabase.from('coaching_sessions').delete().eq('id',id).eq('owner_id',session.user.id).select('id').maybeSingle();if(error||!data){alert('Suppression impossible : '+(error?.message||'session introuvable ou accès refusé.'));return}clearVerifiedActiveCoaching(id);await returnToCoachingSessions('upcoming')}
 async function leaveActiveCoaching(){const s=activeCoachingSession;if(!s||isCoachingOwner(s)){alert('L’organisateur ne peut pas quitter sa propre session. Il peut la terminer ou la supprimer.');return}if(!confirm('Quitter cette session ? Seule votre participation sera supprimée ; la session de l’organisateur et ses données seront conservées.'))return;const id=s.id,{data,error}=await supabase.from('coaching_members').delete().eq('session_id',id).eq('user_id',session.user.id).select('session_id').maybeSingle();if(error||!data){alert('Impossible de quitter : '+(error?.message||'participation introuvable ou droit Supabase manquant.'));return}clearVerifiedActiveCoaching(id);await returnToCoachingSessions('upcoming')}
 async function saveCoachingDebrief(e,publicationStatus='published'){e?.preventDefault();const s=activeCoachingSession,form=$('coachingDebriefForm');if(!s||!form||!((s.visibility_version!==3&&isCoachingOwner(s))||hasCoachingCapability('coach',s)))return alert('Fonction Coach requise.');const f=new FormData(form),{data:allPoints=[]}=await supabase.from('coaching_live_points').select('owner_id,lat,lon,accuracy_m,heading_deg,speed_mps,recorded_at').eq('session_id',s.id).order('recorded_at'),points=allPoints.filter(p=>['driver','solo'].includes(coachingMemberRole(p.owner_id)));if(!coachingAutoMetrics)await calculateCoachingDebrief();const now=new Date().toISOString(),payload={session_id:s.id,owner_id:s.owner_id,coach_id:session.user.id,strengths:f.get('strengths')||null,improvement_area:f.get('improvement_area')||null,coach_notes:f.get('coach_notes')||null,statistics_notes:f.get('statistics_notes')||null,actual_track:points,auto_metrics:coachingAutoMetrics||{},publication_status:publicationStatus,published_at:publicationStatus==='published'?now:null,last_editor_id:session.user.id,updated_at:now},{error}=await supabase.from('coaching_debriefs').upsert(payload);if(error){alert('Débrief non enregistré : '+error.message);return}setUiText('coachingDebriefState',publicationStatus==='draft'?'Brouillon enregistré — reprise possible.':'Débrief enregistré.');if(publicationStatus==='draft'){alert('Brouillon enregistré. Vous pourrez le compléter plus tard.');return}await completeCoachingDebriefReturnHome(s.id)}
+async function finalizeSavedCoachingSession(id){
+ const closed=await supabase.rpc('finish_coaching_session',{p_session_id:id});
+ if(closed.error)throw closed.error;
+ if(closed.data!==true)throw new Error('La clôture serveur n’a pas été confirmée.');
+ const {data,error}=await supabase.rpc('get_my_coaching_sessions',{p_session_id:id});
+ if(error)throw error;
+ const fresh=Array.isArray(data)?data.find(row=>row.id===id):null;
+ if(!fresh||fresh.status!=='ended')throw new Error('La session reste active ou son état final ne peut pas être vérifié. Réessayez l’enregistrement.');
+ const index=coachingSessions.findIndex(row=>row.id===id);
+ if(index>=0)coachingSessions[index]={...coachingSessions[index],...fresh};else coachingSessions.push(fresh);
+ if(activeCoachingSession?.id===id)Object.assign(activeCoachingSession,fresh);
+ return fresh;
+}
 async function saveCoachingDriverFeedback(e){
  e?.preventDefault();if(coachingDriverFeedbackSaving)return false;
  const s=activeCoachingSession,form=$('coachingDriverFeedbackForm');
  if(!s||!form||!hasCoachingCapability('drive',s)||!(s.status==='ended'||coachingPhase(s)==='completed')||coachingDriverTrackPending(s)){alert('Terminez la piste avant de l’enregistrer.');return false}
- const button=form.querySelector('button[type="submit"]');coachingDriverFeedbackSaving=true;if(button)button.disabled=true;
+ let feedbackSaved=false;const button=form.querySelector('button[type="submit"]');coachingDriverFeedbackSaving=true;if(button)button.disabled=true;
  try{
   const f=new FormData(form),payload={session_id:s.id,owner_id:s.owner_id,driver_notes:f.get('driver_notes')||null,last_editor_id:session.user.id,updated_at:new Date().toISOString()};
   const {error}=await supabase.from('coaching_debriefs').upsert(payload,{onConflict:'session_id'});
-  if(error)throw error;
+  if(error)throw error;feedbackSaved=true;
+  await finalizeSavedCoachingSession(s.id);
+  clearVerifiedActiveCoaching(s.id);
   setUiText('coachingDriverFeedbackState','Piste enregistrée — retour du Conducteur sauvegardé.');
-  if(activeCoachingSession?.id===s.id){clearVerifiedActiveCoaching(s.id);clearCoachingRealtime();activeCoachingSession=null;activityLibraryFilters.type='coaching';$('libraryType').value='coaching';showPage('libraryPage');coachingToast('Piste enregistrée')}
+  if(activeCoachingSession?.id===s.id){clearCoachingRealtime();activeCoachingSession=null;activityLibraryFilters.type='coaching';$('libraryType').value='coaching';showPage('libraryPage');coachingToast('Piste enregistrée')}
   return true;
- }catch(error){setUiText('coachingDriverFeedbackState','Piste non enregistrée — votre texte est conservé.');alert('Piste non enregistrée : '+error.message);return false}
+ }catch(error){const message=feedbackSaved?'Retour sauvegardé, mais clôture non confirmée. Réessayez Enregistrer ma piste.':'Piste non enregistrée — votre texte est conservé.';setUiText('coachingDriverFeedbackState',message);alert(message+' '+error.message);return false}
  finally{coachingDriverFeedbackSaving=false;if(button)button.disabled=false}
 }
 async function completeCoachingDebriefReturnHome(id){stopCoachingPresence();stopTraceurTracking();clearCoachingRealtime();clearVerifiedActiveCoaching(id);if(activeCoachingSession?.id===id){activeCoachingSession.status='ended';activeCoachingSession=null}const draftKeys=[`piste-coaching-debrief-${id}`,`piste-debrief-${id}`];draftKeys.forEach(key=>{try{localStorage.removeItem(key)}catch{}});$('coachingDebriefForm')?.reset();$('coachingDebriefStage')?.classList.add('stage-hidden');$('coachingLivePanel')?.classList.add('hidden');showPage('homePage');window.history.replaceState(window.history.state,'','#home');if(typeof bootHome==='function'){try{await bootHome()}catch{}}const toast=$('globalToast')||$('coachingCreateMsg');if(toast){toast.textContent='Session terminée et débrief enregistré';toast.classList.remove('hidden');setTimeout(()=>toast.classList.add('hidden'),3000)}else alert('Session terminée et débrief enregistré')}
