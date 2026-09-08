@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1027">
-<link rel="stylesheet" href="./v2.css?v=2072">
+<link rel="stylesheet" href="./v2.css?v=2073">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -586,6 +586,7 @@
       <div id="coachingWaitingActions" class="coaching-waiting-actions hidden"><small>La suppression définitive efface aussi les positions, messages, repères et débrief associés.</small><button id="cancelCoachingWaiting" class="danger-button" type="button">Annuler la session</button><button id="deleteCoachingWaiting" class="danger-button" type="button">Supprimer définitivement</button></div>
       <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small id="coachingMetricRole">CONDUCTEUR</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Me localiser</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div id="coachingLayerControls" class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Conducteur / Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Olfactif estimé</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label><label id="observerTrackChoice" class="hidden"><input type="checkbox" id="observerTrackToggle"> Voir la piste</label></div><div id="coachingMapContext" class="map-context-menu hidden" role="menu"></div></div>
       <div id="coachingTerrainCommandBar" class="coaching-terrain-command-bar" aria-label="Commandes Terrain"><button id="terrainPauseBtn" class="secondary" type="button">Pause</button><button id="terrainBlackScreenBtn" class="secondary" type="button">Écran noir</button><button id="terrainPlusBtn" class="secondary" type="button">Plus</button></div>
+      <button id="coachingDriverTrackFinish" class="primary hidden" type="button">Terminer la piste<small>Maintenir 2 secondes pour accéder au débrief</small></button>
       <div id="coachingPrimaryActions" class="coaching-primary-actions" aria-label="Commandes principales de la session">
         <div><button id="startCoachingLive" class="primary" type="button">Démarrer la session</button><small id="startCoachingReason" aria-live="polite"></small></div>
         <div><button id="startLayingBtn" class="primary hidden" type="button">Je pars tracer</button><small id="layingStartReason" aria-live="polite"></small></div>
@@ -615,7 +616,7 @@
       <div id="coachingDebriefStage"><div id="coachingAutoDebrief" class="auto-debrief hidden"></div>
       <div class="coaching-actions"><button id="calculateCoachingDebrief" class="secondary">Calculer le débrief</button><button id="backToCoachingSessions" class="ghost-dark" type="button">Retour à Mes pistes</button></div>
       <form id="coachingDebriefForm" class="form-grid hidden"><h3 class="full">Analyse du Coach</h3><p id="coachingDebriefState" class="full coaching-debrief-state" aria-live="polite">Aucun brouillon chargé.</p><label class="full">Points forts<textarea name="strengths" maxlength="1500" rows="2"></textarea></label><label class="full">Axe de progression<textarea name="improvement_area" maxlength="1500" rows="2"></textarea></label><label class="full">Notes du coach<textarea name="coach_notes" maxlength="2500" rows="3"></textarea></label><label class="full">Données statistiques complémentaires<textarea name="statistics_notes" maxlength="2500" rows="3" placeholder="Conditions, observations ou mesures ajoutées après la séance"></textarea></label><div class="full debrief-save-actions"><button id="generateCoachingAi" class="secondary" type="button">✦ Générer le débrief IA</button><button id="saveDebriefDraft" class="secondary" type="button">Enregistrer le brouillon</button><button class="primary" type="submit">Publier le débrief</button></div><label id="coachingAiDebriefWrap" class="full hidden">Suggestion IA modifiable<textarea id="coachingAiDebriefText" rows="8"></textarea></label><p id="coachingAiDebriefStatus" class="small muted full" aria-live="polite"></p></form>
-      <form id="coachingDriverFeedbackForm" class="form-grid hidden"><h3 class="full">Retour du Conducteur</h3><p id="coachingDriverFeedbackState" class="full coaching-debrief-state" aria-live="polite">Aucun retour enregistré.</p><label class="full">Votre retour<textarea name="driver_notes" maxlength="2500" rows="4" placeholder="Ressenti, décisions et observations pendant le parcours"></textarea></label><div class="full debrief-save-actions"><button class="primary" type="submit">Enregistrer mon retour</button></div></form></div>
+      <form id="coachingDriverFeedbackForm" class="form-grid hidden"><h3 class="full">Retour du Conducteur</h3><p id="coachingDriverFeedbackState" class="full coaching-debrief-state" aria-live="polite">Aucun retour enregistré.</p><label class="full">Votre retour<textarea name="driver_notes" maxlength="2500" rows="4" placeholder="Ressenti, décisions et observations pendant le parcours"></textarea></label><div class="full debrief-save-actions"><button class="primary" type="submit">Enregistrer ma piste</button></div></form></div>
     </div>
   </section>
 
@@ -800,7 +801,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1042-18"></script>
+<script type="module" src="./app.js?v=1042-19"></script>
 <script src="./v2.js?v=2019"></script>
 </body>
 </html>

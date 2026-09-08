@@ -23,8 +23,8 @@ check('N/O Coach et Observateur ne démarrent pas de trace personnelle',()=>{con
 check('Q participants uniques par user_id, aucun duo imposé',()=>{assert(source('updateCoachingParticipants').includes('unique.has(m.user_id)'));assert(source('createCoaching').includes('create_coaching_people_session'));assert(!app.includes('coachingWorkMode'));assert(!html.includes('data-coaching-work-mode'));assert(html.includes('coachingCreatorRole'))});
 check('R legacy duo/team toujours consultables, capabilities sans autorité',()=>{for(const work_mode of ['duo','team']){const s={work_mode,workflow_version:2,blind_mode:'full_blind',phase:'driver_running',laying_mode:'traceur'};assert(!context.coachingDataVisibility(s,'driver').planned);assert.deepEqual(Array.from(context.coachingMemberCapabilities({...member('tim','driver'),capabilities:['coach','trace']},s)),['drive'])}assert(sql.includes('r.visibility_version is distinct from 3 then return private.legacy_'));assert(!/update public\.coaching_sessions set work_mode/.test(sql))});
 check('S serveur : RLS, memberships, réponses RPC filtrées, DRY/APPLY non exécutés',()=>{assert(sql.includes("me.invitation_status not in ('accepted','active')"));assert(sql.includes("subject_role in ('driver','coach')"));assert(sql.includes('return jsonb_populate_record(null::public.coaching_sessions,public.get_my_coaching_sessions(r.id)->0)'));assert(sql.includes('SELECT global interdit'));assert(sql.includes('RLS obligatoire'));assert(!sql.includes("'coach'=any(caps)"));assert.equal(dry.replace(/rollback;\s*$/,'').trim(),sql.replace(/commit;\s*$/,'').trim());assert(!/\.rpc\(['"](?:execute_sql|apply_migration)/.test(app))});
-check('cache et version applicative',()=>{assert(app.includes("APP_VERSION='10.42.3'"));assert(html.includes('app.js?v=1042-18'));assert(sw.includes('app.js?v=1042-18'));assert(sw.includes('piste-community-v2106'))});
-check('Workflow principal : Je pars tracer → Piste tracée, Démarrer → Fin de parcours',()=>{
+check('cache et version applicative',()=>{assert(app.includes("APP_VERSION='10.42.3'"));assert(html.includes('app.js?v=1042-19'));assert(sw.includes('app.js?v=1042-19'));assert(sw.includes('piste-community-v2107'))});
+check('Workflow principal : Je pars tracer → Piste tracée, Démarrer → Fin de parcours → Terminer la piste',()=>{
  assert(html.includes('>Je pars tracer</button>'));assert(source('applyV1040RoleSurface').includes("'Je pars tracer'"));
  assert(!/Je démarre la piste|Je prépare la piste/.test(app+html));
  assert(!app.includes('vous pouvez terminer la session'));assert(!app.includes('Vous pouvez terminer la session'));
@@ -32,9 +32,9 @@ check('Workflow principal : Je pars tracer → Piste tracée, Démarrer → Fin 
  assert(secondary.includes('id="terrainFinishBtn"'));assert(secondary.includes('Clôture de secours — maintenir 2 secondes'));
  assert(!html.slice(html.indexOf('id="coachingTerrainCommandBar"'),html.indexOf('id="coachingPrimaryActions"')).includes('terrainFinishBtn'));
 });
-check('Commandes par rôle : aucune clôture principale après le parcours',()=>{
+check('Commandes par rôle : Terminer la piste réservé au Conducteur après le parcours',()=>{
  const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',classList:{hidden:false,add(){this.hidden=true},remove(){this.hidden=false},toggle(name,value){this.hidden=value}}});return nodes.get(id)};
- const c={activeCoachingSession:null,$:node,coachingGpsRole:s=>s.role,coachingPhase:s=>s.phase,isCoachingOwner:s=>s.owner,isCurrentUserLayingActor:s=>s.role==='traceur',setUiText:(id,text)=>node(id).textContent=text,updateCoachingDebriefAccess(){},renderCoachingScenario(){},coachingRoleLabel:r=>r,coachingPhaseLabelV1040:s=>s.phase,esc:s=>s,coachingParticipantName:m=>m.display_name};
+ const c={activeCoachingSession:null,$:node,coachingGpsRole:s=>s.role,coachingPhase:s=>s.phase,isCoachingOwner:s=>s.owner,isCurrentUserLayingActor:s=>s.role==='traceur',setUiText:(id,text)=>node(id).textContent=text,updateCoachingDebriefAccess(){},renderCoachingScenario(){},coachingRoleLabel:r=>r,coachingPhaseLabelV1040:s=>s.phase,esc:s=>s,coachingParticipantName:m=>m.display_name,coachingDriverTrackPending:s=>s.role==='driver'&&s.phase==='completed'};
  vm.createContext(c);for(const name of ['coachingPhaseLabel','updateCoachingPhase','updateCoachingWorkflowNotice','applyV1040RoleSurface'])vm.runInContext(source(name),c);
  for(const [role,phase,button] of [['traceur','preparation','startLayingBtn'],['traceur','laying','trackReadyBtn'],['driver','waiting_ready','driverStartBtn'],['driver','driver_running','driverFinishBtn']]){
   c.activeCoachingSession={role,phase,workflow_version:2,status:'live',owner:false};c.applyV1040RoleSurface();assert(!node(button).classList.hidden);assert(node('terrainFinishBtn').classList.hidden);
@@ -44,7 +44,7 @@ check('Commandes par rôle : aucune clôture principale après le parcours',()=>
  for(const role of ['driver','traceur','coach','observer']){
   c.activeCoachingSession={role,phase:'completed',workflow_version:2,status:'live',owner:role==='coach'};c.applyV1040RoleSurface();
   for(const id of ['driverStartBtn','driverFinishBtn','startLayingBtn','trackReadyBtn','endCoachingLive'])assert(node(id).classList.hidden);
-  assert.equal(node('coachingRoleInstruction').textContent,'');assert(node('coachingRoleInstruction').className.includes('hidden'));assert.equal(node('coachingPhase').innerHTML,'PARCOURS TERMINÉ<small>Débrief disponible</small>');
+  assert.equal(node('coachingRoleInstruction').textContent,'');assert(node('coachingRoleInstruction').className.includes('hidden'));assert.equal(node('coachingPhase').innerHTML,`PARCOURS TERMINÉ<small>${role==='driver'?'GPS et chrono arrêtés':'Débrief disponible'}</small>`);assert.equal(node('coachingDriverTrackFinish').classList.hidden,role!=='driver');
   assert.equal(node('terrainFinishBtn').classList.hidden,role!=='coach');
  }
 });
@@ -60,6 +60,11 @@ check('Clôture de secours : appui court annulé, appui long de 2 s, créateur u
  c.isCoachingOwner=()=>false;c.finishHoldStart();assert.equal(tick,null);
  assert(app.includes("bindClick('terrainFinishBtn',e=>e.preventDefault())"));
 });
+check('Terminer la piste visible hors Plus ; Enregistrer ma piste sans ancien libellé',()=>{
+ const start=html.indexOf('id="coachingDriverTrackFinish"');assert(start>0&&start<html.indexOf('id="coachingPrimaryActions"'));assert(!html.slice(html.indexOf('data-coaching-panel="session"'),html.indexOf('id="coachingDebriefStage"')).includes('id="coachingDriverTrackFinish"'));
+ assert(html.includes('Terminer la piste<small>Maintenir 2 secondes'));assert(html.includes('Enregistrer ma piste'));assert(!html.includes('Enregistrer mon retour'));assert(!/Remplir à mon retour/i.test(app+html+fs.readFileSync('v2.js','utf8')));
+ assert(source('setupCoachingDriverTrackFinish').includes("'pointercancel'"));assert(source('setupCoachingDriverTrackFinish').includes("'visibilitychange'"));
+});
 check('Accueil unifié et Créateur de tracé séparé',()=>{
  const v2=fs.readFileSync('v2.js','utf8');assert(html.includes('ENTRAÎNEMENT &amp; COACHING'));assert(v2.includes('ENTRAÎNEMENT & COACHING'));assert(html.includes('Travailler seul ou avec une équipe'));assert(v2.includes('Travailler seul ou avec une équipe'));assert(html.includes('<b>CRÉATEUR DE TRACÉ</b>'));assert(v2.includes("textContent='CRÉATEUR DE TRACÉ'"));
  const calls=[],c={showPage:p=>calls.push(p),setCoachingStage:s=>calls.push(s)};vm.createContext(c);vm.runInContext(source('openUnifiedCoachingHome'),c);c.openUnifiedCoachingHome();assert.deepEqual(calls,['coachingPage','prepare']);assert.equal((app.match(/\$\('openTerrainHomeBtn'\)\.onclick=openUnifiedCoachingHome/g)||[]).length,2);assert(app.includes("openTerrainPlanner('library')"));
@@ -73,18 +78,28 @@ check('Accueil unifié et Créateur de tracé séparé',()=>{
  }
  assert(source('renderCoachingSessions').includes("owner?'Supprimer':'Retirer'"));console.log('✓ Legacy : owner Supprimer, participant Retirer ; membership personnel, refresh immédiat, erreur conservée');
  for(const success of [true,false]){
-  const calls=[],c={activeCoachingSession:{id:'s',phase:'driver_running'},coachingTransitionV1040:async rpc=>{calls.push(rpc);if(success)Object.assign(c.activeCoachingSession,{phase:'completed',driver_finished_at:'2026-09-08T12:00:00Z'});return success},openCoachingDebriefOnce:async(id,text)=>{calls.push('debrief');assert.equal(id,'s');assert(text.includes('Débrief disponible'))}};
-  vm.createContext(c);vm.runInContext(source('finishDriverRun'),c);assert.equal(await c.finishDriverRun(),success);assert.deepEqual(calls,success?['finish_driver_run','debrief']:['finish_driver_run']);
-  if(success)assert.equal(c.activeCoachingSession.driver_finished_at,'2026-09-08T12:00:00Z');
+  let now=0,tick;const calls=[],storage=new Map(),c={session:{user:{id:'seb'}},activeCoachingSession:{id:'s',role:'driver',phase:'driver_running'},coachingDriverTrackConfirmedKey:'',coachingDriverTrackHoldTimer:null,coachingSessionEndHandledId:null,localStorage:{getItem:key=>storage.get(key),setItem:(key,val)=>storage.set(key,val)},Date:{now:()=>now},setInterval:fn=>(tick=fn,1),clearInterval:()=>{tick=null},coachingPhase:s=>s.phase,myCoachingRole:s=>s.role,$:()=>null,stopCoachingPresence:()=>calls.push('stopGPS'),stopTraceurTracking:()=>{},stopCoachingV1040MetricsTimer:()=>calls.push('stopClock'),clearCoachingRealtime:()=>{},closeFakeLock:async()=>{},updateCoachingPhase:()=>{},updateCoachingPrimaryActions:()=>{},updateCoachingDebriefAccess:()=>{},setCoachingStage:stage=>calls.push(stage),updateCoachingTerrainStatus:()=>{},clearVerifiedActiveCoaching:()=>{},refreshCoachingMapLayout:()=>{},setUiText:()=>{},calculateCoachingDebrief:async()=>calls.push('metrics'),loadSavedCoachingDebrief:async()=>calls.push('load'),coachingTransitionV1040:async rpc=>{calls.push(rpc);if(success)Object.assign(c.activeCoachingSession,{phase:'completed',driver_finished_at:'2026-09-08T12:00:00Z'});return success}};
+  vm.createContext(c);for(const name of ['coachingDriverTrackKey','coachingDriverTrackPending','showCoachingDriverTrackFinish','openCoachingDebriefOnce','finishDriverRun','cancelCoachingDriverTrackHold','startCoachingDriverTrackHold'])vm.runInContext(source(name),c);
+  assert.equal(await c.finishDriverRun(),success);
+  if(!success){assert.deepEqual(calls,['finish_driver_run']);continue}
+  assert.deepEqual(calls,['finish_driver_run','stopGPS','stopClock','finish']);assert(c.coachingDriverTrackPending());assert.equal(c.activeCoachingSession.driver_finished_at,'2026-09-08T12:00:00Z');
+  c.startCoachingDriverTrackHold();now=1999;tick();assert(!calls.includes('debrief'));c.cancelCoachingDriverTrackHold();assert.equal(tick,null);assert(c.coachingDriverTrackPending());
+  c.startCoachingDriverTrackHold({type:'keydown',key:'Enter',repeat:true});assert.equal(tick,null);
+  c.startCoachingDriverTrackHold();now+=2000;tick();await new Promise(resolve=>setImmediate(resolve));
+  assert(!c.coachingDriverTrackPending());assert.equal(calls.filter(x=>x==='debrief').length,1);assert(calls.includes('load'));
+  c.coachingDriverTrackConfirmedKey='';assert(!c.coachingDriverTrackPending()); // Confirmation conservée après rechargement.
+  c.session.user.id='other';assert(c.coachingDriverTrackPending()); // Jamais partagée entre utilisateurs.
+  c.startCoachingDriverTrackHold();c.activeCoachingSession.id='another';now+=2000;tick();assert.equal(tick,null);assert(c.coachingDriverTrackPending());
  }
  {
-  const calls=[],c={coachingSessionEndHandledId:null,stopCoachingPresence:()=>calls.push('stopGPS'),stopTraceurTracking:()=>{},closeFakeLock:async()=>{},clearCoachingRealtime:()=>{},clearVerifiedActiveCoaching:()=>{},$:()=>null,updateCoachingPhase:()=>{},updateCoachingPrimaryActions:()=>{},updateCoachingDebriefAccess:()=>calls.push('access'),setCoachingStage:stage=>calls.push(stage),refreshCoachingMapLayout:()=>{},setUiText:()=>{},calculateCoachingDebrief:async()=>calls.push('metrics'),loadSavedCoachingDebrief:async()=>calls.push('load')};
-  vm.createContext(c);vm.runInContext(source('openCoachingDebriefOnce'),c);await c.openCoachingDebriefOnce('s','Débrief disponible');await c.openCoachingDebriefOnce('s','Débrief disponible');assert.deepEqual(calls,['stopGPS','access','debrief','metrics','load']);
-  assert(source('setCoachingStage').includes('else stopCoachingV1040MetricsTimer()'));
-  assert(source('startCoachingPresence').includes("coachingPhase(activeCoachingSession)!=='driver_running'"));
-  assert(source('handleCoachingSessionChange').includes("if(nextPhase==='completed'){await openCoachingDebriefOnce"));
+  const seen=[],c={activeCoachingSession:{id:'s',status:'live'},coachingDriverTrackPending:()=>true,$:id=>({classList:{toggle:(name,value)=>seen.push([id,name,value]),add(){},remove(){}}}),document:{querySelectorAll:()=>[]},setTimeout(){},startCoachingV1040MetricsTimer:()=>{throw Error('GPS clock resumed')},stopCoachingV1040MetricsTimer:()=>{},calculateCoachingDebrief:()=>{throw Error('debrief before hold')}};
+  vm.createContext(c);vm.runInContext(source('setCoachingStage'),c);c.setCoachingStage('debrief');assert(seen.some(([id,name,value])=>id==='coachingDebriefStage'&&name==='stage-hidden'&&value));assert(seen.some(([id,name,value])=>id==='coachingDriverTrackFinish'&&name==='hidden'&&!value));
  }
- console.log('✓ Fin de parcours : heure serveur, arrêt GPS/chrono, débrief direct sans seconde clôture ; échec conservé');
+ for(const fail of [false,true]){
+  const calls=[],button={disabled:false},form={notes:'Mon parcours',querySelector:()=>button};let release;const gate=new Promise(resolve=>release=resolve),c={coachingDriverFeedbackSaving:false,activeCoachingSession:{id:'s',owner_id:'coach',phase:'completed'},session:{user:{id:'seb'}},$:id=>id==='coachingDriverFeedbackForm'?form:{value:''},hasCoachingCapability:()=>true,coachingPhase:s=>s.phase,coachingDriverTrackPending:()=>false,FormData:class{get(){return form.notes}},supabase:{from:table=>({upsert:async(payload,options)=>{calls.push({table,payload,options});await gate;return {error:fail?{message:'offline'}:null}}})},setUiText:(id,text)=>calls.push(text),clearVerifiedActiveCoaching:()=>{},clearCoachingRealtime:()=>{},activityLibraryFilters:{},showPage:page=>calls.push(page),coachingToast:text=>calls.push(text),alert:text=>calls.push(text)};
+  vm.createContext(c);vm.runInContext(source('saveCoachingDriverFeedback'),c);const first=c.saveCoachingDriverFeedback();assert(button.disabled);assert.equal(await c.saveCoachingDriverFeedback(),false);release();assert.equal(await first,!fail);assert(!button.disabled);assert.equal(calls.filter(x=>x?.table).length,1);assert.equal(calls[0].table,'coaching_debriefs');assert.equal(calls[0].payload.driver_notes,'Mon parcours');assert.equal(calls[0].options.onConflict,'session_id');assert.equal(calls.includes('libraryPage'),!fail);assert.equal(form.notes,'Mon parcours');if(fail)assert.equal(c.activeCoachingSession.id,'s');else assert.equal(c.activeCoachingSession,null);
+ }
+ console.log('✓ Conducteur : GPS/chrono figés, maintien 2 s puis débrief ; sauvegarde unique et retour Mes pistes, erreur sans perte');
  for(const [rpc,phase,next] of [['start_coaching_laying','preparation','laying'],['mark_coaching_track_ready','laying','waiting_ready'],['start_driver_run','waiting_ready','driver_running'],['finish_driver_run','driver_running','completed']]){
   let count=0,release;const gate=new Promise(resolve=>release=resolve),c={session:{user:{id:'seb'}},activeCoachingSession:{id:'s',phase},coachingV10423TransitionInFlight:false,coachingPhase:s=>s.phase,supabase:{rpc:async()=>{count++;await gate;return {data:true}}},refreshActiveCoachingSession:async()=>{c.activeCoachingSession.phase=next},updateCoachingPhase:()=>{},updateCoachingPreparationDetails:()=>{},updateCoachingPrimaryActions:()=>{},applyV1040RoleSurface:()=>{},renderCoachingMap:async()=>{},coachingToast:()=>{}};
   vm.createContext(c);vm.runInContext(source('coachingTransitionV1040'),c);const first=c.coachingTransitionV1040(rpc);assert.equal(await c.coachingTransitionV1040(rpc),false);release();assert.equal(await first,true);assert.equal(await c.coachingTransitionV1040(rpc),false);assert.equal(count,1);
