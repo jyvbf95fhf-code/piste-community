@@ -114,7 +114,7 @@ do $$ declare c record; begin
   execute format('revoke select (%I) on public.coaching_sessions from public,anon,authenticated',c.attname);
  end loop;
 end $$;
-grant select (id,owner_id,name,status,workflow_version,visibility_version,phase,blind_mode,visibility_mode,laying_mode,created_at,started_at,ended_at,laying_started_at,track_finished_at,coach_ready_at,driver_started_at,driver_finished_at,updated_at,invite_code) on public.coaching_sessions to authenticated;
+grant select (id,owner_id,name,status,workflow_version,visibility_version,phase,blind_mode,visibility_mode,laying_mode,created_at,started_at,ended_at,laying_started_at,track_finished_at,coach_ready_at,driver_started_at,driver_finished_at,invite_code) on public.coaching_sessions to authenticated;
 
 create or replace function public.create_coaching_people_session(p_route_id uuid,p_members jsonb,p_blind_mode text default 'normal')
 returns jsonb language plpgsql security definer set search_path='' as $$
