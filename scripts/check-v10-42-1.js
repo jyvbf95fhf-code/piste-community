@@ -9,13 +9,13 @@ const checks=[
  ['reprise active non destructive',/function resumeActiveSession\(\).*hasActiveTerrainSession\(\).*redrawLiveRecordingMap/s.test(app)],
  ['draft conservé après terminer réseau',/queueRecord\(recordMode,o\);saveDraft\(true\)/.test(app)&&!/queueRecord\(recordMode,o\);[^\n]*clearDraft\(\);resetGpsUI/.test(app)],
  ['GPS avant finalisation conservé',/resetGpsUI\(false,\{force:true\}\)/.test(app)&&/saveLastActivity\(o\);clearDraft\(\)/.test(app)],
- ['Traceur Je pars tracer',/layingActor&&phase==='preparation'.*setUiText\('startLayingBtn','Je pars tracer'\)/s.test(app)&&/startLayingBtn/.test(html)],
+ ['Traceur Je démarre la piste',/layingActor&&phase==='preparation'.*setUiText\('startLayingBtn','Je démarre la piste'\)/s.test(app)&&/startLayingBtn/.test(html)],
  ['démarrage pose RPC',/async function startCoachingLaying\(\).*start_coaching_laying.*startTraceurTracking/s.test(app)],
- ['Piste prête uniquement après pose',/layingActor&&phase==='laying'.*setUiText\('trackReadyBtn','Piste prête'\)/s.test(app)],
+ ['Piste prête uniquement après pose',/layingActor&&phase==='laying'.*setUiText\('trackReadyBtn','Piste tracée'\)/s.test(app)],
  ['Conducteur transitions',/driverStartBtn/.test(app)&&/waiting_ready.*coach_ready/.test(app)&&/start_driver_run/.test(app)&&/finish_driver_run/.test(app)],
  ['phase realtime réévaluée',/const nextPhase=coachingPhase\(activeCoachingSession\).*nextPhase!==previousPhase/s.test(app)],
  ['GPS trace points',/coaching_trace_points/.test(app)&&/navigator\.geolocation\.watchPosition/.test(app)],
- ['PWA cache incrémenté',/piste-community-v210(?:0|1|2|3)/.test(sw)&&/app\.js\?v=1042-(?:12|13|14|15)/.test(sw+html)&&/skipWaiting\(\)/.test(sw)&&/clients\.claim\(\)/.test(sw)],
+ ['PWA cache incrémenté',/piste-community-v210(?:0|1|2|3|4)/.test(sw)&&/app\.js\?v=1042-(?:12|13|14|15|16)/.test(sw+html)&&/skipWaiting\(\)/.test(sw)&&/clients\.claim\(\)/.test(sw)],
  ['Coach propriétaire poseur',/function isCurrentUserLayingActor/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)]
 ];
 let ok=true;for(const [label,pass] of checks){console.log(`${pass?'✓':'✗'} ${label}`);if(!pass)ok=false}
