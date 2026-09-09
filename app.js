@@ -1134,15 +1134,30 @@ function libraryStatsHtml(x){
  const points=TerrainBlackBox.points(x._type==='prepared'?x.route:x.track),distance=hasValue(x.distance_km)?x.distance_km:x._type==='prepared'&&hasValue(x.planned_distance_km)?x.planned_distance_km:points.length>1?libraryTrackDistanceKm(points):null,start=Date.parse(x.driver_started_at),end=Date.parse(x.driver_finished_at),duration=Number.isFinite(start)&&Number.isFinite(end)&&end>=start?formatExactDuration(end-start):hasValue(x.duree_h)?`${fmt(x.duree_h,2)} h`:points.length>1&&TerrainBlackBox.duration(points)>0?formatExactDuration(TerrainBlackBox.duration(points)):null;
  return `<span>${distance===null?'Distance indisponible':`<b>${fmt(distance,2)} km</b>${x._type==='prepared'?' prévus':''}`}</span>${x._type==='prepared'?'':`<span>${duration?`<b>${esc(duration)}</b>`:'Durée indisponible'}</span>`}${x.resultat?`<span>${esc(x.resultat)}</span>`:''}`;
 }
+function libraryThumbnail(x){
+ const markers=x._type==='coaching'?x.planned_markers:x._type==='prepared'?x.waypoints:x.field_markers;
+ const photo=(Array.isArray(markers)?markers:[]).map(m=>missionPhotoUrl(m.photo_data)).find(Boolean);
+ if(photo)return `<img class="library-thumbnail-photo" src="${photo}" alt="Photo de la mission" loading="lazy" decoding="async">`;
+ const preview=feedTrackPreview(TerrainBlackBox.points(libraryTrack(x)));
+ return preview||`<span class="library-thumbnail-fallback" aria-hidden="true">${libraryTypeMeta(x._type).icon}</span>`;
+}
 function activityLibraryCard(x){
  const meta=libraryTypeMeta(x._type),date=missionDateLabel(x),tags=(x.tags||[]).map(t=>`<em>${esc(t)}</em>`).join(''),key=`${x._type}:${x.id}`,owned=libraryOwned(x),visibility=libraryVisibility(x),archived=!!x.archived_at,selected=activityLibrarySelection.includes(key),reportReady=['operational','training','coaching'].includes(x._type)&&(['operational','training'].includes(x._type)?Array.isArray(x.track)&&x.track.length>1:x.status==='ended');
- return `<article class="library-card activity-open ${archived?'archived':''} ${selected?'selected':''}" data-id="${x.id}" data-type="${x._type}" data-key="${key}">
-  ${owned?`<label class="library-select-check"><input type="checkbox" data-library-select="${key}" ${activityLibrarySelection.includes(key)?'checked':''}> Sélectionner</label>`:''}
+ return `<article class="library-card library-dossier-card activity-open ${archived?'archived':''} ${selected?'selected':''}" data-id="${x.id}" data-type="${x._type}" data-key="${key}">
+  ${owned?`<label class="library-select-check"><input type="checkbox" data-library-select="${key}" ${selected?'checked':''}> Sélectionner</label>`:''}
   ${owned?`<button class="library-favorite ${x.is_favorite?'active':''}" data-favorite-id="${x.id}" data-favorite-type="${x._type}" aria-label="Favori">★</button>`:''}
-  <div class="library-track-preview">${feedTrackPreview(libraryTrack(x))}</div>
-  <div class="library-card-body"><small>${meta.icon} ${meta.label} • ${date}${archived?' • ARCHIVÉE':''}</small><h3>${esc(libraryName(x))}</h3><p>🐕 ${esc(dogDisplay(x.dog_id))}${x.commune_depart?` • 📍 ${esc(x.commune_depart)}`:''}</p><div class="library-stats">${libraryStatsHtml(x)}<span class="mission-status">${esc(missionStatus(x))}</span></div>${reportReady?'<span class="library-report-ready">▤ Rapport PDF disponible</span>':''}${tags?`<div class="library-tags">${tags}</div>`:''}
-  ${owned?`<label class="library-visibility">Visibilité<select data-library-visibility="${key}"><option value="private" ${visibility==='private'?'selected':''}>🔒 Privé</option><option value="community" ${visibility==='community'?'selected':''}>🌐 Communauté</option><option value="public" ${visibility==='public'?'selected':''}>🔗 Public</option></select></label>`:`<span class="pill private">Participant • consultation autorisée</span>`}
-  <div class="library-actions"><button class="primary openLibraryItem" type="button">Ouvrir</button><button class="library-actions-toggle" type="button" aria-expanded="false">••• Plus d’actions</button><div class="library-actions-panel hidden">${owned?`<button class="secondary manageLibraryItem" type="button">Modifier</button><button class="secondary duplicateLibraryItem" type="button">Dupliquer</button><button class="secondary archiveLibraryItem" type="button">${archived?'Désarchiver':'Archiver'}</button>${visibility==='public'?'<button class="secondary copyLibraryLink" type="button">Copier le lien</button>':''}<button class="danger-button deleteLibraryItem" type="button">Supprimer</button>`:'<button class="danger-button deleteLibraryItem" type="button">Quitter</button>'}</div></div></div></article>`;
+  <div class="library-card-body">
+   <div class="library-dossier-heading"><div class="library-thumbnail">${libraryThumbnail(x)}</div><div class="library-dossier-title"><small>${esc(meta.label)}</small><h3>${esc(libraryName(x))}</h3><time>${esc(date)}</time></div></div>
+   ${x.dog_id||x.commune_depart?`<p class="library-dossier-context">${x.dog_id?`🐕 ${esc(dogDisplay(x.dog_id))}`:''}${x.commune_depart?`${x.dog_id?' · ':''}${esc(x.commune_depart)}`:''}</p>`:''}
+   <div class="library-stats">${libraryStatsHtml(x)}</div>
+   <div class="library-dossier-status"><span class="mission-status">${esc(missionStatus(x))}</span>${reportReady&&TerrainBlackBox.points(libraryTrack(x)).length>1?'<span class="library-analysis-ready">Analyse dispo</span>':''}</div>
+   ${tags?`<div class="library-tags">${tags}</div>`:''}
+   <div class="library-actions"><button class="primary openLibraryItem" type="button">Ouvrir</button><button class="library-actions-toggle" type="button" aria-expanded="false">＋ d’actions</button><div class="library-actions-panel hidden">
+    ${owned?`<button class="secondary manageLibraryItem" type="button">Modifier</button><button class="secondary duplicateLibraryItem" type="button">Dupliquer</button><button class="secondary archiveLibraryItem" type="button">${archived?'Désarchiver':'Archiver'}</button>
+    <label class="library-visibility">Visibilité<select data-library-visibility="${key}"><option value="private" ${visibility==='private'?'selected':''}>🔒 Privé</option><option value="community" ${visibility==='community'?'selected':''}>🌐 Communauté</option><option value="public" ${visibility==='public'?'selected':''}>🔗 Public</option></select></label>
+    ${visibility==='public'?'<button class="secondary copyLibraryLink" type="button">Copier le lien</button>':''}<button class="danger-button deleteLibraryItem" type="button">Supprimer</button>`:'<span class="pill private">Participant • consultation autorisée</span><button class="danger-button deleteLibraryItem" type="button">Quitter</button>'}
+   </div></div>
+  </div></article>`;
 }
 async function toggleActivityFavorite(type,id){
  const tables={training:'entrainements',operational:'pistes',coaching:'coaching_sessions',prepared:'training_routes'},row=libraryRow(type,id);if(!row||!libraryOwned(row))return;

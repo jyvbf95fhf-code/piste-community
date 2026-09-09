@@ -841,3 +841,38 @@ body.v10-30-aurora{
 #missionMapPanel.mission-map-expanded #missionMap{flex:1;height:auto;min-height:0}
 #missionMapPanel.mission-map-expanded #missionMapKpis{display:none}
 #missionMapExpand{margin-bottom:10px!important}
+
+/* V10.43 — cartes de dossiers compactes, vignette secondaire */
+#libraryPage .library-dossier-card{background:#10212b;box-shadow:0 5px 16px #0002;border-color:#293d49;border-radius:18px;align-self:start}
+#libraryPage .library-dossier-card .library-card-body{padding:16px;gap:12px}
+.library-dossier-heading{display:grid;grid-template-columns:54px minmax(0,1fr);gap:12px;align-items:center;padding-right:30px}
+.library-thumbnail{width:54px;height:54px;overflow:hidden;border-radius:12px;background:#1a303b;border:1px solid #ffffff0c;display:grid;place-items:center}
+.library-thumbnail-photo{display:block;width:100%;height:100%;object-fit:cover}
+.library-thumbnail-fallback{font-size:23px;opacity:.8}
+.library-thumbnail .feed-track-preview{width:54px;height:54px!important;min-height:0;margin:0;border:0;border-radius:0;opacity:.5;pointer-events:none}
+.library-thumbnail .feed-track-preview svg{width:100%;height:100%}
+.library-thumbnail .feed-track-preview>span{display:none}
+.library-dossier-title{min-width:0;display:grid;gap:4px}
+.library-dossier-title>small{color:#9ec4d3;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+#libraryPage .library-dossier-title h3{font-size:16px;line-height:1.35;color:#f0f5f7;margin:0}
+.library-dossier-title time{font-size:12px;color:#aebec8;line-height:1.4}
+#libraryPage .library-dossier-context{font-size:12px;color:#bfccd3;line-height:1.5}
+#libraryPage .library-dossier-card .library-stats{display:flex;flex-wrap:wrap;gap:8px 16px}
+#libraryPage .library-dossier-card .library-stats span{padding:0;background:none;font-size:12px;color:#aebec8;overflow:visible}
+#libraryPage .library-dossier-card .library-stats b{color:#e0eaf0;font-weight:600}
+.library-dossier-status{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.library-dossier-status .mission-status{font-size:11px;padding:4px 9px;font-weight:600}
+.library-analysis-ready{font-size:11px;color:#9dc7dc}
+#libraryPage .library-dossier-card .library-actions{border-top:1px solid #ffffff0c;padding-top:12px;gap:8px}
+#libraryPage .library-dossier-card .library-actions>button{min-height:44px;font-size:12px;padding:9px 14px}
+#libraryPage .library-dossier-card .library-actions>.primary{background:#1b4351;border:1px solid #356271;color:#e1f0f6;box-shadow:none}
+#libraryPage .library-dossier-card .library-actions-toggle{color:#b6c9d3}
+#libraryPage .library-dossier-card .library-visibility{grid-column:1/-1;font-size:12px}
+#libraryPage .library-dossier-card .library-visibility select{font-size:14px;min-height:44px}
+#libraryPage .library-dossier-card .library-favorite{width:32px;height:32px;right:10px;top:12px;border:0;background:transparent;font-size:18px}
+#libraryPage .library-dossier-card.archived{opacity:1}
+#libraryPage .library-dossier-card.archived:after{display:none}
+#libraryPage .library-dossier-card.archived .mission-status{background:#29343d;color:#cad4dc;border-color:#52606b}
+#libraryPage.library-selection-mode .library-dossier-card .library-select-check{position:static;margin:12px 16px 0;width:fit-content;box-shadow:none}
+.nav-folder-icon{display:block;width:23px;height:23px;margin:auto}
+@media(max-width:600px){#libraryPage .activity-library{grid-template-columns:minmax(0,1fr);gap:12px}#libraryPage .library-date-group{margin:12px 2px 0}}

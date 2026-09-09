@@ -14,6 +14,13 @@ assert(!source('activityLibraryCard').includes('createPisteMap'));assert(source(
 assert(source('missionReportModel').includes('driver_notes'));assert(!source('missionReportModel').includes('mergeReportDraft'));assert(source('renderMissionReport').includes('buildProfessionalPdfBlob(model)'));assert(source('renderMissionDossier').includes('Voir le rapport'));
 assert(css.includes('overflow-x:auto'));assert(css.includes('max-width:420px'));assert(css.includes('orientation:landscape'));assert(source('renderMissionMap').includes('ResizeObserver'));
 require('./verify-current-assets')();
+assert(!source('activityLibraryCard').includes('library-track-preview'));
+assert(source('activityLibraryCard').includes('libraryThumbnail(x)'));
+assert(source('activityLibraryCard').includes('openLibraryItem'));
+assert(source('activityLibraryCard').includes('library-actions-toggle'));
+assert(html.includes('class="nav-folder-icon"'));
+assert(fs.readFileSync('v2.js','utf8').includes('class="nav-folder-icon"'));
+assert(css.includes('.library-thumbnail{width:54px;height:54px'));
 const values={};const ctx=vm.createContext({Date,Set,Map,Number,String,Array,console,$:id=>({value:values[id]||''}),activityLibraryFilters:{status:'all'},libraryName:x=>x.name||'',formatExactDuration:ms=>`${ms} ms`,hasValue:v=>v!==null&&v!==undefined&&v!=='',esc:v=>String(v).replace(/</g,'&lt;'),LIVE_MARKERS:{note:{label:'Note'},loss:{label:'Perte'},recovery:{label:'Reprise'}},libraryRow:()=>({id:'s',planned_route:[{lat:1,lon:1}]}),TerrainBlackBox:{points:x=>Array.isArray(x)?x:[],analyse:()=>({}),facts:()=>[]}});
 for(const name of ['missionDate','missionDateLabel','missionStatus','missionLibraryMatch','missionLibrarySort','missionTimeline','missionAge','missionDebriefHtml','missionPhotoUrl','missionReadRows','reportActivitySource'])vm.runInContext(source(name),ctx);
 assert.equal(ctx.missionDate({}),null);assert.equal(ctx.missionDate({date:'bad'}),null);assert.equal(ctx.missionStatus({_type:'coaching',phase:'completed',status:'live'}),'En cours');assert.equal(ctx.missionStatus({_type:'coaching',status:'ended'}),'Terminé');

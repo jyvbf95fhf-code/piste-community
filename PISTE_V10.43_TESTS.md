@@ -88,4 +88,8 @@ Limite explicite : ces essais de navigateur simulé ne constituent pas une valid
 
 ### Cache
 
-Application `10.43` ; `app.js?v=1043-1`, `v2.css?v=2074`, `v2.js?v=2020`, service worker `piste-community-v2110`. `styles.css` inchangé. Les mêmes URLs sont précachées ; nettoyage ancien cache et activation du nouveau worker conservés.
+Application `10.43` ; `app.js?v=1043-2`, `v2.css?v=2075`, `v2.js?v=2021`, service worker `piste-community-v2111`. `styles.css` inchangé. Les mêmes URLs sont précachées ; nettoyage ancien cache et activation du nouveau worker conservés.
+
+## Ajustement UI des cartes — PR #37
+
+Liste compacte avec vignette 54×54 à gauche : première photo raster de repère déjà accessible, sinon aperçu SVG discret, sinon icône du type. Aucun chargement de données supplémentaire. Titre, date/heure, type, chien si connu, métriques et badges séparés. Les actions Ouvrir et + d’actions restent accessibles ; les réglages de visibilité sont déplacés dans le panneau d’actions existant. L’icône de navigation est un dossier SVG en currentColor, présent avant et après l’habillage v2.js. Aucun changement des onglets du dossier, des filtres ou des données.

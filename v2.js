@@ -129,7 +129,7 @@
     const defs = [
       {page:'homePage', icon:'⌂', label:'Accueil'},
       {page:'dogPage', icon:'🐕', label:'Chien'},
-      {page:'libraryPage', icon:'🗂️', label:'Mes pistes'},
+      {page:'libraryPage', icon:'<svg class="nav-folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 9h18"/></svg>', label:'Mes pistes'},
       {page:'feedPage', icon:'🔔', label:'Actualités'},
       {page:'profilePage', icon:'○', label:'Profil'}
     ];
