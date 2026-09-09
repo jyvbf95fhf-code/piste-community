@@ -149,7 +149,7 @@
       buttons.forEach(b => b.classList.remove('v2-nav-active'));
       const match = buttons.find(b => b.dataset.page === page);
       if(match) match.classList.add('v2-nav-active');
-      if(['recordPage','activityDetailPage','plannerPage','coachingPage','operationalCallPage'].includes(page) && buttons[2]) buttons[2].classList.add('v2-nav-active');
+      if(['recordPage','activityDetailPage','missionPage','plannerPage','coachingPage','operationalCallPage'].includes(page) && buttons[2]) buttons[2].classList.add('v2-nav-active');
     };
 
     document.addEventListener('click', e => {

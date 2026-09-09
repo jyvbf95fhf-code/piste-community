@@ -816,3 +816,28 @@ body.v10-30-aurora{
 #coachingDriverTrackFinish.hidden{display:none}
 #coachingDriverTrackFinish small{display:block;margin-top:6px;font-size:12px;font-weight:500}
 #coachingDriverTrackFinish::before{content:"";position:absolute;inset:0 auto 0 0;width:var(--finish-progress,0%);background:rgba(255,255,255,.25);pointer-events:none}
+
+/* V10.43 — bibliothèque et dossier terrain mobile */
+.mission-subtitle{color:#b8cbd6;margin:4px 0 18px}
+.mission-tabs{display:flex;gap:8px;overflow-x:auto;max-width:100%;padding:8px 0 14px;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.mission-tabs button{flex:0 0 auto;min-height:44px;padding:10px 15px;border:1px solid #334c60;border-radius:24px;background:#152635;color:#dce9f2;white-space:nowrap}
+.mission-tabs button.active{background:#163d54;border-color:#4fb6ec;color:#fff}
+.mission-tabs button:focus-visible{outline:2px solid #66dbb1;outline-offset:2px}
+.mission-header{padding:18px 0}.mission-header h2{font-size:25px;overflow-wrap:anywhere;margin:0 0 8px}.mission-header p{color:#b8cbd6}
+.mission-status{display:inline-block;border:1px solid #2a715d;background:#12392e;color:#a4f0d0;border-radius:20px;padding:5px 10px;font-size:12px}
+#missionPage{min-width:0;max-width:100%}#missionPage .card{padding:18px;border-radius:20px;background:#102231;border:1px solid #294354;color:#e4eef5}
+#missionPage h3{font-size:14px;letter-spacing:.045em;line-height:1.5;color:#d3edf8}
+#missionPage .primary,#missionPage .secondary{min-height:46px;margin:8px 6px 0 0}
+.mission-info{margin:12px 0 20px}.mission-info div{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #ffffff12}.mission-info dt{color:#abc1ce;font-size:13px}.mission-info dd{margin:0;text-align:right;color:#f0f6fa;font-weight:600;font-size:14px;overflow-wrap:anywhere;max-width:62%}
+#missionMap{height:60vh;height:60svh;min-height:300px;border-radius:14px;background:#142735;isolation:isolate}#missionMap .leaflet-control-layers{max-width:220px;font-size:12px}#missionMap .leaflet-control-layers label{color:#182a34}
+.mission-marker-photo{width:100%;max-height:200px;object-fit:contain}
+.mission-timeline{list-style:none;padding:0 0 0 14px;border-left:2px solid #3ba6bf;margin:20px 0}.mission-timeline li{position:relative;padding:0 0 24px 10px}.mission-timeline li:before{content:'';position:absolute;left:-20px;top:5px;width:10px;height:10px;background:#66dbb1;border-radius:50%}.mission-timeline time{display:block;font-size:12px;color:#a7c2d0;margin-bottom:6px}.mission-timeline p{font-size:14px;overflow-wrap:anywhere}
+.mission-contribution{padding:12px 0;border-bottom:1px solid #365060}.mission-contribution p,.mission-paper p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65}.mission-estimate{border-left:3px solid #57baad;padding-left:12px;color:#c7e4df;font-size:14px}
+.mission-paper{background:#fff;color:#172f3a;padding:20px;border-radius:12px;margin:18px 0;overflow-wrap:anywhere}.mission-paper h2{font-size:22px}.mission-paper h3{color:#176148!important}.mission-paper img{max-width:100%;height:auto}.mission-paper figure{margin:14px 0}.mission-paper section{border-bottom:1px solid #dce5e9;padding:8px 0}
+.mission-advanced summary{cursor:pointer;min-height:44px;padding:12px 0;color:#c9e0ed}.mission-search{display:block}.library-toolbar>label{display:block;margin:12px 0}.library-toolbar input,.library-toolbar select{min-width:0;width:100%;font-size:16px}.library-toolbar input[type=checkbox]{width:auto}.library-filters label{min-width:0}.library-card-body{min-width:0}.library-card h3{overflow-wrap:anywhere}
+@media(max-width:420px){#missionPage .card{padding:14px}.mission-header h2{font-size:22px}.mission-info div{gap:10px}.mission-paper{padding:14px}.library-filters{grid-template-columns:1fr}.mission-tabs{margin-right:-4px}.library-head h2{font-size:18px}}
+@media(orientation:landscape) and (max-height:500px){#missionMap{height:80vh;min-height:240px}}
+#missionMapPanel.mission-map-expanded{position:fixed;inset:8px;z-index:2000;margin:0;display:flex;flex-direction:column;padding:10px;padding-top:max(10px,env(safe-area-inset-top));background:#102231}
+#missionMapPanel.mission-map-expanded #missionMap{flex:1;height:auto;min-height:0}
+#missionMapPanel.mission-map-expanded #missionMapKpis{display:none}
+#missionMapExpand{margin-bottom:10px!important}
