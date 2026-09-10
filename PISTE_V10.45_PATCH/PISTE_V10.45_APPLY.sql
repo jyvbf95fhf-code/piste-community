@@ -12,19 +12,18 @@ end $$;
 -- Private supplement, no new columns or permissive policies on the existing sessions.
 create table private.coaching_deferred_v1045 (
  session_id uuid primary key references public.coaching_sessions(id) on delete cascade,
- search_mode text not null check(search_mode in ('immediate','deferred')),
+ search_mode text check(search_mode in ('immediate','deferred')),
  traceur_ready_at timestamptz,
  departure_point jsonb not null default '{}'::jsonb check(jsonb_typeof(departure_point)='object')
 );
 alter table private.coaching_deferred_v1045 enable row level security;
 revoke all on table private.coaching_deferred_v1045 from public,anon,authenticated;
 
-create function public.create_coaching_people_session_v1045(p_route_id uuid,p_members jsonb,p_blind_mode text default 'normal',p_search_mode text default 'immediate')
+create function public.create_coaching_people_session_v1045(p_route_id uuid,p_members jsonb,p_blind_mode text default 'normal')
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare uid uuid:=(select auth.uid()); route public.training_routes; sid uuid; item jsonb; member_id uuid; member_role text; without_route boolean;
 begin
  if uid is null then raise exception 'Authentification requise'; end if;
- if p_search_mode is null or p_search_mode not in ('immediate','deferred') then raise exception 'Type de recherche invalide'; end if;
  if p_blind_mode is null or p_blind_mode not in ('normal','simple_blind','full_blind') then raise exception 'Mode de visibilité invalide'; end if;
  if jsonb_typeof(p_members) is distinct from 'array' then raise exception 'Liste de personnes requise'; end if;
  if exists(select 1 from jsonb_array_elements(p_members) m where m->>'user_id' is null or coalesce(m->>'role','') not in ('coach','traceur','driver','observer')) then raise exception 'Rôle ou personne invalide'; end if;
@@ -51,19 +50,19 @@ begin
   member_id:=(item->>'user_id')::uuid;member_role:=item->>'role';
   insert into public.coaching_members(session_id,user_id,role,invitation_status) values(sid,member_id,member_role,case when member_id=uid then 'accepted' else 'invited' end);
  end loop;
- insert into private.coaching_deferred_v1045(session_id,search_mode) values(sid,p_search_mode);
+ insert into private.coaching_deferred_v1045(session_id) values(sid);
  perform set_config('piste.people_creation','off',true);
  return jsonb_build_object('id',sid);
 end $$;
-revoke all on function public.create_coaching_people_session_v1045(uuid,jsonb,text,text) from public,anon,authenticated;
-grant execute on function public.create_coaching_people_session_v1045(uuid,jsonb,text,text) to authenticated;
+revoke all on function public.create_coaching_people_session_v1045(uuid,jsonb,text) from public,anon,authenticated;
+grant execute on function public.create_coaching_people_session_v1045(uuid,jsonb,text) to authenticated;
 
 -- Exact V10.42.3 truth gates and legacy projection retained. Only logistical metadata added.
 create or replace function public.get_my_coaching_sessions(p_session_id uuid default null)
 returns jsonb language sql stable security definer set search_path='' as $$
  select coalesce(jsonb_agg(case when s.visibility_version is distinct from 3 then legacy.row else
  jsonb_build_object('id',s.id,'owner_id',s.owner_id,'name',s.name,'status',s.status,'workflow_version',s.workflow_version,'visibility_version',3,
- 'server_now',statement_timestamp(),'search_mode',coalesce(d.search_mode,'immediate'),'traceur_ready_at',case when me.invitation_status in ('accepted','active') then d.traceur_ready_at else null end,
+ 'server_now',statement_timestamp(),'search_mode',case when d.session_id is null then 'immediate' else d.search_mode end,'traceur_ready_at',case when me.invitation_status in ('accepted','active') then d.traceur_ready_at else null end,
  'phase',s.phase,'blind_mode',s.blind_mode,'visibility_mode',s.visibility_mode,'laying_mode',s.laying_mode,
  'created_at',s.created_at,'started_at',s.started_at,'ended_at',s.ended_at,'laying_started_at',s.laying_started_at,'track_finished_at',s.track_finished_at,'driver_started_at',s.driver_started_at,'driver_finished_at',s.driver_finished_at,
  'invite_code',case when s.owner_id=(select auth.uid()) then s.invite_code else null end,
@@ -80,6 +79,28 @@ $$;
 revoke all on function public.get_my_coaching_sessions(uuid) from public,anon;
 grant execute on function public.get_my_coaching_sessions(uuid) to authenticated;
 
+-- Only the accepted Traceur chooses after the actual laying end; NULL means undecided.
+create function public.choose_coaching_search_mode_v1045(p_session_id uuid,p_search_mode text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare uid uuid:=(select auth.uid()); s public.coaching_sessions; d private.coaching_deferred_v1045;
+begin
+ if uid is null then raise exception 'Authentification requise' using errcode='42501'; end if;
+ if p_search_mode is null or p_search_mode not in ('immediate','deferred') then raise exception 'Type de recherche invalide'; end if;
+ select * into s from public.coaching_sessions where id=p_session_id for update;
+ if s.id is null or s.visibility_version is distinct from 3 or not exists(select 1 from public.coaching_members m where m.session_id=s.id and m.user_id=uid and m.role='traceur' and m.invitation_status in ('accepted','active')) then raise exception 'Choix réservé au Traceur autorisé' using errcode='42501'; end if;
+ select * into d from private.coaching_deferred_v1045 where session_id=s.id;
+ if d.session_id is null then raise exception 'Session antérieure à V10.45'; end if;
+ if d.search_mode is not null then
+  if d.search_mode=p_search_mode then return public.get_my_coaching_sessions(s.id)->0; end if;
+  raise exception 'Le type de recherche est déjà enregistré';
+ end if;
+ if s.phase<>'waiting_ready' or s.status<>'waiting' or s.track_finished_at is null or s.driver_started_at is not null then raise exception 'Terminez la pose avant de choisir'; end if;
+ update private.coaching_deferred_v1045 set search_mode=p_search_mode where session_id=s.id;
+ return public.get_my_coaching_sessions(s.id)->0;
+end $$;
+revoke all on function public.choose_coaching_search_mode_v1045(uuid,text) from public,anon,authenticated;
+grant execute on function public.choose_coaching_search_mode_v1045(uuid,text) to authenticated;
+
 create function public.mark_coaching_traceur_ready_v1045(p_session_id uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare uid uuid:=(select auth.uid()); s public.coaching_sessions; d private.coaching_deferred_v1045;
@@ -88,7 +109,7 @@ begin
  select * into s from public.coaching_sessions where id=p_session_id for update;
  if s.id is null or s.visibility_version is distinct from 3 or not exists(select 1 from public.coaching_members m where m.session_id=s.id and m.user_id=uid and m.role='traceur' and m.invitation_status in ('accepted','active')) then raise exception 'Action réservée au Traceur autorisé' using errcode='42501'; end if;
  select * into d from private.coaching_deferred_v1045 where session_id=s.id;
- if d.session_id is null or d.search_mode<>'deferred' then raise exception 'Action réservée à une recherche différée'; end if;
+ if d.session_id is null or d.search_mode is distinct from 'deferred' then raise exception 'Action réservée à une recherche différée'; end if;
  -- One durable event, no repeated message inserts, including retries after the driver has started.
  if d.traceur_ready_at is not null then return public.get_my_coaching_sessions(s.id)->0; end if;
  if s.phase<>'waiting_ready' or s.status<>'waiting' or s.track_finished_at is null or s.driver_started_at is not null then raise exception 'La pose doit être terminée et le parcours non démarré'; end if;
@@ -114,6 +135,7 @@ begin
  if old.phase='laying' and new.phase='waiting_ready' and jsonb_array_length(old.planned_route)=0 then
   if (select count(*) from (select 1 from public.coaching_trace_points p join public.coaching_members m on m.session_id=p.session_id and m.user_id=p.owner_id and m.role='traceur' where p.session_id=old.id limit 2) points)<2 then raise exception 'Enregistrez au moins deux points réels avant Piste tracée'; end if;
  end if;
+ if old.phase is distinct from new.phase and new.phase='driver_running' and d.search_mode is null then raise exception 'Attendez le choix de recherche du Traceur'; end if;
  if old.phase is distinct from new.phase and new.phase='driver_running' and d.search_mode='deferred' then
   if d.traceur_ready_at is null or old.track_finished_at is null then raise exception 'Attendez la confirmation Traceur en place'; end if;
  end if;
@@ -125,11 +147,11 @@ create trigger coaching_deferred_transition_v1045 before update on public.coachi
 -- Serialize GPS writes with phase transitions; old RLS remains mandatory.
 create function private.guard_coaching_deferred_gps_v1045()
 returns trigger language plpgsql security definer set search_path='' as $$
-declare s public.coaching_sessions; mode text;
+declare s public.coaching_sessions; d private.coaching_deferred_v1045;
 begin
  select * into s from public.coaching_sessions where id=new.session_id for update;
- select search_mode into mode from private.coaching_deferred_v1045 where session_id=new.session_id;
- if mode='deferred' then
+ select * into d from private.coaching_deferred_v1045 where session_id=new.session_id;
+ if d.search_mode='deferred' or (d.session_id is not null and d.search_mode is null and s.phase='waiting_ready') then
   if (select auth.uid()) is null or new.owner_id is distinct from (select auth.uid()) then raise exception 'Propriétaire GPS invalide' using errcode='42501'; end if;
   if s.status<>'live' or (tg_table_name='coaching_trace_points' and s.phase<>'laying') or (tg_table_name in ('coaching_live_points','coaching_current_positions') and s.phase<>'driver_running') then raise exception 'GPS arrêté pendant l’attente' using errcode='42501'; end if;
  end if;

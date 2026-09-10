@@ -8,7 +8,7 @@ SQL nécessaire : OUI, uniquement préparé pour application manuelle. Aucun SQL
 
 ## Implémentation retenue
 
-- Création : la nouvelle RPC `create_coaching_people_session_v1045` garde les validations V10.42.3 et autorise spécifiquement Coach/full_blind sans planned_route ; le sélecteur et les actions carte disparaissent dans ce cas. Les personnes et leurs rôles restent explicites et distincts.
+- Création : la nouvelle RPC `create_coaching_people_session_v1045` garde les validations V10.42.3 et autorise spécifiquement Coach ou Conducteur/full_blind sans planned_route ; le sélecteur et les actions carte disparaissent dans ce cas. Les personnes et leurs rôles restent explicites et distincts.
 - Complément privé `private.coaching_deferred_v1045` : mode, présence Traceur et snapshot du premier point logistique. Aucune nouvelle colonne ni nouvelle phase sur coaching_sessions, aucun rôle transformé.
 - Transition « Traceur en place » : rôle Traceur accepté/actif, après fin de pose différée, idempotence sous verrou, heure serveur. Ne clôture pas la session. Le trigger complémentaire bloque le départ via l’ancienne RPC tant que cette confirmation manque.
 - Attente : aucune position GPS d’aperçu en différé avant le parcours, arrêt des watches après pose ; garde côté serveur sur trace/live/current. Le chrono Conducteur ne démarre qu’au départ.
@@ -21,7 +21,7 @@ SQL nécessaire : OUI, uniquement préparé pour application manuelle. Aucun SQL
 
 Aucune modification des policies RLS ou des fonctions de matrice V10.42.3. Les expressions de visibilité de get_my_coaching_sessions sont conservées, ainsi que sa branche legacy. Métadonnées privées sans privilège direct, fonctions bornées avec search_path vide. La capture du départ n’actualise jamais la position finale dans le champ logistique. Aucun email/débrief/trace supplémentaire n’est exposé.
 
-Les anciennes sessions sont interprétées comme recherche immédiate ; leurs données ne sont pas migrées. Normal/simple aveugle et rôles V10.42.3 sont conservés. En immédiat, aucune étape Traceur en place n’est requise. Le correctif sans carte est borné au Coach full_blind ; les autres créations conservent leur tracé personnel. Les invitations gardent leur expiration existante (7 jours pour les nouvelles sessions), suffisante pour l’attente de plusieurs heures ; aucun mécanisme de suppression automatique n’est ajouté.
+Les anciennes sessions sont interprétées comme recherche immédiate ; leurs données ne sont pas migrées. Normal/simple aveugle et rôles V10.42.3 sont conservés. En immédiat, aucune étape Traceur en place n’est requise. Le correctif sans carte est borné au Coach ou Conducteur full_blind ; les autres créations conservent leur tracé personnel. Les invitations gardent leur expiration existante (7 jours pour les nouvelles sessions), suffisante pour l’attente de plusieurs heures ; aucun mécanisme de suppression automatique n’est ajouté.
 
 Les distances/coordonnées GPS et les contributions Conducteur/Coach restent dans leurs tables distinctes. Le complément suit la suppression de session existante via FK ; le patch n’efface aucune donnée. Aucune Edge Function ni fonctionnalité V10.46.
 
@@ -31,7 +31,7 @@ Contrôles : `node --check app.js`, `node --check v2.js`, `check-postgres-sql.js
 
 Le test V10.45 couvre les scénarios A–J localement : contrat SQL/permissions déclarées, Coach sans route, double soumission, modes, rôles, attente sans appel GPS, arrêt des watches, réception unique, rechargement, délai de plusieurs heures à la milliseconde, timeline et absence de fallback temporel erroné. Il compare les fonctions de visibilité, rôles et clôture Conducteur à la baseline. Aucun ID HTML dupliqué. Les nouveaux SQL sont parsés, jamais exécutés.
 
-Les tests historiques gardent leurs assertions de sécurité ; seules les versions acceptées, les deux fichiers SQL V10.45 autorisés explicitement et les dépendances du harness de rendu sont adaptés. Cache : app.js `1045-1`, v2.css `2077`, service worker `piste-community-v2114`. v2.js inchangé.
+Les tests historiques gardent leurs assertions de sécurité ; seules les versions acceptées, les deux fichiers SQL V10.45 autorisés explicitement et les dépendances du harness de rendu sont adaptés. Cache : app.js `1045-3`, v2.css `2078`, service worker `piste-community-v2116`. v2.js inchangé.
 
 ## Limites de recette
 
@@ -39,8 +39,16 @@ Les tests navigateur utilisent le HTML/CSS et les fonctions de présentation ré
 
 Recette navigateur locale : création Coach double aveugle sans contrôles carte, attente Traceur/Conducteur et notification unique après deux ouvertures vérifiées. Largeur document = viewport = 375 px dans les trois vues ; paysage 812 px sans débordement ; action Démarrer haute de 50 px. Barre d’étapes défilable horizontalement. Aucune erreur navigateur relevée. Cette recette utilise des réponses simulées, pas le SQL distant.
 
-Résultat final local : tous les contrôles listés ci-dessus sont PASS, ainsi que verify-current-assets. Les deux scripts V10.45 contiennent chacun 29 instructions PostgreSQL analysées ; DRY RUN finit par rollback, APPLY par commit. Aucune exécution SQL.
+Résultat final local : tous les contrôles listés ci-dessus sont PASS, ainsi que verify-current-assets. Les deux scripts V10.45 contiennent chacun 32 instructions PostgreSQL analysées ; DRY RUN finit par rollback, APPLY par commit. Aucune exécution SQL.
 
 ## Correctif Conducteur double aveugle
 
 Exception sans route étendue à Coach/Conducteur en full_blind, côté formulaire et RPC. Test explicite driver : contrôles masqués, création sans route et sélection résiduelle ignorée (p_route_id NULL). Contrat SQL : rôle authentifié Coach/Conducteur et refus route non NULL. Traceur et modes normal/simple_blind conservés. Cache app 1045-2, service worker v2115. SQL uniquement préparé, non exécuté ; refus API réel à valider après application manuelle.
+
+## Choix après la pose (remplace le choix à la création)
+
+Aucun sélecteur et aucun paramètre immédiat/différé dans la création. Le complément existant conserve search_mode=NULL jusqu’au choix du Traceur après Piste tracée. Aucun mode artificiel ni nouvelle phase. RPC choose_coaching_search_mode_v1045 : Traceur accepté/actif uniquement, verrou, fin de pose requise, choix immuable/idempotent. Le départ est bloqué tant que le choix manque. En immédiat, départ normal ; en différé, attente et Traceur en place. Aucun timestamp réécrit.
+
+Tests ajoutés : création sans choix pour tous les rôles ; panneau absent avant pose et pour Coach/Conducteur ; immédiat/différé après pose ; double clic ; erreur réseau récupérable ; reprise du choix enregistré ; âge inchangé ; contrat SQL et garde départ. Le test historique charge le nouveau helper sans modifier ses assertions de visibilité. Cache final app 1045-3 / CSS 2078 / SW v2116.
+
+Recette finale après cet ajout : tous les contrôles syntaxe/SQL/DOM/V10.38–V10.45/diff passent. Navigateur 375 px avec réponses simulées : aucun sélecteur pour les trois créateurs ; route masquée Coach/Conducteur et conservée Traceur ; les deux boutons sont lisibles, immédiat rend Démarrer disponible, différé le bloque jusqu’à Traceur en place. Largeur document 375 px, aucune erreur navigateur. Droits SQL réels non testés (aucun SQL exécuté).

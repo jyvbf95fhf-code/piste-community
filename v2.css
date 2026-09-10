@@ -903,3 +903,9 @@ body.v10-30-aurora{
 #coachingPage .coaching-stepper button{flex-shrink:0;min-height:44px}
 #coachingPage .coaching-terrain-status{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:.8rem;line-height:1.5}
 #coachingPage .coaching-terrain-status>span{padding:5px 8px;border-radius:8px;background:#102638;overflow-wrap:anywhere}
+
+/* Traceur decision after the server has recorded the end of laying. */
+#coachingPage .coaching-search-choice{padding:16px;margin:12px 0;border:1px solid #91b34c;border-radius:16px;background:#152d2e}
+#coachingPage .coaching-search-choice h4{margin:8px 0 12px}
+#coachingPage .coaching-search-choice>div{display:flex;flex-wrap:wrap;gap:10px}
+#coachingPage .coaching-search-choice button{flex:1 1 200px;min-height:48px;white-space:normal}
