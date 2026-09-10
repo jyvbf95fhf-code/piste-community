@@ -602,7 +602,7 @@ function renderCoachingSessions(){const el=$('coachingSessionsList');if(!el)retu
 async function removeCoachingSessionFromList(id){const s=coachingSessions.find(x=>x.id===id);if(!s||!session?.user?.id)return;if(isCoachingOwner(s)){if(!confirm(`Supprimer « ${s.name||'cette session'} » ? Les positions, messages, repères et débrief seront définitivement effacés.`)||!confirm('Confirmer la suppression définitive ?'))return;const {error}=await supabase.from('coaching_sessions').delete().eq('id',id).eq('owner_id',session.user.id);if(error)return alert('Suppression impossible : '+error.message)}else{if(!confirm('Retirer cette session de votre liste ? Seule votre participation sera supprimée.'))return;const {error}=await supabase.from('coaching_members').delete().eq('session_id',id).eq('user_id',session.user.id);if(error)return alert('Retrait impossible : '+error.message)}coachingSessions=coachingSessions.filter(x=>x.id!==id);clearVerifiedActiveCoaching(id);renderCoachingSessions();await loadCoachingHub()}
 
 
-function coachingWithoutPreparedRouteV1045(){return $('coachingCreatorRole')?.value==='coach'&&$('coachingVisibility')?.value==='full_blind'}
+function coachingWithoutPreparedRouteV1045(){return ['coach','driver'].includes($('coachingCreatorRole')?.value)&&$('coachingVisibility')?.value==='full_blind'}
 function updateCoachingCreationV1045(){
  const hidden=coachingWithoutPreparedRouteV1045();$('coachingRouteFields')?.classList.toggle('hidden',hidden);$('coachingNoRouteInfo')?.classList.toggle('hidden',!hidden);
 }

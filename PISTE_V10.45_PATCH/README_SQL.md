@@ -62,3 +62,9 @@ Utiliser des comptes distincts : Coach, Traceur, Conducteur et Observateur. Les 
 9. Conducteur démarre plusieurs heures après T0 : comparer les deux timestamps serveur et l’âge affiché. Fin de parcours fige GPS/chrono ; Terminer la piste maintenu 2 s ouvre le débrief ; Enregistrer ma piste préserve le retour et passe status ended. Aucun recours normal à Plus → Terminer la session, aucun raccourci actif résiduel.
 10. Contrôler normal/simple aveugle, recherche immédiate et sessions legacy existantes. Dossier/Rapport : début pose, fin pose, attente, présence, départ, fin, clôture et âge cohérents ; trois couches et contributions intactes.
 11. Courses simultanées : dernier point GPS / fin de pose ; présence Traceur / départ ; double transition de fin. Vérifier atomicité, non-régression des timestamps et aucun ajout GPS post-attente.
+
+## Correctif créateur Conducteur double aveugle
+
+La RPC V10.45 applique désormais la branche sans tracé aux créateurs Coach ET Conducteur en full_blind. Elle refuse explicitement tout p_route_id non nul avant insertion ; le Traceur reste seul autorisé à fournir un tracé dans ce mode. Aucun changement RLS, matrice ou privilège. Tester manuellement Conducteur/full_blind avec route NULL (succès), avec route personnelle non NULL (refus), puis Traceur/full_blind et les modes normal/simple_blind (comportement inchangé).
+
+Les scripts complets restent destinés à la première application V10.45. Si V10.45 est déjà appliquée, ne pas relancer APPLY complet : son précontrôle bloque la réapplication ; une mise à jour ciblée de la fonction doit être préparée séparément. Aucun SQL exécuté par Codex.

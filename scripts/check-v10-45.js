@@ -12,7 +12,7 @@ assert(sql.includes('alter table private.coaching_deferred_v1045 enable row leve
 assert(sql.includes('revoke all on table private.coaching_deferred_v1045 from public,anon,authenticated'));
 assert(!/create policy|drop policy|disable row level|alter table public|grant (?:select|all|update|insert|truncate|trigger|references)/i.test(sql));
 assert.equal((sql.match(/security definer set search_path=''/g)||[]).length,6);
-assert(sql.includes("without_route:=p_blind_mode='full_blind'"));assert(sql.includes("m->>'role'='coach'"));assert(sql.includes("if p_route_id is not null then raise exception"));
+assert(sql.includes("without_route:=p_blind_mode='full_blind'"));assert(sql.includes("and m->>'role' in ('coach','driver'));"));assert(sql.includes("if p_route_id is not null then raise exception"));
 for(const rule of ["m->>'role'='driver')<>1","m->>'role'='traceur')<>1","Chaque personne doit apparaître une seule fois","Cette personne ne fait pas partie de vos amis"])assert(sql.includes(rule));
 for(const field of ['planned_route','planned_markers','odor_model']){const pattern=new RegExp(`'${field}',case when private.coaching_truth_v10423\\(s.id\\)[^\\n]+`);assert.equal(sql.match(pattern)?.[0],legacy.match(pattern)?.[0]);}
 assert(sql.includes("me.invitation_status<>'declined'"));assert(sql.includes("me.invitation_status in ('accepted','active')"));assert(sql.includes('private.legacy_get_my_coaching_sessions_v10423(s.id)'));
@@ -36,6 +36,15 @@ for(const name of ['coachingPhase','myCoachingRole','coachingWithoutPreparedRout
 (async()=>{
  node('coachingCreatorRole').value='coach';node('coachingVisibility').value='full_blind';node('coachingSearchMode').value='deferred';ctx.updateCoachingCreationV1045();assert(node('coachingRouteFields').classList.hidden);
  let complete;ctx.supabase={rpc:async(name,args)=>{calls.push({name,args});return new Promise(resolve=>complete=resolve);}};const creating=ctx.createCoaching();await ctx.createCoaching();assert.equal(calls.filter(c=>c.name).length,1);assert.equal(calls.at(-1).args.p_route_id,null);assert.equal(calls.at(-1).args.p_search_mode,'deferred');assert.equal(calls.at(-1).args.p_members[0].role,'coach');complete({data:{id:'created'}});await creating;assert(!ctx.coachingCreateInFlight);
+ // A creator Conducteur must ignore even a previously selected personal route.
+ ctx.session.user.id='driver';node('coachingCreatorRole').value='driver';node('coachingRouteSelect').value='stale-route';ctx.trainingRoutes=[{id:'stale-route',route:[{lat:1,lon:2},{lat:2,lon:3}]}];
+ ctx.updateCoachingCreationV1045();assert(node('coachingRouteFields').classList.hidden,'Double aveugle + creator_role=driver: aucun contrôle planned_route visible');
+ ctx.supabase={rpc:async(name,args)=>{calls.push({name,args});return {data:{id:'driver-created'}};}};
+ await ctx.createCoaching();assert.equal(calls.at(-1).args.p_route_id,null,'Driver cannot send a stale planned_route');
+ ctx.trainingRoutes=[];await ctx.createCoaching();assert.equal(calls.at(-1).args.p_route_id,null,'Driver creation requires no planned_route');
+ node('coachingCreatorRole').value='traceur';ctx.updateCoachingCreationV1045();assert(!node('coachingRouteFields').classList.hidden,'Traceur retains route controls');
+ for(const role of ['coach','driver','traceur'])for(const mode of ['normal','simple_blind']){node('coachingCreatorRole').value=role;node('coachingVisibility').value=mode;ctx.updateCoachingCreationV1045();assert(!node('coachingRouteFields').classList.hidden);assert(!ctx.coachingWithoutPreparedRouteV1045());}
+ node('coachingCreatorRole').value='driver';
  for(const mode of ['normal','simple_blind']){node('coachingVisibility').value=mode;ctx.updateCoachingCreationV1045();assert(!node('coachingRouteFields').classList.hidden);assert(!ctx.coachingWithoutPreparedRouteV1045());}
  for(const user of ['coach','traceur','driver']){ctx.session.user.id=user;for(const phase of ['preparation','laying','waiting_ready']){ctx.activeCoachingSession={...session,phase,status:phase==='laying'?'live':'waiting'};assert.equal(await ctx.requestCoachingPreviewLocation(),false);if(user==='driver')ctx.startCoachingPresence();}}assert.equal(watches.length,0,'No GPS started in deferred wait, including driver while Traceur lays');
  ctx.activeCoachingSession={...session};ctx.session.user.id='traceur';ctx.syncCoachingDeferredV1045();assert(!node('traceurInPlaceBtn').classList.hidden);

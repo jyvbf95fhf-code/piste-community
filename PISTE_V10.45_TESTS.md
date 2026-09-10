@@ -40,3 +40,7 @@ Les tests navigateur utilisent le HTML/CSS et les fonctions de présentation ré
 Recette navigateur locale : création Coach double aveugle sans contrôles carte, attente Traceur/Conducteur et notification unique après deux ouvertures vérifiées. Largeur document = viewport = 375 px dans les trois vues ; paysage 812 px sans débordement ; action Démarrer haute de 50 px. Barre d’étapes défilable horizontalement. Aucune erreur navigateur relevée. Cette recette utilise des réponses simulées, pas le SQL distant.
 
 Résultat final local : tous les contrôles listés ci-dessus sont PASS, ainsi que verify-current-assets. Les deux scripts V10.45 contiennent chacun 29 instructions PostgreSQL analysées ; DRY RUN finit par rollback, APPLY par commit. Aucune exécution SQL.
+
+## Correctif Conducteur double aveugle
+
+Exception sans route étendue à Coach/Conducteur en full_blind, côté formulaire et RPC. Test explicite driver : contrôles masqués, création sans route et sélection résiduelle ignorée (p_route_id NULL). Contrat SQL : rôle authentifié Coach/Conducteur et refus route non NULL. Traceur et modes normal/simple_blind conservés. Cache app 1045-2, service worker v2115. SQL uniquement préparé, non exécuté ; refus API réel à valider après application manuelle.
