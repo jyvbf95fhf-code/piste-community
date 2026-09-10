@@ -603,12 +603,14 @@ function renderCoachingSessions(){const el=$('coachingSessionsList');if(!el)retu
 async function removeCoachingSessionFromList(id){const s=coachingSessions.find(x=>x.id===id);if(!s||!session?.user?.id)return;if(isCoachingOwner(s)){if(!confirm(`Supprimer « ${s.name||'cette session'} » ? Les positions, messages, repères et débrief seront définitivement effacés.`)||!confirm('Confirmer la suppression définitive ?'))return;const {error}=await supabase.from('coaching_sessions').delete().eq('id',id).eq('owner_id',session.user.id);if(error)return alert('Suppression impossible : '+error.message)}else{if(!confirm('Retirer cette session de votre liste ? Seule votre participation sera supprimée.'))return;const {error}=await supabase.from('coaching_members').delete().eq('session_id',id).eq('user_id',session.user.id);if(error)return alert('Retrait impossible : '+error.message)}coachingSessions=coachingSessions.filter(x=>x.id!==id);clearVerifiedActiveCoaching(id);renderCoachingSessions();await loadCoachingHub()}
 
 
-function coachingWithoutPreparedRouteV1045(){return ['coach','driver'].includes($('coachingCreatorRole')?.value)}
+// Creation V3 has one distinct Traceur, enforced by validateCoachingMembers and the RPC.
+function coachingWithoutPreparedRouteV1045(){return $('coachingVisibility')?.value==='full_blind'&&['coach','driver'].includes($('coachingCreatorRole')?.value)}
+function coachingCanPrepareRouteV1045(){return ['coach','driver','traceur'].includes($('coachingCreatorRole')?.value)&&['normal','simple_blind','full_blind'].includes($('coachingVisibility')?.value)&&!coachingWithoutPreparedRouteV1045()}
 function updateCoachingCreationV1045(){
- const hidden=$('coachingCreatorRole')?.value!=='traceur';$('coachingRouteFields')?.classList.toggle('hidden',hidden);$('coachingNoRouteInfo')?.classList.toggle('hidden',!hidden);
+ const hidden=!coachingCanPrepareRouteV1045();$('coachingRouteFields')?.classList.toggle('hidden',hidden);$('coachingNoRouteInfo')?.classList.toggle('hidden',!hidden);
 }
 function openCoachingRouteV1045(mode){
- if($('coachingCreatorRole')?.value!=='traceur'||!['import','draw'].includes(mode))return false;
+ if(!coachingCanPrepareRouteV1045()||!['import','draw'].includes(mode))return false;
  openTerrainPlanner('coaching');
  if(mode==='import')$('chooseGpxBtn')?.click();
  return true;
