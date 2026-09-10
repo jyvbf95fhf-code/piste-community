@@ -68,3 +68,9 @@ Contrôles et handlers réservés au rôle de création traceur (nom interne, et
 Tests explicites : visibilité Traceur et Conducteur invité, absence pour Coach/Conducteur y compris full_blind, garde des handlers, import/dessin raccordés au créateur de tracé, sauvegarde vers training_routes et retour sélection, couches GPS séparées. Cache app 1045-4 / CSS 2079 / SW v2117.
 
 Recette des actions Traceur à 375 px : les deux boutons sont visibles pour Traceur, absents pour Coach et Conducteur ; document limité à 375 px, aucune erreur navigateur. Vérification avec HTML/CSS réels et réponses simulées. Contrôles syntaxe/SQL/DOM/V10.38–V10.45/diff PASS.
+
+## Régression préparation Normal / Simple aveugle
+
+Le masquage global par rôle et le refus serveur sans condition de mode ont été remplacés par l’exception full_blind Coach/Conducteur. Normal/Simple : les trois rôles peuvent choisir/importer/dessiner leur route personnelle comme avant V10.45. Double : Coach/Conducteur sans route, Traceur équipé. L’identité/rôle serveur et l’unicité d’un Traceur distinct restent validées. Les neuf combinaisons UI/actions/payload création sont testées ; les couches et la matrice serveur restent inchangées.
+
+SQL supplémentaire uniquement incrémental PREPARATION_DRY_RUN/APPLY, une seule condition de la RPC modifiée. Aucun SQL exécuté. App cache 1045-5, SW v2118. La PR #39 est déjà fusionnée : ce correctif est poussé sur sa branche, sans nouvelle fusion ni tag.
