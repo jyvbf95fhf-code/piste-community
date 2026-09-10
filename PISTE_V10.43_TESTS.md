@@ -88,8 +88,16 @@ Limite explicite : ces essais de navigateur simulé ne constituent pas une valid
 
 ### Cache
 
-Application `10.43` ; `app.js?v=1043-2`, `v2.css?v=2075`, `v2.js?v=2021`, service worker `piste-community-v2111`. `styles.css` inchangé. Les mêmes URLs sont précachées ; nettoyage ancien cache et activation du nouveau worker conservés.
+Application `10.43` ; `app.js?v=1043-3`, `v2.css?v=2076`, `v2.js?v=2021`, service worker `piste-community-v2112`. `styles.css` inchangé. Les mêmes URLs sont précachées ; nettoyage ancien cache et activation du nouveau worker conservés.
 
 ## Ajustement UI des cartes — PR #37
 
 Liste compacte avec vignette 54×54 à gauche : première photo raster de repère déjà accessible, sinon aperçu SVG discret, sinon icône du type. Aucun chargement de données supplémentaire. Titre, date/heure, type, chien si connu, métriques et badges séparés. Les actions Ouvrir et + d’actions restent accessibles ; les réglages de visibilité sont déplacés dans le panneau d’actions existant. L’icône de navigation est un dossier SVG en currentColor, présent avant et après l’habillage v2.js. Aucun changement des onglets du dossier, des filtres ou des données.
+
+## Palette fixe des couches
+
+Palette immuable `TRACE_PALETTE` dans app.js, propagée aux variables CSS et utilisée par Leaflet, SVG et Canvas/PDF : prévu cyan #00D9FF, Traceur vert #39FF14, Conducteur orange #FF7A00, GPX/externe magenta #E600FF, repères jaune #FFE600. Les labels et les pointillés restent présents. Aucun réglage utilisateur.
+
+Applications : préparation, suivi OPS/Entraînement, Coaching live/replay/débrief, historiques, cartes globales et partage, miniatures Mes pistes/actualités, dossier et rapport PDF. Les anciennes métadonnées de couleur GPX ne sont pas réécrites ; les rendus utilisent la palette fixe. Le rapport conserve une page blanche et affiche la carte sur un panneau sombre, avec légende textuelle. Départ/arrivée sont également identifiés D/A dans le PDF. Les zones d’estimation olfactive et la position de prévisualisation restent des représentations distinctes des traces.
+
+Vérification visuelle sur fixture à 375×812 : Mes pistes, Dossier > Carte, Débrief et Rapport. Couleurs Leaflet inspectées, couches cyan/vert/orange distinctes, repère jaune, libellés lisibles et largeur sans débordement. Le test V10.43 vérifie la palette figée, les usages Leaflet/PDF et l’identité des fonctions de visibilité, sélection des points, contributions et lecture serveur par rapport au commit précédent ee3ac12. Contrôles demandés et matrice V10.42.3 passants. Aucun SQL/RLS/Edge Function modifié ou exécuté.

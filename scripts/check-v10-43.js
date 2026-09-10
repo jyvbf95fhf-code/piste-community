@@ -21,6 +21,19 @@ assert(source('activityLibraryCard').includes('library-actions-toggle'));
 assert(html.includes('class="nav-folder-icon"'));
 assert(fs.readFileSync('v2.js','utf8').includes('class="nav-folder-icon"'));
 assert(css.includes('.library-thumbnail{width:54px;height:54px'));
+// A single immutable palette drives Leaflet, thumbnails, CSS variables and PDF.
+const palette=vm.runInNewContext(app.match(/^const TRACE_PALETTE=.*$/m)[0]+';TRACE_PALETTE');
+assert.deepEqual({...palette},{planned:'#00D9FF',traceur:'#39FF14',conducteur:'#FF7A00',external:'#E600FF',markers:'#FFE600'});
+assert(Object.isFrozen(palette));
+for(const key of Object.keys(palette))assert(source('reportMapCanvas').includes(`TRACE_PALETTE.${key}`));
+for(const name of ['renderCoachingMap','drawCoachingReplay','renderMissionMap'])for(const key of ['planned','traceur','conducteur'])assert(source(name).includes(`TRACE_PALETTE.${key}`),`${name}: ${key}`);
+for(const name of ['renderOperationalLiveGpx','renderOperationalCallMap','renderOperationalGpxList']){assert(source(name).includes('TRACE_PALETTE.external'));assert(!source(name).includes('track.color'))}
+assert(source('feedTrackPreview').includes('TRACE_PALETTE[layer]'));
+assert(!css.includes('stroke:#168de2'));
+for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','saveCoachingDriverFeedback','savePendingFieldMarker','reportActivitySource']){
+ const previous=execFileSync('git',['show','ee3ac12:app.js'],{encoding:'utf8'}),start=previous.search(new RegExp(`(?:async )?function ${name}\\(`)),rest=previous.slice(start),next=rest.slice(1).search(/\n(?:async )?function \w+\(/);
+ assert.equal(source(name),next<0?rest:rest.slice(0,next+1),`${name}: business/security/data unchanged`);
+}
 const values={};const ctx=vm.createContext({Date,Set,Map,Number,String,Array,console,$:id=>({value:values[id]||''}),activityLibraryFilters:{status:'all'},libraryName:x=>x.name||'',formatExactDuration:ms=>`${ms} ms`,hasValue:v=>v!==null&&v!==undefined&&v!=='',esc:v=>String(v).replace(/</g,'&lt;'),LIVE_MARKERS:{note:{label:'Note'},loss:{label:'Perte'},recovery:{label:'Reprise'}},libraryRow:()=>({id:'s',planned_route:[{lat:1,lon:1}]}),TerrainBlackBox:{points:x=>Array.isArray(x)?x:[],analyse:()=>({}),facts:()=>[]}});
 for(const name of ['missionDate','missionDateLabel','missionStatus','missionLibraryMatch','missionLibrarySort','missionTimeline','missionAge','missionDebriefHtml','missionPhotoUrl','missionReadRows','reportActivitySource'])vm.runInContext(source(name),ctx);
 assert.equal(ctx.missionDate({}),null);assert.equal(ctx.missionDate({date:'bad'}),null);assert.equal(ctx.missionStatus({_type:'coaching',phase:'completed',status:'live'}),'En cours');assert.equal(ctx.missionStatus({_type:'coaching',status:'ended'}),'Terminé');

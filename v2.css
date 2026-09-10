@@ -616,7 +616,7 @@ body.v10-30-aurora{
 
 /* V10.24 — cartographie olfactive premium */
 +.leaflet-overlay-pane .odor-zone{mix-blend-mode:multiply}.leaflet-overlay-pane .odor-zone-inner{filter:drop-shadow(0 1px 2px rgba(84,118,61,.16))}.leaflet-overlay-pane .odor-zone-outer{filter:blur(.15px)}
-.leaflet-overlay-pane .map-route-planned{filter:drop-shadow(0 1px 1px rgba(34,55,29,.24))}.leaflet-overlay-pane .map-route-trace{filter:drop-shadow(0 1px 1px rgba(91,50,24,.2))}.leaflet-overlay-pane .map-route-actual{filter:drop-shadow(0 0 4px rgba(22,141,226,.68))}.leaflet-overlay-pane .coaching-driver-trail{stroke:#168de2;stroke-width:7;stroke-opacity:1}
+.leaflet-overlay-pane .map-route-planned{filter:drop-shadow(0 1px 1px rgba(34,55,29,.24))}.leaflet-overlay-pane .map-route-trace{filter:drop-shadow(0 1px 1px rgba(91,50,24,.2))}.leaflet-overlay-pane .map-route-actual{filter:drop-shadow(0 0 4px rgba(22,141,226,.68))}.leaflet-overlay-pane .coaching-driver-trail{stroke:var(--trace-conducteur);stroke-width:7;stroke-opacity:1}
 .coaching-layer-controls{gap:6px!important;padding:8px!important;border:1px solid rgba(225,238,228,.12)!important;border-radius:14px!important;background:rgba(7,19,24,.9)!important;box-shadow:0 8px 22px rgba(0,0,0,.2)!important;backdrop-filter:blur(9px)}
 .coaching-layer-controls label{padding:7px 9px!important;border-radius:9px!important;background:rgba(255,255,255,.045)!important;color:#dce6e1!important;font-size:11px!important;font-weight:750!important}.coaching-layer-controls input{accent-color:#8faf62}
 .coaching-legend{display:flex!important;gap:8px!important;flex-wrap:wrap!important;margin-top:9px!important}.coaching-legend span{padding:6px 9px!important;border:1px solid var(--v2-line)!important;border-radius:999px!important;background:rgba(10,24,30,.76)!important;color:#aebbb7!important;font-size:10px!important}
@@ -849,8 +849,8 @@ body.v10-30-aurora{
 .library-thumbnail{width:54px;height:54px;overflow:hidden;border-radius:12px;background:#1a303b;border:1px solid #ffffff0c;display:grid;place-items:center}
 .library-thumbnail-photo{display:block;width:100%;height:100%;object-fit:cover}
 .library-thumbnail-fallback{font-size:23px;opacity:.8}
-.library-thumbnail .feed-track-preview{width:54px;height:54px!important;min-height:0;margin:0;border:0;border-radius:0;opacity:.5;pointer-events:none}
-.library-thumbnail .feed-track-preview svg{width:100%;height:100%}
+.library-thumbnail .feed-track-preview{width:54px;height:54px!important;min-height:0;margin:0;border:0;border-radius:0;opacity:1;pointer-events:none}
+.library-thumbnail .feed-track-preview svg{inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)}
 .library-thumbnail .feed-track-preview>span{display:none}
 .library-dossier-title{min-width:0;display:grid;gap:4px}
 .library-dossier-title>small{color:#9ec4d3;font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
@@ -876,3 +876,20 @@ body.v10-30-aurora{
 #libraryPage.library-selection-mode .library-dossier-card .library-select-check{position:static;margin:12px 16px 0;width:fit-content;box-shadow:none}
 .nav-folder-icon{display:block;width:23px;height:23px;margin:auto}
 @media(max-width:600px){#libraryPage .activity-library{grid-template-columns:minmax(0,1fr);gap:12px}#libraryPage .library-date-group{margin:12px 2px 0}}
+
+/* Fixed map palette supplied by TRACE_PALETTE in app.js. */
+.participant-chip.driver i,.participant-chip.solo i,.legend-dot.driver{background:var(--trace-conducteur);color:var(--trace-conducteur)}
+.participant-chip.traceur i,.legend-dot.traceur{background:var(--trace-traceur);color:var(--trace-traceur)}
+.legend-dot.planned{background:var(--trace-planned);color:var(--trace-planned)}
+.legend-dot.markers{background:var(--trace-markers);color:var(--trace-markers)}
+.live-map-icon span,.scenario-map-icon span,.call-map-marker span,.planner-point-icon span{background:var(--trace-markers);color:#101820;border:2px solid #101820;box-shadow:0 0 0 1px #fff8,0 2px 8px #0009}
+.debrief-role-grid article.traceur{border-color:var(--trace-traceur)}
+.debrief-role-grid article.driver{border-color:var(--trace-conducteur)}
+.debrief-role-grid article.traceur strong{color:var(--trace-traceur)}
+.debrief-role-grid article.driver strong{color:var(--trace-conducteur)}
+.leaflet-overlay-pane .map-route-line{filter:drop-shadow(0 1px 1px #071015) drop-shadow(0 -1px 1px #071015)}
+.trace-palette-legend{display:flex;flex-wrap:wrap;gap:6px 12px;padding:10px 2px;color:#d6e2eb;font-size:11px;line-height:1.5}
+.trace-palette-legend span{display:inline-flex;align-items:center;gap:5px}
+.trace-palette-legend i,.trace-layer-swatch{display:inline-block;flex:none;width:14px;height:5px;border-radius:2px;box-shadow:0 0 0 1px #10202c;margin-right:4px}
+.trace-palette-legend i{margin:0}
+#missionMap .trace-layer-swatch{width:12px;vertical-align:middle}
