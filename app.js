@@ -1,14 +1,17 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
+import { createAdminCentre } from './admin.js?v=1044-1';
+
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
-const APP_VERSION='10.43';
+const APP_VERSION='10.44';
 // Fixed presentation palette. Never derived from a stored/user-selected color.
 const TRACE_PALETTE=Object.freeze({planned:'#00D9FF',traceur:'#39FF14',conducteur:'#FF7A00',external:'#E600FF',markers:'#FFE600'});
 const TRACE_LABELS=Object.freeze({planned:'Tracé prévu',traceur:'Traceur',conducteur:'Conducteur',external:'GPX / Externe',markers:'Repères'});
 for(const [layer,color] of Object.entries(TRACE_PALETTE))document.documentElement.style.setProperty(`--trace-${layer}`,color);
 
 const APP_RELEASE_NOTES=Object.freeze([
+ {version:'10.44',date:'10/09/2026',title:'Nouveautés V10.44',items:['Un Centre Admin dédié au suivi de la communauté.','Un formulaire pour transmettre vos idées et améliorations.'],important:['Les informations Admin sont protégées côté serveur.']},
  {version:'10.43',date:'08/09/2026',title:'Nouveautés V10.43',items:['Mes pistes : recherche, filtres rapides et tri.','Dossier de mission : résumé, carte, chronologie, analyse, débrief et rapport prévisualisable.'],important:['Les couches Coaching et les contributions restent soumises aux droits serveur.']},
  {version:'10.42.3',date:'07/09/2026',title:'Nouveautés V10.42.3',items:['Coaching organisé par personnes, rôles et mode de visibilité.','Participants affichés comme des personnes uniques avec leurs fonctions réelles.','Résumé d’équipe, action attendue, synchronisation et reprise renforcées.'],important:['Le point de départ est disponible immédiatement ; le tracé reste protégé en mode aveugle.']},
  {version:'10.42.2',date:'03/09/2026',title:'Nouveautés V10.42.2',items:['Coaching : correction du cas où le Coach trace lui-même la piste et amélioration de l’attente temps réel du Conducteur.'],important:[]},
@@ -21,6 +24,7 @@ const $=id=>document.getElementById(id);
 const setUiText=(id,value)=>{const el=$(id);if(el)el.textContent=value;return el};
 const bindClick=(id,handler)=>{const el=$(id);if(el)el.addEventListener('click',handler);return el};
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
+const adminCentre=createAdminCentre({client:supabase,getUserId:()=>session?.user?.id,navigate:(id,verified)=>showPage(id,verified)});
 let currentStatsScope='mine';
 let liveMap=null, liveLine=null, liveMarker=null, livePositionMarker=null, liveAccuracyCircle=null, liveFieldMarkerLayers=[], historyMap=null, activityDetailMap=null, globalMap=null, globalLayers=[], plannerMap=null, plannerLine=null, plannerMarkers=[], plannerOdorLayers=[], plannerUserMarker=null, plannerAccuracyCircle=null, plannerFollowWatch=null, plannedLiveLine=null, plannedLiveOdorLayers=[], coachingMap=null, coachingLayers=[], coachingParticipantMarkers=new Map(), coachingChannel=null;
 let wakeLock=null,wakeLockSupported='wakeLock' in navigator,fakeLockBlockUntil=0,fakeLockContext='record';
@@ -200,7 +204,9 @@ function switchAuth(mode){
 $('showLogin').onclick=()=>switchAuth('login');
 $('showSignup').onclick=()=>switchAuth('signup');
 
-function showPage(id){
+function showPage(id,adminVerified=false){
+ if(id==='adminPage'&&!adminVerified){void adminCentre.open();return}
+ if(id!=='adminPage')adminCentre.leave();
  if(id!=='missionPage')closeMissionDossier();
  const target=$(id);if(!target){console.error('Page introuvable:',id);return}
  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
@@ -1317,10 +1323,10 @@ async function boot(){
  session=s;
  if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
  $('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
- const bootTasks=[['profil',ensureProfile],['pistes',refreshMine],['entraînements',refreshTrainings],['chiens',loadDogs],['objectifs',loadGoals],['tracés préparés',loadTrainingRoutes],['Coaching',loadCoachingHub]];
+ const bootTasks=[['profil',ensureProfile],['pistes',refreshMine],['entraînements',refreshTrainings],['chiens',loadDogs],['objectifs',loadGoals],['tracés préparés',loadTrainingRoutes],['Coaching',loadCoachingHub],['Admin',()=>adminCentre.refreshAccess()]];
  const results=await Promise.all(bootTasks.map(([label,task])=>Promise.resolve().then(task).then(()=>({ok:true,label}),error=>({ok:false,label,error}))));
  results.forEach(result=>{if(!result.ok)console.error(`Initialisation ${result.label} indisponible`,result.error)});
- updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');refreshSocialBadge();renderReleaseNotesHistory();setTimeout(()=>{openTutorial(false);showReleaseNotesIfNeeded()},350);
+ updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');if(location.hash==='#admin'||new URLSearchParams(location.search).get('page')==='admin')void adminCentre.open();refreshSocialBadge();renderReleaseNotesHistory();setTimeout(()=>{openTutorial(false);showReleaseNotesIfNeeded()},350);
 }
 $('logoutBtn').onclick=async()=>{clearVerifiedActiveCoaching();activeCoachingSession=null;await supabase.auth.signOut();location.reload()};
 
@@ -1347,8 +1353,9 @@ $('signupForm').onsubmit=async e=>{
 };
 
 supabase.auth.onAuthStateChange(async(event,s)=>{
- if(event==='SIGNED_OUT'){clearVerifiedActiveCoaching();activeCoachingSession=null;session=null}
+ if(event==='SIGNED_OUT'){adminCentre.reset();clearVerifiedActiveCoaching();activeCoachingSession=null;session=null}
  if(event==='SIGNED_IN'&&s){
+   if(session?.user?.id!==s.user.id)adminCentre.reset();
    session=s;
    const pending=localStorage.getItem('pending_display_name');
    if(pending){

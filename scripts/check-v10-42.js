@@ -3,7 +3,7 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const checks=[
- ['version centralisée',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43)['"]/.test(app)&&/APP_RELEASE_NOTES/.test(app)],
+ ['version centralisée',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44)['"]/.test(app)&&/APP_RELEASE_NOTES/.test(app)],
  ['moteur olfactif partagé',/function sharedOlfactionEngine\(/.test(app)&&/module:(?:'ops'|recordMode===.*?'training':'ops')/.test(app)&&/module:'coaching'/.test(app)&&/module:'training'/.test(app)],
  ['niveaux qualitatifs',/Favorables/.test(app)&&/Fortement perturbées/.test(app)&&!/pourcentage d.?odeur restante/i.test(app)],
  ['heure disparition OPS',/id="opsDisappearanceAt"/.test(html)&&/operationalTrackAgeReference/.test(app)],
