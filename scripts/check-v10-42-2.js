@@ -17,7 +17,7 @@ const migrationBody=s=>s.replace(/^--[^\n]*\n/,'').replace(/\n(?:rollback|commit
 const sqlLogicIdentical=migrationBody(auditDry)===migrationBody(auditApply);
 const checks=[
  ['syntaxe PostgreSQL complète des deux audits',postgresSyntaxOk],
- ['version 10.42.x et release note',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43)'/.test(app)&&/Coach trace lui-même/.test(app)],
+ ['version 10.42.x et release note',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44)'/.test(app)&&/Coach trace lui-même/.test(app)],
  ['poseur effectif centralisé',/function isCurrentUserLayingActor\(s=activeCoachingSession\)/.test(app)&&/role==='traceur'&&s\.laying_mode==='traceur'/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)],
  ['poseur coach préparation',/v1040&&layingActor&&phase==='preparation'.*startLayingBtn/s.test(app)&&/Je pars tracer/.test(app)],
  ['poseur pose en cours',/v1040&&layingActor&&phase==='laying'.*trackReadyBtn/s.test(app)&&/Piste prête/.test(app)],

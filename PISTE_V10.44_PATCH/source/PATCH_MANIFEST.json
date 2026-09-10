@@ -1,0 +1,24 @@
+{
+  "version": "V10.44",
+  "name": "Centre Admin",
+  "baseline_tag": "stable-v10.43",
+  "baseline_commit": "0b9d1c9eff6c3b7414e0266627e05a4c53ed26a1",
+  "suggested_branch": "feature/v10-44-centre-admin",
+  "scope": [
+    "Dashboard Admin",
+    "Nouveaux utilisateurs",
+    "Utilisateurs et fiche admin",
+    "Activité récente",
+    "Statistiques globales et utilisateur",
+    "Retours / idées / améliorations"
+  ],
+  "out_of_scope": [
+    "Mot de passe oublié",
+    "Ajout d'amis simplifié",
+    "Mode clair",
+    "Coaching différé",
+    "OPS a posteriori"
+  ],
+  "sql_policy": "Audit first; prepare DRY RUN/APPLY only if necessary; never execute automatically",
+  "merge_policy": "Draft PR only; no merge; no tag"
+}

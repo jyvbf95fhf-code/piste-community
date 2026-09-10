@@ -1,0 +1,38 @@
+/* V10.44 — scoped, compact Admin; no changes to terrain or mission styles. */
+#openAdminCentre[hidden],.admin-centre [hidden]{display:none!important}
+.admin-centre{max-width:1040px;margin-inline:auto;overflow-wrap:anywhere;padding-bottom:100px}
+.admin-centre *{box-sizing:border-box;min-width:0}
+.admin-centre .record-head{flex-wrap:wrap;gap:10px}
+.admin-centre .record-head h2{flex:1;font-size:1.25rem}
+.admin-centre .record-head button{font-size:.82rem}
+.admin-tabs{display:flex;gap:8px;overflow-x:auto;padding:8px 0 14px;max-width:100%;scrollbar-width:thin}
+.admin-tabs button{flex:0 0 auto;white-space:nowrap;background:#142237;color:#c9d7e7;border:1px solid #2d405a;border-radius:20px;padding:11px 16px;min-height:44px}
+.admin-tabs button[aria-pressed=true]{background:#123c53;border-color:#32bcf1;color:#fff}
+.admin-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.admin-controls label,.admin-idea label{display:grid;gap:6px;font-size:.85rem;color:#c9d7e7}
+.admin-controls input,.admin-controls select,.admin-idea input,.admin-idea select,.admin-idea textarea,.admin-feedback select{width:100%;min-height:44px;font:inherit;background:#0d192a;color:#f2f7ff;border:1px solid #34485f;border-radius:10px;padding:10px}
+.admin-centre button,.admin-centre summary{min-height:44px;cursor:pointer}
+.admin-centre button:focus-visible,.admin-centre summary:focus-visible,.admin-centre input:focus-visible,.admin-centre select:focus-visible,.admin-centre textarea:focus-visible{outline:2px solid #47cafa;outline-offset:3px}
+.admin-centre button:disabled{opacity:.5;cursor:default}
+.admin-card{background:linear-gradient(135deg,#132239,#101b2d);border:1px solid #2b3c53;border-radius:18px;padding:16px;margin:14px 0}
+.admin-card h3{font-size:1rem;margin:0 0 12px;color:#f2f7ff}
+.admin-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.admin-kpi{padding:14px 12px;background:#101e31;border:1px solid #2a4159;border-radius:14px;display:flex;flex-direction:column;gap:6px}
+.admin-kpi strong{color:#54d9b1;font-size:1.5rem;font-variant-numeric:tabular-nums}
+.admin-kpi span{font-size:.8rem;color:#bfcde0;line-height:1.4}
+.admin-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid #293b51;padding:14px 0}
+.admin-row:last-child{border-bottom:0}
+.admin-row h4,.admin-timeline h4{font-size:.95rem;margin:4px 0 8px;color:#eef5ff}
+.admin-row p,.admin-timeline p,.admin-row time{font-size:.8rem;color:#b8c9de;margin:6px 0;line-height:1.5}
+.admin-row button{font-size:.8rem}
+.admin-badge{display:inline-block;max-width:100%;font-size:.74rem;border-radius:8px;padding:5px 8px;background:#20344a;color:#dcecff;margin:3px 4px 3px 0}
+.admin-badge.new{background:#123e59;color:#7edcff}.admin-badge.todo{background:#483718;color:#ffe39a}.admin-badge.done{background:#154232;color:#98efcd}
+.admin-note,.admin-empty{font-size:.82rem;color:#b8c9de;line-height:1.6}.admin-empty{padding:20px 0}
+.admin-timeline{list-style:none;padding:0 0 0 12px;margin:0;border-left:2px solid #365a78}
+.admin-timeline li{padding:0 0 20px 8px}.admin-timeline time{font-size:.75rem;color:#81cbea}
+.admin-feedback>div,.admin-feedback details{width:100%}.admin-feedback summary{display:flex;align-items:center;color:#81d6f8;font-size:.85rem}
+.admin-feedback details[open]{display:grid;gap:10px}.admin-feedback label{display:grid;gap:8px;font-size:.85rem}.admin-message{white-space:pre-wrap;word-break:break-word}
+.admin-periods{display:grid;grid-template-columns:1fr;gap:10px}.admin-periods article{background:#101e31;padding:12px;border-radius:12px}.admin-periods h4{margin:0;color:#81d6f8}.admin-periods p{font-size:.85rem;margin:8px 0 0}
+.admin-pager{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.8rem}.admin-pager span{flex:1 0 100%}
+.admin-idea{display:grid;gap:16px}.admin-idea p{font-size:.9rem;line-height:1.6;margin:0}.admin-entry-card button{margin-top:10px}
+@media(min-width:700px){.admin-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.admin-controls{grid-template-columns:2fr 1fr 1fr 1fr auto;align-items:end}.admin-periods{grid-template-columns:repeat(3,minmax(0,1fr))}}
