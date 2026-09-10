@@ -12,7 +12,7 @@
 <link rel="icon" href="./icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1027">
-<link rel="stylesheet" href="./v2.css?v=2073">
+<link rel="stylesheet" href="./v2.css?v=2076">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -314,6 +314,26 @@
   </section>
 
 
+  <section id="missionPage" class="page">
+    <div class="record-head"><button id="missionBack" class="back">‹ Mes pistes</button><small>DOSSIER DE MISSION</small></div>
+    <header id="missionHeader" class="mission-header"></header>
+    <nav id="missionTabs" class="mission-tabs" aria-label="Dossier de mission" role="tablist">
+      <button id="missionTabSummary" data-mission-tab="summary" role="tab" aria-controls="missionSummary">Résumé</button>
+      <button id="missionTabMap" data-mission-tab="map" role="tab" aria-controls="missionMapPanel">Carte</button>
+      <button id="missionTabTimeline" data-mission-tab="timeline" role="tab" aria-controls="missionTimeline">Chronologie</button>
+      <button id="missionTabAnalysis" data-mission-tab="analysis" role="tab" aria-controls="missionAnalysis">Analyse</button>
+      <button id="missionTabDebrief" data-mission-tab="debrief" role="tab" aria-controls="missionDebrief">Débrief</button>
+      <button id="missionTabReport" data-mission-tab="report" role="tab" aria-controls="missionReport">Rapport</button>
+    </nav>
+    <p id="missionState" role="status" aria-live="polite"></p>
+    <section id="missionSummary" class="card" data-mission-panel="summary" role="tabpanel" aria-labelledby="missionTabSummary"></section>
+    <section id="missionMapPanel" class="card hidden" data-mission-panel="map" role="tabpanel" aria-labelledby="missionTabMap"><button id="missionMapExpand" class="secondary" type="button" aria-pressed="false">Agrandir la carte</button><div id="missionMap" aria-label="Carte de la mission"></div><div id="missionMapKpis"></div></section>
+    <section id="missionTimeline" class="card hidden" data-mission-panel="timeline" role="tabpanel" aria-labelledby="missionTabTimeline"></section>
+    <section id="missionAnalysis" class="card hidden" data-mission-panel="analysis" role="tabpanel" aria-labelledby="missionTabAnalysis"></section>
+    <section id="missionDebrief" class="card hidden" data-mission-panel="debrief" role="tabpanel" aria-labelledby="missionTabDebrief"></section>
+    <section id="missionReport" class="card hidden" data-mission-panel="report" role="tabpanel" aria-labelledby="missionTabReport"></section>
+  </section>
+
   <section id="activityDetailPage" class="page">
     <div class="record-head">
       <button id="activityDetailBack" class="back">‹ Retour</button>
@@ -439,11 +459,17 @@
   </section>
 
   <section id="libraryPage" class="page">
-    <div class="record-head library-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🗂️ Mes pistes</h2><button id="librarySelectionToggle" class="secondary" type="button">Sélectionner</button></div>
+    <div class="record-head library-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>MES PISTES</h2><button id="librarySelectionToggle" class="secondary" type="button">Sélectionner</button></div>
+    <p class="mission-subtitle">Toutes vos pistes, bien organisées.</p>
+    <nav id="missionQuickFilters" class="mission-tabs" aria-label="Type de piste">
+      <button data-library-filter="all">Toutes</button><button data-library-filter="operational">OPS</button><button data-library-filter="training">Entraînement</button><button data-library-filter="coaching">Coaching</button>
+    </nav>
     <div id="libraryBulkBar" class="library-bulk-bar hidden"><label><input id="librarySelectAll" type="checkbox"> Tout sélectionner</label><span id="librarySelectionInfo">Aucune sélection</span><button id="archiveSelectedActivities" class="secondary" type="button" disabled>Archiver</button><button id="deleteSelectedActivities" class="danger-button" type="button" disabled>Supprimer</button></div>
     <div class="card library-toolbar">
       <div class="segmented three" aria-label="Affichage de la bibliothèque"><button class="active" data-library-view="list">☰ Liste</button><button data-library-view="calendar">▦ Calendrier</button><button data-library-view="map">🗺️ Carte</button></div>
-      <div class="library-filters"><input id="librarySearch" type="search" placeholder="Nom, lieu, chien, étiquette…"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">OPS</option><option value="training">Entraînement</option><option value="coaching">Coaching</option><option value="prepared">Tracés préparés</option></select><select id="libraryStatus"><option value="active">Actives et terminées</option><option value="archived">Archivées</option><option value="all">Tous les statuts</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label></div>
+      <label class="mission-search">Rechercher<input id="librarySearch" type="search" placeholder="Nom, lieu, chien, type…"></label>
+      <label>Trier<select id="missionSort"><option value="recent">Plus récentes</option><option value="oldest">Plus anciennes</option><option value="name">Nom</option></select></label>
+      <details class="mission-advanced"><summary>Filtres avancés</summary><div class="library-filters"><select id="libraryType"><option value="all">Toutes les activités</option><option value="operational">OPS</option><option value="training">Entraînement</option><option value="coaching">Coaching</option><option value="prepared">Tracés préparés</option></select><select id="libraryStatus"><option value="active">Actives et terminées</option><option value="archived">Archivées</option><option value="all">Tous les statuts</option><option value="finished">Terminées</option><option value="ongoing">En cours / brouillons</option></select><label class="favorite-filter"><input id="libraryFavorites" type="checkbox"> ★ Favoris</label><label>Chien<select id="missionDog"><option value="">Tous les chiens</option></select></label><label>Depuis<input id="missionSince" type="date"></label><label>Jusqu’au<input id="missionUntil" type="date"></label></div></details>
     </div>
     <div id="activityLibraryList" class="activity-library"></div>
     <div id="activityLibraryCalendar" class="activity-calendar hidden"></div>
@@ -584,7 +610,7 @@
       <div id="coachingParticipants" class="coaching-participants" aria-live="polite"><span class="participant-chip waiting"><i></i>En attente des positions GPS</span></div>
       <div id="coachingPreparationDetails" class="coaching-preparation-details"></div>
       <div id="coachingWaitingActions" class="coaching-waiting-actions hidden"><small>La suppression définitive efface aussi les positions, messages, repères et débrief associés.</small><button id="cancelCoachingWaiting" class="danger-button" type="button">Annuler la session</button><button id="deleteCoachingWaiting" class="danger-button" type="button">Supprimer définitivement</button></div>
-      <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small id="coachingMetricRole">CONDUCTEUR</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Me localiser</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div id="coachingLayerControls" class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> Prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> Posé</label><label><input type="checkbox" data-coaching-layer="actual" checked> Conducteur / Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Olfactif estimé</label><label><input type="checkbox" data-coaching-layer="markers" checked> Signes</label><label id="observerTrackChoice" class="hidden"><input type="checkbox" id="observerTrackToggle"> Voir la piste</label></div><div id="coachingMapContext" class="map-context-menu hidden" role="menu"></div></div>
+      <div class="coaching-map-shell"><div id="coachingMap"></div><div class="coaching-live-metrics"><div><small id="coachingMetricRole">CONDUCTEUR</small><strong id="coachingLiveDistance">0.00 km</strong></div><div><small>TEMPS</small><strong id="coachingLiveTime">00 min 00 s</strong></div></div><button id="recenterCoachingMap" class="coaching-recenter" type="button">⌖ Me localiser</button><button id="fullscreenCoachingMap" class="coaching-fullscreen" type="button">⛶ Carte</button><div id="coachingLayerControls" class="coaching-layer-controls"><label><input type="checkbox" data-coaching-layer="planned" checked> <i class="legend-dot planned"></i> Tracé prévu</label><label><input type="checkbox" data-coaching-layer="trace" checked> <i class="legend-dot traceur"></i> Traceur</label><label><input type="checkbox" data-coaching-layer="actual" checked> <i class="legend-dot driver"></i> Conducteur / Équipe</label><label><input type="checkbox" data-coaching-layer="odor" checked> Olfactif estimé</label><label><input type="checkbox" data-coaching-layer="markers" checked> <i class="legend-dot markers"></i> Repères</label><label id="observerTrackChoice" class="hidden"><input type="checkbox" id="observerTrackToggle"> Voir la piste</label></div><div id="coachingMapContext" class="map-context-menu hidden" role="menu"></div></div>
       <div id="coachingTerrainCommandBar" class="coaching-terrain-command-bar" aria-label="Commandes Terrain"><button id="terrainPauseBtn" class="secondary" type="button">Pause</button><button id="terrainBlackScreenBtn" class="secondary" type="button">Écran noir</button><button id="terrainPlusBtn" class="secondary" type="button">Plus</button></div>
       <button id="coachingDriverTrackFinish" class="primary hidden" type="button">Terminer la piste<small>Maintenir 2 secondes pour accéder au débrief</small></button>
       <div id="coachingPrimaryActions" class="coaching-primary-actions" aria-label="Commandes principales de la session">
@@ -629,7 +655,7 @@
         <button data-mapfilter="training">🟣 Entraînement</button>
       </div>
       <div id="globalMap"></div>
-      <div id="mapLegend" class="map-legend"><span>🔵 Pistage opérationnel</span><span>🟣 Entraînement</span><span>✓ Résultat utile</span></div>
+      <div id="mapLegend" class="map-legend"><span><i class="legend-dot driver"></i> Conducteur — OPS / Entraînement</span><span>✓ Résultat utile</span></div>
     </div>
   </section>
 
@@ -749,7 +775,7 @@
   <nav class="bottom-nav">
     <button data-page="homePage"><span class="nav-icon">⌂</span><span>Accueil</span></button>
     <button data-page="dogPage"><span class="nav-icon">🐕</span><span>Chien</span></button>
-    <button id="navRecord" class="nav-paw" data-page="libraryPage"><span class="nav-icon">🗂️</span><span>Mes pistes</span></button>
+    <button id="navRecord" class="nav-paw" data-page="libraryPage"><span class="nav-icon"><svg class="nav-folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M3 9h18"/></svg></span><span>Mes pistes</span></button>
     <button class="nav-social" data-page="feedPage"><span class="nav-icon">🔔</span><span>Actualités</span><b id="socialNavBadge" class="nav-notification hidden">0</b></button>
     <button data-page="profilePage"><span class="nav-icon">🐕</span><span>Profil</span></button>
   </nav>
@@ -801,7 +827,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1042-20"></script>
-<script src="./v2.js?v=2019"></script>
+<script type="module" src="./app.js?v=1043-3"></script>
+<script src="./v2.js?v=2021"></script>
 </body>
 </html>
