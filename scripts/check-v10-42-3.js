@@ -3,7 +3,7 @@ const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','ut
 const sql=fs.readFileSync('PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql','utf8'),dry=fs.readFileSync('PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_DRY_RUN.sql','utf8');
 function source(name){const re=new RegExp(`^(?:async )?function ${name}\\(`,'m'),start=app.search(re);assert(start>=0,name);const rest=app.slice(start),next=rest.slice(1).search(/\n(?:async )?function /);return next<0?rest:rest.slice(0,next+1)}
 const context={session:{user:{id:'seb'}},activeCoachingSession:null,$:()=>null,coachingAcceptedFriends:[],me:null};vm.createContext(context);
-for(const name of ['validateCoachingMembers','coachingPhase','coachingBlindMode','myCoachingRole','coachingMemberCapabilities','coachingDataVisibility','coachingCanSeeLiveOwner','coachingDeparture','coachingExpectedActionV10423'])vm.runInContext(source(name),context);
+for(const name of ['coachingSearchPendingV1045','validateCoachingMembers','coachingPhase','coachingBlindMode','myCoachingRole','coachingMemberCapabilities','coachingDataVisibility','coachingCanSeeLiveOwner','coachingDeparture','coachingExpectedActionV10423'])vm.runInContext(source(name),context);
 const member=(user_id,role)=>({user_id,role,invitation_status:'accepted'}),A=[member('seb','coach'),member('xavier','traceur'),member('tim','driver'),member('melodie','observer')];
 function check(label,run){run();console.log('✓ '+label)}
 function view(mode,role,phase='driver_running'){return context.coachingDataVisibility({visibility_version:3,workflow_version:2,blind_mode:mode,phase,status:'live'},role)}
@@ -34,8 +34,8 @@ check('Workflow principal : Je pars tracer → Piste tracée, Démarrer → Fin 
 });
 check('Commandes par rôle : Terminer la piste réservé au Conducteur après le parcours',()=>{
  const nodes=new Map(),node=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',classList:{hidden:false,add(){this.hidden=true},remove(){this.hidden=false},toggle(name,value){this.hidden=value}}});return nodes.get(id)};
- const c={activeCoachingSession:null,$:node,coachingGpsRole:s=>s.role,coachingPhase:s=>s.phase,isCoachingOwner:s=>s.owner,isCurrentUserLayingActor:s=>s.role==='traceur',setUiText:(id,text)=>node(id).textContent=text,updateCoachingDebriefAccess(){},renderCoachingScenario(){},coachingRoleLabel:r=>r,coachingPhaseLabelV1040:s=>s.phase,esc:s=>s,coachingParticipantName:m=>m.display_name,coachingDriverTrackPending:s=>s.role==='driver'&&s.phase==='completed'};
- vm.createContext(c);for(const name of ['coachingPhaseLabel','updateCoachingPhase','updateCoachingWorkflowNotice','applyV1040RoleSurface'])vm.runInContext(source(name),c);
+ const c={session:{user:{id:'seb'}},myCoachingRole:s=>s.role,formatExactDuration:String,dateTimeFr:String,activeCoachingSession:null,$:node,coachingGpsRole:s=>s.role,coachingPhase:s=>s.phase,isCoachingOwner:s=>s.owner,isCurrentUserLayingActor:s=>s.role==='traceur',setUiText:(id,text)=>node(id).textContent=text,updateCoachingDebriefAccess(){},renderCoachingScenario(){},coachingRoleLabel:r=>r,coachingPhaseLabelV1040:s=>s.phase,esc:s=>s,coachingParticipantName:m=>m.display_name,coachingDriverTrackPending:s=>s.role==='driver'&&s.phase==='completed'};
+ vm.createContext(c);for(const name of ['coachingSearchPendingV1045','coachingTimingV1045','coachingTimestampV1045','coachingSearchLabelV1045','coachingReadyNoticeV1045','syncCoachingDeferredV1045','coachingPhaseLabel','updateCoachingPhase','updateCoachingWorkflowNotice','applyV1040RoleSurface'])vm.runInContext(source(name),c);
  for(const [role,phase,button] of [['traceur','preparation','startLayingBtn'],['traceur','laying','trackReadyBtn'],['driver','waiting_ready','driverStartBtn'],['driver','driver_running','driverFinishBtn']]){
   c.activeCoachingSession={role,phase,workflow_version:2,status:'live',owner:false};c.applyV1040RoleSurface();assert(!node(button).classList.hidden);assert(node('terrainFinishBtn').classList.hidden);
  }
@@ -50,7 +50,7 @@ check('Commandes par rôle : Terminer la piste réservé au Conducteur après le
 });
 check('Chrono terrain figé sur l’heure de fin du passage',()=>{
  const el={innerHTML:''},s={driver_started_at:'2026-09-08T12:00:00Z',driver_finished_at:'2026-09-08T12:05:00Z'},c={activeCoachingSession:s,$:id=>id==='coachingTerrainStatus'?el:null,coachingPreviewPosition:null,coachingOwnPosition:null,myCoachingRole:()=> 'driver',isCoachingGpsTracking:()=>false,formatExactDuration:ms=>String(ms),coachingTerrainPaused:false,TerrainEngine:{ageMs:()=>0}};
- vm.createContext(c);vm.runInContext(source('updateCoachingTerrainStatus'),c);c.updateCoachingTerrainStatus();assert(el.innerHTML.includes('Terminé 300000'));
+ vm.createContext(c);vm.runInContext(source('coachingTimingV1045'),c);vm.runInContext(source('updateCoachingTerrainStatus'),c);c.updateCoachingTerrainStatus();assert(el.innerHTML.includes('Terminé 300000'));
 });
 check('Clôture de secours : appui court annulé, appui long de 2 s, créateur uniquement',()=>{
  let now=0,tick,finishes=0;const c={activeCoachingSession:{status:'live',workflow_version:2,phase:'completed'},coachingFinishArmed:false,coachingFinishTimer:null,Date:{now:()=>now},isCoachingOwner:()=>true,coachingPhase:s=>s.phase,$:()=>({classList:{add(){},remove(){}},style:{setProperty(){},removeProperty(){}}}),setInterval:fn=>(tick=fn,1),clearInterval:()=>{tick=null},finishCoachingSessionV1040:()=>finishes++,finishActiveCoaching:()=>{throw Error('legacy')}};

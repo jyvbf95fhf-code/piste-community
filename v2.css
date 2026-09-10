@@ -893,3 +893,22 @@ body.v10-30-aurora{
 .trace-palette-legend i,.trace-layer-swatch{display:inline-block;flex:none;width:14px;height:5px;border-radius:2px;box-shadow:0 0 0 1px #10202c;margin-right:4px}
 .trace-palette-legend i{margin:0}
 #missionMap .trace-layer-swatch{width:12px;vertical-align:middle}
+
+/* V10.45: logistical timing only, no tactical content. */
+.coaching-deferred-info{display:grid;gap:7px;padding:14px;margin:10px 0;border:1px solid #2f5368;border-radius:14px;background:#102638;font-size:.83rem;line-height:1.5;overflow-wrap:anywhere}
+.coaching-deferred-info strong{color:#76d9ed}.coaching-deferred-info:empty{display:none}
+#coachingRouteFields.hidden,#coachingNoRouteInfo.hidden{display:none!important}
+#coachingSearchMode{width:100%;min-width:0;min-height:44px}
+#coachingPage .coaching-stepper{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+#coachingPage .coaching-stepper button{flex-shrink:0;min-height:44px}
+#coachingPage .coaching-terrain-status{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;font-size:.8rem;line-height:1.5}
+#coachingPage .coaching-terrain-status>span{padding:5px 8px;border-radius:8px;background:#102638;overflow-wrap:anywhere}
+
+/* Traceur decision after the server has recorded the end of laying. */
+#coachingPage .coaching-search-choice{padding:16px;margin:12px 0;border:1px solid #91b34c;border-radius:16px;background:#152d2e}
+#coachingPage .coaching-search-choice h4{margin:8px 0 12px}
+#coachingPage .coaching-search-choice>div{display:flex;flex-wrap:wrap;gap:10px}
+#coachingPage .coaching-search-choice button{flex:1 1 200px;min-height:48px;white-space:normal}
+
+#coachingPage .coaching-traceur-preparation{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 16px}
+#coachingPage .coaching-traceur-preparation button{flex:1 1 200px;min-height:48px;white-space:normal}

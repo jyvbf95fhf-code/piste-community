@@ -3,7 +3,7 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const checks=[
- ['version 10.42.x',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44)'/.test(app)],
+ ['version 10.42.x',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44|45)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44|45)'/.test(app)],
  ['session terrain active protégée',/function hasActiveTerrainSession\(\)/.test(app)&&/resetGpsUI\(clear=true,\{force=false\}=\{\}\)/.test(app)&&/!force&&hasActiveTerrainSession\(\)/.test(app)],
  ['restoreDraft non destructive',/async function restoreDraft\(\)\{if\(hasActiveTerrainSession\(\)\)/.test(app)&&/redrawLiveRecordingMap\(\);return/.test(app)],
  ['reprise active non destructive',/function resumeActiveSession\(\).*hasActiveTerrainSession\(\).*redrawLiveRecordingMap/s.test(app)],

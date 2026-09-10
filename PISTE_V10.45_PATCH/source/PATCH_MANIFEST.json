@@ -1,0 +1,26 @@
+{
+  "version": "V10.45",
+  "name": "Coaching différé + correctif double aveugle",
+  "baseline_tag": "stable-v10.44",
+  "baseline_commit": "91fe23c88cc81836a797dad33ee2badd8b649a4c",
+  "suggested_branch": "feature/v10-45-coaching-differe-double-aveugle",
+  "scope": [
+    "Coach double aveugle sans carte obligatoire",
+    "Recherche différée",
+    "Persistance session",
+    "Traceur en place",
+    "Notification Conducteur",
+    "Délai exact",
+    "Compatibilité immédiat",
+    "Chronologie dossier de mission"
+  ],
+  "out_of_scope": [
+    "Comptes Amis Feed",
+    "OPS a posteriori",
+    "Météo historique complète",
+    "Mode clair",
+    "Refonte esthétique globale"
+  ],
+  "sql_policy": "Audit first; prepare DRY RUN/APPLY only if required; never execute automatically",
+  "merge_policy": "Draft PR only; no merge; no tag"
+}
