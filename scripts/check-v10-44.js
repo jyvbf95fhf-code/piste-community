@@ -41,7 +41,7 @@ const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);assert.equal(ids.le
 assert(css.includes('overflow-x:auto')&&css.includes('minmax(0,1fr)')&&css.includes('min-height:44px'));
 require('./verify-current-assets')();
 const diff=execFileSync('git',['diff',baseline,'--name-only'],{encoding:'utf8'}).trim().split('\n');
-assert(!diff.some(p=>p.startsWith('supabase/functions/')||p.endsWith('.sql')&&!['PISTE_V10.45_PATCH/PISTE_V10.45_CORRECTIF_DRY_RUN.sql','PISTE_V10.45_PATCH/PISTE_V10.45_CORRECTIF_APPLY.sql','PISTE_V10.45_PATCH/PISTE_V10.45_DRY_RUN.sql','PISTE_V10.45_PATCH/PISTE_V10.45_APPLY.sql'].includes(p)&&!/^PISTE_V10\.44_PATCH\/PISTE_V10\.44_(DRY_RUN|APPLY)\.sql$/.test(p)));
+assert(!diff.some(p=>p.startsWith('supabase/functions/')||p.endsWith('.sql')&&!['PISTE_V10.45_PATCH/PISTE_V10.45_PREPARATION_DRY_RUN.sql','PISTE_V10.45_PATCH/PISTE_V10.45_PREPARATION_APPLY.sql','PISTE_V10.45_PATCH/PISTE_V10.45_CORRECTIF_DRY_RUN.sql','PISTE_V10.45_PATCH/PISTE_V10.45_CORRECTIF_APPLY.sql','PISTE_V10.45_PATCH/PISTE_V10.45_DRY_RUN.sql','PISTE_V10.45_PATCH/PISTE_V10.45_APPLY.sql'].includes(p)&&!/^PISTE_V10\.44_PATCH\/PISTE_V10\.44_(DRY_RUN|APPLY)\.sql$/.test(p)));
 const ctx=vm.createContext({console,Date,Number,String,Object,Array,JSON});vm.runInContext(src.replace(/export /g,''),ctx);
 for(const tab of ['dashboard','users','profile','activity','statistics','feedback'])assert.equal(typeof ctx.renderAdmin(tab,{}),'string');
 const xss=ctx.adminUserCards([{user_id:'u',display_name:'<img src=x onerror=alert(1)>',sessions_count:12}]);assert(!xss.includes('<img'));assert(xss.includes('&lt;img'));assert(xss.includes('12 pistes'));
