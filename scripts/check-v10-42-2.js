@@ -4,7 +4,7 @@ const vm=require('vm');
 const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),sw=fs.readFileSync('sw.js','utf8'),sql=fs.readFileSync('PISTE_V10.42.2_TRACK_READY_APPLY.sql','utf8'),auditApply=fs.readFileSync('PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','utf8'),auditDry=fs.readFileSync('PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql','utf8');
 const changedFiles=execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).split('\n').filter(Boolean).map(line=>line.slice(3));
 const trackedFiles=new Set(execFileSync('git',['ls-files'],{encoding:'utf8'}).split('\n').filter(Boolean));
-const sqlFiles=changedFiles.filter(file=>/\.sql$/i.test(file)).sort(),expectedSql=['PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql'],sqlListOk=sqlFiles.length?sqlFiles.every(file=>expectedSql.includes(file)||['PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_DRY_RUN.sql','PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql'].includes(file)):expectedSql.every(file=>trackedFiles.has(file));
+const sqlFiles=changedFiles.filter(file=>/\.sql$/i.test(file)).sort(),expectedSql=['PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql','PISTE_V10.42.2_AUDIT_SECURITY_DRY_RUN.sql'],sqlListOk=sqlFiles.length?sqlFiles.every(file=>expectedSql.includes(file)||['PISTE_V10.45_PATCH/PISTE_V10.45_DRY_RUN.sql','PISTE_V10.45_PATCH/PISTE_V10.45_APPLY.sql','PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_DRY_RUN.sql','PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql'].includes(file)):expectedSql.every(file=>trackedFiles.has(file));
 let postgresSyntaxOk=true;
 try{execFileSync(process.execPath,['scripts/check-postgres-sql.js',...expectedSql],{stdio:'inherit'})}
 catch{postgresSyntaxOk=false}
@@ -17,7 +17,7 @@ const migrationBody=s=>s.replace(/^--[^\n]*\n/,'').replace(/\n(?:rollback|commit
 const sqlLogicIdentical=migrationBody(auditDry)===migrationBody(auditApply);
 const checks=[
  ['syntaxe PostgreSQL complète des deux audits',postgresSyntaxOk],
- ['version 10.42.x et release note',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44)'/.test(app)&&/Coach trace lui-même/.test(app)],
+ ['version 10.42.x et release note',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44|45)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44|45)'/.test(app)&&/Coach trace lui-même/.test(app)],
  ['poseur effectif centralisé',/function isCurrentUserLayingActor\(s=activeCoachingSession\)/.test(app)&&/role==='traceur'&&s\.laying_mode==='traceur'/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)],
  ['poseur coach préparation',/v1040&&layingActor&&phase==='preparation'.*startLayingBtn/s.test(app)&&/Je pars tracer/.test(app)],
  ['poseur pose en cours',/v1040&&layingActor&&phase==='laying'.*trackReadyBtn/s.test(app)&&/Piste prête/.test(app)],
