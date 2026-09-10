@@ -909,3 +909,6 @@ body.v10-30-aurora{
 #coachingPage .coaching-search-choice h4{margin:8px 0 12px}
 #coachingPage .coaching-search-choice>div{display:flex;flex-wrap:wrap;gap:10px}
 #coachingPage .coaching-search-choice button{flex:1 1 200px;min-height:48px;white-space:normal}
+
+#coachingPage .coaching-traceur-preparation{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 16px}
+#coachingPage .coaching-traceur-preparation button{flex:1 1 200px;min-height:48px;white-space:normal}

@@ -21,7 +21,7 @@ SQL nécessaire : OUI, uniquement préparé pour application manuelle. Aucun SQL
 
 Aucune modification des policies RLS ou des fonctions de matrice V10.42.3. Les expressions de visibilité de get_my_coaching_sessions sont conservées, ainsi que sa branche legacy. Métadonnées privées sans privilège direct, fonctions bornées avec search_path vide. La capture du départ n’actualise jamais la position finale dans le champ logistique. Aucun email/débrief/trace supplémentaire n’est exposé.
 
-Les anciennes sessions sont interprétées comme recherche immédiate ; leurs données ne sont pas migrées. Normal/simple aveugle et rôles V10.42.3 sont conservés. En immédiat, aucune étape Traceur en place n’est requise. Le correctif sans carte est borné au Coach ou Conducteur full_blind ; les autres créations conservent leur tracé personnel. Les invitations gardent leur expiration existante (7 jours pour les nouvelles sessions), suffisante pour l’attente de plusieurs heures ; aucun mécanisme de suppression automatique n’est ajouté.
+Les anciennes sessions sont interprétées comme recherche immédiate ; leurs données ne sont pas migrées. Normal/simple aveugle et rôles V10.42.3 sont conservés. En immédiat, aucune étape Traceur en place n’est requise. Les créateurs Coach et Conducteur ne préparent pas de route ; le créateur Traceur conserve la préparation par import ou dessin. Les invitations gardent leur expiration existante (7 jours pour les nouvelles sessions), suffisante pour l’attente de plusieurs heures ; aucun mécanisme de suppression automatique n’est ajouté.
 
 Les distances/coordonnées GPS et les contributions Conducteur/Coach restent dans leurs tables distinctes. Le complément suit la suppression de session existante via FK ; le patch n’efface aucune donnée. Aucune Edge Function ni fonctionnalité V10.46.
 
@@ -31,7 +31,7 @@ Contrôles : `node --check app.js`, `node --check v2.js`, `check-postgres-sql.js
 
 Le test V10.45 couvre les scénarios A–J localement : contrat SQL/permissions déclarées, Coach sans route, double soumission, modes, rôles, attente sans appel GPS, arrêt des watches, réception unique, rechargement, délai de plusieurs heures à la milliseconde, timeline et absence de fallback temporel erroné. Il compare les fonctions de visibilité, rôles et clôture Conducteur à la baseline. Aucun ID HTML dupliqué. Les nouveaux SQL sont parsés, jamais exécutés.
 
-Les tests historiques gardent leurs assertions de sécurité ; seules les versions acceptées, les deux fichiers SQL V10.45 autorisés explicitement et les dépendances du harness de rendu sont adaptés. Cache : app.js `1045-3`, v2.css `2078`, service worker `piste-community-v2116`. v2.js inchangé.
+Les tests historiques gardent leurs assertions de sécurité ; seules les versions acceptées, les deux fichiers SQL V10.45 autorisés explicitement et les dépendances du harness de rendu sont adaptés. Cache : app.js `1045-4`, v2.css `2079`, service worker `piste-community-v2117`. v2.js inchangé.
 
 ## Limites de recette
 
@@ -52,3 +52,19 @@ Aucun sélecteur et aucun paramètre immédiat/différé dans la création. Le c
 Tests ajoutés : création sans choix pour tous les rôles ; panneau absent avant pose et pour Coach/Conducteur ; immédiat/différé après pose ; double clic ; erreur réseau récupérable ; reprise du choix enregistré ; âge inchangé ; contrat SQL et garde départ. Le test historique charge le nouveau helper sans modifier ses assertions de visibilité. Cache final app 1045-3 / CSS 2078 / SW v2116.
 
 Recette finale après cet ajout : tous les contrôles syntaxe/SQL/DOM/V10.38–V10.45/diff passent. Navigateur 375 px avec réponses simulées : aucun sélecteur pour les trois créateurs ; route masquée Coach/Conducteur et conservée Traceur ; les deux boutons sont lisibles, immédiat rend Démarrer disponible, différé le bloque jusqu’à Traceur en place. Largeur document 375 px, aucune erreur navigateur. Droits SQL réels non testés (aucun SQL exécuté).
+
+## Migration incrémentale sur V10.45 déjà installée
+
+Fichiers séparés CORRECTIF_DRY_RUN/APPLY (25 instructions chacun), audit des catalogues et empreintes de fonctions avant mutation, retrait NOT NULL, conservation de la signature historique par renommage/révocation, remplacement en place de six corps conformes à l’APPLY final. Aucun DML de migration, aucune recréation de table/trigger/policy. Modes et timestamps des sessions existantes préservés. Réapplication prévue sans rejouer les événements.
+
+Contrôles : syntaxe des deux nouveaux SQL PASS ; check-v10-45 PASS, dont égalité des six corps avec le serveur final attendu et absence d’écriture des lignes existantes. Les listes de fichiers autorisés des tests historiques acceptent explicitement seulement ces deux nouveaux SQL. Aucun SQL exécuté : idempotence en base et audit des ACL effectives à confirmer avec le DRY RUN manuel.
+
+## Actions de préparation réservées au Traceur
+
+Deux boutons principaux : Importer un tracé ouvre l’import GPX existant du créateur de tracé ; Tracer directement ouvre sa carte de dessin. Les deux utilisent le retour Coaching existant : sauvegarde dans training_routes puis sélection automatique, copiée dans planned_route lors de la création. Aucun point n’est ajouté à coaching_trace_points ou coaching_live_points par cette préparation. Je pars tracer garde son démarrage GPS réel indépendant.
+
+Contrôles et handlers réservés au rôle de création traceur (nom interne, et non tracer). Coach/Conducteur sans préparation dans tous les modes : front envoie NULL, RPC refuse tout route_id non NULL pour ces rôles. Aucune nouvelle contrainte de tracé n’est ajoutée : le Traceur créateur conserve le comportement de préparation existant ; le Traceur invité peut poser sans route préparée. Les sessions déjà installées ne sont pas réécrites. SQL initial et incrémental uniquement préparés.
+
+Tests explicites : visibilité Traceur et Conducteur invité, absence pour Coach/Conducteur y compris full_blind, garde des handlers, import/dessin raccordés au créateur de tracé, sauvegarde vers training_routes et retour sélection, couches GPS séparées. Cache app 1045-4 / CSS 2079 / SW v2117.
+
+Recette des actions Traceur à 375 px : les deux boutons sont visibles pour Traceur, absents pour Coach et Conducteur ; document limité à 375 px, aucune erreur navigateur. Vérification avec HTML/CSS réels et réponses simulées. Contrôles syntaxe/SQL/DOM/V10.38–V10.45/diff PASS.

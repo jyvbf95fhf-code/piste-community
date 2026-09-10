@@ -1,25 +1,74 @@
 begin;
 set local lock_timeout='5s';
 set local statement_timeout='30s';
--- V10.45: prepared for manual application only. No SQL executed by Codex.
-do $$
+-- Incremental update ONLY: expected initial APPLY c1f4bf5 / driver fix 448e3c3.
+-- Existing rows, GPS, timestamps, debriefs, policies and triggers are not rewritten.
+-- This file is prepared for manual SQL Editor use. Codex has not executed it.
+
+-- Audit catalog and known function bodies BEFORE any persistent change.
+do $audit$
+declare item record; obj oid; legacy oid; archived oid;
 begin
- if to_regclass('private.coaching_deferred_v1045') is not null then raise exception 'V10.45 déjà présent : auditer avant réapplication'; end if;
- if to_regprocedure('private.coaching_truth_v10423(uuid)') is null or to_regprocedure('public.create_coaching_people_session(uuid,jsonb,text)') is null or to_regprocedure('public.finish_coaching_session(uuid)') is null then raise exception 'Baseline V10.44 incomplète'; end if;
- if not exists(select 1 from pg_catalog.pg_trigger where tgrelid='public.coaching_sessions'::regclass and tgname='coaching_people_guard_v10423' and tgenabled<>'D') then raise exception 'Protection V10.42.3 absente'; end if;
-end $$;
+ if to_regclass('private.coaching_deferred_v1045') is null then raise exception 'V10.45 initiale absente : ne pas utiliser le correctif incrémental'; end if;
+ if not exists(select 1 from pg_catalog.pg_class where oid='private.coaching_deferred_v1045'::regclass and relkind='r' and relrowsecurity) then raise exception 'Table privée/RLS V10.45 inattendue'; end if;
+ for item in select * from (values ('session_id','uuid'),('search_mode','text'),('traceur_ready_at','timestamptz'),('departure_point','jsonb')) expected(col,typ) loop
+  if not exists(select 1 from pg_catalog.pg_attribute where attrelid='private.coaching_deferred_v1045'::regclass and attname=item.col and atttypid=to_regtype(item.typ) and not attisdropped) then raise exception 'Colonne V10.45 absente/incompatible : %',item.col; end if;
+ end loop;
+ if exists(select 1 from pg_catalog.pg_attribute where attrelid='private.coaching_deferred_v1045'::regclass and attname='search_mode' and atthasdef) then raise exception 'Default search_mode inattendu : auditer avant correction'; end if;
+ if exists(select 1 from pg_catalog.pg_policy where polrelid='private.coaching_deferred_v1045'::regclass) then raise exception 'Policy privée inattendue'; end if;
+ if has_table_privilege('authenticated','private.coaching_deferred_v1045','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') or has_table_privilege('anon','private.coaching_deferred_v1045','SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') then raise exception 'Privilèges privés inattendus'; end if;
+ for item in select * from (values
+  ('public.coaching_sessions','coaching_people_guard_v10423',null::text),
+  ('public.coaching_sessions','coaching_deferred_transition_v1045','private.guard_coaching_deferred_transition_v1045()'),
+  ('public.coaching_trace_points','coaching_deferred_gps_v1045','private.guard_coaching_deferred_gps_v1045()'),
+  ('public.coaching_live_points','coaching_deferred_gps_v1045','private.guard_coaching_deferred_gps_v1045()'),
+  ('public.coaching_current_positions','coaching_deferred_gps_v1045','private.guard_coaching_deferred_gps_v1045()'),
+  ('public.coaching_trace_points','coaching_departure_v1045','private.capture_coaching_departure_v1045()')
+ ) expected(rel,trig,fn) loop
+  if not exists(select 1 from pg_catalog.pg_trigger where tgrelid=to_regclass(item.rel) and tgname=item.trig and tgenabled in ('O','A') and not tgisinternal and (item.fn is null or tgfoid=to_regprocedure(item.fn))) then raise exception 'Trigger absent/inattendu : %.%',item.rel,item.trig; end if;
+ end loop;
+ if to_regprocedure('private.coaching_truth_v10423(uuid)') is null or to_regprocedure('public.finish_coaching_session(uuid)') is null then raise exception 'Protection V10.42.3/DRIVER_CLOSE absente'; end if;
+ legacy:=to_regprocedure('public.create_coaching_people_session_v1045(uuid,jsonb,text,text)');
+ archived:=to_regprocedure('public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text)');
+ if legacy is not null and archived is not null then raise exception 'Ancienne RPC et archive simultanées : auditer'; end if;
+ if legacy is null and to_regprocedure('public.create_coaching_people_session_v1045(uuid,jsonb,text)') is null then raise exception 'RPC de création V10.45 absente'; end if;
+ for item in select * from (values
+  ('public.create_coaching_people_session_v1045(uuid,jsonb,text,text)',true,array['51d31e6d8dbd68b65967285bd2e9a2aa','dccbb37a11579bf81e78bbfca370e4eb']::text[]),
+  ('public.create_coaching_people_session_v1045(uuid,jsonb,text)',true,array['363e38e6b1701125d5b810d82c9b9213','882f7f345ec407e5571b2d4cb013bd1b']::text[]),
+  ('public.get_my_coaching_sessions(uuid)',false,array['69c1d1e2ae249c798cbc4d772f96eeeb','7a3503739e8de532abb550c1c1d913c3']::text[]),
+  ('public.choose_coaching_search_mode_v1045(uuid,text)',true,array['7f1b8e005241cf9cc26032057a663bf0']::text[]),
+  ('public.mark_coaching_traceur_ready_v1045(uuid)',false,array['6637f20891c9b293fa08475ad40ca5c5','87b35c6176486b3616567ab343a0b981']::text[]),
+  ('private.guard_coaching_deferred_transition_v1045()',false,array['019b391dd939d20385772037f161021d','5e9b24beb586e9d6dbca0dc2117513a4']::text[]),
+  ('private.guard_coaching_deferred_gps_v1045()',false,array['afe11bcb55e50207136b351d7d8a41eb','c9103787351394fdf0080c3ac90d6d64']::text[]),
+  ('private.capture_coaching_departure_v1045()',false,array['4ed7c9476e513a76b2c7cb66ef0fc9b3']::text[]),
+  ('public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text)',true,array['51d31e6d8dbd68b65967285bd2e9a2aa','dccbb37a11579bf81e78bbfca370e4eb']::text[])
+ ) expected(sig,optional,hashes) loop
+  obj:=to_regprocedure(item.sig);
+  if obj is null then
+   if not item.optional then raise exception 'Fonction attendue absente : %',item.sig; end if;
+  else
+   if not exists(select 1 from pg_catalog.pg_proc where oid=obj and md5(prosrc)=any(item.hashes) and prosecdef and 'search_path=""'=any(proconfig)) then raise exception 'Définition non reconnue : %. Auditer sans réappliquer la migration initiale.',item.sig; end if;
+  end if;
+ end loop;
+ raise notice 'Audit V10.45 reconnu. Ancienne signature présente : %. Archive présente : %.',legacy is not null,archived is not null;
+end $audit$;
 
--- Private supplement, no new columns or permissive policies on the existing sessions.
-create table private.coaching_deferred_v1045 (
- session_id uuid primary key references public.coaching_sessions(id) on delete cascade,
- search_mode text check(search_mode in ('immediate','deferred')),
- traceur_ready_at timestamptz,
- departure_point jsonb not null default '{}'::jsonb check(jsonb_typeof(departure_point)='object')
-);
-alter table private.coaching_deferred_v1045 enable row level security;
-revoke all on table private.coaching_deferred_v1045 from public,anon,authenticated;
+-- The sole table alteration: retain all existing non-NULL choices unchanged.
+alter table private.coaching_deferred_v1045 alter column search_mode drop not null;
 
-create function public.create_coaching_people_session_v1045(p_route_id uuid,p_members jsonb,p_blind_mode text default 'normal')
+-- Preserve the old function OID/body and dependencies, but remove the obsolete public API.
+-- Renaming avoids PostgREST ambiguity between three args and four args with defaults.
+do $archive$
+begin
+ if to_regprocedure('public.create_coaching_people_session_v1045(uuid,jsonb,text,text)') is not null then
+  alter function public.create_coaching_people_session_v1045(uuid,jsonb,text,text) rename to create_coaching_people_session_v1045_pre_correctif;
+ end if;
+ if to_regprocedure('public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text)') is not null then
+  revoke all on function public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text) from public,anon,authenticated;
+ end if;
+end $archive$;
+
+create or replace function public.create_coaching_people_session_v1045(p_route_id uuid,p_members jsonb,p_blind_mode text default 'normal')
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare uid uuid:=(select auth.uid()); route public.training_routes; sid uuid; item jsonb; member_id uuid; member_role text; without_route boolean;
 begin
@@ -57,7 +106,6 @@ end $$;
 revoke all on function public.create_coaching_people_session_v1045(uuid,jsonb,text) from public,anon,authenticated;
 grant execute on function public.create_coaching_people_session_v1045(uuid,jsonb,text) to authenticated;
 
--- Exact V10.42.3 truth gates and legacy projection retained. Only logistical metadata added.
 create or replace function public.get_my_coaching_sessions(p_session_id uuid default null)
 returns jsonb language sql stable security definer set search_path='' as $$
  select coalesce(jsonb_agg(case when s.visibility_version is distinct from 3 then legacy.row else
@@ -76,11 +124,10 @@ returns jsonb language sql stable security definer set search_path='' as $$
  left join lateral (select row from jsonb_array_elements(private.legacy_get_my_coaching_sessions_v10423(s.id)) row where s.visibility_version is distinct from 3) legacy on true
  where (p_session_id is null or s.id=p_session_id) and me.invitation_status<>'declined'
 $$;
-revoke all on function public.get_my_coaching_sessions(uuid) from public,anon;
+revoke all on function public.get_my_coaching_sessions(uuid) from public,anon,authenticated;
 grant execute on function public.get_my_coaching_sessions(uuid) to authenticated;
 
--- Only the accepted Traceur chooses after the actual laying end; NULL means undecided.
-create function public.choose_coaching_search_mode_v1045(p_session_id uuid,p_search_mode text)
+create or replace function public.choose_coaching_search_mode_v1045(p_session_id uuid,p_search_mode text)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare uid uuid:=(select auth.uid()); s public.coaching_sessions; d private.coaching_deferred_v1045;
 begin
@@ -101,7 +148,7 @@ end $$;
 revoke all on function public.choose_coaching_search_mode_v1045(uuid,text) from public,anon,authenticated;
 grant execute on function public.choose_coaching_search_mode_v1045(uuid,text) to authenticated;
 
-create function public.mark_coaching_traceur_ready_v1045(p_session_id uuid)
+create or replace function public.mark_coaching_traceur_ready_v1045(p_session_id uuid)
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare uid uuid:=(select auth.uid()); s public.coaching_sessions; d private.coaching_deferred_v1045;
 begin
@@ -119,8 +166,7 @@ end $$;
 revoke all on function public.mark_coaching_traceur_ready_v1045(uuid) from public,anon,authenticated;
 grant execute on function public.mark_coaching_traceur_ready_v1045(uuid) to authenticated;
 
--- Additional server guard: existing transition RPCs cannot bypass deferred readiness.
-create function private.guard_coaching_deferred_transition_v1045()
+create or replace function private.guard_coaching_deferred_transition_v1045()
 returns trigger language plpgsql security definer set search_path='' as $$
 declare d private.coaching_deferred_v1045;
 begin
@@ -142,10 +188,8 @@ begin
  return new;
 end $$;
 revoke all on function private.guard_coaching_deferred_transition_v1045() from public,anon,authenticated;
-create trigger coaching_deferred_transition_v1045 before update on public.coaching_sessions for each row execute function private.guard_coaching_deferred_transition_v1045();
 
--- Serialize GPS writes with phase transitions; old RLS remains mandatory.
-create function private.guard_coaching_deferred_gps_v1045()
+create or replace function private.guard_coaching_deferred_gps_v1045()
 returns trigger language plpgsql security definer set search_path='' as $$
 declare s public.coaching_sessions; d private.coaching_deferred_v1045;
 begin
@@ -158,31 +202,18 @@ begin
  return new;
 end $$;
 revoke all on function private.guard_coaching_deferred_gps_v1045() from public,anon,authenticated;
-create trigger coaching_deferred_gps_v1045 before insert or update on public.coaching_trace_points for each row execute function private.guard_coaching_deferred_gps_v1045();
-create trigger coaching_deferred_gps_v1045 before insert or update on public.coaching_live_points for each row execute function private.guard_coaching_deferred_gps_v1045();
-create trigger coaching_deferred_gps_v1045 before insert or update on public.coaching_current_positions for each row execute function private.guard_coaching_deferred_gps_v1045();
 
--- Snapshot the FIRST inserted Traceur point, never a moving/final position.
--- Kept private and immutable to clients even if GPS records are later removed.
-create function private.capture_coaching_departure_v1045()
-returns trigger language plpgsql security definer set search_path='' as $$
-declare s public.coaching_sessions;
+-- Postflight: unique public creation signature, nullable pending mode, private archive.
+do $check$
 begin
- if (select auth.uid()) is null or new.owner_id is distinct from (select auth.uid()) then return new; end if;
- select * into s from public.coaching_sessions where id=new.session_id for update;
- if s.visibility_version=3 and s.phase='laying' and jsonb_array_length(s.planned_route)=0 and exists(select 1 from public.coaching_members m where m.session_id=s.id and m.user_id=new.owner_id and m.role='traceur' and m.invitation_status in ('accepted','active')) then
-  update private.coaching_deferred_v1045 set departure_point=jsonb_build_object('lat',new.lat,'lon',new.lon) where session_id=s.id and departure_point='{}'::jsonb;
+ if to_regprocedure('public.create_coaching_people_session_v1045(uuid,jsonb,text,text)') is not null then raise exception 'Ancienne signature encore active'; end if;
+ if to_regprocedure('public.create_coaching_people_session_v1045(uuid,jsonb,text)') is null then raise exception 'Nouvelle signature absente'; end if;
+ if exists(select 1 from pg_catalog.pg_attribute where attrelid='private.coaching_deferred_v1045'::regclass and attname='search_mode' and attnotnull) then raise exception 'Mode en attente impossible'; end if;
+ if to_regprocedure('public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text)') is not null then
+  if has_function_privilege('authenticated','public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text)','EXECUTE') or has_function_privilege('anon','public.create_coaching_people_session_v1045_pre_correctif(uuid,jsonb,text,text)','EXECUTE') then raise exception 'Ancienne RPC encore exposée'; end if;
  end if;
- return new;
-end $$;
-revoke all on function private.capture_coaching_departure_v1045() from public,anon,authenticated;
-create trigger coaching_departure_v1045 after insert on public.coaching_trace_points for each row execute function private.capture_coaching_departure_v1045();
-
--- Only executable when the operator runs this script manually.
-do $$
-begin
- if has_table_privilege('authenticated','private.coaching_deferred_v1045','SELECT') or has_table_privilege('authenticated','private.coaching_deferred_v1045','UPDATE') or has_table_privilege('anon','private.coaching_deferred_v1045','SELECT') then raise exception 'Métadonnées privées exposées'; end if;
- if not exists(select 1 from pg_class where oid='private.coaching_deferred_v1045'::regclass and relrowsecurity) then raise exception 'RLS manquante'; end if;
-end $$;
+ raise notice 'Correctif incrémental prêt. Aucune ligne existante modifiée. Choix historiques conservés.';
+end $check$;
+notify pgrst, 'reload schema';
 
 commit;
