@@ -4,13 +4,14 @@ import { createAdminCentre } from './admin.js?v=1044-1';
 
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
-const APP_VERSION='10.46';
+const APP_VERSION='10.47';
 // Fixed presentation palette. Never derived from a stored/user-selected color.
 const TRACE_PALETTE=Object.freeze({planned:'#00D9FF',traceur:'#39FF14',conducteur:'#FF7A00',external:'#E600FF',markers:'#FFE600'});
 const TRACE_LABELS=Object.freeze({planned:'Tracé prévu',traceur:'Traceur',conducteur:'Conducteur',external:'GPX / Externe',markers:'Repères'});
 for(const [layer,color] of Object.entries(TRACE_PALETTE))document.documentElement.style.setProperty(`--trace-${layer}`,color);
 
 const APP_RELEASE_NOTES=Object.freeze([
+ {version:'10.47',date:'13/09/2026',title:'Nouveautés V10.47',items:['Nouvelle entrée Entraînement & Coaching avec accès direct à Créer, Rejoindre, Mes sessions et Progression d’équipe.'],important:[]},
  {version:'10.46',date:'13/09/2026',title:'Nouveautés V10.46',items:['Terrain Coaching plein écran.','Interface terrain plus compacte.','Suppression des messages pré-rédigés.','Badge de messages non lus et toast discret.'],important:[]},
  {version:'10.45',date:'10/09/2026',title:'Nouveautés V10.45',items:['Coaching différé : attendez le retour du Traceur, puis reprenez votre session.','Double aveugle : le Coach peut créer une session sans préparer la piste.'],important:['L’âge de piste au départ est calculé depuis la fin de pose enregistrée.']},
  {version:'10.44',date:'10/09/2026',title:'Nouveautés V10.44',items:['Un Centre Admin dédié au suivi de la communauté.','Un formulaire pour transmettre vos idées et améliorations.'],important:['Les informations Admin sont protégées côté serveur.']},
@@ -503,14 +504,18 @@ async function handleHomeCoachingAction(action){
  if(action==='resume'&&verifiedActiveCoachingSession?.id){await openCoachingSession(verifiedActiveCoachingSession.id,{resume:true});return}
  if(action==='invitation'){const invite=coachingSessions.find(s=>s.coaching_members?.some(m=>m.user_id===session?.user?.id&&m.invitation_status==='invited'));if(invite){showPage('coachingPage');await openCoachingSession(invite.id);return}}
  if(action==='draft'){const draft=coachingDebriefs.find(isReliableCoachingDraft);if(draft){showPage('coachingPage');await openCoachingSession(draft.session_id);setCoachingStage('debrief');return}}
- showPage('coachingPage');setCoachingStage('prepare');
+ openUnifiedCoachingHome();
 }
 function activeCoachingStorageKey(){return `${ACTIVE_COACHING_KEY}_${session?.user?.id||'anonymous'}`}
 function readActiveCoachingRef(){try{return JSON.parse(localStorage.getItem(activeCoachingStorageKey())||'null')}catch{return null}}
 function saveActiveCoachingRef(s){if(!s||s.status!=='live')return;try{localStorage.setItem(activeCoachingStorageKey(),JSON.stringify({id:s.id}))}catch{}}
 function clearActiveCoachingRef(id=null){try{const saved=readActiveCoachingRef();if(!id||saved?.id===id)localStorage.removeItem(activeCoachingStorageKey())}catch{}}
 function clearVerifiedActiveCoaching(id=null){if(!id||verifiedActiveCoachingSession?.id===id)verifiedActiveCoachingSession=null;coachingShortcutValidated=true;clearActiveCoachingRef(id);refreshActiveSessionShortcut()}
-function openUnifiedCoachingHome(e){e?.preventDefault();showPage('coachingPage');setCoachingStage('prepare')}
+function openUnifiedCoachingHome(e){e?.preventDefault();showPage('coachingEntryPage')}
+function openCoachingEntryTarget(target){
+ showPage('coachingPage');setCoachingStage('prepare');
+ setTimeout(()=>{const zone=$(target);zone?.scrollIntoView({block:'center'});zone?.focus({preventScroll:true})},120);
+}
 function isCoachingOwner(s){return !!s&&s.owner_id===session?.user?.id}
 function myCoachingRole(s){const role=s?.coaching_members?.find(m=>m.user_id===session?.user?.id)?.role||'observer';return role==='solo'?'driver':role}
 function isSoloCoaching(s){return s?.coaching_members?.some(m=>m.user_id===session?.user?.id&&m.role==='solo')||false}
@@ -2649,7 +2654,7 @@ $('confirmDeleteAccountBtn').onclick=deleteCurrentAccount;
 $('newOperationalTerrainBtn').addEventListener('click',()=>{activeOperationalCallId=null;activeOperationalGpxTracks=[];beginNewPiste('piste')});
 $('quickStartLastActivity').onclick=quickStartLastActivity;
 $('receivedCallBtn').onclick=()=>{showPage('operationalCallPage');resetOperationalCall()};
-document.addEventListener('click',e=>{if(e.target.closest('#homeOpsBtn'))openOpsChoice();if(e.target.closest('#homeCoachingBtn')){showPage('coachingPage');setCoachingStage('prepare')}});
+document.addEventListener('click',e=>{if(e.target.closest('#homeOpsBtn'))openOpsChoice();if(e.target.closest('#homeCoachingBtn'))openUnifiedCoachingHome(e)});
 $('openTerrainHomeBtn').onclick=openUnifiedCoachingHome;
 $('openPlannerHomeBtn').onclick=e=>{e.preventDefault();openTerrainPlanner('library')};
 document.addEventListener('click',e=>{const state=e.target.closest('#homeCoachingStateAction'),prepare=e.target.closest('#homeCoachingPrepare'),join=e.target.closest('#homeCoachingJoin');if(state){e.preventDefault();handleHomeCoachingAction(state.dataset.coachingHomeAction||'open')}else if(prepare){e.preventDefault();showPage('coachingPage');setCoachingStage('prepare')}else if(join){e.preventDefault();showPage('coachingPage');setCoachingStage('prepare');setTimeout(()=>$('coachingInviteInput')?.focus(),120)}});
@@ -2682,7 +2687,8 @@ $('recenterLiveMapBtn').onclick=recenterLiveMap;
 $('showFullLiveTrackBtn').onclick=showFullLiveTrack;
 ['odorEnabled','odorWindDirection','odorWindSpeed','odorAge','odorEnvironment','odorTemperature','odorHumidity'].forEach(id=>{if($(id))$(id).oninput=updateOdorPreview});
 $('routeName').oninput=savePlannerDraft;
-$('openCoachingBtn').onclick=()=>{showPage('coachingPage');setCoachingStage('prepare')};
+$('openCoachingBtn').onclick=openUnifiedCoachingHome;
+document.querySelectorAll('[data-coaching-entry-target]').forEach(b=>b.onclick=()=>openCoachingEntryTarget(b.dataset.coachingEntryTarget));
 $('undoPlannerPoint').onclick=undoPlanner;$('redoPlannerPoint').onclick=redoPlanner;
 $('clearPlanner').onclick=()=>{if(confirm('Effacer le tracé, les signes et le brouillon ?')){plannerPoints=[];plannerWaypoints=[];clearPlannerDraft();redrawPlanner()}};
 $('saveTrainingRoute').onclick=()=>savePlanner('copy');$('updateTrainingRoute').onclick=()=>savePlanner('update');$('saveAndStartRoute').onclick=()=>savePlanner('copy','start');

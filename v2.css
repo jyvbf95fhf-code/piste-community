@@ -962,3 +962,12 @@ body.coaching-session-active #coachingPage{
 .coaching-unread-badge{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-left:3px;padding:0 5px;border-radius:999px;background:#b9d66c;color:#102024;font-size:10px;font-weight:900;line-height:1}
 .coaching-unread-badge[hidden],.coaching-message-toast[hidden]{display:none}
 .coaching-message-toast{position:fixed;z-index:9200;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));max-width:calc(100vw - 32px);padding:9px 12px;border:1px solid rgba(185,214,108,.38);border-radius:12px;background:rgba(9,26,32,.94);box-shadow:0 8px 24px rgba(0,0,0,.3);color:#e8f3d6;font-size:12px;font-weight:750;pointer-events:none}
+
+/* V10.47 — Entrée Coaching */
+#coachingEntryPage .record-head{flex-wrap:wrap;gap:12px}
+#coachingEntryPage h2{font-size:clamp(20px,6vw,26px);line-height:1.25}
+#coachingEntryPage>p{font-size:14px;line-height:1.5}
+#coachingEntryPage .coaching-entry-cards{display:grid;gap:12px;margin-top:20px}
+#coachingEntryPage .coaching-entry-cards button{width:100%;min-height:64px;padding:18px;text-align:left;white-space:normal;border:1px solid rgba(159,189,101,.32);border-radius:16px;background:#13232a;color:#edf3ee;font:inherit;font-weight:750;cursor:pointer}
+#coachingEntryPage .coaching-entry-cards button:focus-visible{outline:2px solid #b9d66c;outline-offset:3px}
+#coachingEntryPage .coaching-entry-cards button:active{background:#20352d}
