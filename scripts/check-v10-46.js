@@ -87,6 +87,21 @@ assert(
 );
 
 assert(
+  css.includes('/* V10.46 — Coaching terrain compact */'),
+  'Styles terrain compact V10.46 absents'
+);
+
+assert(
+  css.includes('#coachingLivePanel.active-terrain'),
+  'Styles spécifiques au terrain actif absents'
+);
+
+assert(
+  css.includes('#coachingLivePanel.active-terrain .coaching-tabs'),
+  'Onglets terrain non optimisés'
+);
+
+assert(
   !html.includes('data-coaching-quick='),
   'Les messages pré-rédigés doivent être retirés'
 );

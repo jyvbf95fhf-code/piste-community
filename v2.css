@@ -807,6 +807,39 @@ body.v10-30-aurora{
 #coachingLivePanel.active-terrain #coachingParticipants{display:flex!important;flex-wrap:wrap;gap:6px}
 .coaching-team-summary span{display:block}
 
+/* V10.46 — Coaching terrain compact */
+#coachingLivePanel.active-terrain{padding-top:12px;padding-bottom:12px}
+#coachingLivePanel.active-terrain .coaching-live-head{gap:10px}
+#coachingLivePanel.active-terrain .coaching-live-head h3,
+#coachingLivePanel.active-terrain .coaching-live-head p{margin-top:3px;margin-bottom:3px}
+#coachingLivePanel.active-terrain .invite-chip{padding:7px 10px;gap:2px}
+#coachingLivePanel.active-terrain #coachingLiveWeather,
+#coachingLivePanel.active-terrain #coachingHistoricalWeather{margin:6px 0;padding:7px 9px;gap:6px}
+#coachingLivePanel.active-terrain #coachingTerrainStatus{margin:6px 0;padding:7px 9px;gap:6px}
+#coachingLivePanel.active-terrain #coachingPhase{display:block!important;margin:7px 0 5px;padding:8px 10px}
+#coachingLivePanel.active-terrain #coachingRoleInstruction{margin:5px 0;line-height:1.35}
+#coachingLivePanel.active-terrain #coachingParticipants{margin:7px 0 5px;padding-bottom:0;gap:5px}
+#coachingLivePanel.active-terrain .participant-chip{padding:6px 9px}
+#coachingLivePanel.active-terrain .coaching-map-shell:not(.fullscreen){margin-top:6px;margin-bottom:8px}
+#coachingLivePanel.active-terrain .coaching-terrain-command-bar{margin:6px 0;gap:6px}
+#coachingLivePanel.active-terrain .coaching-terrain-command-bar button,
+#coachingLivePanel.active-terrain .coaching-tabs button{min-height:44px}
+#coachingLivePanel.active-terrain .coaching-primary-actions{gap:7px;margin:8px 0 calc(10px + env(safe-area-inset-bottom,0px));padding:9px}
+#coachingLivePanel.active-terrain .coaching-departure{gap:8px;margin:8px 0;padding:10px}
+#coachingLivePanel.active-terrain .coaching-tabs{display:grid!important;gap:4px;margin:8px 0 6px;padding:4px}
+#coachingLivePanel.active-terrain .coaching-tabs button{padding:8px 3px}
+#coachingLivePanel.active-terrain .coaching-tabs #coachingHelpBtn{grid-column:1/-1}
+#coachingLivePanel.active-terrain .coaching-tab-panel.active{display:block!important;padding-top:2px}
+#coachingLivePanel.active-terrain .coaching-tab-panel .session-preflight{margin:4px 0 7px;padding:9px}
+
+@media(max-width:600px){
+  #coachingLivePanel.active-terrain{padding:10px}
+  #coachingLivePanel.active-terrain .invite-chip{margin-top:7px}
+  #coachingLivePanel.active-terrain .coaching-map-shell:not(.fullscreen){min-height:46dvh}
+  #coachingLivePanel.active-terrain .coaching-map-shell:not(.fullscreen) #coachingMap{height:46dvh;min-height:340px}
+  #coachingLivePanel.active-terrain .coaching-tabs{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+
 /* V10.42.3 — état du parcours lisible sur mobile */
 .coaching-workflow-banner{display:block;padding:16px;margin:12px 0;border:2px solid #b9d66c;border-radius:14px;background:#233c2b;color:#f2ffd9;font-size:clamp(16px,4.5vw,20px);font-weight:800;line-height:1.4;overflow-wrap:anywhere}
 .coaching-phase.completed{background:#173126;color:#bdeaa8;border-color:#3d6b4d}
