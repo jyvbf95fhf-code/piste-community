@@ -65,6 +65,28 @@ assert(
 
 // Assertions V10.46 : elles DOIVENT échouer avant l’implémentation UX.
 assert(
+  source('setCoachingStage').includes(
+    "document.body.classList.toggle('coaching-session-active'"
+  ),
+  'Le mode plein écran doit être piloté depuis setCoachingStage'
+);
+
+assert(
+  css.includes('body.coaching-session-active .bottom-nav'),
+  'La navigation générale doit être masquée pendant le terrain Coaching'
+);
+
+assert(
+  css.includes('body.coaching-session-active #activeSessionDock'),
+  'Le dock de session générale doit être masqué pendant le terrain Coaching'
+);
+
+assert(
+  css.includes('safe-area-inset-bottom'),
+  'Le mode Coaching doit conserver la safe-area iPhone'
+);
+
+assert(
   !html.includes('data-coaching-quick='),
   'Les messages pré-rédigés doivent être retirés'
 );

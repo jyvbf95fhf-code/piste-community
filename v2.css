@@ -912,3 +912,17 @@ body.v10-30-aurora{
 
 #coachingPage .coaching-traceur-preparation{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 16px}
 #coachingPage .coaching-traceur-preparation button{flex:1 1 200px;min-height:48px;white-space:normal}
+
+/* V10.46 — Coaching terrain plein écran, présentation uniquement */
+body.coaching-session-active{
+  padding-bottom:env(safe-area-inset-bottom);
+}
+body.coaching-session-active .bottom-nav{
+  display:none!important;
+}
+body.coaching-session-active #activeSessionDock{
+  display:none!important;
+}
+body.coaching-session-active #coachingPage{
+  padding-bottom:calc(12px + env(safe-area-inset-bottom));
+}
