@@ -111,6 +111,8 @@ if (process.argv.includes('--case=state') || !process.argv.some(arg => arg.start
     const validateCoachingMembers=members=>members.some(member=>!member.user_id)||new Set(members.map(member=>member.user_id)).size!==members.length||!['coach','driver','traceur'].includes(members[0]?.role)||members.filter(member=>member.role==='driver').length!==1||members.filter(member=>member.role==='traceur').length!==1||members.filter(member=>member.role==='coach').length>1?{ok:false}:{ok:true};
     ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
     ${source('resetCoachingWizard')}
+    ${source('coachingWizardMembers')}
+    ${source('validCoachingWizardParticipants')}
     ${source('changeCoachingWizard')}
     ${source('validCoachingWizard')}
     coachingWizard=newCoachingWizard();
@@ -151,6 +153,8 @@ if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.sta
     const coachingCanPrepareRouteV1045=()=>true;
     ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
     ${source('resetCoachingWizard')}
+    ${source('coachingWizardMembers')}
+    ${source('validCoachingWizardParticipants')}
     ${source('changeCoachingWizard')}
     ${source('validCoachingWizard')}
     ${source('validCoachingWizardStep')}
@@ -185,6 +189,93 @@ if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.sta
   }
   const wizardWiring = app.match(/\$\('coachingWizardSessionType'\)[\s\S]*?\$\('coachingWizardCreatorRole'\)[^\n]*/)?.[0] || '';
   assert(wizardWiring && !wizardWiring.includes('chooseCoachingSearchV1045') && !wizardWiring.includes('p_search_mode'), 'Le câblage du wizard ne doit pas appeler la décision Traceur ni envoyer p_search_mode');
+}
+
+if (process.argv.includes('--case=participants') || !process.argv.some(arg => arg.startsWith('--case='))) {
+  const participantFunctions = [
+    'coachingWizardMembers',
+    'validCoachingWizardParticipants',
+    'coachingWizardAvailableFriends',
+    'coachingWizardAvailableRoles',
+    'addCoachingWizardParticipant',
+    'removeCoachingWizardParticipant'
+  ];
+  participantFunctions.forEach(name => source(name));
+  const participantHarness = `(function(){
+    const fields={coachingCreatorRole:{value:''},coachingVisibility:{value:''}};
+    const $=id=>fields[id]||null;
+    const session={user:{id:'creator-1'}};
+    const coachingAcceptedFriends=[
+      {user_id:'traceur-1',display_name:'Traceur'},
+      {user_id:'driver-1',display_name:'Conducteur'},
+      {user_id:'coach-1',display_name:'Coach'},
+      {user_id:'observer-1',display_name:'Observateur'},
+      {user_id:'observer-2',display_name:'Observateur 2'}
+    ];
+    const coachingFriendInvites=[{user_id:'legacy-friend',role:'observer'}];
+    const coachingCanPrepareRouteV1045=()=>true;
+    const renderCoachingWizard=()=>{};
+    ${functionOnly('validateCoachingMembers')}
+    ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
+    let coachingWizard=newCoachingWizard();
+    ${source('resetCoachingWizard')}
+    ${source('coachingWizardMembers')}
+    ${source('validCoachingWizardParticipants')}
+    ${source('coachingWizardAvailableFriends')}
+    ${source('coachingWizardAvailableRoles')}
+    ${source('addCoachingWizardParticipant')}
+    ${source('removeCoachingWizardParticipant')}
+    ${source('changeCoachingWizard')}
+    ${source('validCoachingWizardStep')}
+
+    coachingWizard.change({sessionType:'immediate',mode:'normal',creatorRole:'coach'});
+    if(!addCoachingWizardParticipant('traceur-1','traceur'))throw new Error('le premier membre intermédiaire valide doit être accepté');
+    if(coachingWizard.participants.length!==1||validCoachingWizardStep(4).ok)throw new Error('le premier membre ne doit pas être confondu avec une équipe complète');
+    if(coachingWizardAvailableFriends().some(friend=>friend.user_id==='traceur-1'))throw new Error('une personne déjà utilisée reste proposée');
+    const rolesAfterTraceur=coachingWizardAvailableRoles();
+    if(rolesAfterTraceur.includes('coach')||rolesAfterTraceur.includes('traceur')||!rolesAfterTraceur.includes('driver')||!rolesAfterTraceur.includes('observer'))throw new Error('les rôles occupés ne sont pas filtrés');
+    if(!addCoachingWizardParticipant('driver-1','driver')||!validCoachingWizardStep(4).ok)throw new Error('équipe Coach complète refusée');
+    if(!addCoachingWizardParticipant('observer-1','observer')||!validCoachingWizardStep(4).ok)throw new Error('observateur facultatif refusé');
+    if(addCoachingWizardParticipant('driver-1','observer')||addCoachingWizardParticipant('observer-2','driver'))throw new Error('doublon de personne ou de rôle accepté');
+    if(coachingFriendInvites.length!==1||coachingFriendInvites[0].user_id!=='legacy-friend')throw new Error('participants synchronisés avant submit vers p_members');
+
+    const validTeams={
+      coach:[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}],
+      traceur:[{user_id:'driver-1',role:'driver'}],
+      driver:[{user_id:'traceur-1',role:'traceur'}]
+    };
+    for(const sessionType of ['immediate','deferred'])for(const mode of ['normal','simple_blind','full_blind'])for(const creatorRole of ['coach','traceur','driver']){
+      coachingWizard.change({sessionType,mode,creatorRole});
+      coachingWizard.participants=validTeams[creatorRole].map(member=>({...member}));
+      if(!validCoachingWizardStep(4).ok)throw new Error('équipe valide refusée pour '+sessionType+'/'+mode+'/'+creatorRole);
+      coachingWizard.participants=[...validTeams[creatorRole],{user_id:'observer-1',role:'observer'}];
+      if(!validCoachingWizardStep(4).ok)throw new Error('observateur refusé pour '+sessionType+'/'+mode+'/'+creatorRole);
+      if(creatorRole!=='coach'){
+        coachingWizard.participants=[...validTeams[creatorRole],{user_id:'coach-1',role:'coach'}];
+        if(!validCoachingWizardStep(4).ok)throw new Error('Coach optionnel refusé pour '+creatorRole);
+      }
+    }
+    coachingWizard.change({sessionType:'deferred',mode:'full_blind',creatorRole:'coach'});
+    coachingWizard.participants=[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}];
+    if(!validCoachingWizardStep(4).ok)throw new Error('Coach double aveugle doit pouvoir inviter Traceur et Conducteur');
+
+    const invalidTeams=[
+      [{user_id:'same',role:'traceur'},{user_id:'same',role:'driver'}],
+      [{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'},{user_id:'coach-1',role:'coach'}],
+      [{user_id:'traceur-1',role:'traceur'}],
+      [{user_id:'driver-1',role:'driver'}]
+    ];
+    coachingWizard.creatorRole='coach';
+    for(const participants of invalidTeams){coachingWizard.participants=participants;if(validCoachingWizardStep(4).ok)throw new Error('équipe invalide acceptée: '+JSON.stringify(participants))}
+
+    coachingWizard.creatorRole='coach';
+    coachingWizard.participants=[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'},{user_id:'observer-1',role:'observer'}];
+    coachingWizard.change({creatorRole:'traceur'});
+    if(JSON.stringify(coachingWizard.participants)!==JSON.stringify([{user_id:'driver-1',role:'driver'},{user_id:'observer-1',role:'observer'}]))throw new Error('changement de créateur retire autre chose que les conflits');
+    return true;
+  })()`;
+  execFileSync(process.execPath,['-e',participantHarness],{stdio:'inherit'});
+  for(const id of ['coachingWizardParticipantFriend','coachingWizardParticipantRole','addCoachingWizardParticipant','coachingWizardParticipants'])assert(html.includes(`id="${id}"`), `Contrôle participant absent: ${id}`);
 }
 
 if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.startsWith('--case='))) {
@@ -234,6 +325,7 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     const validateCoachingMembers=()=>({ok:stepValid});
     const session={user:{id:'creator-1'}};
     const coachingCanPrepareRouteV1045=()=>true;
+    const renderCoachingWizardParticipants=()=>{};
     ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
     let coachingWizard=newCoachingWizard();
     ${source('resetCoachingWizard')}
