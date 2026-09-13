@@ -36,13 +36,36 @@ for(const name of [
 
 
 for(const name of ['loadCoachingHub','setCoachingStage','setCoachingPanel','openCoachingSession','loadStats','showPage']){
- assert.equal(source(name),source(name,old),`${name} doit rester intacte`);
+ assert.equal(source(name).replaceAll('setCoachingEntryView(null);',''),source(name,old),`${name} doit rester intacte hors nettoyage de navigation`);
 }
 // Toutes les pages internes restent identiques, pas seulement leurs formulaires.
 const entry=html.match(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/);
 assert(entry,'Nouvelle entrée Coaching absente');
-assert.equal(html.replace(entry[0],'').replace(/app\.js\?v=1047-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208\d/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021'),oldHtml,'Écrans internes modifiés');
+assert.equal(html.replace(entry[0],'').replace('    <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>\n','').replace(/app\.js\?v=1047-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208\d/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021'),oldHtml,'Écrans internes modifiés');
 assert(!/<(?:input|select|form|textarea)\b/.test(entry[0]),'Aucun formulaire dupliqué');
+assert(html.includes('id="coachingEntryBack"'),'Bouton Retour des sous-écrans absent');
+assert(html.includes('data-page="coachingEntryPage" hidden>← Retour</button>'));
+const viewBehavior=Function('$',`${source('setCoachingEntryView')}return setCoachingEntryView;`);
+function element(){const classes=new Set();return {dataset:{},hidden:false,classList:{toggle:(c,on)=>on?classes.add(c):classes.delete(c),contains:c=>classes.has(c)}}}
+const elements=Object.fromEntries(['coachingPage','coachingEntryBack','coachingPrepareStage','coachingSessionsCard','createBlock','joinBlock'].map(id=>[id,element()]));
+elements.coachingCreatorRole={closest:()=>elements.createBlock};
+elements.coachingInviteInput={closest:()=>elements.joinBlock};
+const setView=viewBehavior(id=>elements[id]);
+for(const target of ['coachingCreatorRole','coachingInviteInput','coachingSessionsCard']){
+ setView(target);
+ assert.equal(elements.createBlock.classList.contains('coaching-entry-hidden'),target!=='coachingCreatorRole');
+ assert.equal(elements.joinBlock.classList.contains('coaching-entry-hidden'),target!=='coachingInviteInput');
+ assert.equal(elements.coachingSessionsCard.classList.contains('coaching-entry-hidden'),target!=='coachingSessionsCard');
+ assert.equal(elements.coachingPrepareStage.classList.contains('coaching-entry-hidden'),target==='coachingSessionsCard');
+ assert.equal(elements.coachingEntryBack.hidden,false);
+ setView(null);
+ for(const id of ['createBlock','joinBlock','coachingSessionsCard','coachingPrepareStage'])assert(!elements[id].classList.contains('coaching-entry-hidden'),`${id} doit être restauré`);
+ assert.equal(elements.coachingEntryBack.hidden,true);
+ assert.equal(elements.coachingPage.dataset.entryView,undefined);
+}
+assert(source('showPage').includes('setCoachingEntryView(null);'),'Chaque navigation restaure les blocs');
+assert(source('setCoachingStage').startsWith('function setCoachingStage(stage){setCoachingEntryView(null);'),'Toute transition restaure les blocs avant le terrain');
+assert(read('v2.css').includes('#coachingPage .coaching-entry-hidden{display:none!important}'));
 const routes=[
  ['Créer une session','coachingCreatorRole','Préparer un nouvel entraînement'],
  ['Rejoindre une session','coachingInviteInput','Entrer avec un code d’invitation'],
@@ -58,24 +81,25 @@ for(const [label,target,subtitle] of routes){
  assert(card[1].includes('aria-hidden="true"'),`Icône décorative absente: ${label}`);
  assert(oldHtml.includes(`id="${target}"`),`Cible inexistante: ${target}`);
  if(target==='statsPage')continue;
- for(const leaveBeforeFrame of [false,true]){
-  const calls=[],frames=[],timers=[];let active=true;
+ for(const leaveBeforeFrame of [false,true,'session']){
+  const calls=[],frames=[],timers=[];let active=true,entryView=target;
   const zone={tabIndex:target==='coachingSessionsCard'?-1:0,
    setAttribute:(key,value)=>calls.push(['attribute',key,value]),
    scrollIntoView:()=>calls.push(['scroll',target]),focus:()=>calls.push(['focus',target]),
    closest:()=>zone,classList:{add:()=>{},remove:()=>{}}};
-  Function('showPage','setCoachingStage','$','requestAnimationFrame','setTimeout',`${source('openCoachingEntryTarget')}openCoachingEntryTarget('${target}');`)(
+  Function('showPage','setCoachingStage','$','requestAnimationFrame','setTimeout','setCoachingEntryView',`${source('openCoachingEntryTarget')}openCoachingEntryTarget('${target}');`)(
    id=>calls.push(['page',id]),stage=>calls.push(['stage',stage]),
-   id=>id==='coachingPage'?{classList:{contains:()=>active}}:zone,
-   callback=>frames.push(callback),callback=>timers.push(callback)
+   id=>id==='coachingPage'?{classList:{contains:()=>active},dataset:{entryView},scrollIntoView:()=>calls.push(['scroll','coachingPage'])}:zone,
+   callback=>frames.push(callback),callback=>timers.push(callback),mode=>assert.equal(mode,target)
   );
   assert.deepEqual(calls,[['page','coachingPage'],['stage','prepare']],'Attendre le rendu avant scroll/focus');
-  if(leaveBeforeFrame)active=false;
+  if(leaveBeforeFrame===true)active=false;
+  if(leaveBeforeFrame==='session')entryView=undefined;
   while(frames.length)frames.shift()();
   const expected=[['page','coachingPage'],['stage','prepare']];
   if(!leaveBeforeFrame){
    if(target==='coachingSessionsCard')expected.push(['attribute','tabindex','-1']);
-   expected.push(['scroll',target],['focus',target]);
+   expected.push(['scroll','coachingPage'],['focus',target]);
   }
   assert.deepEqual(calls,expected,`Navigation incorrecte: ${label}`);
   timers.forEach(callback=>callback());
