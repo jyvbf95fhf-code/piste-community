@@ -92,6 +92,31 @@ assert(
 );
 
 assert(
+  html.includes('id="coachingMessageInput"'),
+  'Le champ message libre doit rester présent'
+);
+
+assert(
+  html.includes('id="sendCoachingMessage"'),
+  'Le bouton d’envoi libre doit rester présent'
+);
+
+assert(
+  html.includes('id="coachingMessages"'),
+  'L’historique des messages doit rester présent'
+);
+
+assert(
+  source('sendCoachingMessage').includes('coaching_messages'),
+  'L’envoi de messages libres doit rester actif'
+);
+
+assert(
+  source('loadCoachingMessages').includes('coaching_messages'),
+  'Le chargement de l’historique doit rester actif'
+);
+
+assert(
   html.includes('id="coachingMessageUnreadBadge"'),
   'Badge non-lu absent'
 );
