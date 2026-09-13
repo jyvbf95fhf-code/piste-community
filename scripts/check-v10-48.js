@@ -129,18 +129,99 @@ if (process.argv.includes('--case=state') || !process.argv.some(arg => arg.start
   execFileSync(process.execPath,['-e',stateHarness],{stdio:'inherit'});
 }
 
+if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.startsWith('--case='))) {
+  const stepTitles = [
+    'Type de session',
+    'Mode',
+    'Ton rôle',
+    'Participants',
+    'Préparation de la piste',
+    'Invitations',
+    'Récapitulatif'
+  ];
+  const wizardPanel = html.match(/    <div id="coachingWizardPanel"[\s\S]*?<\/div>\n    <div class="record-head">/);
+  assert(wizardPanel, 'Shell du wizard introuvable');
+  assert.equal((wizardPanel[0].match(/data-coaching-wizard-step="[1-7]"/g) || []).length, 7, 'Le wizard doit afficher sept étapes');
+  for (const title of stepTitles) assert(wizardPanel[0].includes(`>${title}<`), `Titre d'étape absent: ${title}`);
+  assert(wizardPanel[0].includes('Étape 1 sur 7'), 'Progression initiale absente');
+  assert(wizardPanel[0].includes('id="coachingWizardBack"'), 'Retour du wizard absent');
+  assert(wizardPanel[0].includes('id="coachingWizardNext"'), 'Suivant du wizard absent');
+
+  for (const name of ['renderCoachingWizard', 'validCoachingWizardStep', 'nextCoachingWizard', 'backCoachingWizard', 'leaveCoachingWizard']) {
+    source(name);
+  }
+
+  const shellHarness = `(function(){
+    let stepValid=false,confirmResult=true;
+    const calls=[];
+    function element(hidden=false){const classes=new Set(hidden?['hidden']:[]);return {hidden,textContent:'',disabled:false,dataset:{},style:{},tabIndex:0,classList:{toggle:(name,on)=>on?classes.add(name):classes.delete(name),add:name=>classes.add(name),remove:name=>classes.delete(name),contains:name=>classes.has(name)},setAttribute:(name,value)=>{if(name==='aria-valuenow')this.ariaValueNow=value},focus:()=>calls.push('focus'),scrollIntoView:()=>{}}}
+    const fields={
+      coachingWizardPanel:element(true),coachingWizardProgressText:element(),coachingWizardProgressBar:element(),
+      coachingWizardBack:element(),coachingWizardNext:element(),coachingWizardSubmit:element(true),coachingWizardError:element(),
+      coachingPage:element(),coachingEntryBack:element(),coachingPrepareStage:element(),coachingSessionsCard:element(),
+      coachingCreatorRole:element(),coachingInviteInput:element()
+    };
+    const createBlock=element(),joinBlock=element();
+    fields.coachingCreatorRole.closest=()=>createBlock;fields.coachingInviteInput.closest=()=>joinBlock;
+    fields.coachingPage.classList.add('active');
+    const steps=Array.from({length:7},(_,index)=>{const node=element();node.dataset.coachingWizardStep=String(index+1);return node});
+    const $=id=>fields[id]||null;
+    const setUiText=(id,value)=>{const node=$(id);if(node)node.textContent=value;return node};
+    const document={querySelectorAll:selector=>selector==='[data-coaching-wizard-step]'?steps:[]};
+    const requestAnimationFrame=callback=>callback();
+    const setTimeout=callback=>callback();
+    const confirm=()=>confirmResult;
+    const showPage=id=>{calls.push(['page',id]);fields.coachingPage.classList.toggle('active',id==='coachingPage')};
+    const setCoachingStage=stage=>calls.push(['stage',stage]);
+    const validateCoachingMembers=()=>({ok:stepValid});
+    const session={user:{id:'creator-1'}};
+    const coachingCanPrepareRouteV1045=()=>true;
+    ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
+    let coachingWizard=newCoachingWizard();
+    ${source('resetCoachingWizard')}
+    ${source('validCoachingWizardStep')}
+    ${source('renderCoachingWizard')}
+    ${source('leaveCoachingWizard')}
+    ${source('nextCoachingWizard')}
+    ${source('backCoachingWizard')}
+    ${source('setCoachingEntryView')}
+    ${source('openCoachingEntryTarget')}
+    if(!['next','back','leave'].every(name=>typeof coachingWizard[name]==='function'))throw new Error('méthodes de navigation absentes de l’état');
+    openCoachingEntryTarget('coachingCreatorRole');
+    if(coachingWizard.currentStep!==1||fields.coachingWizardPanel.classList.contains('hidden')||fields.coachingWizardProgressText.textContent!=='Étape 1 sur 7')throw new Error('Créer doit ouvrir l’étape 1 sur 7');
+    if(!fields.coachingWizardNext.disabled)throw new Error('Suivant doit être indisponible tant que l’étape est invalide');
+    if(!createBlock.classList.contains('coaching-entry-hidden')||!joinBlock.classList.contains('coaching-entry-hidden'))throw new Error('anciens formulaires visibles derrière le wizard');
+    const beforeInvalid=coachingWizard.currentStep;
+    coachingWizard.next();
+    if(coachingWizard.currentStep!==beforeInvalid)throw new Error('Suivant invalide a changé d’étape');
+    coachingWizard.sessionType='immediate';stepValid=true;coachingWizard.next();
+    if(coachingWizard.currentStep!==2||fields.coachingWizardProgressText.textContent!=='Étape 2 sur 7'||!steps[0].hidden||steps[1].hidden)throw new Error('progression Suivant incorrecte');
+    coachingWizard.back();
+    if(coachingWizard.currentStep!==1||fields.coachingWizardProgressText.textContent!=='Étape 1 sur 7')throw new Error('Retour interne incorrect');
+    coachingWizard.sessionType=null;coachingWizard.back();
+    if(!calls.some(call=>Array.isArray(call)&&call[0]==='page'&&call[1]==='coachingEntryPage'))throw new Error('Retour initial ne rejoint pas les quatre cartes');
+    for(const target of ['coachingInviteInput','coachingSessionsCard']){
+      calls.length=0;openCoachingEntryTarget(target);
+      if(!calls.some(call=>Array.isArray(call)&&call[0]==='page'&&call[1]==='coachingPage'))throw new Error('destination V10.47 perdue: '+target);
+      if(fields.coachingPage.dataset.entryView!==target)throw new Error('vue V10.47 incorrecte: '+target);
+    }
+    return true;
+  })()`;
+  execFileSync(process.execPath,['-e',shellHarness],{stdio:'inherit'});
+}
+
 assert(html.includes('class="bottom-nav"'), 'Navigation générale absente');
 assert(html.includes('id="coachingPage"'), 'Page Coaching absente');
 assert(html.includes('id="coachingSessionsCard"'), 'Sessions internes absentes');
 assert(html.includes('id="coachingWizardPanel"'), 'Wizard absent');
 
 function withoutWizard(text) {
-  return text.replace(/    <div id="coachingWizardPanel"[\s\S]*?<\/div>\n/, '');
+  return text.replace(/    <div id="coachingWizardPanel"[\s\S]*?(?=    <div class="record-head">)/, '');
 }
 
-const currentCoachingPage = html.match(/  <section id="coachingPage"[\s\S]*?<\/section>\n/);
+const currentCoachingPage = html.match(/  <section id="coachingPage"[\s\S]*?(?=  <section id="mapPage")/);
 const oldHtml = execFileSync('git', ['show', `${baseline}:index.html`], { encoding: 'utf8' });
-const oldCoachingPage = oldHtml.match(/  <section id="coachingPage"[\s\S]*?<\/section>\n/);
+const oldCoachingPage = oldHtml.match(/  <section id="coachingPage"[\s\S]*?(?=  <section id="mapPage")/);
 assert(currentCoachingPage && oldCoachingPage, 'Section Coaching introuvable');
 assert.equal(
   withoutWizard(currentCoachingPage[0]),
@@ -155,7 +236,9 @@ assert.deepEqual(
   [
     'app.js',
     'index.html',
-    'scripts/check-v10-48.js'
+    'scripts/check-v10-47.js',
+    'scripts/check-v10-48.js',
+    'v2.css'
   ],
   'Task 1 ne doit modifier que le shell et son guard'
 );

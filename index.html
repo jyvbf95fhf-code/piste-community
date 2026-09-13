@@ -606,7 +606,19 @@
   </section>
   <section id="coachingPage" class="page">
     <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>
-    <div id="coachingWizardPanel" class="coaching-wizard-panel hidden" aria-live="polite"></div>
+    <div id="coachingWizardPanel" class="coaching-wizard-panel hidden" role="region" aria-labelledby="coachingWizardTitle" aria-live="polite" tabindex="-1">
+      <div class="coaching-wizard-head"><div><small class="section-kicker">PRÉPARATION GUIDÉE</small><h2 id="coachingWizardTitle">Créer une session</h2></div><button id="coachingWizardExit" class="text-btn" type="button">Quitter</button></div>
+      <div class="coaching-wizard-progress"><span id="coachingWizardProgressText">Étape 1 sur 7</span><div class="coaching-wizard-progress-track" aria-hidden="true"><span id="coachingWizardProgressBar" role="progressbar" aria-label="Progression de la préparation" aria-valuemin="1" aria-valuemax="7" aria-valuenow="1"></span></div></div>
+      <section data-coaching-wizard-step="1"><h3>Type de session</h3><p class="muted">Choisissez comment vous souhaitez préparer la recherche.</p></section>
+      <section data-coaching-wizard-step="2" hidden><h3>Mode</h3><p class="muted">Choisissez le niveau de visibilité de la session.</p></section>
+      <section data-coaching-wizard-step="3" hidden><h3>Ton rôle</h3><p class="muted">Indiquez votre rôle dans la session.</p></section>
+      <section data-coaching-wizard-step="4" hidden><h3>Participants</h3><p class="muted">Composez une équipe compatible avec vos choix.</p></section>
+      <section data-coaching-wizard-step="5" hidden><h3>Préparation de la piste</h3><p class="muted">Choisissez comment préparer le tracé.</p></section>
+      <section data-coaching-wizard-step="6" hidden><h3>Invitations</h3><p class="muted">Vérifiez les personnes à inviter.</p></section>
+      <section data-coaching-wizard-step="7" hidden><h3>Récapitulatif</h3><p class="muted">Vérifiez votre préparation avant de créer la session.</p></section>
+      <p id="coachingWizardError" class="msg" aria-live="assertive"></p>
+      <div class="coaching-wizard-actions"><button id="coachingWizardBack" class="secondary" type="button">← Retour</button><button id="coachingWizardNext" class="primary" type="button">Suivant</button><button id="coachingWizardSubmit" class="primary" type="button" hidden disabled>Créer la session</button></div>
+    </div>
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🐾 Entraînement & Coaching</h2></div>
     <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Créer / Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
     <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
