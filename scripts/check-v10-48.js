@@ -54,6 +54,7 @@ for (const name of protectedFunctions) {
 const createHarness = `(async()=>{
   let coachingCreateInFlight=false, valid=false, rpcCalls=0;
   const events=[], messages=[], members=[{user_id:'friend-1',role:'observer'}];
+  let rpcName=null,rpcPayload=null;
   const button={disabled:false};
   const fields={coachingRouteSelect:{value:'route-1'},createCoachingSession:button,coachingVisibility:{value:'full_blind'}};
   const route={id:'route-1',route:[[1,2],[3,4]]};
@@ -63,7 +64,7 @@ const createHarness = `(async()=>{
   const coachingWithoutPreparedRouteV1045=()=>false;
   const validateCoachingConfigurationV10423=()=>valid?{ok:true}:{ok:false,message:'configuration invalide'};
   const setUiText=(id,text)=>messages.push([id,text]);
-  const supabase={rpc:async(name,payload)=>{events.push('rpc');rpcCalls++;return {data:{id:'session-1'},error:null}}};
+  const supabase={rpc:async(name,payload)=>{events.push('rpc');rpcCalls++;rpcName=name;rpcPayload=payload;return {data:{id:'session-1'},error:null}}};
   const loadCoachingHub=async()=>events.push('load');
   const openCoachingSession=async id=>events.push(['open',id]);
   const renderCoachingFriendInvites=()=>events.push('render');
@@ -74,6 +75,8 @@ const createHarness = `(async()=>{
   valid=true;events.length=0;messages.length=0;
   await createCoaching();
   if(rpcCalls!==1)throw new Error('un seul RPC de création attendu');
+  if(rpcName!=='create_coaching_people_session_v1045')throw new Error('nom RPC de création incorrect: '+rpcName);
+  if(JSON.stringify(rpcPayload)!==JSON.stringify({p_route_id:'route-1',p_members:members,p_blind_mode:'full_blind'}))throw new Error('payload RPC de création incorrect: '+JSON.stringify(rpcPayload));
   if(events.join('|')!=='rpc|load|open,session-1|render|sync')throw new Error('ordre historique createCoaching modifié: '+events.join('|'));
   if(button.disabled)throw new Error('bouton création laissé désactivé');
   if(!events.includes('rpc'))throw new Error('RPC absent');
