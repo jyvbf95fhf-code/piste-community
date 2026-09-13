@@ -15,6 +15,12 @@ Choix :
 - Immédiate
 - Différée
 
+« Immédiate / Différée » est une intention UI de préparation avant création. Elle peut adapter les textes, le parcours UX et le récapitulatif, mais ne constitue pas la décision métier effective.
+
+Cette intention ne doit pas être ajoutée au contrat de `createCoaching()` ni modifier `create_coaching_people_session_v1045`. Elle ne nécessite aucun SQL/Supabase et ne change pas le fonctionnement protégé V10.45.
+
+Après la pose, le Traceur confirme le choix effectif via `chooseCoachingSearchV1045()`. Cette confirmation reste la source de vérité métier pour immédiate/différée ; le wizard ne la remplace pas.
+
 Pour une session différée :
 
 - aucun délai saisi manuellement
@@ -64,6 +70,14 @@ Quand le rôle et le mode l’autorisent, proposer :
 - Tracer maintenant
 - Importer un GPX
 - Utiliser une piste déjà enregistrée
+
+L’étape 5 choisit une méthode de préparation ; elle ne déclenche aucune écriture serveur.
+
+- Tracer maintenant : mémoriser seulement la méthode dans l’état temporaire. Après création réelle de la session, ouvrir/réutiliser le mécanisme existant de préparation/tracé.
+- Importer un GPX : autoriser seulement une lecture/validation locale et conserver les données temporairement côté client. Ne sauvegarder/appliquer qu’après création réelle, selon le flux existant.
+- Utiliser une piste déjà enregistrée : mémoriser localement la piste sélectionnée ou son identifiant, sans mutation serveur ; appliquer le choix après création via les mécanismes existants.
+
+`savePlanner()` reste différé jusqu’après création réelle de la session, et ne doit jamais être appelé aux étapes 1 à 6.
 
 Ne pas proposer une option interdite par la logique actuelle.
 
@@ -123,6 +137,8 @@ Pendant les étapes 1 à 6 :
 - ne lancer aucune RPC de création
 - ne créer aucune invitation serveur
 - ne modifier aucune table
+- ne pas appeler `savePlanner()`
+- ne provoquer aucune écriture dans `training_routes`
 
 Conserver la préparation dans un état temporaire côté interface.
 
@@ -195,6 +211,8 @@ Prévoir des tests pour :
 - Tracer / GPX / piste existante seulement quand autorisé
 - aucun impact sur Terrain / realtime / sessions existantes
 - régressions V10.47, V10.46, V10.45, V10.44, V10.43, V10.42.2
+
+Le test `scripts/check-v10-45.js` ne doit pas être affaibli pour contourner le fonctionnement immédiate/différée existant. Seul un ajustement minimal d’un ancien contrôle de version pour accepter `APP_VERSION` 10.48 est permis, sans supprimer d’assertion métier.
 
 ## Hors périmètre V10.48
 
