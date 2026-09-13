@@ -141,6 +141,44 @@ if (process.argv.includes('--case=state') || !process.argv.some(arg => arg.start
   execFileSync(process.execPath,['-e',stateHarness],{stdio:'inherit'});
 }
 
+if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.startsWith('--case='))) {
+  const choiceHarness = `(function(){
+    let coachingWizard;
+    const fields={coachingCreatorRole:{value:''},coachingVisibility:{value:''}};
+    const $=id=>fields[id]||null;
+    const session={user:{id:'creator-1'}};
+    const validateCoachingMembers=members=>members.some(member=>!member.user_id||member.role==='observer')?{ok:false,message:'créateur invalide'}:{ok:true};
+    const coachingCanPrepareRouteV1045=()=>true;
+    ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
+    ${source('resetCoachingWizard')}
+    ${source('changeCoachingWizard')}
+    ${source('validCoachingWizard')}
+    ${source('validCoachingWizardStep')}
+    coachingWizard=newCoachingWizard();
+    if(coachingWizard.sessionType!==null||coachingWizard.mode!==null||coachingWizard.creatorRole!==null)throw new Error('les choix du wizard doivent être vides par défaut');
+    for(const sessionType of ['immediate','deferred']) for(const mode of ['normal','simple_blind','full_blind']) for(const creatorRole of ['coach','traceur','driver']){
+      coachingWizard.reset();
+      coachingWizard.change({sessionType,mode,creatorRole,participants:[]});
+      if(coachingWizard.sessionType!==sessionType||coachingWizard.mode!==mode||coachingWizard.creatorRole!==creatorRole)throw new Error('choix non conservé: '+sessionType+'/'+mode+'/'+creatorRole);
+      if(!validCoachingWizardStep(1).ok||!validCoachingWizardStep(2).ok||!validCoachingWizardStep(3).ok)throw new Error('choix valide refusé');
+    }
+    coachingWizard.reset();
+    coachingWizard.change({creatorRole:'observer'});
+    if(coachingWizard.creatorRole==='observer')throw new Error('un observateur ne peut pas être créateur');
+    coachingWizard.change({sessionType:'immediate'});
+    if(validCoachingWizardStep(2).ok||validCoachingWizardStep(3).ok)throw new Error('champ manquant accepté');
+    const wizardText=(${JSON.stringify(source('validCoachingWizard'))});
+    if(wizardText.includes('chooseCoachingSearchV1045'))throw new Error('le wizard ne doit pas choisir immediate/deferred métier');
+    return true;
+  })()`;
+  execFileSync(process.execPath,['-e',choiceHarness],{stdio:'inherit'});
+  assert(html.includes('id="coachingWizardSessionType"'), 'Choix du type de session absent');
+  assert(html.includes('id="coachingWizardMode"'), 'Choix du mode absent');
+  assert(html.includes('id="coachingWizardCreatorRole"'), 'Choix du rôle absent');
+  assert(html.includes('Intention — à confirmer par le Traceur après la pose'), 'Récapitulatif de l’intention absent');
+  assert(!source('newCoachingWizard').includes('chooseCoachingSearchV1045'), 'Le wizard ne doit pas appeler chooseCoachingSearchV1045');
+}
+
 if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.startsWith('--case='))) {
   const stepTitles = [
     'Type de session',

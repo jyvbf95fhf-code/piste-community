@@ -46,8 +46,14 @@ function newCoachingWizard(){const state={active:false,currentStep:1,sessionType
 let coachingWizard=newCoachingWizard();
 function resetCoachingWizard(){const fresh=newCoachingWizard();Object.keys(fresh).forEach(key=>{coachingWizard[key]=fresh[key]});return coachingWizard}
 function changeCoachingWizard(changes={}){
+ const sessionTypes=['immediate','deferred'],modes=['normal','simple_blind','full_blind'],roles=['coach','traceur','driver'];
  const previous=coachingWizard,trackPatch=changes.trackPreparation&&typeof changes.trackPreparation==='object'?changes.trackPreparation:null;
- Object.keys(changes).filter(key=>key!=='trackPreparation'&&key!=='participants').forEach(key=>{if(Object.prototype.hasOwnProperty.call(previous,key))previous[key]=changes[key]});
+ Object.keys(changes).filter(key=>key!=='trackPreparation'&&key!=='participants').forEach(key=>{
+  if(!Object.prototype.hasOwnProperty.call(previous,key))return;
+  const allowed=key==='sessionType'?sessionTypes:key==='mode'?modes:key==='creatorRole'?roles:null;
+  if(allowed){if(allowed.includes(changes[key]))previous[key]=changes[key];return}
+  previous[key]=changes[key]
+ });
  if(Object.prototype.hasOwnProperty.call(changes,'participants')){
   const candidate=Array.isArray(changes.participants)?changes.participants:[];
   const creatorId=typeof session!=='undefined'&&session?.user?.id?session.user.id:'wizard-creator';
@@ -70,7 +76,8 @@ function changeCoachingWizard(changes={}){
  return previous
 }
 function validCoachingWizard(){
- if(!coachingWizard.sessionType||!coachingWizard.mode||!coachingWizard.creatorRole)return {ok:false,message:'Choisissez le type, le mode et votre rôle.'};
+ const sessionTypes=['immediate','deferred'],modes=['normal','simple_blind','full_blind'],roles=['coach','traceur','driver'];
+ if(!sessionTypes.includes(coachingWizard.sessionType)||!modes.includes(coachingWizard.mode)||!roles.includes(coachingWizard.creatorRole))return {ok:false,message:'Choisissez le type, le mode et votre rôle.'};
  const creatorId=typeof session!=='undefined'&&session?.user?.id?session.user.id:'wizard-creator',candidate=coachingWizard.participants,memberList=candidate.some(member=>member.user_id===creatorId)?candidate:[{user_id:creatorId,role:coachingWizard.creatorRole},...candidate],members=validateCoachingMembers(memberList);if(!members.ok)return members;
  const role=$('coachingCreatorRole'),mode=$('coachingVisibility'),roleBefore=role?.value,modeBefore=mode?.value;let canPrepare=true;
  try{if(role&&mode){role.value=coachingWizard.creatorRole;mode.value=coachingWizard.mode;canPrepare=coachingCanPrepareRouteV1045()}}
@@ -79,9 +86,9 @@ function validCoachingWizard(){
  return {ok:true}
 }
 function validCoachingWizardStep(step=coachingWizard.currentStep){
- if(step===1)return coachingWizard.sessionType?{ok:true}:{ok:false,message:'Choisissez un type de session.'};
- if(step===2)return coachingWizard.mode?{ok:true}:{ok:false,message:'Choisissez un mode.'};
- if(step===3)return coachingWizard.creatorRole?{ok:true}:{ok:false,message:'Choisissez votre rôle.'};
+ if(step===1)return ['immediate','deferred'].includes(coachingWizard.sessionType)?{ok:true}:{ok:false,message:'Choisissez un type de session.'};
+ if(step===2)return ['normal','simple_blind','full_blind'].includes(coachingWizard.mode)?{ok:true}:{ok:false,message:'Choisissez un mode.'};
+ if(step===3)return ['coach','traceur','driver'].includes(coachingWizard.creatorRole)?{ok:true}:{ok:false,message:'Choisissez votre rôle.'};
  if(step===4){const creatorId=session?.user?.id||'wizard-creator',members=[{user_id:creatorId,role:coachingWizard.creatorRole},...coachingWizard.participants];return validateCoachingMembers(members)}
  if(step===5||step===7)return validCoachingWizard();
  return {ok:true}
@@ -95,6 +102,11 @@ function renderCoachingWizard(){
  const progress=$('coachingWizardProgressBar');if(progress){progress.setAttribute('aria-valuenow',String(step));progress.style.width=`${step/7*100}%`}
  const next=$('coachingWizardNext'),submit=$('coachingWizardSubmit');if(next){next.hidden=step===7;next.disabled=step<7&&!validCoachingWizardStep(step).ok}if(submit)submit.hidden=step!==7;
  setUiText('coachingWizardError',coachingWizard.error||'');
+ const sessionType=$('coachingWizardSessionType'),mode=$('coachingWizardMode'),role=$('coachingWizardCreatorRole');
+ if(sessionType)sessionType.value=coachingWizard.sessionType||'';
+ if(mode)mode.value=coachingWizard.mode||'';
+ if(role)role.value=coachingWizard.creatorRole||'';
+ setUiText('coachingWizardIntentSummary',coachingWizard.sessionType?`Intention — à confirmer par le Traceur après la pose (${coachingWizard.sessionType==='deferred'?'Différée':'Immédiate'})`:'Intention — à confirmer par le Traceur après la pose');
 }
 function coachingWizardHasChoices(){return !!(coachingWizard.sessionType||coachingWizard.mode||coachingWizard.creatorRole||coachingWizard.participants.length||coachingWizard.trackPreparation.method||coachingWizard.trackPreparation.draft||coachingWizard.trackPreparation.routeId||coachingWizard.invitations.length)}
 function guardCoachingWizardNavigation(id){
@@ -2788,6 +2800,9 @@ $('routeName').oninput=savePlannerDraft;
 $('openCoachingBtn').onclick=openUnifiedCoachingHome;
 document.querySelectorAll('[data-coaching-entry-target]').forEach(b=>b.onclick=()=>openCoachingEntryTarget(b.dataset.coachingEntryTarget));
 $('coachingWizardBack').onclick=()=>coachingWizard.back();$('coachingWizardNext').onclick=()=>coachingWizard.next();$('coachingWizardExit').onclick=()=>coachingWizard.leave();
+$('coachingWizardSessionType').onchange=e=>{changeCoachingWizard({sessionType:e.target.value});renderCoachingWizard()};
+$('coachingWizardMode').onchange=e=>{changeCoachingWizard({mode:e.target.value});renderCoachingWizard()};
+$('coachingWizardCreatorRole').onchange=e=>{changeCoachingWizard({creatorRole:e.target.value});renderCoachingWizard()};
 $('undoPlannerPoint').onclick=undoPlanner;$('redoPlannerPoint').onclick=redoPlanner;
 $('clearPlanner').onclick=()=>{if(confirm('Effacer le tracé, les signes et le brouillon ?')){plannerPoints=[];plannerWaypoints=[];clearPlannerDraft();redrawPlanner()}};
 $('saveTrainingRoute').onclick=()=>savePlanner('copy');$('updateTrainingRoute').onclick=()=>savePlanner('update');$('saveAndStartRoute').onclick=()=>savePlanner('copy','start');
