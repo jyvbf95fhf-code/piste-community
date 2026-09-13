@@ -73,11 +73,11 @@ Quand le rôle et le mode l’autorisent, proposer :
 
 L’étape 5 choisit une méthode de préparation ; elle ne déclenche aucune écriture serveur.
 
-- Tracer maintenant : mémoriser seulement la méthode dans l’état temporaire. Après création réelle de la session, ouvrir/réutiliser le mécanisme existant de préparation/tracé.
-- Importer un GPX : autoriser seulement une lecture/validation locale et conserver les données temporairement côté client. Ne sauvegarder/appliquer qu’après création réelle, selon le flux existant.
-- Utiliser une piste déjà enregistrée : mémoriser localement la piste sélectionnée ou son identifiant, sans mutation serveur ; appliquer le choix après création via les mécanismes existants.
+- Tracer maintenant : préparer le tracé localement côté client, sans écriture serveur.
+- Importer un GPX : lire et valider localement le fichier ; conserver ses données côté client.
+- Utiliser une piste déjà enregistrée : mémoriser sa sélection et son identifiant sans mutation serveur.
 
-`savePlanner()` reste différé jusqu’après création réelle de la session, et ne doit jamais être appelé aux étapes 1 à 6.
+Aux étapes 1 à 6, ne jamais appeler `savePlanner()` : aucune session, invitation serveur, écriture `training_routes` ou RPC de création.
 
 Ne pas proposer une option interdite par la logique actuelle.
 
@@ -142,10 +142,26 @@ Pendant les étapes 1 à 6 :
 
 Conserver la préparation dans un état temporaire côté interface.
 
-Au dernier écran :
+Au clic final « Créer la session » uniquement :
 
-- traduire cet état temporaire vers les champs / fonctions métier existants
-- réutiliser le moteur existant au maximum
+1. Valider l’état du wizard et les règles existantes.
+2. Pour Tracer/GPX, sauvegarder la piste par `savePlanner()` si elle n’a pas déjà été sauvegardée lors d’un essai précédent.
+3. Récupérer le `route_id` réellement produit et le conserver dans l’état temporaire.
+4. Sélectionner cet identifiant pour `createCoaching()`, qui utilise `validateCoachingMembers()` via sa validation existante, `coachingCreationMembers()`, `p_members` et `p_route_id`.
+5. Laisser les invitations suivre la création atomique existante via `p_members` ; aucun nouveau mécanisme d’invitation.
+
+Pour une piste déjà enregistrée, ne pas appeler `savePlanner()` : sélectionner directement son identifiant pour `p_route_id`.
+
+Pour `full_blind` avec créateur Coach ou Conducteur, conserver exactement l’exception actuelle autorisant l’absence de piste ; ne pas forcer de `route_id`.
+
+Si `savePlanner()` réussit mais `createCoaching()` échoue :
+
+- ne pas supprimer automatiquement la piste ; elle reste enregistrée et réutilisable ;
+- conserver son `route_id` dans l’état temporaire ;
+- afficher l’échec de création et proposer « Réessayer » ;
+- réutiliser le même identifiant lors du réessai, sans rappeler `savePlanner()` inutilement et sans doublon de piste.
+
+Cette séquence remplace la règle précédente qui reportait `savePlanner()` après la création réelle : la sauvegarde éventuelle précède désormais la création, mais seulement après le clic final.
 
 ## Sortie volontaire du wizard
 
@@ -210,6 +226,10 @@ Prévoir des tests pour :
 - Coach + Double aveugle + Traceur distinct ne peut pas préparer la piste
 - Tracer / GPX / piste existante seulement quand autorisé
 - aucun impact sur Terrain / realtime / sessions existantes
+- sauvegarde Tracer/GPX uniquement au clic final, avant création et après validation
+- piste existante sans nouvelle sauvegarde et exception sans piste conservée
+- échec après sauvegarde : identifiant conservé, réessai sans seconde sauvegarde ni doublon
+- invitations atomiques par `p_members` existant
 - régressions V10.47, V10.46, V10.45, V10.44, V10.43, V10.42.2
 
 Le test `scripts/check-v10-45.js` ne doit pas être affaibli pour contourner le fonctionnement immédiate/différée existant. Seul un ajustement minimal d’un ancien contrôle de version pour accepter `APP_VERSION` 10.48 est permis, sans supprimer d’assertion métier.
