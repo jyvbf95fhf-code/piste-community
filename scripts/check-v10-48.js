@@ -275,6 +275,28 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
     return true;
   })()`;
   execFileSync(process.execPath,['-e',participantHarness],{stdio:'inherit'});
+  const asyncFriendsHarness = `(async()=>{
+    const session={user:{id:'creator-1'}};
+    let coachingShortcutValidated=false,verifiedActiveCoachingSession=null,coachingDebriefs=[],trainingRoutes=[],coachingAcceptedFriends=[],coachingSessions=[],activeCoachingSession=null;
+    const coachingWizard={active:true};
+    let wizardRenders=0,renderedFriend=null;
+    const $=()=>null,esc=value=>String(value),fmt=value=>String(value);
+    const updateHomeCoachingState=()=>{},refreshActiveSessionShortcut=()=>{},loadTrainingRoutes=async()=>{},renderCoachingFriendInvites=()=>{};
+    const renderCoachingWizardParticipants=()=>{wizardRenders++;renderedFriend=coachingAcceptedFriends[0]?.user_id||null};
+    const readActiveCoachingRef=()=>null,clearActiveCoachingRef=()=>{},saveActiveCoachingRef=()=>{},renderCoachingSessions=()=>{};
+    const supabase={
+      rpc:async name=>name==='get_friends'?{data:[{user_id:'friend-1',display_name:'Ami',status:'accepted'},{user_id:'pending-1',status:'pending'}]}:{data:[],error:null},
+      from:()=>({select:()=>({eq:async()=>({data:[],error:null})})})
+    };
+    ${functionOnly('loadCoachingHub')}
+    await loadCoachingHub();
+    if(wizardRenders!==1||renderedFriend!=='friend-1')throw new Error('le wizard actif ne reçoit pas les amis chargés');
+    coachingWizard.active=false;
+    await loadCoachingHub();
+    if(wizardRenders!==1)throw new Error('le wizard inactif ne doit pas être rendu par le chargement');
+    return true;
+  })().catch(error=>{console.error(error.message);process.exit(1)})`;
+  execFileSync(process.execPath,['-e',asyncFriendsHarness],{stdio:'inherit'});
   for(const id of ['coachingWizardParticipantFriend','coachingWizardParticipantRole','addCoachingWizardParticipant','coachingWizardParticipants'])assert(html.includes(`id="${id}"`), `Contrôle participant absent: ${id}`);
 }
 

@@ -580,7 +580,7 @@ function coachingCode(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='PI
 async function loadCoachingHub(){
  if(!session)return;coachingShortcutValidated=false;verifiedActiveCoachingSession=null;coachingDebriefs=[];updateHomeCoachingState('loading');refreshActiveSessionShortcut();await loadTrainingRoutes();
  const select=$('coachingRouteSelect');if(select)select.innerHTML='<option value="">Choisir un tracé…</option>'+trainingRoutes.map(r=>`<option value="${r.id}">${esc(r.name)} — ${fmt(r.planned_distance_km,2)} km / ${Array.isArray(r.waypoints)?r.waypoints.length:0} signes</option>`).join('');
- const friends=await supabase.rpc('get_friends');coachingAcceptedFriends=(friends.data||[]).filter(x=>x.status==='accepted');renderCoachingFriendInvites();
+ const friends=await supabase.rpc('get_friends');coachingAcceptedFriends=(friends.data||[]).filter(x=>x.status==='accepted');renderCoachingFriendInvites();if(coachingWizard.active)renderCoachingWizardParticipants();
  const {data,error}=await supabase.rpc('get_my_coaching_sessions');
  coachingSessions=error?[]:(Array.isArray(data)?data:[]);
  try{let debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,published_at,is_finalized,finalized_at,completed_at,updated_at').eq('owner_id',session.user.id);if(debriefs.error)debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,published_at,is_finalized,finalized_at,updated_at').eq('owner_id',session.user.id);if(debriefs.error)debriefs=await supabase.from('coaching_debriefs').select('session_id,publication_status,published_at,updated_at').eq('owner_id',session.user.id);coachingDebriefs=debriefs.error?[]:(debriefs.data||[])}catch{coachingDebriefs=[]}

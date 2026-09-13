@@ -35,7 +35,7 @@ for(const name of [
 }
 
 
-const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','').replace(" if(!guardCoachingWizardNavigation(id))return false;\n",'').replace(" if(showPage(page)===false)e.stopImmediatePropagation();\n"," showPage(page);\n");
+const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','').replace('if(coachingWizard.active)renderCoachingWizardParticipants();','').replace(" if(!guardCoachingWizardNavigation(id))return false;\n",'').replace(" if(showPage(page)===false)e.stopImmediatePropagation();\n"," showPage(page);\n");
 for(const name of ['loadCoachingHub','setCoachingStage','setCoachingPanel','openCoachingSession','loadStats','showPage']){
  assert.equal(normalizeNavigation(source(name)),normalizeNavigation(source(name,old)),`${name} doit rester intacte hors nettoyage de navigation`);
 }
