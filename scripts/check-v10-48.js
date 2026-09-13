@@ -21,6 +21,18 @@ function source(name, text = app) {
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
 
+function functionOnly(name, text = app) {
+  const start = text.search(new RegExp(`^(?:async )?function ${name}\\(`, 'm'));
+  assert(start >= 0, `Fonction absente: ${name}`);
+  const open = text.indexOf('{', start);
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if (text[i] === '{') depth++;
+    if (text[i] === '}' && --depth === 0) return text.slice(start, i + 1);
+  }
+  assert.fail(`Fonction incomplète: ${name}`);
+}
+
 const old = execFileSync('git', ['show', `${baseline}:app.js`], { encoding: 'utf8' });
 const protectedFunctions = [
   'coachingMemberCapabilities',
@@ -181,6 +193,8 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     ${source('resetCoachingWizard')}
     ${source('validCoachingWizardStep')}
     ${source('renderCoachingWizard')}
+    ${functionOnly('coachingWizardHasChoices')}
+    ${functionOnly('guardCoachingWizardNavigation')}
     ${source('leaveCoachingWizard')}
     ${source('nextCoachingWizard')}
     ${source('backCoachingWizard')}
@@ -208,6 +222,57 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     return true;
   })()`;
   execFileSync(process.execPath,['-e',shellHarness],{stdio:'inherit'});
+
+  const hasNavigationGuard = /^function guardCoachingWizardNavigation\(/m.test(app);
+  const navigationGuardSource = hasNavigationGuard
+    ? `${functionOnly('coachingWizardHasChoices')}\n${functionOnly('guardCoachingWizardNavigation')}`
+    : `function coachingWizardHasChoices(){return false}\nfunction guardCoachingWizardNavigation(){return true}`;
+  const capturedNavigation = app.match(/document\.addEventListener\('click',e=>\{([\s\S]*?)\n\},true\);/);
+  assert(capturedNavigation, 'Gestionnaire de navigation persistante introuvable');
+  const navigationHarness = `(function(){
+    let confirmResult=false,confirmations=0,plannerReturnTarget='library';
+    function page(active=false){const classes=new Set(active?['active']:[]);return {classList:{add:name=>classes.add(name),remove:name=>classes.delete(name),contains:name=>classes.has(name)}}}
+    const pages={coachingPage:page(true),homePage:page(),profilePage:page(),plannerPage:page()};
+    const $=id=>pages[id]||null;
+    const document={querySelectorAll:selector=>selector==='.page'?Object.values(pages):[],getElementById:id=>pages[id]||null};
+    const adminCentre={open:()=>{},leave:()=>{}};
+    const closeMissionDossier=()=>{};
+    const setCoachingEntryView=()=>{};
+    const stopPlannerFollow=()=>{};
+    const initPlanner=()=>{};
+    const loadCoachingHub=()=>{};
+    const refreshActiveSessionShortcut=()=>{};
+    const setTimeout=callback=>callback();
+    const confirm=()=>{confirmations++;return confirmResult};
+    ${functionOnly('newCoachingWizard')}
+    let coachingWizard=newCoachingWizard();
+    ${functionOnly('resetCoachingWizard')}
+    ${navigationGuardSource}
+    ${functionOnly('showPage')}
+    const prepare=()=>{coachingWizard.active=true;coachingWizard.sessionType='immediate';coachingWizard.busy=false;Object.values(pages).forEach(node=>node.classList.remove('active'));pages.coachingPage.classList.add('active');confirmations=0};
+    prepare();
+    const rejected=showPage('homePage');
+    if(rejected!==false||!pages.coachingPage.classList.contains('active')||pages.homePage.classList.contains('active'))throw new Error('navigation globale non bloquée après refus');
+    if(confirmations!==1||coachingWizard.sessionType!=='immediate'||!coachingWizard.active)throw new Error('refus doit conserver le wizard après une seule confirmation');
+    prepare();
+    let stopped=false;
+    const nav={dataset:{page:'homePage'}};
+    const event={target:{closest:selector=>selector==='[data-page]'?nav:null},preventDefault:()=>{},stopImmediatePropagation:()=>{stopped=true}};
+    Function('Date','fakeLockBlockUntil','document','showPage','e',${JSON.stringify(capturedNavigation[1])})(Date,0,document,showPage,event);
+    if(!stopped)showPage('homePage');
+    if(confirmations!==1||!stopped||!pages.coachingPage.classList.contains('active'))throw new Error('un clic persistant refusé doit demander une seule confirmation');
+    prepare();confirmResult=true;
+    if(showPage('homePage')===false||!pages.homePage.classList.contains('active'))throw new Error('navigation globale acceptée doit aboutir');
+    if(confirmations!==1||coachingWizard.active||coachingWizard.sessionType!==null)throw new Error('acceptation doit réinitialiser le wizard une seule fois');
+    prepare();coachingWizard.busy=true;confirmResult=true;
+    if(showPage('profilePage')!==false||!pages.coachingPage.classList.contains('active')||confirmations!==0)throw new Error('navigation volontaire doit rester bloquée pendant busy');
+    prepare();confirmResult=false;plannerReturnTarget='coaching';
+    if(showPage('plannerPage')===false||!pages.plannerPage.classList.contains('active')||confirmations!==0||!coachingWizard.active)throw new Error('transition interne vers le planner bloquée');
+    plannerReturnTarget='library';
+    if(showPage('coachingPage')===false||!pages.coachingPage.classList.contains('active')||confirmations!==0||!coachingWizard.active)throw new Error('transition interne vers la session Coaching bloquée');
+    return true;
+  })()`;
+  execFileSync(process.execPath,['-e',navigationHarness],{stdio:'inherit'});
 }
 
 assert(html.includes('class="bottom-nav"'), 'Navigation générale absente');

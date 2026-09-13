@@ -12,7 +12,15 @@
 
 - Initial shell test failed with `Le wizard doit afficher sept étapes` (`0 !== 7`) before production changes.
 - The disabled-Next test then failed with `Suivant doit être indisponible tant que l’étape est invalide` before the renderer enforced that state.
-- Both tests passed after their minimal production changes.
+- The review regression test failed with `navigation globale non bloquée après refus` before `showPage` gained the centralized wizard-exit guard.
+- All regression cases passed after their minimal production changes.
+
+## Review fix
+
+- The wizard now keeps an explicit active-flow flag, including during its internal planner round trip.
+- `showPage` blocks voluntary global navigation while submission is busy, prompts once when choices would be discarded, preserves all state on rejection, and resets the wizard on acceptance.
+- The persistent capture-phase navigation handler stops the element-level handler after a rejected navigation, preventing a second confirmation from the same click.
+- Internal navigation to the Coaching page and to the Coaching planner remains available without an abandonment prompt.
 
 ## Verification
 
