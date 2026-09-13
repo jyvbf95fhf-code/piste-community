@@ -127,6 +127,131 @@ assert(
 );
 
 assert(
+  app.includes('let coachingUnreadMessages=0'),
+  'État local des messages non lus absent'
+);
+
+assert(
+  app.includes('function renderCoachingMessageUnread'),
+  'Rendu du badge absent'
+);
+
+assert(
+  app.includes('function markCoachingMessagesSeen'),
+  'Reset des non-lus absent'
+);
+
+assert(
+  app.includes('function showCoachingMessageToast'),
+  'Toast message absent'
+);
+
+assert(
+  app.includes('function handleIncomingCoachingMessage'),
+  'Gestion des messages entrants absente'
+);
+
+assert(
+  app.includes("},payload=>handleIncomingCoachingMessage(payload)).subscribe()"),
+  'La subscription Messages doit transmettre le payload entrant'
+);
+
+const messageBehavior=Function(`
+  let coachingUnreadMessages=0,coachingMessageToastTimer=null;
+  let coachingPanel='team',loads=0,lastDelay=null,pendingCallback=null;
+  const session={user:{id:'current-user'}};
+  const badge={textContent:'0',hidden:true};
+  const toast={textContent:'',hidden:true};
+  const document={getElementById:id=>id==='coachingMessageUnreadBadge'?badge:toast};
+  const clearTimeout=()=>{};
+  const setTimeout=(callback,delay)=>{pendingCallback=callback;lastDelay=delay;return 1};
+  const loadCoachingMessages=()=>{loads+=1};
+  ${source('renderCoachingMessageUnread')}
+  ${source('markCoachingMessagesSeen')}
+  ${source('showCoachingMessageToast')}
+  ${source('handleIncomingCoachingMessage')}
+  handleIncomingCoachingMessage({new:{author_id:'other-user'}});
+  const otherInactive={unread:coachingUnreadMessages,badgeHidden:badge.hidden,toastHidden:toast.hidden,loads,lastDelay};
+  pendingCallback();
+  const toastHiddenAfterTimeout=toast.hidden;
+  markCoachingMessagesSeen();toast.hidden=true;
+  handleIncomingCoachingMessage({new:{author_id:'current-user'}});
+  const ownInactive={unread:coachingUnreadMessages,toastHidden:toast.hidden,loads};
+  coachingPanel='messages';
+  handleIncomingCoachingMessage({new:{author_id:'other-user'}});
+  return {otherInactive,toastHiddenAfterTimeout,ownInactive,otherActive:{unread:coachingUnreadMessages,toastHidden:toast.hidden,loads},badge};
+`)();
+
+assert.deepEqual(
+  messageBehavior.otherInactive,
+  {unread:1,badgeHidden:false,toastHidden:false,loads:1,lastDelay:2500},
+  'Un message distant hors onglet doit afficher un non-lu et un toast temporaire'
+);
+assert.equal(messageBehavior.toastHiddenAfterTimeout,true,'Le callback du toast doit le masquer');
+assert.deepEqual(
+  messageBehavior.ownInactive,
+  {unread:0,toastHidden:true,loads:2},
+  'Un message propre doit seulement actualiser l’historique'
+);
+assert.deepEqual(
+  messageBehavior.otherActive,
+  {unread:0,toastHidden:true,loads:3},
+  'Un message distant dans l’onglet actif doit seulement actualiser l’historique'
+);
+assert.deepEqual(
+  messageBehavior.badge,
+  {textContent:'0',hidden:true},
+  'Ouvrir Messages doit remettre le badge à zéro et le masquer'
+);
+
+const panelReset=Function(`
+  let coachingUnreadMessages=3,coachingPanel='team',coachingMap=null;
+  const badge={textContent:'3',hidden:false};
+  const document={getElementById:()=>badge,querySelectorAll:()=>[]};
+  const $=()=>null;
+  const setTimeout=()=>{};
+  ${source('renderCoachingMessageUnread')}
+  ${source('markCoachingMessagesSeen')}
+  ${source('setCoachingPanel')}
+  setCoachingPanel('messages');
+  return {unread:coachingUnreadMessages,panel:coachingPanel,badge};
+`)();
+assert.deepEqual(
+  panelReset,
+  {unread:0,panel:'messages',badge:{textContent:'0',hidden:true}},
+  'setCoachingPanel doit nettoyer les non-lus à l’ouverture de Messages'
+);
+
+const messageCleanup=Function(`
+  let coachingUnreadMessages=2,coachingMessageToastTimer=42;
+  let coachingRoomPoll=1,coachingPreviewSharedAt=1,coachingPreviewWatch=null,coachingOwnPosition={};
+  let coachingMapRefreshTimer=null,coachingWeatherTimer=null,coachingLiveWeather={},coachingTerrainPaused=true;
+  let coachingPreviewPosition={},coachingPreviewMarker=null,coachingPreviewAccuracyCircle=null,coachingChannel=null;
+  const clearedTimers=[];
+  const badge={textContent:'2',hidden:false};
+  const toast={hidden:false};
+  const document={getElementById:id=>id==='coachingMessageUnreadBadge'?badge:toast};
+  const clearInterval=()=>{};
+  const clearTimeout=timer=>{clearedTimers.push(timer)};
+  const stopCoachingPresence=()=>{};
+  const stopTraceurTracking=()=>{};
+  const navigator={geolocation:null};
+  const supabase={removeChannel:()=>{}};
+  const $=id=>id==='coachingMessageToast'?toast:null;
+  ${source('renderCoachingMessageUnread')}
+  ${source('markCoachingMessagesSeen')}
+  ${source('clearCoachingRealtime')}
+  clearCoachingRealtime();
+  return {unread:coachingUnreadMessages,badge,toastHidden:toast.hidden,timer:coachingMessageToastTimer,toastTimerCleared:clearedTimers.includes(42)};
+`)();
+
+assert.deepEqual(
+  messageCleanup,
+  {unread:0,badge:{textContent:'0',hidden:true},toastHidden:true,timer:null,toastTimerCleared:true},
+  'Quitter une session doit nettoyer son badge et son toast'
+);
+
+assert(
   css.includes('body.coaching-session-active .bottom-nav'),
   'Règle plein écran absente'
 );
