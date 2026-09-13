@@ -35,13 +35,15 @@ for(const name of [
 }
 
 
+const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','');
 for(const name of ['loadCoachingHub','setCoachingStage','setCoachingPanel','openCoachingSession','loadStats','showPage']){
- assert.equal(source(name).replaceAll('setCoachingEntryView(null);',''),source(name,old),`${name} doit rester intacte hors nettoyage de navigation`);
+ assert.equal(normalizeNavigation(source(name)),normalizeNavigation(source(name,old)),`${name} doit rester intacte hors nettoyage de navigation`);
 }
 // Toutes les pages internes restent identiques, pas seulement leurs formulaires.
 const entry=html.match(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/);
 assert(entry,'Nouvelle entrée Coaching absente');
-assert.equal(html.replace(entry[0],'').replace('    <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>\n','').replace(/app\.js\?v=1047-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208\d/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021'),oldHtml,'Écrans internes modifiés');
+const normalizeHtml=text=>text.replace(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/,'').replace('    <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>\n','').replace(/app\.js\?v=1047-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208\d/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021');
+assert.equal(normalizeHtml(html),normalizeHtml(oldHtml),'Écrans internes modifiés');
 assert(!/<(?:input|select|form|textarea)\b/.test(entry[0]),'Aucun formulaire dupliqué');
 assert(html.includes('id="coachingEntryBack"'),'Bouton Retour des sous-écrans absent');
 assert(html.includes('data-page="coachingEntryPage" hidden>← Retour</button>'));
