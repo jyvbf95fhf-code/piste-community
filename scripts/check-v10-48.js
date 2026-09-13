@@ -167,8 +167,11 @@ if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.sta
     if(coachingWizard.creatorRole==='observer')throw new Error('un observateur ne peut pas être créateur');
     coachingWizard.change({sessionType:'immediate'});
     if(validCoachingWizardStep(2).ok||validCoachingWizardStep(3).ok)throw new Error('champ manquant accepté');
-    const wizardText=(${JSON.stringify(source('validCoachingWizard'))});
-    if(wizardText.includes('chooseCoachingSearchV1045'))throw new Error('le wizard ne doit pas choisir immediate/deferred métier');
+    const wizardFunctions=['newCoachingWizard','changeCoachingWizard','validCoachingWizard','validCoachingWizardStep','renderCoachingWizard','nextCoachingWizard','backCoachingWizard','leaveCoachingWizard'];
+    for(const name of wizardFunctions){
+      const wizardText=(${JSON.stringify(['newCoachingWizard','changeCoachingWizard','validCoachingWizard','validCoachingWizardStep','renderCoachingWizard','nextCoachingWizard','backCoachingWizard','leaveCoachingWizard'].map(name=>source(name)).join('\n'))});
+      if(wizardText.includes('chooseCoachingSearchV1045')||wizardText.includes('p_search_mode'))throw new Error(name+' ne doit pas appeler la décision Traceur ni envoyer p_search_mode');
+    }
     return true;
   })()`;
   execFileSync(process.execPath,['-e',choiceHarness],{stdio:'inherit'});
@@ -176,7 +179,12 @@ if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.sta
   assert(html.includes('id="coachingWizardMode"'), 'Choix du mode absent');
   assert(html.includes('id="coachingWizardCreatorRole"'), 'Choix du rôle absent');
   assert(html.includes('Intention — à confirmer par le Traceur après la pose'), 'Récapitulatif de l’intention absent');
-  assert(!source('newCoachingWizard').includes('chooseCoachingSearchV1045'), 'Le wizard ne doit pas appeler chooseCoachingSearchV1045');
+  for (const name of ['newCoachingWizard','changeCoachingWizard','validCoachingWizard','validCoachingWizardStep','renderCoachingWizard','nextCoachingWizard','backCoachingWizard','leaveCoachingWizard']) {
+    assert(!source(name).includes('chooseCoachingSearchV1045'), `${name} ne doit pas appeler chooseCoachingSearchV1045`);
+    assert(!source(name).includes('p_search_mode'), `${name} ne doit pas envoyer p_search_mode`);
+  }
+  const wizardWiring = app.match(/\$\('coachingWizardSessionType'\)[\s\S]*?\$\('coachingWizardCreatorRole'\)[^\n]*/)?.[0] || '';
+  assert(wizardWiring && !wizardWiring.includes('chooseCoachingSearchV1045') && !wizardWiring.includes('p_search_mode'), 'Le câblage du wizard ne doit pas appeler la décision Traceur ni envoyer p_search_mode');
 }
 
 if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.startsWith('--case='))) {
