@@ -41,24 +41,55 @@ for(const name of ['loadCoachingHub','setCoachingStage','setCoachingPanel','open
 // Toutes les pages internes restent identiques, pas seulement leurs formulaires.
 const entry=html.match(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/);
 assert(entry,'Nouvelle entrée Coaching absente');
-assert.equal(html.replace(entry[0],'').replaceAll('1047-1','1046-1').replaceAll('2081','2080'),oldHtml,'Écrans internes modifiés');
+assert.equal(html.replace(entry[0],'').replace(/app\.js\?v=1047-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208\d/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021'),oldHtml,'Écrans internes modifiés');
 assert(!/<(?:input|select|form|textarea)\b/.test(entry[0]),'Aucun formulaire dupliqué');
 const routes=[
- ['Créer une session','coachingCreatorRole'],
- ['Rejoindre une session','coachingInviteInput'],
- ['Mes sessions','coachingSessionsCard']
+ ['Créer une session','coachingCreatorRole','Préparer un nouvel entraînement'],
+ ['Rejoindre une session','coachingInviteInput','Entrer avec un code d’invitation'],
+ ['Mes sessions','coachingSessionsCard','Reprendre une session en attente ou en cours'],
+ ['Progression d’équipe','statsPage','Consulter vos statistiques']
 ];
-for(const [label,target] of routes){
- assert(entry[0].includes(`data-coaching-entry-target="${target}">${label}</button>`),`Accès absent: ${label}`);
+for(const [label,target,subtitle] of routes){
+ const attr=target==='statsPage'?'data-page':'data-coaching-entry-target';
+ const card=entry[0].match(new RegExp(`<button[^>]*${attr}="${target}"[^>]*>([\\s\\S]*?)</button>`));
+ assert(card,`Accès absent: ${label}`);
+ assert(card[1].includes(`<b>${label}</b>`),`Titre absent: ${label}`);
+ assert(card[1].includes(`<small>${subtitle}</small>`),`Sous-texte absent: ${label}`);
+ assert(card[1].includes('aria-hidden="true"'),`Icône décorative absente: ${label}`);
  assert(oldHtml.includes(`id="${target}"`),`Cible inexistante: ${target}`);
- const calls=[];
- Function('showPage','setCoachingStage','$','setTimeout',`${source('openCoachingEntryTarget')}openCoachingEntryTarget('${target}');`)(
-  id=>calls.push(['page',id]),stage=>calls.push(['stage',stage]),
-  id=>({scrollIntoView:()=>calls.push(['scroll',id]),focus:()=>calls.push(['focus',id])}),callback=>callback()
- );
- assert.deepEqual(calls,[['page','coachingPage'],['stage','prepare'],['scroll',target],['focus',target]],`Navigation incorrecte: ${label}`);
+ if(target==='statsPage')continue;
+ for(const leaveBeforeFrame of [false,true]){
+  const calls=[],frames=[],timers=[];let active=true;
+  const zone={tabIndex:target==='coachingSessionsCard'?-1:0,
+   setAttribute:(key,value)=>calls.push(['attribute',key,value]),
+   scrollIntoView:()=>calls.push(['scroll',target]),focus:()=>calls.push(['focus',target]),
+   closest:()=>zone,classList:{add:()=>{},remove:()=>{}}};
+  Function('showPage','setCoachingStage','$','requestAnimationFrame','setTimeout',`${source('openCoachingEntryTarget')}openCoachingEntryTarget('${target}');`)(
+   id=>calls.push(['page',id]),stage=>calls.push(['stage',stage]),
+   id=>id==='coachingPage'?{classList:{contains:()=>active}}:zone,
+   callback=>frames.push(callback),callback=>timers.push(callback)
+  );
+  assert.deepEqual(calls,[['page','coachingPage'],['stage','prepare']],'Attendre le rendu avant scroll/focus');
+  if(leaveBeforeFrame)active=false;
+  while(frames.length)frames.shift()();
+  const expected=[['page','coachingPage'],['stage','prepare']];
+  if(!leaveBeforeFrame){
+   if(target==='coachingSessionsCard')expected.push(['attribute','tabindex','-1']);
+   expected.push(['scroll',target],['focus',target]);
+  }
+  assert.deepEqual(calls,expected,`Navigation incorrecte: ${label}`);
+  timers.forEach(callback=>callback());
+ }
 }
-assert(entry[0].includes('data-page="statsPage">Progression d’équipe</button>'));
+// Exécute la logique visuelle réelle de la bottom nav, sans changer ses destinations.
+const v2=read('v2.js');
+const navBody=v2.match(/const setActive = \(page\) => \{([\s\S]*?)\n    \};/)[1];
+for(const [page,expected] of [['coachingEntryPage',[]],['coachingPage',[]],['libraryPage',[2]],['recordPage',[2]],['homePage',[0]]]){
+ const buttons=['homePage','dogPage','libraryPage','feedPage','profilePage'].map(page=>({dataset:{page},active:false,classList:{}}));
+ buttons.forEach(b=>b.classList={add:()=>b.active=true,remove:()=>b.active=false});
+ Function('buttons','page',navBody)(buttons,page);
+ assert.deepEqual(buttons.flatMap((b,i)=>b.active?[i]:[]),expected,`Onglet actif incorrect: ${page}`);
+}
 assert(oldHtml.includes('id="statsPage"'));
 assert(source('showPage').includes("if(id==='statsPage')loadStats(currentStatsScope||'mine')"));
 assert(source('openUnifiedCoachingHome').includes("showPage('coachingEntryPage')"));

@@ -514,7 +514,16 @@ function clearVerifiedActiveCoaching(id=null){if(!id||verifiedActiveCoachingSess
 function openUnifiedCoachingHome(e){e?.preventDefault();showPage('coachingEntryPage')}
 function openCoachingEntryTarget(target){
  showPage('coachingPage');setCoachingStage('prepare');
- setTimeout(()=>{const zone=$(target);zone?.scrollIntoView({block:'center'});zone?.focus({preventScroll:true})},120);
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(!$('coachingPage')?.classList.contains('active'))return;
+  const zone=$(target);if(!zone)return;
+  const block=zone.closest('.card')||zone;
+  if(target==='coachingSessionsCard')zone.setAttribute('tabindex','-1');
+  block.scrollIntoView({block:'start',behavior:'instant'});
+  zone.focus({preventScroll:true});
+  block.classList.add('coaching-entry-arrival');
+  setTimeout(()=>block.classList.remove('coaching-entry-arrival'),1800);
+ }));
 }
 function isCoachingOwner(s){return !!s&&s.owner_id===session?.user?.id}
 function myCoachingRole(s){const role=s?.coaching_members?.find(m=>m.user_id===session?.user?.id)?.role||'observer';return role==='solo'?'driver':role}
