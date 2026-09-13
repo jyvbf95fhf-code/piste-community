@@ -51,6 +51,37 @@ for (const name of protectedFunctions) {
   assert.equal(source(name), source(name, old), `${name}: moteur Coaching modifié`);
 }
 
+const createHarness = `(async()=>{
+  let coachingCreateInFlight=false, valid=false, rpcCalls=0;
+  const events=[], messages=[], members=[{user_id:'friend-1',role:'observer'}];
+  const button={disabled:false};
+  const fields={coachingRouteSelect:{value:'route-1'},createCoachingSession:button,coachingVisibility:{value:'full_blind'}};
+  const route={id:'route-1',route:[[1,2],[3,4]]};
+  const $=id=>fields[id]||null;
+  const trainingRoutes=[route];
+  const coachingCreationMembers=()=>members;
+  const coachingWithoutPreparedRouteV1045=()=>false;
+  const validateCoachingConfigurationV10423=()=>valid?{ok:true}:{ok:false,message:'configuration invalide'};
+  const setUiText=(id,text)=>messages.push([id,text]);
+  const supabase={rpc:async(name,payload)=>{events.push('rpc');rpcCalls++;return {data:{id:'session-1'},error:null}}};
+  const loadCoachingHub=async()=>events.push('load');
+  const openCoachingSession=async id=>events.push(['open',id]);
+  const renderCoachingFriendInvites=()=>events.push('render');
+  const markCoachingSyncV10423=()=>events.push('sync');
+  ${source('createCoaching')}
+  await createCoaching();
+  if(rpcCalls!==0||messages[0][1]!=='configuration invalide')throw new Error('validation doit bloquer le RPC');
+  valid=true;events.length=0;messages.length=0;
+  await createCoaching();
+  if(rpcCalls!==1)throw new Error('un seul RPC de création attendu');
+  if(events.join('|')!=='rpc|load|open,session-1|render|sync')throw new Error('ordre historique createCoaching modifié: '+events.join('|'));
+  if(button.disabled)throw new Error('bouton création laissé désactivé');
+  if(!events.includes('rpc'))throw new Error('RPC absent');
+  return true;
+})().catch(error=>{console.error(error.message);process.exit(1)})`;
+execFileSync(process.execPath,['-e',createHarness],{stdio:'inherit'});
+assert(!source('createCoaching').includes('p_search_mode'), 'createCoaching ne doit pas envoyer p_search_mode');
+
 assert(html.includes('class="bottom-nav"'), 'Navigation générale absente');
 assert(html.includes('id="coachingPage"'), 'Page Coaching absente');
 assert(html.includes('id="coachingSessionsCard"'), 'Sessions internes absentes');
