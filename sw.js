@@ -1,14 +1,14 @@
 // Cache lineage kept explicit for legacy checks: piste-community-v2083 / app.js?v=1082.
-const C='piste-community-v2119';
+const C='piste-community-v2122';
 const A=[
   './',
   './index.html',
   './admin.js?v=1044-1',
   './admin.css?v=1044-1',
   './styles.css?v=1027',
-  './v2.css?v=2080',
-  './app.js?v=1046-1',
-  './v2.js?v=2021',
+  './v2.css?v=2083',
+  './app.js?v=1047-3',
+  './v2.js?v=2022',
   './config.js',
   './manifest.webmanifest',
   './icon.svg'

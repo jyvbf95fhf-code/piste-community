@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="./icon.svg">
 <link rel="stylesheet" href="./styles.css?v=1027">
 <link rel="stylesheet" href="./admin.css?v=1044-1">
-<link rel="stylesheet" href="./v2.css?v=2080">
+<link rel="stylesheet" href="./v2.css?v=2083">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.css">
 </head>
@@ -594,7 +594,18 @@
     <div class="planner-marker-sheet-card"><div class="planner-marker-sheet-head"><div><small class="section-kicker">REPÈRE TERRAIN</small><h3 id="plannerMarkerTitle">Ajouter à cet endroit</h3></div><button id="closePlannerMarkerMenu" class="dialog-close" type="button" aria-label="Fermer">×</button></div><div class="planner-marker-choices"><button type="button" data-planner-marker="object">📦 Objet</button><button type="button" data-planner-marker="clue">🔎 Indice</button><button type="button" data-planner-marker="danger">⚠️ Danger</button><button type="button" data-planner-marker="pause">⏳ Attente</button><button type="button" data-planner-marker="note">📍 Note</button></div><p class="small muted">Le repère reste modifiable et déplaçable sur la carte.</p></div>
   </div>
 
+  <section id="coachingEntryPage" class="page">
+    <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>Entraînement &amp; Coaching</h2></div>
+    <p class="muted">Créez, rejoignez et reprenez vos sessions facilement.</p>
+    <nav class="coaching-entry-cards" aria-label="Entraînement et Coaching">
+      <button type="button" data-coaching-entry-target="coachingCreatorRole"><span class="coaching-entry-icon" aria-hidden="true">＋</span><span><b>Créer une session</b><small>Préparer un nouvel entraînement</small></span></button>
+      <button type="button" data-coaching-entry-target="coachingInviteInput"><span class="coaching-entry-icon" aria-hidden="true">↗</span><span><b>Rejoindre une session</b><small>Entrer avec un code d’invitation</small></span></button>
+      <button type="button" data-coaching-entry-target="coachingSessionsCard"><span class="coaching-entry-icon" aria-hidden="true">↻</span><span><b>Mes sessions</b><small>Reprendre une session en attente ou en cours</small></span></button>
+      <button type="button" data-page="statsPage"><span class="coaching-entry-icon" aria-hidden="true">▥</span><span><b>Progression d’équipe</b><small>Consulter vos statistiques</small></span></button>
+    </nav>
+  </section>
   <section id="coachingPage" class="page">
+    <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>
     <div class="record-head"><button class="back" data-page="homePage">‹ Accueil</button><h2>🐾 Entraînement & Coaching</h2></div>
     <nav class="coaching-stepper" aria-label="Étapes de la session"><button class="active" data-coaching-stage="prepare"><span>1</span>Créer / Préparer</button><button data-coaching-stage="live"><span>2</span>Réaliser</button><button data-coaching-stage="debrief"><span>3</span>Débriefer</button></nav>
     <div id="coachingPrepareStage" class="coaching-stage coaching-grid">
@@ -863,7 +874,7 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tomickigrzegorz/leaflet-rotate@0.2.3/dist/leaflet-rotate.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script type="module" src="./app.js?v=1046-1"></script>
-<script src="./v2.js?v=2021"></script>
+<script type="module" src="./app.js?v=1047-3"></script>
+<script src="./v2.js?v=2022"></script>
 </body>
 </html>
