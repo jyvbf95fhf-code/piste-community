@@ -42,6 +42,42 @@ let coachingOrientation={permission:'unknown',listening:false,deviceHeading:null
 let coachingLiveWeather=null,coachingWeatherTimer=null,coachingWeatherLoading=false,coachingTerrainPaused=false,coachingFinishTimer=null,coachingFinishArmed=false;
 let coachingFriendInvites=[],coachingAcceptedFriends=[],coachingLongPressTimer=null,coachingLongPressOrigin=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
+function newCoachingWizard(){const state={currentStep:1,sessionType:null,mode:null,creatorRole:null,participants:[],trackPreparation:{method:null,draft:null,routeId:null,origin:null},invitations:[],busy:false,createdSessionId:null,error:null};Object.defineProperties(state,{reset:{value:()=>resetCoachingWizard(),enumerable:false},change:{value:changes=>changeCoachingWizard(changes),enumerable:false},valid:{value:()=>validCoachingWizard(),enumerable:false}});return state}
+let coachingWizard=newCoachingWizard();
+function resetCoachingWizard(){const fresh=newCoachingWizard();Object.keys(fresh).forEach(key=>{coachingWizard[key]=fresh[key]});return coachingWizard}
+function changeCoachingWizard(changes={}){
+ const previous=coachingWizard,trackPatch=changes.trackPreparation&&typeof changes.trackPreparation==='object'?changes.trackPreparation:null;
+ Object.keys(changes).filter(key=>key!=='trackPreparation'&&key!=='participants').forEach(key=>{if(Object.prototype.hasOwnProperty.call(previous,key))previous[key]=changes[key]});
+ if(Object.prototype.hasOwnProperty.call(changes,'participants')){
+  const candidate=Array.isArray(changes.participants)?changes.participants:[];
+  const creatorId=typeof session!=='undefined'&&session?.user?.id?session.user.id:'wizard-creator';
+  const members=candidate.some(member=>member.user_id===creatorId)?candidate:[{user_id:creatorId,role:previous.creatorRole},...candidate];
+  if(validateCoachingMembers(members).ok)previous.participants=candidate;
+ }
+ if(trackPatch){
+  const oldDraft=previous.trackPreparation.draft;
+  previous.trackPreparation={...previous.trackPreparation,...trackPatch};
+  if(Object.prototype.hasOwnProperty.call(trackPatch,'draft')){
+   previous.trackPreparation.draft=trackPatch.draft===null?null:{...trackPatch.draft,route:trackPatch.draft?.route?trackPatch.draft.route.map(point=>({...point})):trackPatch.draft?.route,waypoints:trackPatch.draft?.waypoints?trackPatch.draft.waypoints.map(point=>({...point})):trackPatch.draft?.waypoints};
+   if(previous.trackPreparation.routeId&&JSON.stringify(oldDraft)!==JSON.stringify(previous.trackPreparation.draft)){previous.trackPreparation.routeId=null;previous.trackPreparation.origin=null}
+  }
+ }
+ const role=$('coachingCreatorRole'),mode=$('coachingVisibility'),roleValue=previous.creatorRole,modeValue=previous.mode;
+ let canPrepare=true,roleBefore,modeBefore;
+ try{if(role&&mode){roleBefore=role.value;modeBefore=mode.value;role.value=roleValue||'';mode.value=modeValue||'';canPrepare=coachingCanPrepareRouteV1045()}}
+ finally{if(role&&mode){role.value=roleBefore;mode.value=modeBefore}}
+ if(!canPrepare&&previous.trackPreparation.routeId){previous.trackPreparation.routeId=null;previous.trackPreparation.origin=null}
+ return previous
+}
+function validCoachingWizard(){
+ if(!coachingWizard.sessionType||!coachingWizard.mode||!coachingWizard.creatorRole)return {ok:false,message:'Choisissez le type, le mode et votre rôle.'};
+ const creatorId=typeof session!=='undefined'&&session?.user?.id?session.user.id:'wizard-creator',candidate=coachingWizard.participants,memberList=candidate.some(member=>member.user_id===creatorId)?candidate:[{user_id:creatorId,role:coachingWizard.creatorRole},...candidate],members=validateCoachingMembers(memberList);if(!members.ok)return members;
+ const role=$('coachingCreatorRole'),mode=$('coachingVisibility'),roleBefore=role?.value,modeBefore=mode?.value;let canPrepare=true;
+ try{if(role&&mode){role.value=coachingWizard.creatorRole;mode.value=coachingWizard.mode;canPrepare=coachingCanPrepareRouteV1045()}}
+ finally{if(role&&mode){role.value=roleBefore;mode.value=modeBefore}}
+ if(canPrepare&&!coachingWizard.trackPreparation.routeId&&!coachingWizard.trackPreparation.draft)return {ok:false,message:'Préparez une piste.'};
+ return {ok:true}
+}
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
 let coachingLayerVisibility={planned:true,trace:true,actual:true,odor:true,markers:true},plannerDraftTimer=null,plannerReturnTarget='library',plannerPendingLatLng=null,plannerTouchTimer=null,plannerTouchOrigin=null,plannerSuppressClickUntil=0;
 let routeSuggestionSeed=0;
