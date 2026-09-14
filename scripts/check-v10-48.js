@@ -300,6 +300,140 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
   for(const id of ['coachingWizardParticipantFriend','coachingWizardParticipantRole','addCoachingWizardParticipant','coachingWizardParticipants'])assert(html.includes(`id="${id}"`), `Contrôle participant absent: ${id}`);
 }
 
+if (process.argv.includes('--case=track') || !process.argv.some(arg => arg.startsWith('--case='))) {
+  const trackFunctions = [
+    'withCoachingWizardControls',
+    'coachingWizardCanPrepareTrack',
+    'selectCoachingWizardRoute',
+    'openCoachingWizardRoute',
+    'plannerSourceForInit',
+    'useCoachingWizardPreparation',
+    'restoreCoachingWizardPlanner',
+    'runPlannerSave',
+    'renderCoachingWizardTrackPreparation'
+  ];
+  trackFunctions.forEach(name => source(name));
+
+  const trackHarness = `(async()=>{
+    const calls=[],messages=[];
+    function element(value=''){const classes=new Set();return {value,textContent:'',innerHTML:'',disabled:false,hidden:false,classList:{add:name=>classes.add(name),remove:name=>classes.delete(name),toggle:(name,on)=>on?classes.add(name):classes.delete(name),contains:name=>classes.has(name)}}}
+    const fields={
+      coachingCreatorRole:element('legacy-role'),coachingVisibility:element('legacy-mode'),coachingRouteSelect:element('legacy-route'),
+      coachingWizardExistingRoute:element(''),coachingWizardTrackInfo:element(''),coachingWizardTrackOptions:element(''),
+      routeName:element('Ancienne préparation'),plannerMsg:element(''),gpxImportStatus:element(''),gpxFileInput:element(''),
+      clearImportedGpxBtn:element(''),saveTrainingRoute:element(''),updateTrainingRoute:element(''),saveAndStartRoute:element(''),
+      chooseGpxBtn:{...element(''),click:()=>calls.push('choose-gpx')}
+    };
+    const $=id=>fields[id]||null;
+    const setUiText=(id,value)=>{const node=$(id);if(node)node.textContent=value;return node};
+    const session={user:{id:'creator-1'}};
+    const trainingRoutes=[{id:'route-1',name:'Piste existante',route:[{lat:48.1,lon:7.1},{lat:48.2,lon:7.2}],waypoints:[]}];
+    const validateCoachingMembers=()=>({ok:true});
+    const coachingCanPrepareRouteV1045=()=>['coach','driver','traceur'].includes(fields.coachingCreatorRole.value)&&['normal','simple_blind','full_blind'].includes(fields.coachingVisibility.value)&&!(fields.coachingVisibility.value==='full_blind'&&['coach','driver'].includes(fields.coachingCreatorRole.value));
+    const renderCoachingWizard=()=>{};
+    const showPage=id=>calls.push(['page',id]);
+    const setCoachingEntryView=target=>calls.push(['entry-view',target]);
+    const openCoachingRouteV1045=mode=>{calls.push(['open-route',mode,fields.coachingCreatorRole.value,fields.coachingVisibility.value]);openTerrainPlanner('coaching');if(mode==='import')fields.chooseGpxBtn.click();return true};
+    const openTerrainPlanner=target=>calls.push(['planner',target]);
+    const setPlannerRoutingMode=mode=>{plannerRoutingMode=mode;calls.push(['routing',mode])};
+    const redrawPlanner=()=>calls.push('redraw');
+    const readOdorForm=()=>({enabled:true,source:'manual'});
+    const setOdorForm=()=>{};
+    const plannerDistance=()=>1;
+    const confirm=()=>true;
+    const window={editingTrainingRouteId:'old-id'};
+    let saveCalls=0;
+    const savePlanner=()=>{saveCalls++;return true};
+    let plannerPoints=[{lat:1,lon:1}],plannerWaypoints=[{id:'old'}],plannerRedoStack=[{lat:9,lon:9}],plannerTool='note',plannerRoutingMode='street',plannerImportedGpx=false;
+    let plannerOdorModel={enabled:false,source:'old'},plannerWizardContext=null;
+    const readPlannerDraft=()=>{throw new Error('le brouillon général ne doit pas écraser le wizard')};
+    ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
+    let coachingWizard=newCoachingWizard();
+    ${source('coachingWizardMembers')}
+    ${source('validCoachingWizardParticipants')}
+    ${source('changeCoachingWizard')}
+    ${source('validCoachingWizard')}
+    ${source('validCoachingWizardStep')}
+    ${source('withCoachingWizardControls')}
+    ${source('coachingWizardCanPrepareTrack')}
+    ${source('selectCoachingWizardRoute')}
+    ${source('snapshotCoachingWizardPlanner')}
+    ${source('restoreCoachingWizardPlanner')}
+    ${source('openCoachingWizardRoute')}
+    ${source('plannerSourceForInit')}
+    ${source('useCoachingWizardPreparation')}
+    ${source('runPlannerSave')}
+
+    coachingWizard.change({sessionType:'immediate',mode:'normal',creatorRole:'coach',participants:[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}]});
+    if(!selectCoachingWizardRoute('route-1'))throw new Error('piste enregistrée valide refusée');
+    if(coachingWizard.trackPreparation.method!=='existing'||coachingWizard.trackPreparation.routeId!=='route-1'||coachingWizard.trackPreparation.origin!=='existing'||fields.coachingRouteSelect.value!=='route-1')throw new Error('sélection enregistrée non mémorisée');
+    if(selectCoachingWizardRoute('missing'))throw new Error('identifiant de piste inconnu accepté');
+    if(saveCalls!==0)throw new Error('la sélection enregistrée a déclenché une sauvegarde');
+
+    coachingWizard.change({trackPreparation:{method:'existing',routeId:'route-1',origin:'existing'}});
+    coachingWizard.change({mode:'full_blind'});
+    if(coachingWizard.trackPreparation.method!=='none'||coachingWizard.trackPreparation.routeId!==null||coachingWizard.trackPreparation.draft!==null||coachingWizard.trackPreparation.origin!==null)throw new Error('Coach double aveugle conserve une ancienne piste');
+    if(!validCoachingWizardStep(5).ok)throw new Error('absence de piste double aveugle refusée');
+    coachingWizard.change({creatorRole:'driver',trackPreparation:{method:'existing',routeId:'route-1',origin:'existing'}});
+    coachingWizard.change({mode:'simple_blind'});coachingWizard.change({mode:'full_blind'});
+    if(coachingWizard.trackPreparation.method!=='none'||coachingWizard.trackPreparation.routeId!==null)throw new Error('Conducteur double aveugle conserve une ancienne piste');
+
+    coachingWizard.change({mode:'normal',creatorRole:'coach'});
+    fields.coachingCreatorRole.value='legacy-role';fields.coachingVisibility.value='legacy-mode';
+    if(!openCoachingWizardRoute('draw'))throw new Error('ouverture dessin refusée');
+    const openCall=calls.find(call=>Array.isArray(call)&&call[0]==='open-route');
+    if(!openCall||openCall[2]!=='coach'||openCall[3]!=='normal')throw new Error('rôle/mode non synchronisés pendant openCoachingRouteV1045');
+    if(fields.coachingCreatorRole.value!=='legacy-role'||fields.coachingVisibility.value!=='legacy-mode')throw new Error('contrôles historiques non restaurés');
+    if(!plannerWizardContext||plannerWizardContext.method!=='draw')throw new Error('contexte planner wizard absent');
+    plannerPoints=[{lat:48.1,lon:7.1},{lat:48.2,lon:7.2}];plannerWaypoints=[{id:'new'}];plannerRoutingMode='free';fields.routeName.value='Piste dessinée';
+    if(!useCoachingWizardPreparation())throw new Error('dessin local valide refusé');
+    const drawn=coachingWizard.trackPreparation.draft;
+    if(!drawn||drawn.name!=='Piste dessinée'||drawn.route.length!==2||drawn.waypoints.length!==1||drawn.routing_mode!=='free'||coachingWizard.trackPreparation.method!=='draw')throw new Error('dessin non copié dans le brouillon wizard');
+    if(saveCalls!==0)throw new Error('le dessin local a appelé savePlanner');
+    if(plannerPoints.length!==1||plannerPoints[0].lat!==1||plannerWaypoints[0].id!=='old'||plannerRoutingMode!=='street'||fields.routeName.value!=='Ancienne préparation')throw new Error('état planner antérieur non restauré');
+
+    if(!openCoachingWizardRoute('draw'))throw new Error('réouverture dessin refusée');
+    const reopened=plannerSourceForInit(null);
+    if(!reopened||reopened.name!=='Piste dessinée'||reopened.route.length!==2)throw new Error('init différé écrase le brouillon wizard');
+    const reopenedFromAdvancedDraft=plannerSourceForInit({name:'Brouillon général',route:[{lat:0,lon:0}]});
+    if(!reopenedFromAdvancedDraft||reopenedFromAdvancedDraft.name!=='Piste dessinée'||reopenedFromAdvancedDraft.route.length!==2)throw new Error('le raccourci brouillon général écrase le brouillon wizard');
+    plannerPoints=[];plannerWaypoints=[];fields.routeName.value='';restoreCoachingWizardPlanner();
+
+    if(!openCoachingWizardRoute('import'))throw new Error('ouverture import refusée');
+    let parsedKind='valid';
+    const parseGpx=text=>{if(text==='bad-xml')throw new Error('Le fichier GPX est illisible ou endommagé.');if(text==='one-point')throw new Error('Aucune trace exploitable : au moins deux points sont nécessaires.');return {points:[{lat:47.1,lon:6.1},{lat:47.2,lon:6.2}],waypoints:[],name:'Import GPX',originalCount:2,reduced:false}};
+    ${source('importPlannerGpx')}
+    await importPlannerGpx({size:1024,text:async()=>parsedKind});
+    if(!useCoachingWizardPreparation()||coachingWizard.trackPreparation.method!=='import'||coachingWizard.trackPreparation.draft.route.length!==2)throw new Error('GPX valide non conservé localement');
+    if(saveCalls!==0)throw new Error('import GPX a appelé savePlanner');
+    const previousDraft=JSON.stringify(coachingWizard.trackPreparation.draft);
+    await importPlannerGpx({size:10*1024*1024+1,text:async()=>{throw new Error('lecture interdite')}});
+    if(!fields.gpxImportStatus.textContent.includes('10 Mo')||JSON.stringify(coachingWizard.trackPreparation.draft)!==previousDraft)throw new Error('fichier GPX trop volumineux non bloqué');
+    parsedKind='bad-xml';await importPlannerGpx({size:100,text:async()=>parsedKind});
+    if(!fields.gpxImportStatus.textContent.includes('illisible')||JSON.stringify(coachingWizard.trackPreparation.draft)!==previousDraft)throw new Error('XML incorrect non bloqué');
+    parsedKind='one-point';await importPlannerGpx({size:100,text:async()=>parsedKind});
+    if(!fields.gpxImportStatus.textContent.includes('deux points')||JSON.stringify(coachingWizard.trackPreparation.draft)!==previousDraft)throw new Error('GPX à une position non bloqué');
+
+    plannerWizardContext={method:'draw',snapshot:{}};
+    if(runPlannerSave('copy')!==false||runPlannerSave('update')!==false||runPlannerSave('copy','start')!==false||saveCalls!==0)throw new Error('un bouton planner peut sauvegarder dans le contexte wizard');
+    plannerWizardContext=null;await runPlannerSave('copy');
+    if(saveCalls!==1)throw new Error('sauvegarde planner historique bloquée hors wizard');
+    return true;
+  })().catch(error=>{console.error(error.message);process.exit(1)})`;
+  execFileSync(process.execPath,['-e',trackHarness],{stdio:'inherit'});
+
+  for (const id of ['coachingWizardTrackOptions','coachingWizardDrawRoute','coachingWizardImportRoute','coachingWizardExistingRoute','coachingWizardTrackInfo','useCoachingWizardPreparation']) {
+    assert(html.includes(`id="${id}"`), `Contrôle de préparation absent: ${id}`);
+  }
+  assert(html.includes('Utiliser cette préparation'), 'Action locale du planner absente');
+  assert(source('initPlanner').includes('plannerSourceForInit(route)'), 'initPlanner doit préférer le brouillon du wizard');
+  assert(source('savePlannerDraft').includes('plannerWizardContext'), 'Le planner wizard ne doit pas écrire le brouillon général');
+  assert(source('persistPlannerDraft').includes('plannerWizardContext'), 'La persistance locale générale doit être bloquée dans le wizard');
+  assert(source('clearPlannerDraft').includes('plannerWizardContext'), 'Le planner wizard ne doit pas supprimer le brouillon général');
+  const saveWiring=app.match(/\$\('saveTrainingRoute'\)\.onclick[^\n]+/)?.[0]||'';
+  assert(saveWiring.includes('runPlannerSave')&&!saveWiring.includes('=>savePlanner('), 'Les boutons du planner doivent respecter la frontière wizard');
+}
+
 if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.startsWith('--case='))) {
   const stepTitles = [
     'Type de session',

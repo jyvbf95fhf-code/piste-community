@@ -584,6 +584,7 @@
         <button id="updateTrainingRoute" class="secondary hidden">Mettre à jour l’original</button>
         <button id="saveTrainingRoute" class="primary">💾 Enregistrer le tracé</button>
         <button id="saveAndStartRoute" class="primary">▶ Démarrer un entraînement</button>
+        <button id="useCoachingWizardPreparation" class="primary hidden" type="button">Utiliser cette préparation</button>
       </div>
       <small id="plannerDraftStatus" class="muted">Le brouillon est sauvegardé automatiquement sur cet appareil.</small>
       <p id="plannerMsg" class="msg"></p>
@@ -613,7 +614,7 @@
       <section data-coaching-wizard-step="2" hidden><h3>Mode</h3><p class="muted">Choisissez le niveau de visibilité de la session.</p><label>Mode<select id="coachingWizardMode"><option value="" selected>Choisir un mode</option><option value="normal">Normal</option><option value="simple_blind">Simple aveugle</option><option value="full_blind">Double aveugle</option></select></label></section>
       <section data-coaching-wizard-step="3" hidden><h3>Ton rôle</h3><p class="muted">Indiquez votre rôle dans la session.</p><label>Rôle<select id="coachingWizardCreatorRole"><option value="" selected>Choisir un rôle</option><option value="coach">Coach</option><option value="traceur">Traceur</option><option value="driver">Conducteur</option></select></label></section>
       <section data-coaching-wizard-step="4" hidden><h3>Participants</h3><p class="muted">Composez une équipe compatible avec vos choix.</p><div class="coaching-invites"><div class="coaching-invite-row"><select id="coachingWizardParticipantFriend" aria-label="Personne"><option value="">Choisir une personne</option></select><select id="coachingWizardParticipantRole" aria-label="Rôle"><option value="">Choisir un rôle</option></select><button id="addCoachingWizardParticipant" class="secondary" type="button">＋</button></div><div id="coachingWizardParticipants" aria-live="polite"><p class="muted small">Ajoutez les personnes nécessaires à la session.</p></div></div></section>
-      <section data-coaching-wizard-step="5" hidden><h3>Préparation de la piste</h3><p class="muted">Choisissez comment préparer le tracé.</p></section>
+      <section data-coaching-wizard-step="5" hidden><h3>Préparation de la piste</h3><p class="muted">Choisissez comment préparer le tracé.</p><div id="coachingWizardTrackOptions" class="coaching-wizard-track-options"><button id="coachingWizardDrawRoute" class="secondary" type="button">✏️ Tracer maintenant</button><button id="coachingWizardImportRoute" class="secondary" type="button">↥ Importer un GPX</button><label>Piste enregistrée<select id="coachingWizardExistingRoute"><option value="">Choisir une piste enregistrée</option></select></label></div><p id="coachingWizardTrackInfo" class="small muted" aria-live="polite">Choisissez une méthode de préparation.</p></section>
       <section data-coaching-wizard-step="6" hidden><h3>Invitations</h3><p class="muted">Vérifiez les personnes à inviter.</p></section>
       <section data-coaching-wizard-step="7" hidden><h3>Récapitulatif</h3><p id="coachingWizardIntentSummary" class="muted">Intention — à confirmer par le Traceur après la pose</p><p class="muted">Vérifiez votre préparation avant de créer la session.</p></section>
       <p id="coachingWizardError" class="msg" aria-live="assertive"></p>
