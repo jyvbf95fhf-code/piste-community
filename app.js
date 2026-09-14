@@ -121,6 +121,7 @@ function renderCoachingWizard(){
  if(mode)mode.value=coachingWizard.mode||'';
  if(role)role.value=coachingWizard.creatorRole||'';
  renderCoachingWizardParticipants();
+ renderCoachingWizardInvitations();
  if(typeof renderCoachingWizardTrackPreparation==='function')renderCoachingWizardTrackPreparation();
  setUiText('coachingWizardIntentSummary',coachingWizard.sessionType?`Intention — à confirmer par le Traceur après la pose (${coachingWizard.sessionType==='deferred'?'Différée':'Immédiate'})`:'Intention — à confirmer par le Traceur après la pose');
 }
@@ -132,6 +133,13 @@ function renderCoachingWizardParticipants(){
  list.innerHTML=coachingWizard.participants.map((member,index)=>`<div class="coaching-invite-row"><span>${esc(coachingParticipantName(member))}</span><span>${esc(coachingRoleLabel(member.role))}</span><button class="ghost-dark removeCoachingWizardParticipant" data-index="${index}" type="button" aria-label="Retirer">×</button></div>`).join('')||'<p class="muted small">Ajoutez les personnes nécessaires à la session.</p>';
  if(add)add.disabled=!availableFriends.length||!availableRoles.length;
  list.querySelectorAll('.removeCoachingWizardParticipant').forEach(button=>button.onclick=()=>removeCoachingWizardParticipant(Number(button.dataset.index)))
+}
+function coachingWizardInvitationMembers(){return coachingWizard.participants.map(member=>({user_id:member.user_id,role:member.role}))}
+function renderCoachingWizardInvitations(){
+ const list=$('coachingWizardInvitations');if(!list)return;
+ const invitations=coachingWizardInvitationMembers();
+ coachingWizard.invitations=invitations;
+ list.innerHTML=invitations.map(member=>`<div class="coaching-invite-row"><span>${esc(coachingParticipantName(member))}</span><span>${esc(coachingRoleLabel(member.role))}</span></div>`).join('')||'<p class="muted small">Aucune invitation préparée.</p>';
 }
 function coachingWizardHasChoices(){return !!(coachingWizard.sessionType||coachingWizard.mode||coachingWizard.creatorRole||coachingWizard.participants.length||coachingWizard.trackPreparation.method||coachingWizard.trackPreparation.draft||coachingWizard.trackPreparation.routeId||coachingWizard.invitations.length)}
 function guardCoachingWizardNavigation(id){

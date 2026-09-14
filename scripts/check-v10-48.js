@@ -482,6 +482,7 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     const session={user:{id:'creator-1'}};
     const coachingCanPrepareRouteV1045=()=>true;
     const renderCoachingWizardParticipants=()=>{};
+    const renderCoachingWizardInvitations=()=>{};
     ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
     let coachingWizard=newCoachingWizard();
     ${source('resetCoachingWizard')}
@@ -567,6 +568,40 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     return true;
   })()`;
   execFileSync(process.execPath,['-e',navigationHarness],{stdio:'inherit'});
+}
+
+if (process.argv.includes('--case=invitations') || !process.argv.some(arg => arg.startsWith('--case='))) {
+  assert(html.includes('id="coachingWizardInvitations"'), 'Confirmation des invitations absente');
+  for (const name of ['coachingWizardInvitationMembers', 'renderCoachingWizardInvitations']) source(name);
+  const invitationHarness = `(function(){
+    let coachingWizard;
+    let mutationCount=0;
+    const coachingFriendInvites=[{user_id:'legacy-friend',role:'observer'}];
+    const session={user:{id:'creator-1'}};
+    const fields={coachingWizardInvitations:{innerHTML:''}};
+    const $=id=>fields[id]||null;
+    const esc=value=>String(value);
+    const coachingParticipantName=member=>member.user_id;
+    const coachingRoleLabel=role=>role;
+    const sourceParticipants=[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}];
+    ${source('newCoachingWizard').replace(/\nlet coachingWizard=newCoachingWizard\(\);/, '')}
+    ${functionOnly('coachingWizardInvitationMembers')}
+    ${functionOnly('renderCoachingWizardInvitations')}
+    coachingWizard=newCoachingWizard();
+    coachingWizard.participants=sourceParticipants.map(member=>({...member}));
+    renderCoachingWizardInvitations();
+    if(!fields.coachingWizardInvitations.innerHTML.includes('traceur-1')||!fields.coachingWizardInvitations.innerHTML.includes('traceur'))throw new Error('étape 6 n’affiche pas le Traceur');
+    if(!fields.coachingWizardInvitations.innerHTML.includes('driver-1')||!fields.coachingWizardInvitations.innerHTML.includes('driver'))throw new Error('étape 6 n’affiche pas le Conducteur');
+    const first=fields.coachingWizardInvitations.innerHTML;
+    renderCoachingWizardInvitations();
+    if(fields.coachingWizardInvitations.innerHTML!==first)throw new Error('aller-retour du wizard duplique les invitations');
+    coachingWizard.participants=[{user_id:'traceur-1',role:'traceur'},{user_id:'observer-1',role:'observer'}];
+    renderCoachingWizardInvitations();
+    if(!fields.coachingWizardInvitations.innerHTML.includes('observer-1')||fields.coachingWizardInvitations.innerHTML.includes('driver-1'))throw new Error('la mutation de l’étape 4 ne se reflète pas à l’étape 6');
+    if(coachingFriendInvites.length!==1||coachingFriendInvites[0].user_id!=='legacy-friend'||mutationCount!==0)throw new Error('les invitations serveur/globales ont été mutées avant le clic final');
+    return true;
+  })()`;
+  execFileSync(process.execPath,['-e',invitationHarness],{stdio:'inherit'});
 }
 
 assert(html.includes('class="bottom-nav"'), 'Navigation générale absente');
