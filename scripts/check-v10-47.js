@@ -35,14 +35,14 @@ for(const name of [
 }
 
 
-const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','').replace('if(coachingWizard.active)renderCoachingWizardParticipants();','').replace(" if(!guardCoachingWizardNavigation(id))return false;\n",'').replace(" if(showPage(page)===false)e.stopImmediatePropagation();\n"," showPage(page);\n");
+const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','').replace(" if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard();\n",'').replace('if(coachingWizard.active)renderCoachingWizardParticipants();','').replace(" if(!guardCoachingWizardNavigation(id))return false;\n",'').replace(" if(showPage(page)===false)e.stopImmediatePropagation();\n"," showPage(page);\n");
 for(const name of ['loadCoachingHub','setCoachingStage','setCoachingPanel','openCoachingSession','loadStats','showPage']){
  assert.equal(normalizeNavigation(source(name)),normalizeNavigation(source(name,old)),`${name} doit rester intacte hors nettoyage de navigation`);
 }
 // Toutes les pages internes restent identiques, pas seulement leurs formulaires.
 const entry=html.match(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/);
 assert(entry,'Nouvelle entrée Coaching absente');
-const normalizeHtml=text=>text.replace(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/,'').replace('    <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>\n','').replace(/    <div id="coachingWizardPanel"[\s\S]*?(?=    <div class="record-head">)/,'').replace(/app\.js\?v=1047-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208\d/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021');
+const normalizeHtml=text=>text.replace(/  <section id="coachingEntryPage"[\s\S]*?<\/section>\n/,'').replace('    <button id="coachingEntryBack" class="back" type="button" data-page="coachingEntryPage" hidden>← Retour</button>\n','').replace(/    <div id="coachingWizardPanel"[\s\S]*?(?=    <div class="record-head">)/,'').replace('        <button id="useCoachingWizardPreparation" class="primary hidden" type="button">Utiliser cette préparation</button>\n','').replace(/app\.js\?v=104[78]-\d+/g,'app.js?v=1046-1').replace(/v2\.css\?v=208[34]/g,'v2.css?v=2080').replace(/v2\.js\?v=202\d/g,'v2.js?v=2021');
 assert.equal(normalizeHtml(html),normalizeHtml(oldHtml),'Écrans internes modifiés');
 assert(!/<(?:input|select|form|textarea)\b/.test(entry[0]),'Aucun formulaire dupliqué');
 assert(html.includes('id="coachingEntryBack"'),'Bouton Retour des sous-écrans absent');

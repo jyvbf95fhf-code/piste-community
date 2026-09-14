@@ -97,6 +97,21 @@ const createHarness = `(async()=>{
 execFileSync(process.execPath,['-e',createHarness],{stdio:'inherit'});
 assert(!source('createCoaching').includes('p_search_mode'), 'createCoaching ne doit pas envoyer p_search_mode');
 
+if (process.argv.includes('--case=release')) {
+  const sw = read('sw.js');
+  assert.equal(app.match(/const APP_VERSION='([^']+)'/)?.[1], '10.48', 'APP_VERSION doit être 10.48');
+  assert(app.includes("{version:'10.48',date:'13/09/2026'"), 'Release note V10.48 absente');
+  assert(app.includes('Préparation Coaching guidée en 7 étapes, avec création après validation du récapitulatif.'), 'Texte de release note incorrect');
+  assert(html.includes('./app.js?v=1048-1'), 'Référence app.js V10.48 absente');
+  assert(html.includes('./v2.css?v=2084'), 'Référence v2.css V10.48 absente');
+  assert.match(sw, /const C='piste-community-v2123';/, 'Cache V10.48 absent');
+  assert(sw.includes("'./app.js?v=1048-1'"), 'app.js V10.48 absent du précache');
+  assert(sw.includes("'./v2.css?v=2084'"), 'v2.css V10.48 absent du précache');
+  require('./verify-current-assets')();
+  console.log('V10.48 release checks: OK');
+  process.exit(0);
+}
+
 if (process.argv.includes('--case=state') || !process.argv.some(arg => arg.startsWith('--case='))) {
   for (const name of ['newCoachingWizard', 'resetCoachingWizard', 'changeCoachingWizard', 'validCoachingWizard']) {
     assert(source(name), `Fonction d'état absente: ${name}`);
@@ -647,8 +662,11 @@ assert.deepEqual(
     'index.html',
     'scripts/check-v10-47.js',
     'scripts/check-v10-48.js',
+    'scripts/check-v10-42-2.js',
+    'scripts/verify-current-assets.js',
+    'sw.js',
     'v2.css'
-  ],
+  ].sort(),
   'Task 1 ne doit modifier que le shell et son guard'
 );
 assert(!changed.some(p => p.endsWith('.sql') || p.startsWith('supabase/')), 'Aucun SQL/Supabase');

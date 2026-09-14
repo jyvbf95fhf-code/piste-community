@@ -4,13 +4,14 @@ import { createAdminCentre } from './admin.js?v=1044-1';
 
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
-const APP_VERSION='10.47';
+const APP_VERSION='10.48';
 // Fixed presentation palette. Never derived from a stored/user-selected color.
 const TRACE_PALETTE=Object.freeze({planned:'#00D9FF',traceur:'#39FF14',conducteur:'#FF7A00',external:'#E600FF',markers:'#FFE600'});
 const TRACE_LABELS=Object.freeze({planned:'Tracé prévu',traceur:'Traceur',conducteur:'Conducteur',external:'GPX / Externe',markers:'Repères'});
 for(const [layer,color] of Object.entries(TRACE_PALETTE))document.documentElement.style.setProperty(`--trace-${layer}`,color);
 
 const APP_RELEASE_NOTES=Object.freeze([
+ {version:'10.48',date:'13/09/2026',title:'Nouveautés V10.48',items:['Préparation Coaching guidée en 7 étapes, avec création après validation du récapitulatif.'],important:[]},
  {version:'10.47',date:'13/09/2026',title:'Nouveautés V10.47',items:['Nouvelle entrée Entraînement & Coaching avec accès direct à Créer, Rejoindre, Mes sessions et Progression d’équipe.'],important:[]},
  {version:'10.46',date:'13/09/2026',title:'Nouveautés V10.46',items:['Terrain Coaching plein écran.','Interface terrain plus compacte.','Suppression des messages pré-rédigés.','Badge de messages non lus et toast discret.'],important:[]},
  {version:'10.45',date:'10/09/2026',title:'Nouveautés V10.45',items:['Coaching différé : attendez le retour du Traceur, puis reprenez votre session.','Double aveugle : le Coach peut créer une session sans préparer la piste.'],important:['L’âge de piste au départ est calculé depuis la fin de pose enregistrée.']},
