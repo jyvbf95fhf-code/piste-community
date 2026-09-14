@@ -394,6 +394,7 @@ $('showSignup').onclick=()=>switchAuth('signup');
 
 function showPage(id,adminVerified=false){
  if(!guardCoachingWizardNavigation(id))return false;
+ if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard();
  if(id==='adminPage'&&!adminVerified){void adminCentre.open();return}
  if(id!=='adminPage')adminCentre.leave();
  if(id!=='missionPage')closeMissionDossier();

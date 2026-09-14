@@ -604,6 +604,21 @@ if (process.argv.includes('--case=invitations') || !process.argv.some(arg => arg
   execFileSync(process.execPath,['-e',invitationHarness],{stdio:'inherit'});
 }
 
+if (process.argv.includes('--case=lifecycle')) {
+  const navigationSource = source('showPage');
+  assert(navigationSource.includes("if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard()"), 'Terrain doit restaurer l’état normal du wizard');
+  const guardSource = source('guardCoachingWizardNavigation');
+  assert(guardSource.includes('coachingWizard.busy'), 'Une soumission en cours doit bloquer la sortie');
+  assert(guardSource.includes("id==='plannerPage'&&plannerReturnTarget==='coaching'"), 'Le planner interne doit rester accessible');
+  assert(guardSource.includes('resetCoachingWizard()'), 'Une sortie confirmée doit réinitialiser le wizard');
+  const submitSource = source('submitCoachingWizard');
+  assert(submitSource.includes('preparation.routeId'), 'Le retry doit pouvoir réutiliser routeId');
+  assert(submitSource.includes('if(coachingWizard.createdSessionId)'), 'Une session créée ne doit pas être recréée au retry');
+  assert(submitSource.includes('coachingWizard.busy=true'), 'Le submit doit verrouiller les doubles clics');
+  console.log('V10.48 lifecycle checks: OK');
+  process.exit(0);
+}
+
 assert(html.includes('class="bottom-nav"'), 'Navigation générale absente');
 assert(html.includes('id="coachingPage"'), 'Page Coaching absente');
 assert(html.includes('id="coachingSessionsCard"'), 'Sessions internes absentes');
