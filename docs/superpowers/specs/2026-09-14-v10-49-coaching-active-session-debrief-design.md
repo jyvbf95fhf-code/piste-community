@@ -1,6 +1,6 @@
 # V10.49 — Allègement session active Coaching, fin de piste et débriefing
 
-Date : 14 septembre 2026. Statut : SPEC proposée et auto-revue ; aucune autorisation d’implémentation ou de migration.
+Date : 14 septembre 2026. Statut : SPEC finalisée avec arbitrages utilisateur validés et auto-revue ; aucune autorisation d’implémentation ou de migration.
 
 ## 1. Cadre de cette étape
 
@@ -11,7 +11,7 @@ Worktree : `.worktrees/v10-49-coaching-active-session-debrief` à la racine du d
 
 Cette étape produit uniquement ce document et son commit. Aucun fichier applicatif, SQL, backend, Edge Function, version ou cache ne change. Aucun push, merge, tag ou plan d’implémentation. L’inspection est locale, sur les sources versionnées ; elle ne certifie pas le schéma effectif de la base distante. Aucun SQL n’est exécuté, y compris le patch self-leave V10.48.
 
-**STOP backend : l’objectif complet ne peut pas être promis avec le seul frontend actuel.** Les observations par participant et certains horodatages exigent une décision explicite avant toute implémentation dépendante. Les besoins sont détaillés en section 12, sans DDL ni migration inventée.
+**STOP backend : l’objectif complet ne peut pas être promis avec le seul frontend actuel.** La pause partagée, les contributions de tous, les droits après clôture, les états globaux et la provenance temporelle nécessitent les contrats explicités en section 12. Les arbitrages fonctionnels sont validés ; ils ne valent pas autorisation de modifier le backend. Les besoins sont détaillés en section 12, sans DDL ni migration inventée.
 
 ## 2. Objectif et approches étudiées
 
@@ -52,17 +52,21 @@ Les repères suivants désignent les fonctions de la baseline ; les noms restent
 | Après clôture | `saveCoachingDebrief`, `saveCoachingDriverFeedback`, `finalizeSavedCoachingSession`, `completeCoachingDebriefReturnHome` ; `PISTE_V10.42.3_PATCH/PISTE_V10.42.3_DRIVER_CLOSE_APPLY.sql` | Édition historique prévue pour contributions autorisées. Enregistrement et clôture sont encore couplés dans certains chemins. Le RPC de clôture accepte propriétaire ou Conducteur actif V3, uniquement après `completed`, et est idempotent. |
 | Self-leave | `PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql` | Suppression de sa participation, propriétaire exclu ; ne confère aucun droit historique automatique après suppression du membership. |
 
-## 4. Architecture et états de présentation
+## 4. Architecture et états globaux
 
-Un état de présentation dérivé de la session autorisée, du rôle et d’un éventuel traitement local compose l’écran. Il ne remplace ni `phase`, ni les RPC, ni les RLS.
+La présentation s’appuie sur l’état serveur autorisé, le rôle réel et les traitements en cours. Les états fonctionnels ci-dessous ne sont pas de nouvelles colonnes implicitement autorisées : leur correspondance et leur persistance nécessitent le STOP D.
 
-- **Préparation/attente** : wizard V10.48 puis instructions de départ utiles selon le rôle. Une session différée n’est pas un parcours Conducteur en cours.
-- **Terrain actif** : pose pour l’acteur poseur ; parcours pour le Conducteur ; supervision/consultation contextualisée pour les autres. Carte prioritaire.
-- **Fin en cours de confirmation** : après maintien complet, quitter immédiatement les commandes actives et montrer une confirmation en cours. Le passage UI ne prétend pas que le serveur a confirmé.
-- **Débrief disponible** : après état serveur `completed` ou `ended`, données autorisées accessibles ; GPS terrain et écran noir arrêtés, pas de réouverture implicite.
-- **Historique** : consultation et édition des seules observations autorisées, sans transition vers terrain.
+- **Préparation/attente** : wizard V10.48 et instructions de pose/départ. Le différé ne signifie pas parcours en cours.
+- **Terrain actif** : pose, parcours, supervision ou consultation selon le rôle ; Pause/Reprendre est un état global partagé, indépendant du GPS brut.
+- **Piste terminée** : le Conducteur a validé la fin globale ; terrain arrêté pour tous, heure de fin de référence fixée une seule fois, déclenchement immédiat des calculs.
+- **Débrief en cours** : tous les participants arrivent sur la même page avec carte, statistiques, météo, objets et observations. Cet état suit automatiquement Piste terminée, sans nouvelle validation manuelle ni attente de clôture.
+- **Débrief clôturé** : première clôture globale par le Conducteur ou le Coach. Résultats et observations conservés ; chaque auteur peut encore éditer son bloc depuis l’historique.
 
-Le serveur reste l’autorité de fin. En cas de réponse perdue, relire la session avant tout réessai ; si déjà terminée, ouvrir une seule fois le débrief. Si fin refusée, afficher l’échec et une action explicite de reprise/réessai ; ne jamais annoncer une clôture fictive. Le retour avant validation va à une consultation non active, jamais à un redémarrage automatique GPS.
+Le passage Piste terminée → Débrief en cours n’efface pas l’événement de fin. La clôture ne recalcule pas l’heure de fin et ne réactive jamais Terrain. L’historique affiche ces mêmes données, pas une nouvelle session.
+
+À 2 secondes, le client initiateur sort immédiatement des commandes actives et soumet la fin. La validation globale est confirmée par le serveur, diffusée à tous, puis retrouvée au reload. Un appareil déconnecté converge à la reconnexion ; aucune simultanéité réseau impossible n’est promise. En cas de réponse perdue, relire l’état avant réessai. Une erreur ne doit jamais être présentée comme une fin globale réussie. L’état transitoire « confirmation en cours » est un retour technique, pas un quatrième état métier du débrief.
+
+Le retour depuis le débrief ne redémarre pas le parcours. Une validation personnelle d’observation n’est pas une clôture globale. Le serveur, et non un flag local, reste l’autorité.
 
 ## 5. Écran actif et rôles
 
@@ -74,12 +78,12 @@ Carte : hauteur disponible maximale entre bandeau compact et barre basse ; zones
 
 | Rôle réel | Mesures affichées | Actions directes pertinentes |
 |---|---|---|
-| Conducteur | Son temps/distance actifs ; âge piste | Pause/Reprendre, Écran noir, Messages, Fin de piste |
-| Traceur/acteur poseur | Temps/distance de sa pose ; âge piste | Pause/Reprendre de mesure, Écran noir si disponible, Messages, Fin de pose via transition existante |
-| Observateur | Mesures Conducteur uniquement si accessibles, sinon indisponibles ; âge piste | Messages si autorisés ; pas de pause ni de fin métier |
-| Coach | Mesures Conducteur autorisées, clairement identifiées ; âge piste | Supervision, Messages ; action de clôture seulement selon capacité/propriété existante |
+| Conducteur | Temps/distance actifs partagés du parcours ; âge piste | Pause/Reprendre globale, Écran noir, Messages, Fin de piste globale |
+| Traceur | État Pause et mesures partagées ; âge piste ; pose identifiée séparément | Écran noir si disponible, Messages, Fin de pose existante ; aucune commande Pause/Reprendre ni Fin de piste globale |
+| Observateur | État Pause et mesures partagées autorisées ; âge piste | Messages si autorisés ; aucune commande Pause/Reprendre, fin globale ou clôture |
+| Coach | État Pause, temps/distance actifs partagés ; âge piste | Pause/Reprendre globale, supervision, Messages ; clôture du débrief, jamais Fin de piste globale |
 
-Le Coach-poseur historique suit les capacités de pose ; le rôle solo conserve ses capacités existantes. Ne pas accorder une action à partir du seul libellé ou de la propriété.
+Ces droits définissent les sessions V10.49 à rôles explicites. Le statut de propriétaire ne donne pas de dérogation : un propriétaire Traceur ne peut ni pauser ni clôturer le débrief. Les sessions historiques solo/Coach-poseur restent sous leur contrat versionné ; ne pas les migrer implicitement ni en déduire une permission supplémentaire pour V10.49.
 
 La barre basse garde les quatre actions Conducteur directement accessibles, sans défilement ni passage par Plus. Les rôles sans ces capacités n’affichent pas de boutons interdits/inutiles. L’écran noir garde son mécanisme existant et n’interrompt pas le GPS.
 
@@ -95,32 +99,38 @@ Définitions :
 - `T_pose_fin` : `track_finished_at`.
 - `T_conducteur` : `driver_started_at`.
 - `T_fin` : `driver_finished_at`.
-- Âge courant = maintenant de référence − `T_trace`, y compris en pause et en différé.
+- Âge courant = maintenant de référence − `T_trace`, y compris en pause et en différé, jusqu’à Fin de piste ; ensuite âge final = `T_fin` − `T_trace`, sans continuer à vieillir le résultat historique.
 - Âge au départ = `T_conducteur` − `T_trace`, figé au départ.
 - Délai après pose = `T_conducteur` − `T_pose_fin` : indicateur séparé, ancienne sémantique de `coachingTimingV1045`.
 - Durée traçage → fin = `T_fin` − `T_trace` ; durée parcours totale = `T_fin` − `T_conducteur`.
 
 Ne pas remplacer globalement la sémantique de `coachingTimingV1045` : conserver le délai de recherche V10.45 et créer une résolution d’âge explicitement distincte.
 
-Résolution par provenance, pas simple minimum de tous les timestamps : pour une pose réelle de cette session, première position réelle valide de cette pose ; pour une piste physique antérieure réutilisée sans nouvelle pose, début enregistré de cette piste source. Une géométrie dessinée au planner n’est pas une piste physiquement posée. Si une nouvelle pose est réalisée sur une ancienne géométrie, l’âge appartient à cette nouvelle pose.
+**Arbitrage validé : `T_trace` est toujours le début réel du traçage d’origine.** En direct, prendre la première donnée GPS réelle du tracé. Pour une piste ancienne enregistrée ou réutilisée plusieurs jours après, conserver sa date/heure d’origine. Ni réutilisation, ni nouvelle session, ni passage par la préparation/pose ne remettent cet âge à zéro. Supprimer toute règle qui substituerait automatiquement le début de la session courante à l’origine d’une piste réutilisée.
 
-`created_at`, l’heure d’import, la création Coaching et `laying_started_at` ne deviennent jamais silencieusement le début physique. `laying_started_at` peut expliquer une attente du premier GPS, mais ne satisfait pas l’âge exact demandé. Conserver la provenance, ne pas déplacer les heures au fuseau local avant le calcul ; affichage français ensuite. Préserver les données source malgré réduction GPX, sauvegarde, duplication et réouverture. Les timestamps incohérents/futurs sont signalés, pas transformés en âge zéro trompeur.
+GPX : conserver la date/heure réelle de traçage présente dans le fichier, avec sa provenance. Si absente, demander explicitement **date + heure à l’import**, avec fuseau non ambigu ; ne jamais préremplir ou enregistrer l’heure d’import comme faux début. Sans saisie valide, l’import ne doit pas être confirmé comme piste correctement datée ; annulation possible. Une date déclarée est identifiée comme telle, distincte d’un horodatage GPS. Des métadonnées de création/export du fichier ne prouvent pas l’heure réelle de traçage.
 
-L’horloge corrigée par `server_now` lorsqu’elle est disponible sert aux durées murales. Les durées actives utilisent une horloge monotone en cours d’acquisition et des bornes persistées pour la reprise. Aucun début authentique disponible : « Âge non renseigné ». Ne pas reconstituer le temps GPX historiquement perdu.
+`created_at`, l’heure d’import, la création Coaching et `laying_started_at` ne deviennent jamais le début d’origine par défaut. Une géométrie dessinée n’est pas une preuve de traçage réel. Pour les données historiques déjà privées de leur origine, afficher « Âge non renseigné » jusqu’à une correction explicite autorisée, jamais une reconstruction fictive.
+
+Conserver origine et provenance malgré réduction GPX, sauvegarde, duplication, réutilisation et réouverture. Calculer avec des instants absolus, afficher dans le fuseau choisi ; une heure future/incohérente doit être corrigée ou signalée, jamais ramenée silencieusement à zéro. L’horloge serveur lorsqu’elle est disponible sert de référence partagée. L’âge au départ reste figé et distinct du délai après fin de pose.
 
 **STOP âge pour tous :** en double aveugle, ne pas charger une géométrie interdite pour en extraire sa première heure. Une métadonnée temporelle sûre, persistée et projetée indépendamment peut être nécessaire. L’origine ancienne/importée est également perdue dans plusieurs parcours actuels : section 12.
 
-## 7. Pause et continuité GPS
+## 7. Pause partagée et continuité GPS
 
-Séparer acquisition/enregistrement brut de la mesure active. Pause agit uniquement sur le journal de mesure de l’acteur courant. Aucun appel d’arrêt des watchers, aucun changement de phase partagé et aucune suppression de point à cause de la pause.
+**Pause est un état partagé à toute la session. Seuls Coach et Conducteur peuvent Pause/Reprendre. Traceur et Observateur voient l’état en realtime mais ne peuvent pas agir.** L’autorisation doit être vérifiée côté serveur, y compris pour le propriétaire. Une préférence locale ou un broadcast éphémère ne suffit pas.
 
-Temps actif = somme des intervalles non pausés de la pose ou du parcours concerné. Distance active = somme des déplacements entre points valides consécutifs appartenant au même intervalle actif. Ne pas relier le dernier point avant pause au premier après reprise : ce pont compterait le déplacement de pause. La trace brute et la distance totale gardent les points de pause. Une immobilité GPS ne prouve pas une pause volontaire.
+Séparer acquisition/enregistrement brut et mesures actives. Pause fige le chrono actif partagé et le calcul de distance active partagé, sans arrêter les watchers ni interrompre les insertions GPS brutes. Tous affichent la même pause confirmée et les mêmes bornes de mesure. L’âge de piste, la durée totale et les actualisations météo continuent.
 
-Le journal local porte utilisateur, session et activité (pose/parcours), bornes temporelles et état de pause. Il survit au reload sur le même appareil, sans devenir un état realtime partagé. Deux onglets ne doivent pas doubler les intervalles ; dédupliquer les événements et identifier le propriétaire d’acquisition local. Une suspension navigateur/reload n’autorise pas à inventer les points manquants : signaler le trou et la couverture, ne pas traiter le trou comme déplacement mesuré.
+Le compteur principal concerne le parcours Conducteur, borné par son départ et sa fin ; il n’avance pas avant départ. Une pause globale déjà en cours au départ s’applique immédiatement. Les mesures secondaires de pose, si affichées, sont clairement identifiées et utilisent les mêmes intervalles globaux, sans accorder au Traceur un contrôle de pause.
 
-Les filtres GPS existants restent le contrat de points acquis ; « complet » signifie continu pendant la pause dans les limites du capteur, du navigateur et du réseau. Une garantie d’enregistrement durable hors réseau demande une inspection/conception supplémentaire explicitement autorisée.
+Temps actif = durée de l’activité moins les intervalles de pause partagée qui la recouvrent. Distance active = déplacements entre points valides consécutifs dans un même intervalle actif ; ne pas relier le dernier point avant pause au premier après reprise. Les points de pause restent dans la trace brute, la distance totale et la superposition. Une immobilité GPS ne vaut pas pause volontaire.
 
-**STOP mesures partagées :** aucune persistance serveur de pauses n’a été identifiée dans les points Coaching. Les valeurs exactes sur un autre appareil, chez les autres participants et dans un historique durable ne peuvent être calculées depuis les seuls points. Ne pas réécrire `recorded_at` ni encoder des pauses en faux marqueurs/messages. Sans contrat approuvé, afficher durée totale et mesure active locale qualifiée, jamais une durée active globale supposée.
+Persister l’état global et les intervalles horodatés autoritaires ; les diffuser à tous et les retrouver au reload/reconnexion, depuis un autre appareil et dans le débrief. Traiter deux commandes simultanées Coach/Conducteur par transition atomique/idempotente et ordre serveur ; pas de double intervalle ni d’écrasement sur état périmé. Pendant confirmation, signaler la commande en cours ; hors réseau, ne pas annoncer une pause globale non confirmée. La fin globale ferme les compteurs et tout intervalle de pause ouvert à la même borne de fin.
+
+Les filtres GPS existants restent le contrat d’acquisition. Les trous navigateur/réseau sont signalés et non comblés par des points fictifs ; la continuité pendant Pause n’est pas une promesse de suivi lorsque l’app est fermée. Le journal partagé ne réécrit jamais les timestamps des points ni ne stocke ses événements dans de faux messages/marqueurs.
+
+**STOP SQL/backend A confirmé :** le flag actuel est local et arrête les watchers ; aucun journal partagé persistant de pause n’a été identifié. Une solution seulement locale n’est plus une alternative fonctionnelle acceptée. Aucun stockage ni RPC n’est implémenté à cette étape.
 
 ## 8. Météo, vent et couloir personnel
 
@@ -132,23 +142,43 @@ Préférence couloir : locale et propre au compte sur cet appareil. Proposition 
 
 Réglage simple « Couloir olfactif : Activé / Désactivé » dans la préparation ou le sas d’entrée, accessible à tous les rôles ; ne pas ajouter une septième étape V10.48. Bouton directement sur la carte avec état accessible ; choix conservé au reload/reconnexion du même utilisateur/session. Stockage local indisponible : état mémoire utilisable et indication que la préférence ne sera pas conservée.
 
-**Priorité sécurité :** préférence activée ne signifie pas autorisation de voir la piste. Si double aveugle ou absence de référence autorisée : réglage disponible mais rendu suspendu, « Indisponible avec la visibilité actuelle ». Il reprend à la révélation autorisée si le choix reste activé. Ne pas calculer le couloir d’une piste secrète ni divulguer sa géométrie indirectement. Cette résolution de conflit demande validation produit avant d’exiger un couloir effectivement visible pour tous pendant le mode aveugle.
+**Arbitrage validé : confidentialité avant affichage olfactif.** En double aveugle, le Conducteur ne voit avant ou pendant le parcours aucun couloir ni information olfactive dérivée de la piste cachée susceptible d’en révéler le tracé. Même interdiction pour le Coach sans droit de connaître cette piste. Le Traceur peut voir selon ses permissions normales ; l’Observateur uniquement selon les permissions existantes.
 
-## 9. Fin de piste et validation du débrief
+Le bouton reste personnel mais ne confère aucun droit. Si la référence n’est pas autorisée, conserver la préférence sans afficher, charger ou calculer dans ce client un dérivé révélateur : « Indisponible avec la visibilité actuelle ». Ne pas masquer seulement la couche après avoir livré les coordonnées ou un résultat révélateur. Après révélation autorisée, le couloir peut être affiché selon le choix conservé. La météo générale non dérivée du tracé caché reste accessible. Cette priorité est validée et n’est plus un arbitrage ouvert.
 
-Pour le Conducteur, l’unique action terrain finale se nomme « Fin de piste ». Appui long continu de **2 000 ms** avant appel de la transition `finish_driver_run`, avec progression visuelle. Relâchement anticipé, sortie du bouton, pointercancel, perte de focus ou onglet masqué annulent. Un tap/click synthétique ne déclenche rien. Support clavier par maintien Entrée/Espace, sans répétition automatique ; pas de raccourci par tap.
+## 9. Fin de piste globale et clôture du débrief
 
-Un seul contrôleur de maintien, un verrou de soumission par session/action et les contrôles de phase/rôle au début ET au seuil évitent doublons touch/pointer, RPC et realtime. Ne pas recycler tel quel le maintien propriétaire : ce n’est pas la même action. Réutiliser les protections du maintien Conducteur actuel en les plaçant avant la fin métier ; supprimer la nécessité du second maintien après `completed`, tout en conservant la reprise des anciennes confirmations locales.
+### Fin réelle réservée au Conducteur
 
-À 2 s : quitter immédiatement les commandes actives vers la vue fin en cours, arrêter les mesures au point de fin choisi sans prétendre à une confirmation serveur ; la politique d’arrêt GPS suit la transition confirmée existante. En cas d’erreur, état explicite, points préservés, jamais une boucle de reprise automatique. À confirmation : nettoyage GPS/realtime/écran noir et raccourci actif, ouverture idempotente du débrief même si le realtime arrive avant la réponse RPC.
+**Seul le Conducteur valide la Fin de piste globale.** Coach, Traceur, Observateur et propriétaire sans rôle Conducteur ne peuvent pas le faire. Appui long continu de **2 000 ms**, progression visuelle ; relâchement avant 2 s = annulation, seuil atteint = soumission de la fin globale. Pas de clic/tap alternatif. Préserver l’accessibilité clavier par maintien Entrée/Espace sans répétition automatique.
 
-Le Traceur garde **Fin de pose / Piste prête**, ses vérifications et `mark_coaching_track_ready`, puis le choix immédiat/différé V10.48. Sa fin de pose ne termine pas le parcours du Conducteur et n’ouvre pas prématurément le débrief global. Appliquer le maintien protecteur à l’action finale utile sans changer ses permissions. Coach/Observateur ne reçoivent pas un bouton de fin Conducteur ; clôture organisateur reste distincte dans les actions autorisées.
+Un contrôleur de maintien et un verrou par session/action, avec revalidation du rôle/phase au début et au seuil, évitent doublons touch/pointer, RPC et realtime. Annuler à pointercancel/leave, blur, onglet masqué ou changement de session. Aucun second maintien après `completed` : la protection précède la transition métier, pas l’ouverture du débrief. Le serveur assure aussi l’idempotence et la permission Conducteur.
 
-« Valider le débriefing » accepte une observation vide. Pour les acteurs autorisés à clôturer, conserver le RPC existant et relire `status='ended'` avant d’annoncer la clôture. Une observation sauvegardée avec clôture échouée reste sauvegardée ; le réessai ne doit pas l’écraser. Pour les autres participants, validation signifie terminer leur saisie/consultation, pas exercer une clôture serveur interdite. Le cycle terrain reste terminé à `completed`, indépendamment de leur validation.
+Dès validation confirmée : état global **Piste terminée**, arrêt du terrain pour tous, fin des mesures/GPS terrain/écran noir et suppression des raccourcis actifs. Tous basculent vers la même page **Débrief en cours**, et tous les calculs sont déclenchés immédiatement, sans attendre sa clôture. Préserver ou remplacer proprement les abonnements nécessaires aux états de débrief et observations après nettoyage des abonnements terrain. Une réponse RPC/realtime doublée ne relance pas les calculs ni la navigation inutilement ; une reconnexion récupère l’état terminal.
 
-Depuis l’historique, enregistrer une observation ne rappelle jamais une transition de fin/départ et ne change pas les timestamps métier. Le reload de `completed`/`ended` ouvre la consultation appropriée, sans GPS ni mode terrain ; un flag local ne peut contredire un serveur encore actif. Une disparition de session ou un self-leave enlève les données devenues inaccessibles.
+Le client initiateur sort des commandes actives dès le maintien complet vers confirmation en cours. En cas de refus/timeout, conserver les données, relire l’état serveur et afficher l’échec ou proposer un réessai explicite ; ne jamais simuler une fin globale réussie. Les points acquis en attente de réponse sont préservés et la borne finale autoritaire délimite le résultat.
 
-## 10. Débrief dédié : carte et statistiques
+Le Traceur conserve **Fin de pose / Piste prête** et le choix immédiat/différé existant. Fin de pose n’est jamais Fin de piste globale ni clôture du débrief. Aucun maintien de clôture propriétaire ne peut remplacer l’action Conducteur V10.49.
+
+### Clôture globale réservée au Conducteur ou au Coach
+
+Le bouton **« Valider le débriefing »** clôture le débrief global et n’est disponible que pour Conducteur et Coach. Traceur/Observateur peuvent enregistrer leur observation mais pas clôturer. Observation vide autorisée ; ne pas rendre une contribution obligatoire pour fermer le débrief.
+
+La première clôture confirmée fait passer **Débrief en cours → Débrief clôturé**, une seule fois. Une clôture concurrente ou répétée converge sur le même état et ne modifie pas la fin de piste. Carte, statistiques, météo, objets et observations restent consultables. Aucun effacement, aucune reprise GPS/Terrain et aucune fermeture de l’édition personnelle des observations.
+
+L’enregistrement d’observation est distinct de la clôture. S’il réussit puis que la clôture échoue, garder le texte et permettre de réessayer uniquement la clôture. Après clôture, chaque auteur peut encore modifier son seul bloc depuis historique/détail, sans rouvrir le débrief global ni réactiver la session terrain.
+
+Ne pas supposer que `finish_coaching_session` suffit : son contrat versionné est propriétaire/Conducteur, pas nécessairement Coach non propriétaire ; `publication_status` du Coach ne prouve pas les trois états globaux demandés. **STOP SQL/backend D**, et C pour les droits après clôture. Aucune adaptation implicite du backend.
+
+Au reload, une piste terminée ou un débrief en cours/clôturé ouvre la consultation appropriée sans relancer Terrain. Retour avant clôture reste une navigation non active. Suppression/annulation de session et self-leave restent des mécanismes séparés.
+
+## 10. Débrief dédié : carte et statistiques immédiates
+
+Dès Fin de piste globale, lancer/générer la superposition Traceur + Conducteur, marqueurs/objets, indice de concordance automatique, écarts moyen/maximal, distances Traceur/Conducteur, durées active/totale, âge au départ Conducteur, durée début du traçage d’origine → fin, délai fin de pose → départ et météo/vent/pluie/humidité disponibles. Ces résultats appartiennent au débrief en cours, pas à sa clôture.
+
+Tous les participants arrivent sur **la même page Débrief** et ont accès à la carte, aux statistiques, à la météo, aux objets et aux observations de tous. La cible V10.49 inclut donc les droits de lecture manquants au Traceur/Observateur : STOP B/C/D, sans contournement frontend. La révélation de fin respecte le point de transition autorisé et ne livre rien en avance pendant le double aveugle.
+
+« Immédiatement » signifie déclenchement et présentation dans cette page dès la fin : aucune action « Calculer » ni attente du bouton de clôture. Les données déjà disponibles sont affichées tout de suite ; les lectures/calculs nécessaires ont un état de chargement et les erreurs un réessai. Une donnée manquante reste explicitement indisponible, sans bloquer les autres résultats ni être inventée. Converger vers un résultat commun sur les mêmes sources autorisées et bornes temporelles ; traiter les derniers points arrivés tardivement avant de déclarer le résultat complet. La persistance éventuelle et les révisions du résultat sont signalées en F.
 
 Carte de superposition au début de l’écran : tracé réel Traceur, parcours réel Conducteur, marqueurs/objets accessibles. Exclure trajets et positions Coach/Observateur, y compris leurs éventuelles lignes dans une requête live historique. Identifier les auteurs par les memberships autorisés ; ne pas attribuer une trace inconnue au Conducteur. Un besoin d’identité historique après self-leave relève du STOP backend.
 
@@ -166,33 +196,34 @@ La baseline offre distance point-segment et écarts, pas un pourcentage de conco
 
 Proposition géométrique pour V10.49 : comparaison des polylignes complètes dans les deux sens, avec pondération par longueur pour ne pas surpondérer les zones GPS denses ; écarts point-segment en mètres, couverture et qualité GPS affichées séparément. Pas de comparaison limitée au point de départ/arrivée, ni aux seuls points de carte simplifiés. Conserver l’écart maximal brut ; la précision GPS contextualise l’incertitude, elle ne supprime pas silencieusement un grand écart.
 
-**Décision métrique encore nécessaire avant implémentation :** aucune transformation vers 0–100 n’est justifiée par l’existant. Ne pas inventer une échelle pour remplir la carte. Faire approuver une définition déterministe, ses unités, sa normalisation et ses fixtures géométriques avant tout indice numérique ; sinon « Indice non calculable » accompagné des écarts fiables. Cette restriction ne vaut pas acceptation d’une V10.49 complète sans indicateur : arbitrage produit explicite requis. Pas de revendication de vérité scientifique ; calibration/recherche avancée reportée à V10.52.
+**Arbitrage fonctionnel validé :** l’indice est calculé automatiquement et présenté dès la Fin de piste. La formule exacte reste à fixer dans l’implémentation : elle devra être déterministe, documenter ses unités et sa normalisation, et être vérifiée par des fixtures géométriques. En attendant une définition approuvée, afficher « Indice non calculable » avec les écarts fiables plutôt qu’un chiffre artificiel ; cette limite de données ne doit jamais supprimer le calcul des écarts moyen/maximal. Pas de revendication de vérité scientifique ; calibration/recherche avancée reportée à V10.52.
 
 Précision absente, couverture tronquée, doublons, timestamps invalides, gros trous ou tracé manquant doivent dégrader explicitement la disponibilité/qualité. Une moyenne de précision ne suffit pas à certifier un score. L’inversion du sens, les boucles et les segments partiellement communs doivent être expliqués par la définition retenue, pas par un ajustement manuel.
 
 ## 11. Observations par participant
 
-Cible : un bloc facultatif par personne et par session, auteur + rôle identifiés, lecture par tous les participants autorisés au débrief, modification du seul bloc personnel. Zéro texte n’empêche ni validation personnelle ni clôture autorisée. Pas de fil, réponses ou plusieurs notes par auteur.
+Cible validée : un seul bloc facultatif par participant et par session, auteur + rôle identifiés, visible par tous les participants du débrief, modifiable uniquement par son auteur. Le bloc peut être vide ; cela n’empêche pas la clôture par Coach ou Conducteur. Pas de fil, réponses ou plusieurs notes par auteur.
 
 L’unicité session/auteur, l’identité de l’auteur et l’interdiction d’écraser un autre bloc doivent être garanties côté serveur. Une limitation de boutons ou un objet JSON partagé modifiable par tous ne suffit pas. Prévoir le conflit d’édition du même auteur sur deux appareils : détecter une version périmée, conserver le brouillon et demander une résolution ; ne pas silencieusement perdre un texte.
 
 Les anciens champs Coach/Conducteur restent lisibles et intacts jusqu’à migration contrôlée. Ne pas concaténer automatiquement des observations anciennes dans un auteur supposé. Garder l’accès aux contributions historiques selon leurs droits initiaux ; les élargir nécessite une décision explicite. Les marqueurs de terrain et Messages ne sont pas un stockage alternatif pour les observations.
 
-Après clôture : consultation et édition du bloc propre depuis historique/détail, sans réactiver terrain, recalculer la clôture ou modifier le parcours. Les erreurs gardent le brouillon ; les notes ne sont pas publiques hors participants autorisés. Le sens de « tous » est les participants ayant un droit de consultation valide, pas n’importe quel compte ni un invité non accepté.
+Après Débrief clôturé : chaque participant, y compris Traceur et Observateur, garde la consultation et l’édition de son seul bloc depuis historique/détail, sans réactiver Terrain, rouvrir le débrief, recalculer la clôture ou modifier le parcours. Les erreurs gardent le brouillon ; les notes ne sont pas publiques hors participants autorisés. Le sens de « tous » est les participants ayant un droit de consultation valide, pas n’importe quel compte ni un invité non accepté.
 
-## 12. STOP backend et décisions préalables
+## 12. Liste des STOP SQL/backend A à F
 
-Aucun des points ci-dessous n’autorise un changement SQL. La suite doit demander une autorisation explicite sur le besoin documenté, puis vérifier la base réelle avant toute conception de migration.
+Les arbitrages fonctionnels sont validés. Aucun n’autorise à écrire/appliquer une migration maintenant. Les constats portent sur les sources versionnées, pas sur un audit distant. Avant toute évolution dépendante, vérifier l’existant réel et obtenir l’autorisation explicite du changement backend minimal ; ne pas inventer ici de table, colonne, policy, RPC ou DDL.
 
-| Réf. | Besoin | Preuve/limite | Décision avant suite |
-|---|---|---|---|
-| B1 — confirmé | Observations uniques par auteur, lecture de tous, édition après clôture | `coaching_debriefs` est par session ; guards V10.42.3 limitent à Coach/Conducteur ; RLS lecture exclut certains participants | Nouveau contrat de persistance/permissions nécessaire ; conserver l’ancien débrief jusqu’à migration approuvée. STOP sur I/J dépendants. |
-| B2 — probable pour l’exigence complète | Début réel accessible à tous, notamment aveugle, source ancienne/importée | Première heure dans points cachés ; GPX temps jetés ; projection ne fournit pas un début physique dédié | Auditer métadonnées réelles existantes, provenance et projection sûre. Si absentes, contrat backend à autoriser ; aucune récupération miraculeuse des heures perdues. |
-| B3 — conditionnel à partage durable | Temps/distance actifs identiques dans débrief multi-utilisateur et multi-appareil | Pas de journal de pause serveur identifié | Choisir persistance autorisée ou accepter explicitement métriques locales qualifiées et champs indisponibles ailleurs. Pas de garantie globale sans stockage adapté. |
-| B4 — décision de droits | Accès/édition après self-leave ; attribution historique d’un ancien participant | V10.48 supprime le membership ; plusieurs droits/attributions en dépendent | Par défaut self-leave retire les droits correspondants. Si maintien d’accès demandé, contrat d’autorisation historique distinct à approuver. |
-| B5 — conditionnel | Historique météo partagé et mesures durablement figées | Cache météo local du dernier relevé, pas de série Coaching garantie | Ne montrer que données réellement présentes ; stockage partagé seulement sur besoin autorisé. |
+| Réf. et besoin | L’existant suffit-il ? | Besoin fonctionnel minimal et STOP |
+|---|---|---|
+| **A. Persistance Pause partagée** | **Non.** Flag mémoire local, arrêt des watchers et absence de journal global identifié. | **STOP SQL/backend confirmé.** État/intervalles horodatés persistants par session, transitions atomiques/idempotentes autorisées seulement au Coach/Conducteur, diffusion realtime et reprise multi-appareil. GPS brut indépendant ; mêmes bornes pour les métriques de tous. |
+| **B. Observation unique par participant** | **Non.** Une ligne de débrief par session, colonnes Coach/Conducteur, pas un bloc sécurisé pour chaque auteur. | **STOP SQL/backend confirmé.** Garantir unicité session/auteur, auteur imposé, lecture pour tous les participants du débrief et écriture du seul auteur, vide autorisé, gestion des conflits. Préserver les contributions historiques sans migration implicite. |
+| **C. Droits d’édition après clôture** | **Non pour tous.** Certains chemins historiques Coach/Conducteur existent ; guards/lectures actuels ne satisfont pas Traceur/Observateur. | **STOP SQL/backend confirmé.** Maintenir après clôture lecture commune et modification du seul bloc propre pour chaque participant, sans mutation des états de piste/débrief. Aucun droit de clôture au Traceur/Observateur. |
+| **D. Piste terminée / Débrief en cours / Débrief clôturé** | **Partiellement, donc non pour le contrat complet.** `completed`/`ended`, fin Conducteur et clôture idempotente existent ; pas de preuve des trois états globaux ni du droit Coach non propriétaire à clôturer. | **STOP SQL/backend confirmé pour l’écart.** Fin globale Conducteur seul, passage de tous au débrief, clôture globale Coach ou Conducteur, première clôture idempotente, états durables/realtime et données conservées. Propriété seule ne donne aucun droit supplémentaire. Vérifier aussi la lecture commune des données de fin. |
+| **E. Timestamp fiable du début réel d’origine, notamment GPX** | **Partiellement, donc non pour tous les cas.** Points GPS horodatés présents ; import perd les heures, origine non garantie à la réutilisation et première heure non exposée indépendamment aux rôles aveugles. | **STOP SQL/backend pour le contrat complet.** Conserver origine et provenance, inclure heure GPX ou date/heure explicitement déclarée à l’import, transporter sans remise à zéro et exposer le seul instant sûr à tous sans géométrie cachée. Les heures historiquement perdues ne peuvent être déduites. La lecture GPX/saisie UI seules ne règlent pas la persistance/projection. |
+| **F. Persistance éventuelle des résultats/statistiques de débrief** | **Partiellement.** Sources GPS et `auto_metrics` existent ; sauvegarde liée au débrief Coach, pas une publication automatique commune garantie dès Fin de piste. | **STOP SQL/backend conditionnel.** Le déclenchement immédiat des calculs est obligatoire, indépendamment de cette décision. Si les sources conservées et lectures après B–E permettent un recalcul commun fiable, aucun stockage neuf n’est nécessaire. Sinon, besoin minimal d’un résultat daté/versionné partagé, généré à la fin, relisible sans dépendre de la clôture ou d’un appareil ; inclure les observations météo réellement disponibles, gérer derniers points tardifs et révisions sans inventer de données. |
 
-Décisions produit restant à approuver : (D1) couloir activé mais suspendu en aveugle ; (D2) identité de la piste physique quand une référence ancienne est reposée ; (D3) définition/calibration minimale de l’indice numérique ; (D4) portée locale ou partagée des pauses ; (D5) lecture/édition historique après self-leave et validation personnelle versus clôture globale. Les comportements sûrs proposés ci-dessus sont explicites ; aucune ambiguïté n’est déléguée silencieusement à l’implémenteur.
+Ambiguïtés restantes limitées : définition déterministe et normalisation de l’indice de concordance (exigence immédiate validée, formule non spécifiée) ; choix technique recalcul/persistance F ; droits après **self-leave**, distincts de l’édition après clôture. Par défaut, la suppression de membership conserve son effet de retrait d’accès ; une conservation de droits après self-leave nécessiterait un complément explicite à C. Les participants qui restent membres conservent bien leur édition personnelle après clôture. Ni double aveugle, ni origine de l’âge, ni portée partagée des pauses, ni rôles de fin/clôture ne sont désormais des arbitrages ouverts.
 
 ## 13. Tests d’acceptation à prévoir dans le design
 
@@ -201,18 +232,19 @@ Décisions produit restant à approuver : (D1) couloir activé mais suspendu en 
 | Rendu/rôles | Conducteur, Traceur, Coach, Observateur, solo et Coach-poseur historiques ; mode normal/simple/double aveugle ; aucune action sans capacité. |
 | Avant/après départ | Préparation/pose/attente immédiate ou différée/parcours/completed/ended ; disparition des doublons et blocs devenus inutiles uniquement au bon moment. |
 | Mobile | Carte prioritaire, barre directe, safe areas, portrait/paysage, grand texte, clavier, focus et labels ; messages et non-lus conservés. |
-| Âge | Première position retardée par rapport au bouton de pose, piste ancienne, GPX horodaté/non horodaté, sauvegarde/duplication, repose d’une géométrie, fuseaux, heure future, pause/différé, reload ; âge au départ figé et délai après pose distinct. |
+| Âge | Première position retardée par rapport au bouton de pose, piste ancienne, GPX horodaté/non horodaté, sauvegarde/duplication et réutilisation plusieurs jours après sans remise à zéro, GPX sans heure exige date + heure explicites, fuseaux, heure future, pause/différé, reload ; âge au départ figé et délai après pose distinct. |
 | Âge et sécurité | Tous les rôles reçoivent seulement métadonnée autorisée ; aucune géométrie secrète téléchargée pour calculer l’âge. Valeur absente signalée. |
-| Pause | Temps/distance actifs figés, watchers et insertions GPS continuent ; déplacement pendant pause présent dans trace brute, absent de distance active ; aucun pont à reprise ; doubles clics, reload, changement de compte/session, deux onglets et trou réseau. |
+| Pause | Coach/Conducteur seuls autorisés, Traceur/Observateur refusés même via API ; état realtime partagé et reload multi-appareil ; commandes concurrentes ; temps/distance actifs figés, watchers et insertions GPS continuent ; déplacement pendant pause présent dans trace brute, absent de distance active ; aucun pont à reprise ; doubles clics, reload, changement de compte/session, deux onglets et trou réseau. |
 | Météo | Refresh automatique 7 min et manuel, erreur/cache ancien, données nulles, réponse tardive d’une autre session ; couloir actualisé sans changer le viewport. |
-| Couloir | Deux comptes font des choix opposés sans effet partagé, choix conservé après reload/reconnexion ; même compte autre appareil ; storage indisponible ; masquage autoritaire en aveugle et reprise à révélation. |
+| Couloir | Deux comptes font des choix opposés sans effet partagé, choix conservé après reload/reconnexion ; même compte autre appareil ; storage indisponible ; aucun dérivé de piste cachée pour Conducteur/Coach non autorisé, Traceur/Observateur selon leurs droits ; reprise seulement après révélation autorisée. |
 | Maintien | 1 999 ms = aucune fin ; 2 000 ms = une seule transition ; relâchement, pointercancel/leave, blur, changement de session/phase, masquage onglet, clavier répétitif et événement click synthétique ; aucune deuxième confirmation après completed. |
-| Fin et realtime | Réponse RPC avant/après événement realtime, réponses doublées, échec, timeout et réponse perdue ; sortie UI immédiate vers confirmation, données préservées, ouverture du débrief une seule fois, pas de fausse clôture. |
+| Fin et realtime | Réponse RPC avant/après événement realtime, réponses doublées, échec, timeout et réponse perdue ; sortie UI immédiate vers confirmation, données préservées, Conducteur seul termine globalement, tous quittent Terrain et ouvrent le même débrief une seule fois ; pas de fausse clôture. |
 | Pose | Fin de pose préserve choix immédiat/différé et autorisations ; ne termine jamais prématurément la session Conducteur. |
 | Superposition | Uniquement Traceur/Conducteur ; Coach/Observateur exclus ; objets et marqueurs présents/cliquables ; manque de trace réelle n’est pas remplacé silencieusement par scénario ; contrôles serveur respectés. |
 | Géométrie | Polylignes identiques, décalées, croisement, détour, boucle, densités différentes, trajet partiel, inversion, bruit/précision absente, long trou ; stabilité et limites documentées, aucun faux 100 %, aucun seuil utilisateur. |
-| Contributions | Vide accepté ; un seul bloc par auteur ; tous les lecteurs autorisés ; tentative API directe sur bloc d’autrui refusée ; identité/auteur/role falsifiés refusés ; conflit du même auteur détecté ; erreurs gardent brouillon. Tests serveur requis après autorisation B1. |
-| Clôture/historique | Observation vide + validation ; sauvegarde réussie/clôture échouée ; idempotence ; édition après ended sans modifier états/timestamps ; reload ne relance aucun GPS ni terrain ; droits après self-leave explicites. |
+| Contributions | Vide accepté ; un seul bloc par auteur ; tous les lecteurs autorisés ; tentative API directe sur bloc d’autrui refusée ; identité/auteur/role falsifiés refusés ; conflit du même auteur détecté ; erreurs gardent brouillon. Tests serveur requis après autorisation B/C. |
+| Clôture/historique | Trois états globaux explicites ; Coach non propriétaire et Conducteur peuvent clôturer, Traceur/Observateur non même propriétaires ; première clôture et courses idempotentes ; observation vide acceptée ; édition personnelle après clôture par tous sans rouvrir les états ; carte/statistiques/observations conservées ; reload sans GPS/Terrain ; droits après self-leave séparés. |
+| Calculs à la fin | Tous les résultats de section 10 démarrent à Fin de piste et apparaissent dans Débrief en cours avant toute clôture ; aucun bouton de calcul requis ; chargement/erreur/donnée absente explicites ; derniers points tardifs, reconnexion et cohérence des résultats entre participants ; clôture ne conditionne aucun calcul. |
 | Régressions | Wizard six étapes, création/invitations, GPS/realtime, attente différée, double aveugle, self-leave et session du créateur intacte ; anciens débriefs conservés. |
 
 Batterie de référence : `node scripts/check-v10-48.js`, `check-v10-47.js`, `check-v10-46.js`, `check-v10-45.js`, `check-v10-44.js`, `check-v10-43.js`, `check-v10-42-2.js`, `node scripts/verify-current-assets.js`, `git diff --check` (les noms abrégés désignent aussi les scripts sous `scripts/`). Conserver l’analyse syntaxique complète d’app.js. Les nouveaux tests devront couvrir des comportements réels, pas seulement rechercher des chaînes.
@@ -229,7 +261,9 @@ Auto-revue Superpowers effectuée :
 - Contradictions traitées explicitement : âge ≠ délai après pose ; fin de pose ≠ fin Conducteur ; fin de piste ≠ validation ≠ clôture ≠ suppression ; préférence couloir ≠ autorisation de voir la piste.
 - Scope contenu dans les quatre responsabilités de section 2 ; aucune implémentation ni migration décrite comme acquise.
 - Limites attestées par les sources locales, sans prétendre avoir audité la base distante.
-- B1 est bloquant pour l’objectif complet ; B2–B5 et D1–D5 identifient les arbitrages restants avec comportements sûrs proposés.
+- Arbitrages validés cohérents partout : origine du traçage conservée, GPX sans heure exige saisie explicite, Pause partagée Coach/Conducteur, fin globale Conducteur seul, clôture Coach/Conducteur, calculs dès la fin, édition du seul auteur maintenue après clôture.
+- STOP A–E explicites pour le contrat backend complet ; F conditionnel à la nécessité de persister les résultats. Aucun backend implicite ni migration écrite.
+- Confidentialité olfactive subordonnée aux droits existants ; aucun dérivé révélateur de piste cachée pour un rôle non autorisé. Les ambiguïtés restantes sont bornées en section 12.
 - Baseline testée avant ajout de ce document : huit scripts de régression/assets verts dans le nouveau worktree.
 
 **Arrêt demandé après commit de cette SPEC. Aucun plan n’est créé.** La revue de ce document et la décision explicite sur les points bloquants précèdent toute prochaine étape.
