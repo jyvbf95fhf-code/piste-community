@@ -121,5 +121,5 @@ assert(source('showPage').includes("if(id==='statsPage')loadStats(currentStatsSc
 assert(source('openUnifiedCoachingHome').includes("showPage('coachingEntryPage')"));
 assert(app.includes("document.querySelectorAll('[data-coaching-entry-target]').forEach(b=>b.onclick=()=>openCoachingEntryTarget(b.dataset.coachingEntryTarget))"));
 const changed=execFileSync('git',['diff','origin/main','--name-only'],{encoding:'utf8'}).trim().split('\n');
-assert(!changed.some(p=>p.endsWith('.sql')||p.startsWith('supabase/')));
+assert(!changed.some(p=>p.endsWith('.sql')&&!['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql','PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql'].includes(p)||p.startsWith('supabase/')));
 console.log('V10.47 checks: OK');

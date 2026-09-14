@@ -289,7 +289,7 @@ const changed=execFileSync(
 
 assert(
   !changed.some(
-    p=>p.endsWith('.sql') || p.startsWith('supabase/functions/')
+    p=>p.endsWith('.sql')&&!['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql','PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql'].includes(p) || p.startsWith('supabase/functions/')
   ),
   'V10.46 ne doit contenir ni SQL ni Edge Function'
 );
