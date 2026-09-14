@@ -619,6 +619,48 @@ if (process.argv.includes('--case=invitations') || !process.argv.some(arg => arg
   execFileSync(process.execPath,['-e',invitationHarness],{stdio:'inherit'});
 }
 
+if (process.argv.includes('--case=integration')) {
+  const submit = functionOnly('submitCoachingWizard');
+  const wizardStepSources = ['newCoachingWizard', 'changeCoachingWizard', 'validCoachingWizardStep', 'renderCoachingWizard', 'nextCoachingWizard', 'backCoachingWizard', 'leaveCoachingWizard']
+    .map(name => source(name)).join('\n');
+  assert(!wizardStepSources.includes('savePlanner'), 'les étapes 1 à 6 ne doivent pas sauvegarder une piste');
+  assert(!wizardStepSources.includes('createCoaching'), 'les étapes 1 à 6 ne doivent pas créer une session');
+  assert(!wizardStepSources.includes('supabase.'), 'les étapes 1 à 6 ne doivent pas écrire côté serveur');
+  assert(submit.includes('saveCoachingWizardDraft') && submit.includes('createCoaching'), 'le parcours final doit utiliser les mécanismes existants');
+  assert(submit.includes('preparation.routeId') && submit.includes('createdSessionId'), 'le parcours final doit conserver route_id et session créée');
+  assert(!submit.includes('chooseCoachingSearchV1045') && !submit.includes('p_search_mode'), 'le wizard ne doit pas remplacer la décision Traceur');
+
+  const integrationHarness = `(async()=>{
+    let coachingWizard={busy:false,error:null,createdSessionId:null,sessionType:'immediate',mode:'normal',creatorRole:'traceur',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:'draw',draft:{name:'Préparation',route:[{lat:48.3,lon:7.4},{lat:48.301,lon:7.401}]},routeId:null,origin:null}};
+    const savedRoute={id:'route-fixture-1',name:'Préparation',route:[{lat:48.3,lon:7.4},{lat:48.301,lon:7.401}]};
+    let saveCalls=0,attempt=0,openCalls=0;const requests=[];let trainingRoutes=[];
+    const validCoachingWizard=()=>({ok:true});
+    const renderCoachingWizard=()=>{};
+    const coachingWizardMembers=()=>coachingWizard.participants;
+    const saveCoachingWizardDraft=async()=>{saveCalls++;return savedRoute};
+    const openCoachingSession=async id=>{openCalls++;return id};
+    const createCoaching=async options=>{requests.push({...options});attempt++;if(attempt===1)return false;options.onCreated?.({id:'session-fixture-1'});return {id:'session-fixture-1'}};
+    ${submit}
+    const first=await submitCoachingWizard();
+    if(first!==false||saveCalls!==1||requests.length!==1||requests[0].routeId!=='route-fixture-1'||coachingWizard.createdSessionId!==null)throw new Error('échec initial ou route_id non capturé');
+    const retry=await submitCoachingWizard();
+    if(!retry||saveCalls!==1||requests.length!==2||requests[1].routeId!=='route-fixture-1'||coachingWizard.createdSessionId!=='session-fixture-1')throw new Error('retry doit réutiliser la même piste sans doublon');
+    if(requests.some(request=>Object.hasOwn(request,'p_search_mode')))throw new Error('p_search_mode ne doit pas être envoyé par le wizard');
+    trainingRoutes.push({id:'existing-route',name:'Existante',route:[{lat:48.4,lon:7.5},{lat:48.401,lon:7.501}]});
+    coachingWizard={busy:false,error:null,createdSessionId:null,sessionType:'immediate',mode:'normal',creatorRole:'traceur',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:'existing',draft:null,routeId:'existing-route',origin:'existing'}};
+    const saveBeforeExisting=saveCalls;await submitCoachingWizard();
+    if(saveCalls!==saveBeforeExisting||requests.at(-1).routeId!=='existing-route')throw new Error('une piste existante ne doit pas être resauvegardée');
+    coachingWizard={busy:false,error:null,createdSessionId:null,sessionType:'immediate',mode:'full_blind',creatorRole:'coach',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:null,draft:null,routeId:null,origin:null}};
+    await submitCoachingWizard();
+    if(requests.at(-1).routeId!==null||saveCalls!==saveBeforeExisting)throw new Error('full_blind Coach doit conserver l’absence de piste');
+    if(openCalls!==0||trainingRoutes.length!==2)throw new Error('le harnais a observé une mutation parasite');
+    return true;
+  })().catch(error=>{console.error(error.message);process.exit(1)})`;
+  execFileSync(process.execPath,['-e',integrationHarness],{stdio:'inherit'});
+  console.log('V10.48 integration checks: OK');
+  process.exit(0);
+}
+
 if (process.argv.includes('--case=lifecycle')) {
   const navigationSource = source('showPage');
   assert(navigationSource.includes("if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard()"), 'Terrain doit restaurer l’état normal du wizard');
