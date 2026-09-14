@@ -985,3 +985,28 @@ body.coaching-session-active #coachingPage{
 #coachingPage[data-entry-view] .coaching-grid{grid-template-columns:minmax(0,1fr)}
 #coachingEntryBack{margin:0 0 12px;min-height:44px}
 #coachingEntryBack[hidden]{display:none}
+
+/* V10.48 — Préparation Coaching guidée */
+#coachingWizardPanel{box-sizing:border-box;width:100%;max-width:430px;margin:0 auto;padding:18px 16px calc(18px + env(safe-area-inset-bottom));border:1px solid rgba(159,189,101,.28);border-radius:18px;background:#13232a;color:#edf3ee}
+#coachingWizardPanel.hidden{display:none}
+#coachingWizardPanel .coaching-wizard-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+#coachingWizardPanel .coaching-wizard-head h2{margin:3px 0 0;font-size:22px;line-height:1.25}
+#coachingWizardPanel .coaching-wizard-head .text-btn{min-height:44px;padding:8px;color:#c9d7da}
+#coachingWizardPanel .coaching-wizard-progress{margin:18px 0 24px;font-size:13px;font-weight:800}
+#coachingWizardPanel .coaching-wizard-progress-track{height:6px;margin-top:9px;overflow:hidden;border-radius:999px;background:rgba(255,255,255,.12)}
+#coachingWizardProgressBar{display:block;width:14.2857%;height:100%;border-radius:inherit;background:#b9d66c;transition:width .2s ease}
+#coachingWizardPanel [data-coaching-wizard-step]{min-height:180px}
+#coachingWizardPanel [data-coaching-wizard-step][hidden]{display:none}
+#coachingWizardPanel [data-coaching-wizard-step] h3{margin:0 0 10px;font-size:21px}
+#coachingWizardPanel [data-coaching-wizard-step] p{font-size:14px;line-height:1.55}
+#coachingWizardPanel .coaching-wizard-actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:10px;margin-top:18px}
+#coachingWizardPanel .coaching-wizard-actions button{min-height:48px;white-space:normal}
+#coachingWizardPanel .coaching-wizard-actions button[hidden]{display:none}
+#coachingWizardPanel button:focus-visible{outline:2px solid #b9d66c;outline-offset:3px}
+#coachingWizardPanel .coaching-wizard-track-options{display:grid;gap:10px;margin-top:16px}
+#coachingWizardPanel .coaching-wizard-track-options.hidden{display:none}
+#coachingWizardPanel .coaching-wizard-track-options button{min-height:48px;text-align:left}
+#coachingWizardPanel .coaching-wizard-track-options label{margin:2px 0 0}
+#coachingWizardTrackInfo{min-height:42px;margin:12px 0 0;padding:10px 12px;border-radius:12px;background:rgba(185,214,108,.08)}
+.planner-actions #useCoachingWizardPreparation{grid-column:1/-1;background:linear-gradient(135deg,#58d6a4,#b9d66c);color:#092018}
+@media(max-width:340px){#coachingWizardPanel{padding-right:12px;padding-left:12px;border-radius:14px}#coachingWizardPanel .coaching-wizard-actions{grid-template-columns:1fr}}
