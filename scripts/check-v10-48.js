@@ -638,6 +638,20 @@ assert.deepEqual(
 );
 assert(!changed.some(p => p.endsWith('.sql') || p.startsWith('supabase/')), 'Aucun SQL/Supabase');
 
+if (process.argv.includes('--case=submit')) {
+  const submitSource = source('submitCoachingWizard');
+  assert(source('saveCoachingWizardDraft').includes('savePlanner'), 'Le récapitulatif doit sauvegarder une piste locale au dernier clic');
+  assert(submitSource.includes('createCoaching'), 'Le récapitulatif doit réutiliser createCoaching');
+  assert(submitSource.includes('saveCoachingWizardDraft'), 'Le submit doit passer par le sauvegardeur local du wizard');
+  assert(submitSource.includes('routeId'), 'Le route_id doit être conservé par le wizard');
+  assert(submitSource.includes('coachingWizard.busy=true'), 'Le double clic doit être verrouillé');
+  assert(submitSource.includes('createdSessionId')&&submitSource.includes('openCoachingSession'), 'Un échec après création doit proposer la réouverture sans recréer');
+  assert(source('createCoaching').includes('onCreated'), 'createCoaching doit exposer le résultat créé au wizard');
+  assert(source('savePlanner').includes('onSaved'), 'savePlanner doit notifier le wizard après insertion');
+  console.log('V10.48 submit checks: OK');
+  process.exit(0);
+}
+
 if (process.argv.includes('--case=guardrails')) {
   console.log('V10.48 guardrails: OK');
 } else {

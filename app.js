@@ -114,7 +114,7 @@ function renderCoachingWizard(){
  document.querySelectorAll('[data-coaching-wizard-step]').forEach(section=>{const active=Number(section.dataset.coachingWizardStep)===step;section.hidden=!active;section.setAttribute('aria-hidden',String(!active))});
  setUiText('coachingWizardProgressText',`Étape ${step} sur 7`);
  const progress=$('coachingWizardProgressBar');if(progress){progress.setAttribute('aria-valuenow',String(step));progress.style.width=`${step/7*100}%`}
- const next=$('coachingWizardNext'),submit=$('coachingWizardSubmit');if(next){next.hidden=step===7;next.disabled=step<7&&!validCoachingWizardStep(step).ok}if(submit)submit.hidden=step!==7;
+ const next=$('coachingWizardNext'),submit=$('coachingWizardSubmit');if(next){next.hidden=step===7;next.disabled=step<7&&!validCoachingWizardStep(step).ok}if(submit){submit.hidden=step!==7;submit.disabled=step!==7||!validCoachingWizardStep(7).ok}
  setUiText('coachingWizardError',coachingWizard.error||'');
  const sessionType=$('coachingWizardSessionType'),mode=$('coachingWizardMode'),role=$('coachingWizardCreatorRole');
  if(sessionType)sessionType.value=coachingWizard.sessionType||'';
@@ -124,6 +124,7 @@ function renderCoachingWizard(){
  renderCoachingWizardInvitations();
  if(typeof renderCoachingWizardTrackPreparation==='function')renderCoachingWizardTrackPreparation();
  setUiText('coachingWizardIntentSummary',coachingWizard.sessionType?`Intention — à confirmer par le Traceur après la pose (${coachingWizard.sessionType==='deferred'?'Différée':'Immédiate'})`:'Intention — à confirmer par le Traceur après la pose');
+ setUiText('coachingWizardSummary',`Type : ${coachingWizard.sessionType||'—'} · Mode : ${coachingWizard.mode||'—'} · Rôle : ${coachingWizard.creatorRole||'—'} · Participants : ${coachingWizard.participants.length} · Préparation : ${coachingWizard.trackPreparation.method||'—'} · Invitations : ${coachingWizard.invitations.length}`);
 }
 function renderCoachingWizardParticipants(){
  const friend=$('coachingWizardParticipantFriend'),role=$('coachingWizardParticipantRole'),list=$('coachingWizardParticipants'),add=$('addCoachingWizardParticipant');if(!friend||!role||!list)return;
@@ -201,6 +202,28 @@ function renderCoachingWizardTrackPreparation(){
  if(!allowed){info.textContent='Le Traceur préparera la piste. Aucune carte ni import GPX ne vous est demandé.';return}
  existing.innerHTML='<option value="">Choisir une piste enregistrée</option>'+trainingRoutes.map(route=>`<option value="${esc(route.id)}">${esc(route.name||'Piste enregistrée')}</option>`).join('');existing.value=coachingWizard.trackPreparation.method==='existing'?coachingWizard.trackPreparation.routeId||'':'';
  const preparation=coachingWizard.trackPreparation;info.textContent=preparation.method==='existing'?'Piste enregistrée sélectionnée.':preparation.draft?`${preparation.method==='import'?'GPX importé':'Tracé dessiné'} prêt localement. Aucun enregistrement serveur avant la confirmation finale.`:'Choisissez une méthode de préparation.'
+}
+function restoreCoachingWizardDraftForSave(draft){
+ if(!draft||!Array.isArray(draft.route)||draft.route.length<2)return false;
+ plannerPoints=draft.route.map(point=>({...point}));plannerWaypoints=(draft.waypoints||[]).map(point=>({...point}));plannerRedoStack=[];plannerRoutingMode=draft.routing_mode||'trail';plannerOdorModel={...(draft.odor_model||plannerOdorModel});
+ if($('routeName'))$('routeName').value=draft.name||'Piste Coaching';if(typeof setOdorForm==='function')setOdorForm(draft.odor_model||{});return true
+}
+async function saveCoachingWizardDraft(){
+ const draft=coachingWizard.trackPreparation.draft;if(!restoreCoachingWizardDraftForSave(draft))return null;
+ return new Promise(resolve=>{savePlanner('copy','library',{stayOnPage:true,onSaved:saved=>resolve(saved||null),onError:()=>resolve(null)})})
+}
+async function submitCoachingWizard(){
+ if(coachingWizard.busy)return false;const valid=validCoachingWizard();if(!valid.ok){coachingWizard.error=valid.message;renderCoachingWizard();return false}
+ coachingWizard.busy=true;coachingWizard.error=null;renderCoachingWizard();let created=null;
+ try{
+  if(coachingWizard.createdSessionId){await openCoachingSession(coachingWizard.createdSessionId);return true}
+  const preparation=coachingWizard.trackPreparation,withoutRoute=coachingWizard.mode==='full_blind'&&['coach','driver'].includes(coachingWizard.creatorRole);
+  if(!withoutRoute&&!preparation.routeId&&preparation.draft){const saved=await saveCoachingWizardDraft();if(!saved?.id){coachingWizard.error='La piste n’a pas pu être enregistrée.';renderCoachingWizard();return false}preparation.routeId=saved.id;preparation.origin='saved';if(!trainingRoutes.some(route=>String(route.id)===String(saved.id)))trainingRoutes=[saved,...trainingRoutes]}
+  if(!withoutRoute&&preparation.routeId&&!trainingRoutes.some(route=>String(route.id)===String(preparation.routeId))){coachingWizard.error='La piste sélectionnée est introuvable.';renderCoachingWizard();return false}
+  const routeId=withoutRoute?null:preparation.routeId;created=await createCoaching({validated:true,routeId,members:coachingWizardMembers(),blindMode:coachingWizard.mode,withoutRoute,onCreated:data=>{coachingWizard.createdSessionId=data?.id||null}});
+  if(!created)return false;coachingWizard.createdSessionId=created.id;return true
+ }catch(error){coachingWizard.error=error.message||'Création impossible.';renderCoachingWizard();return false}
+ finally{coachingWizard.busy=false;renderCoachingWizard()}
 }
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
 let coachingLayerVisibility={planned:true,trace:true,actual:true,odor:true,markers:true},plannerDraftTimer=null,plannerReturnTarget='library',plannerPendingLatLng=null,plannerTouchTimer=null,plannerTouchOrigin=null,plannerSuppressClickUntil=0,plannerWizardContext=null;
@@ -578,10 +601,10 @@ function redrawPlanner(fit=true){
 function setPlannerTool(tool){plannerTool=tool;document.querySelectorAll('[data-planner-tool]').forEach(b=>b.classList.toggle('active',b.dataset.plannerTool===tool))}
 function addScenarioMarker(latlng){const def=SCENARIO_MARKERS[plannerTool]||SCENARIO_MARKERS.note,note=prompt(`${def.label} — ajoute une précision (facultatif) :`,'');if(note===null)return;let duration_min=null;if(plannerTool==='pause'){const d=prompt('Temps d’attente sur place en minutes (facultatif) :','5');if(d!==null&&d.trim())duration_min=Math.max(0,Number(d)||0)}plannerWaypoints.push({id:crypto.randomUUID?.()||String(Date.now()),type:plannerTool,lat:latlng.lat,lon:latlng.lng,note:note.trim(),duration_min,visibility:'coach'})}
 function renderPlannerScenarioList(){const el=$('plannerScenarioList');if(!el)return;el.innerHTML=plannerWaypoints.length?`<h4>Scénario (${plannerWaypoints.length})</h4>`+plannerWaypoints.map((w,i)=>{const d=SCENARIO_MARKERS[w.type]||SCENARIO_MARKERS.note;return `<div><span>${d.icon}</span><b>${esc(d.label)}</b><small>${w.duration_min?`${esc(w.duration_min)} min • `:''}${esc(w.note||'Sans note')}</small><button class="ghost-dark removeScenarioMarker" data-index="${i}">×</button></div>`}).join(''):'<p class="muted small">Aucun signe ajouté au scénario.</p>';el.querySelectorAll('.removeScenarioMarker').forEach(b=>b.onclick=()=>{plannerWaypoints.splice(Number(b.dataset.index),1);redrawPlanner()})}
-async function savePlanner(mode='copy',afterSave='library'){
+async function savePlanner(mode='copy',afterSave='library',options={}){
  const name=$('routeName').value.trim();
- if(!name){$('plannerMsg').textContent='Donne un nom au tracé.';return}
- if(plannerPoints.length<2){$('plannerMsg').textContent='Ajoute au moins deux points.';return}
+ if(!name){$('plannerMsg').textContent='Donne un nom au tracé.';options.onError?.(new Error('nom de piste absent'));return false}
+ if(plannerPoints.length<2){$('plannerMsg').textContent='Ajoute au moins deux points.';options.onError?.(new Error('piste trop courte'));return false}
  $('plannerMsg').textContent='Enregistrement…';
  const payload={owner_id:session.user.id,name,route:plannerPoints,planned_distance_km:Number(plannerDistance().toFixed(3)),waypoints:plannerWaypoints,odor_model:readOdorForm()};
  let error=null,saved=null;
@@ -590,8 +613,11 @@ async function savePlanner(mode='copy',afterSave='library'){
  }else{
   ({data:saved,error}=await supabase.from('training_routes').insert(payload).select().single());
  }
- if(error){$('plannerMsg').textContent='Erreur : '+error.message;return}
- window.editingTrainingRouteId=null;clearPlannerDraft();$('plannerMsg').textContent='Tracé enregistré.';await loadTrainingRoutes();
+ if(error){$('plannerMsg').textContent='Erreur : '+error.message;options.onError?.(error);return false}
+ options.onSaved?.(saved);
+ window.editingTrainingRouteId=null;clearPlannerDraft();$('plannerMsg').textContent='Tracé enregistré.';
+ try{await loadTrainingRoutes()}catch(loadError){options.onRefreshError?.(loadError)}
+ if(options.stayOnPage)return saved;
  if(plannerReturnTarget==='coaching'){plannerReturnTarget='library';showPage('coachingPage');setTimeout(()=>{if(saved?.id)$('coachingRouteSelect').value=saved.id;setUiText('coachingCreateMsg','Nouveau tracé sélectionné. Vous pouvez terminer la préparation de la session.')},180);return}
  if(afterSave==='start'&&saved){startTrainingWithPreparedRoute(saved,{preserveDisappearance:true});return}
  activityLibraryFilters.type='prepared';if($('libraryType'))$('libraryType').value='prepared';showPage('libraryPage');
@@ -843,18 +869,20 @@ async function chooseCoachingSearchV1045(mode){
 }
 async function markTraceurInPlaceV1045(){return coachingTransitionV1040('mark_coaching_traceur_ready_v1045')}
 
-async function createCoaching(){
- if(coachingCreateInFlight)return;const valid=validateCoachingConfigurationV10423();if(!valid.ok){setUiText('coachingCreateMsg',valid.message);return}
- const routeId=$('coachingRouteSelect')?.value,route=trainingRoutes.find(r=>String(r.id)===String(routeId));
- const withoutRoute=coachingWithoutPreparedRouteV1045();
- if(!withoutRoute&&(!route||route.route?.length<2)){setUiText('coachingCreateMsg','Choisissez un tracé préparé comportant au moins deux points.');return}
+async function createCoaching(options={}){
+ if(coachingCreateInFlight)return false;const valid=options.validated?{ok:true}:validateCoachingConfigurationV10423();if(!valid.ok){setUiText('coachingCreateMsg',valid.message);return false}
+ const routeId=options.routeId??$('coachingRouteSelect')?.value,route=trainingRoutes.find(r=>String(r.id)===String(routeId));
+ const withoutRoute=options.withoutRoute??coachingWithoutPreparedRouteV1045();
+ if(!withoutRoute&&(!route||route.route?.length<2)){setUiText('coachingCreateMsg','Choisissez un tracé préparé comportant au moins deux points.');return false}
  coachingCreateInFlight=true;const button=$('createCoachingSession');if(button)button.disabled=true;
  try{
-  const {data,error}=await supabase.rpc('create_coaching_people_session_v1045',{p_route_id:withoutRoute?null:route.id,p_members:coachingCreationMembers(),p_blind_mode:$('coachingVisibility')?.value||'normal'});
-  if(error||!data?.id){setUiText('coachingCreateMsg','Création impossible : '+(error?.message||'session absente'));return}
+  const {data,error}=await supabase.rpc('create_coaching_people_session_v1045',{p_route_id:withoutRoute?null:route.id,p_members:options.members||coachingCreationMembers(),p_blind_mode:options.blindMode||$('coachingVisibility')?.value||'normal'});
+  if(error||!data?.id){setUiText('coachingCreateMsg','Création impossible : '+(error?.message||'session absente'));return false}
+  options.onCreated?.(data);
   // Création atomique côté serveur : aucune personne fictive ni session partielle.
   await loadCoachingHub();await openCoachingSession(data.id);coachingFriendInvites=[];renderCoachingFriendInvites();markCoachingSyncV10423();setUiText('coachingCreateMsg','Session créée. Les participants peuvent rejoindre le départ.');
- }catch(e){setUiText('coachingCreateMsg','Création impossible : '+e.message)}finally{coachingCreateInFlight=false;if(button)button.disabled=false}
+  return data
+ }catch(e){setUiText('coachingCreateMsg','Création impossible : '+e.message);return false}finally{coachingCreateInFlight=false;if(button)button.disabled=false}
 }
 
 async function joinCoaching(){const code=$('coachingInviteInput').value.trim().toUpperCase(),role=$('coachingJoinRole').value;if(!code)return;const {data,error}=await supabase.rpc('join_coaching_session',{p_invite_code:code,p_role:role});if(error){$('coachingJoinMsg').textContent='Impossible de rejoindre : '+error.message;return}$('coachingJoinMsg').textContent=`Session rejointe comme ${coachingRoleLabel(role).toLowerCase()}.`;await loadCoachingHub();if(data)openCoachingSession(data)}
@@ -2873,6 +2901,7 @@ $('routeName').oninput=savePlannerDraft;
 $('openCoachingBtn').onclick=openUnifiedCoachingHome;
 document.querySelectorAll('[data-coaching-entry-target]').forEach(b=>b.onclick=()=>openCoachingEntryTarget(b.dataset.coachingEntryTarget));
 $('coachingWizardBack').onclick=()=>coachingWizard.back();$('coachingWizardNext').onclick=()=>coachingWizard.next();$('coachingWizardExit').onclick=()=>coachingWizard.leave();
+$('coachingWizardSubmit').onclick=submitCoachingWizard;
 $('coachingWizardSessionType').onchange=e=>{changeCoachingWizard({sessionType:e.target.value});renderCoachingWizard()};
 $('coachingWizardMode').onchange=e=>{changeCoachingWizard({mode:e.target.value});renderCoachingWizard()};
 $('coachingWizardCreatorRole').onchange=e=>{changeCoachingWizard({creatorRole:e.target.value});renderCoachingWizard()};
