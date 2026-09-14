@@ -11,7 +11,7 @@ const TRACE_LABELS=Object.freeze({planned:'Tracé prévu',traceur:'Traceur',cond
 for(const [layer,color] of Object.entries(TRACE_PALETTE))document.documentElement.style.setProperty(`--trace-${layer}`,color);
 
 const APP_RELEASE_NOTES=Object.freeze([
- {version:'10.48',date:'13/09/2026',title:'Nouveautés V10.48',items:['Préparation Coaching guidée en 7 étapes, avec création après validation du récapitulatif.'],important:[]},
+ {version:'10.48',date:'13/09/2026',title:'Nouveautés V10.48',items:['Préparation Coaching guidée en 6 étapes, avec choix de recherche après la pose.'],important:[]},
  {version:'10.47',date:'13/09/2026',title:'Nouveautés V10.47',items:['Nouvelle entrée Entraînement & Coaching avec accès direct à Créer, Rejoindre, Mes sessions et Progression d’équipe.'],important:[]},
  {version:'10.46',date:'13/09/2026',title:'Nouveautés V10.46',items:['Terrain Coaching plein écran.','Interface terrain plus compacte.','Suppression des messages pré-rédigés.','Badge de messages non lus et toast discret.'],important:[]},
  {version:'10.45',date:'10/09/2026',title:'Nouveautés V10.45',items:['Coaching différé : attendez le retour du Traceur, puis reprenez votre session.','Double aveugle : le Coach peut créer une session sans préparer la piste.'],important:['L’âge de piste au départ est calculé depuis la fin de pose enregistrée.']},
@@ -43,7 +43,7 @@ let coachingOrientation={permission:'unknown',listening:false,deviceHeading:null
 let coachingLiveWeather=null,coachingWeatherTimer=null,coachingWeatherLoading=false,coachingTerrainPaused=false,coachingFinishTimer=null,coachingFinishArmed=false;
 let coachingFriendInvites=[],coachingAcceptedFriends=[],coachingLongPressTimer=null,coachingLongPressOrigin=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
-function newCoachingWizard(){const state={active:false,currentStep:1,sessionType:null,mode:null,creatorRole:null,participants:[],trackPreparation:{method:null,draft:null,routeId:null,origin:null},invitations:[],busy:false,createdSessionId:null,error:null};Object.defineProperties(state,{reset:{value:()=>resetCoachingWizard(),enumerable:false},change:{value:changes=>changeCoachingWizard(changes),enumerable:false},valid:{value:()=>validCoachingWizard(),enumerable:false},next:{value:()=>nextCoachingWizard(),enumerable:false},back:{value:()=>backCoachingWizard(),enumerable:false},leave:{value:()=>leaveCoachingWizard(),enumerable:false}});return state}
+function newCoachingWizard(){const state={active:false,currentStep:1,mode:null,creatorRole:null,participants:[],trackPreparation:{method:null,draft:null,routeId:null,origin:null},invitations:[],busy:false,createdSessionId:null,error:null};Object.defineProperties(state,{reset:{value:()=>resetCoachingWizard(),enumerable:false},change:{value:changes=>changeCoachingWizard(changes),enumerable:false},valid:{value:()=>validCoachingWizard(),enumerable:false},next:{value:()=>nextCoachingWizard(),enumerable:false},back:{value:()=>backCoachingWizard(),enumerable:false},leave:{value:()=>leaveCoachingWizard(),enumerable:false}});return state}
 let coachingWizard=newCoachingWizard();
 function resetCoachingWizard(){if(typeof restoreCoachingWizardPlanner==='function')restoreCoachingWizardPlanner();const fresh=newCoachingWizard();Object.keys(fresh).forEach(key=>{coachingWizard[key]=fresh[key]});return coachingWizard}
 function coachingWizardMembers(participants=coachingWizard.participants,creatorRole=coachingWizard.creatorRole){const creatorId=typeof session!=='undefined'&&session?.user?.id?session.user.id:'wizard-creator';return [{user_id:creatorId,role:creatorRole},...participants]}
@@ -61,12 +61,13 @@ function addCoachingWizardParticipant(userId,role){
  coachingWizard.participants=candidate;renderCoachingWizard();return true
 }
 function removeCoachingWizardParticipant(index){if(!Number.isInteger(index)||index<0||index>=coachingWizard.participants.length)return false;coachingWizard.participants=coachingWizard.participants.filter((_,i)=>i!==index);renderCoachingWizard();return true}
+function updateCoachingWizardParticipantHint(){const hint=$('coachingWizardParticipantHint'),friend=$('coachingWizardParticipantFriend'),role=$('coachingWizardParticipantRole');if(!hint)return;hint.textContent=friend?.value&&role?.value?'Ajoutez ce participant avec + avant de continuer.':friend?.value||role?.value?'Sélectionnez une personne et un rôle, puis ajoutez avec +.':''}
 function changeCoachingWizard(changes={}){
- const sessionTypes=['immediate','deferred'],modes=['normal','simple_blind','full_blind'],roles=['coach','traceur','driver'];
+ const modes=['normal','simple_blind','full_blind'],roles=['coach','traceur','driver'];
  const previous=coachingWizard,trackPatch=changes.trackPreparation&&typeof changes.trackPreparation==='object'?changes.trackPreparation:null,creatorRoleBefore=previous.creatorRole;
  Object.keys(changes).filter(key=>key!=='trackPreparation'&&key!=='participants').forEach(key=>{
   if(!Object.prototype.hasOwnProperty.call(previous,key))return;
-  const allowed=key==='sessionType'?sessionTypes:key==='mode'?modes:key==='creatorRole'?roles:null;
+  const allowed=key==='mode'?modes:key==='creatorRole'?roles:null;
   if(allowed){if(allowed.includes(changes[key]))previous[key]=changes[key];return}
   previous[key]=changes[key]
  });
@@ -91,8 +92,8 @@ function changeCoachingWizard(changes={}){
  return previous
 }
 function validCoachingWizard(){
- const sessionTypes=['immediate','deferred'],modes=['normal','simple_blind','full_blind'],roles=['coach','traceur','driver'];
- if(!sessionTypes.includes(coachingWizard.sessionType)||!modes.includes(coachingWizard.mode)||!roles.includes(coachingWizard.creatorRole))return {ok:false,message:'Choisissez le type, le mode et votre rôle.'};
+ const modes=['normal','simple_blind','full_blind'],roles=['coach','traceur','driver'];
+ if(!modes.includes(coachingWizard.mode)||!roles.includes(coachingWizard.creatorRole))return {ok:false,message:'Choisissez le mode et votre rôle.'};
  const creatorId=typeof session!=='undefined'&&session?.user?.id?session.user.id:'wizard-creator',candidate=coachingWizard.participants,memberList=candidate.some(member=>member.user_id===creatorId)?candidate:[{user_id:creatorId,role:coachingWizard.creatorRole},...candidate],members=validateCoachingMembers(memberList);if(!members.ok)return members;
  const role=$('coachingCreatorRole'),mode=$('coachingVisibility'),roleBefore=role?.value,modeBefore=mode?.value;let canPrepare=true;
  try{if(role&&mode){role.value=coachingWizard.creatorRole;mode.value=coachingWizard.mode;canPrepare=coachingCanPrepareRouteV1045()}}
@@ -101,37 +102,36 @@ function validCoachingWizard(){
  return {ok:true}
 }
 function validCoachingWizardStep(step=coachingWizard.currentStep){
- if(step===1)return ['immediate','deferred'].includes(coachingWizard.sessionType)?{ok:true}:{ok:false,message:'Choisissez un type de session.'};
- if(step===2)return ['normal','simple_blind','full_blind'].includes(coachingWizard.mode)?{ok:true}:{ok:false,message:'Choisissez un mode.'};
- if(step===3)return ['coach','traceur','driver'].includes(coachingWizard.creatorRole)?{ok:true}:{ok:false,message:'Choisissez votre rôle.'};
- if(step===4)return validateCoachingMembers(coachingWizardMembers())
- if(step===5||step===7)return validCoachingWizard();
+ if(step===1)return ['normal','simple_blind','full_blind'].includes(coachingWizard.mode)?{ok:true}:{ok:false,message:'Choisissez un mode.'};
+ if(step===2)return ['coach','traceur','driver'].includes(coachingWizard.creatorRole)?{ok:true}:{ok:false,message:'Choisissez votre rôle.'};
+ if(step===3)return validateCoachingMembers(coachingWizardMembers())
+ if(step===4||step===6)return validCoachingWizard();
  return {ok:true}
 }
 function renderCoachingWizard(){
  const panel=$('coachingWizardPanel');if(!panel)return;
- const step=Math.max(1,Math.min(7,Number(coachingWizard.currentStep)||1));coachingWizard.currentStep=step;
+ if(coachingWizard.active===false){panel.classList.add('hidden');return}
+ const step=Math.max(1,Math.min(6,Number(coachingWizard.currentStep)||1));coachingWizard.currentStep=step;
  panel.classList.remove('hidden');
  document.querySelectorAll('[data-coaching-wizard-step]').forEach(section=>{const active=Number(section.dataset.coachingWizardStep)===step;section.hidden=!active;section.setAttribute('aria-hidden',String(!active))});
- setUiText('coachingWizardProgressText',`Étape ${step} sur 7`);
- const progress=$('coachingWizardProgressBar');if(progress){progress.setAttribute('aria-valuenow',String(step));progress.style.width=`${step/7*100}%`}
- const next=$('coachingWizardNext'),submit=$('coachingWizardSubmit');if(next){next.hidden=step===7;next.disabled=step<7&&!validCoachingWizardStep(step).ok}if(submit){submit.hidden=step!==7;submit.disabled=step!==7||!validCoachingWizardStep(7).ok}
+ setUiText('coachingWizardProgressText',`Étape ${step} sur 6`);
+ const progress=$('coachingWizardProgressBar');if(progress){progress.setAttribute('aria-valuenow',String(step));progress.style.width=`${step/6*100}%`}
+ const next=$('coachingWizardNext'),submit=$('coachingWizardSubmit');if(next){next.hidden=step===6;next.disabled=step<6&&!validCoachingWizardStep(step).ok}if(submit){submit.hidden=step!==6;submit.disabled=step!==6||!validCoachingWizardStep(6).ok}
  setUiText('coachingWizardError',coachingWizard.error||'');
- const sessionType=$('coachingWizardSessionType'),mode=$('coachingWizardMode'),role=$('coachingWizardCreatorRole');
- if(sessionType)sessionType.value=coachingWizard.sessionType||'';
+ const mode=$('coachingWizardMode'),role=$('coachingWizardCreatorRole');
  if(mode)mode.value=coachingWizard.mode||'';
  if(role)role.value=coachingWizard.creatorRole||'';
  renderCoachingWizardParticipants();
  renderCoachingWizardInvitations();
  if(typeof renderCoachingWizardTrackPreparation==='function')renderCoachingWizardTrackPreparation();
- setUiText('coachingWizardIntentSummary',coachingWizard.sessionType?`Intention — à confirmer par le Traceur après la pose (${coachingWizard.sessionType==='deferred'?'Différée':'Immédiate'})`:'Intention — à confirmer par le Traceur après la pose');
- setUiText('coachingWizardSummary',`Type : ${coachingWizard.sessionType||'—'} · Mode : ${coachingWizard.mode||'—'} · Rôle : ${coachingWizard.creatorRole||'—'} · Participants : ${coachingWizard.participants.length} · Préparation : ${coachingWizard.trackPreparation.method||'—'} · Invitations : ${coachingWizard.invitations.length}`);
+ setUiText('coachingWizardSummary',`Mode : ${coachingWizard.mode||'—'} · Rôle : ${coachingWizard.creatorRole||'—'} · Participants : ${coachingWizard.participants.length} · Préparation : ${coachingWizard.trackPreparation.method||'—'} · Invitations : ${coachingWizard.invitations.length}`);
 }
 function renderCoachingWizardParticipants(){
  const friend=$('coachingWizardParticipantFriend'),role=$('coachingWizardParticipantRole'),list=$('coachingWizardParticipants'),add=$('addCoachingWizardParticipant');if(!friend||!role||!list)return;
  const availableFriends=coachingWizardAvailableFriends(),availableRoles=coachingWizardAvailableRoles();
  friend.innerHTML='<option value="">Choisir une personne</option>'+availableFriends.map(item=>`<option value="${esc(item.user_id)}">${esc(item.display_name||'Participant')}</option>`).join('');
  role.innerHTML='<option value="">Choisir un rôle</option>'+availableRoles.map(value=>`<option value="${value}">${esc(coachingRoleLabel(value))}</option>`).join('');
+ updateCoachingWizardParticipantHint();
  list.innerHTML=coachingWizard.participants.map((member,index)=>`<div class="coaching-invite-row"><span>${esc(coachingParticipantName(member))}</span><span>${esc(coachingRoleLabel(member.role))}</span><button class="ghost-dark removeCoachingWizardParticipant" data-index="${index}" type="button" aria-label="Retirer">×</button></div>`).join('')||'<p class="muted small">Ajoutez les personnes nécessaires à la session.</p>';
  if(add)add.disabled=!availableFriends.length||!availableRoles.length;
  list.querySelectorAll('.removeCoachingWizardParticipant').forEach(button=>button.onclick=()=>removeCoachingWizardParticipant(Number(button.dataset.index)))
@@ -143,7 +143,7 @@ function renderCoachingWizardInvitations(){
  coachingWizard.invitations=invitations;
  list.innerHTML=invitations.map(member=>`<div class="coaching-invite-row"><span>${esc(coachingParticipantName(member))}</span><span>${esc(coachingRoleLabel(member.role))}</span></div>`).join('')||'<p class="muted small">Aucune invitation préparée.</p>';
 }
-function coachingWizardHasChoices(){return !!(coachingWizard.sessionType||coachingWizard.mode||coachingWizard.creatorRole||coachingWizard.participants.length||coachingWizard.trackPreparation.method||coachingWizard.trackPreparation.draft||coachingWizard.trackPreparation.routeId||coachingWizard.invitations.length)}
+function coachingWizardHasChoices(){return !!(coachingWizard.mode||coachingWizard.creatorRole||coachingWizard.participants.length||coachingWizard.trackPreparation.method||coachingWizard.trackPreparation.draft||coachingWizard.trackPreparation.routeId||coachingWizard.invitations.length)}
 function guardCoachingWizardNavigation(id){
  if(!coachingWizard.active||id==='coachingPage'||(id==='plannerPage'&&plannerReturnTarget==='coaching'))return true;
  if(coachingWizard.busy)return false;
@@ -155,7 +155,7 @@ function leaveCoachingWizard(){
  setCoachingEntryView(null);showPage('coachingEntryPage');return true
 }
 function nextCoachingWizard(){
- if(coachingWizard.busy||coachingWizard.currentStep>=7)return false;
+ if(coachingWizard.busy||coachingWizard.currentStep>=6)return false;
  const validation=validCoachingWizardStep();if(!validation.ok){coachingWizard.error=validation.message||'Complétez cette étape.';renderCoachingWizard();return false}
  coachingWizard.error=null;coachingWizard.currentStep++;renderCoachingWizard();return true
 }
@@ -206,7 +206,7 @@ function renderCoachingWizardTrackPreparation(){
 }
 function restoreCoachingWizardDraftForSave(draft){
  if(!draft||!Array.isArray(draft.route)||draft.route.length<2)return false;
- plannerPoints=draft.route.map(point=>({...point}));plannerWaypoints=(draft.waypoints||[]).map(point=>({...point}));plannerRedoStack=[];plannerRoutingMode=draft.routing_mode||'trail';plannerOdorModel={...(draft.odor_model||plannerOdorModel});
+ plannerPoints=draft.route.map(point=>({...point}));plannerWaypoints=(draft.waypoints||[]).map(point=>({...point}));plannerRedoStack=[];plannerRoutingMode=draft.routing_mode||'trail';plannerOdorModel={...(draft.odor_model||plannerOdorModel)};
  if($('routeName'))$('routeName').value=draft.name||'Piste Coaching';if(typeof setOdorForm==='function')setOdorForm(draft.odor_model||{});return true
 }
 async function saveCoachingWizardDraft(){
@@ -217,12 +217,12 @@ async function submitCoachingWizard(){
  if(coachingWizard.busy)return false;const valid=validCoachingWizard();if(!valid.ok){coachingWizard.error=valid.message;renderCoachingWizard();return false}
  coachingWizard.busy=true;coachingWizard.error=null;renderCoachingWizard();let created=null;
  try{
-  if(coachingWizard.createdSessionId){await openCoachingSession(coachingWizard.createdSessionId);return true}
+  if(coachingWizard.createdSessionId){if(await openCoachingSession(coachingWizard.createdSessionId)!==false)coachingWizard.active=false;return true}
   const preparation=coachingWizard.trackPreparation,withoutRoute=coachingWizard.mode==='full_blind'&&['coach','driver'].includes(coachingWizard.creatorRole);
   if(!withoutRoute&&!preparation.routeId&&preparation.draft){const saved=await saveCoachingWizardDraft();if(!saved?.id){coachingWizard.error='La piste n’a pas pu être enregistrée.';renderCoachingWizard();return false}preparation.routeId=saved.id;preparation.origin='saved';if(!trainingRoutes.some(route=>String(route.id)===String(saved.id)))trainingRoutes=[saved,...trainingRoutes]}
   if(!withoutRoute&&preparation.routeId&&!trainingRoutes.some(route=>String(route.id)===String(preparation.routeId))){coachingWizard.error='La piste sélectionnée est introuvable.';renderCoachingWizard();return false}
   const routeId=withoutRoute?null:preparation.routeId;created=await createCoaching({validated:true,routeId,members:coachingWizardMembers(),blindMode:coachingWizard.mode,withoutRoute,onCreated:data=>{coachingWizard.createdSessionId=data?.id||null}});
-  if(!created)return false;coachingWizard.createdSessionId=created.id;return true
+  if(!created)return false;coachingWizard.createdSessionId=created.id;coachingWizard.active=false;return true
  }catch(error){coachingWizard.error=error.message||'Création impossible.';renderCoachingWizard();return false}
  finally{coachingWizard.busy=false;renderCoachingWizard()}
 }
@@ -2904,9 +2904,9 @@ $('openCoachingBtn').onclick=openUnifiedCoachingHome;
 document.querySelectorAll('[data-coaching-entry-target]').forEach(b=>b.onclick=()=>openCoachingEntryTarget(b.dataset.coachingEntryTarget));
 $('coachingWizardBack').onclick=()=>coachingWizard.back();$('coachingWizardNext').onclick=()=>coachingWizard.next();$('coachingWizardExit').onclick=()=>coachingWizard.leave();
 $('coachingWizardSubmit').onclick=submitCoachingWizard;
-$('coachingWizardSessionType').onchange=e=>{changeCoachingWizard({sessionType:e.target.value});renderCoachingWizard()};
 $('coachingWizardMode').onchange=e=>{changeCoachingWizard({mode:e.target.value});renderCoachingWizard()};
 $('coachingWizardCreatorRole').onchange=e=>{changeCoachingWizard({creatorRole:e.target.value});renderCoachingWizard()};
+$('coachingWizardParticipantFriend').onchange=updateCoachingWizardParticipantHint;$('coachingWizardParticipantRole').onchange=updateCoachingWizardParticipantHint;
 $('addCoachingWizardParticipant').onclick=()=>addCoachingWizardParticipant($('coachingWizardParticipantFriend').value,$('coachingWizardParticipantRole').value);
 $('coachingWizardDrawRoute').onclick=()=>openCoachingWizardRoute('draw');$('coachingWizardImportRoute').onclick=()=>openCoachingWizardRoute('import');$('coachingWizardExistingRoute').onchange=e=>{if(e.target.value)selectCoachingWizardRoute(e.target.value)};
 $('undoPlannerPoint').onclick=undoPlanner;$('redoPlannerPoint').onclick=redoPlanner;

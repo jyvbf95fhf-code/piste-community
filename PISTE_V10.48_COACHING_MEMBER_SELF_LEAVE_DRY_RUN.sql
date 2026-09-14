@@ -1,0 +1,21 @@
+-- PISTE Community V10.48 — recette validée manuellement sur téléphone.
+-- Ce fichier est descriptif et n'effectue aucune écriture.
+
+-- Résultats attendus pour public.coaching_members DELETE :
+-- owner -> REFUSED (la policy self-delete exclut le propriétaire)
+-- Traceur invité -> ALLOWED pour sa propre ligne uniquement
+-- Conducteur invité -> ALLOWED pour sa propre ligne uniquement
+-- Observateur invité -> ALLOWED pour sa propre ligne uniquement
+-- Coach invité -> ALLOWED pour sa propre ligne uniquement
+-- utilisateur A -> REFUSED sur la ligne de B
+-- utilisateur externe/non-membre -> REFUSED
+
+-- Contrôles structurels à vérifier dans la base cible :
+-- 1. policy coaching_members_self_delete contient user_id = auth.uid().
+-- 2. policy exclut toute session dont owner_id = auth.uid().
+-- 3. le trigger exige OLD.user_id = auth.uid() pour les rôles terrain.
+-- 4. le trigger refuse le propriétaire pour ce mécanisme.
+-- 5. coaching_members.session_id référence coaching_sessions(id) ON DELETE CASCADE;
+--    cette cascade ne s'exécute que lors de la suppression d'une session, jamais
+--    lors de la suppression d'une ligne coaching_members.
+-- 6. aucune instruction DELETE/UPDATE/INSERT sur les tables de session associées.

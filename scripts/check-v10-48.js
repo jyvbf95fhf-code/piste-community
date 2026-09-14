@@ -5,6 +5,9 @@ const { execFileSync } = require('child_process');
 const read = p => fs.readFileSync(p, 'utf8');
 const app = read('app.js');
 const html = read('index.html');
+// Parse le module complet sans exécuter le code applicatif ni aucun appel réseau.
+execFileSync(process.execPath, ['--input-type=module', '--check'], { input: app, stdio: ['pipe', 'inherit', 'inherit'] });
+require('./check-v10-48-coaching-member-self-leave');
 const baseline = 'd57e83c8a8df7fb46b9a310174abd16bd3fa03d9';
 
 assert.equal(
@@ -20,6 +23,8 @@ function source(name, text = app) {
   const next = rest.slice(1).search(/\n(?:async )?function /);
   return next < 0 ? rest : rest.slice(0, next + 1);
 }
+
+assert(!app.includes('plannerOdorModel={...(draft.odor_model||plannerOdorModel});'), 'Syntaxe navigateur invalide dans restoreCoachingWizardDraftForSave');
 
 function functionOnly(name, text = app) {
   const start = text.search(new RegExp(`^(?:async )?function ${name}\\(`, 'm'));
@@ -101,7 +106,7 @@ if (process.argv.includes('--case=release')) {
   const sw = read('sw.js');
   assert.equal(app.match(/const APP_VERSION='([^']+)'/)?.[1], '10.48', 'APP_VERSION doit être 10.48');
   assert(app.includes("{version:'10.48',date:'13/09/2026'"), 'Release note V10.48 absente');
-  assert(app.includes('Préparation Coaching guidée en 7 étapes, avec création après validation du récapitulatif.'), 'Texte de release note incorrect');
+  assert(app.includes('Préparation Coaching guidée en 6 étapes, avec choix de recherche après la pose.'), 'Texte de release note incorrect');
   assert(html.includes('./app.js?v=1048-1'), 'Référence app.js V10.48 absente');
   assert(html.includes('./v2.css?v=2084'), 'Référence v2.css V10.48 absente');
   assert.match(sw, /const C='piste-community-v2123';/, 'Cache V10.48 absent');
@@ -131,10 +136,10 @@ if (process.argv.includes('--case=state') || !process.argv.some(arg => arg.start
     ${source('changeCoachingWizard')}
     ${source('validCoachingWizard')}
     coachingWizard=newCoachingWizard();
-    if(coachingWizard.currentStep!==1||coachingWizard.sessionType!==null||coachingWizard.mode!==null||coachingWizard.creatorRole!==null||coachingWizard.participants.length||coachingWizard.trackPreparation.method!==null||coachingWizard.busy||coachingWizard.error!==null)throw new Error('état neuf incorrect');
+    if(coachingWizard.currentStep!==1||coachingWizard.mode!==null||coachingWizard.creatorRole!==null||coachingWizard.participants.length||coachingWizard.trackPreparation.method!==null||coachingWizard.busy||coachingWizard.error!==null)throw new Error('état neuf incorrect');
     const participants=[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}];
-    changeCoachingWizard({sessionType:'immediate',mode:'normal',creatorRole:'coach',participants});
-    if(coachingWizard.sessionType!=='immediate'||coachingWizard.mode!=='normal'||coachingWizard.creatorRole!=='coach'||coachingWizard.participants!==participants)throw new Error('change ne conserve pas les choix valides');
+    changeCoachingWizard({mode:'normal',creatorRole:'coach',participants});
+    if(coachingWizard.mode!=='normal'||coachingWizard.creatorRole!=='coach'||coachingWizard.participants!==participants)throw new Error('change ne conserve pas les choix valides');
     const traceurParticipants=[{user_id:'driver-1',role:'driver'},{user_id:'coach-1',role:'coach'}];
     changeCoachingWizard({creatorRole:'traceur',participants:traceurParticipants});
     if(coachingWizard.creatorRole!=='traceur'||coachingWizard.participants!==traceurParticipants)throw new Error('créateur Traceur refusé');
@@ -151,7 +156,7 @@ if (process.argv.includes('--case=state') || !process.argv.some(arg => arg.start
     changeCoachingWizard({trackPreparation:{draft:{name:'edited'}}});
     if(coachingWizard.trackPreparation.routeId!==null)throw new Error('route sauvegardée non invalidée après édition');
     resetCoachingWizard();
-    if(coachingWizard.currentStep!==1||coachingWizard.sessionType!==null||coachingWizard.participants.length||coachingWizard.trackPreparation.draft!==null)throw new Error('reset incomplet');
+    if(coachingWizard.currentStep!==1||coachingWizard.participants.length||coachingWizard.trackPreparation.draft!==null)throw new Error('reset incomplet');
     if(coachingFriendInvites.length!==1||activeCoachingSession.id!=='active-session')throw new Error('reset a modifié des globals runtime');
     return true;
   })()`;
@@ -174,18 +179,18 @@ if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.sta
     ${source('validCoachingWizard')}
     ${source('validCoachingWizardStep')}
     coachingWizard=newCoachingWizard();
-    if(coachingWizard.sessionType!==null||coachingWizard.mode!==null||coachingWizard.creatorRole!==null)throw new Error('les choix du wizard doivent être vides par défaut');
-    for(const sessionType of ['immediate','deferred']) for(const mode of ['normal','simple_blind','full_blind']) for(const creatorRole of ['coach','traceur','driver']){
+    if(coachingWizard.mode!==null||coachingWizard.creatorRole!==null)throw new Error('les choix du wizard doivent être vides par défaut');
+    for(const mode of ['normal','simple_blind','full_blind']) for(const creatorRole of ['coach','traceur','driver']){
       coachingWizard.reset();
-      coachingWizard.change({sessionType,mode,creatorRole,participants:[]});
-      if(coachingWizard.sessionType!==sessionType||coachingWizard.mode!==mode||coachingWizard.creatorRole!==creatorRole)throw new Error('choix non conservé: '+sessionType+'/'+mode+'/'+creatorRole);
+      coachingWizard.change({mode,creatorRole,participants:[]});
+      if(coachingWizard.mode!==mode||coachingWizard.creatorRole!==creatorRole)throw new Error('choix non conservé: '+mode+'/'+creatorRole);
       if(!validCoachingWizardStep(1).ok||!validCoachingWizardStep(2).ok||!validCoachingWizardStep(3).ok)throw new Error('choix valide refusé');
     }
     coachingWizard.reset();
     coachingWizard.change({creatorRole:'observer'});
     if(coachingWizard.creatorRole==='observer')throw new Error('un observateur ne peut pas être créateur');
-    coachingWizard.change({sessionType:'immediate'});
-    if(validCoachingWizardStep(2).ok||validCoachingWizardStep(3).ok)throw new Error('champ manquant accepté');
+    coachingWizard.change({});
+    if(validCoachingWizardStep(1).ok||validCoachingWizardStep(2).ok)throw new Error('champ manquant accepté');
     const wizardFunctions=['newCoachingWizard','changeCoachingWizard','validCoachingWizard','validCoachingWizardStep','renderCoachingWizard','nextCoachingWizard','backCoachingWizard','leaveCoachingWizard'];
     for(const name of wizardFunctions){
       const wizardText=(${JSON.stringify(['newCoachingWizard','changeCoachingWizard','validCoachingWizard','validCoachingWizardStep','renderCoachingWizard','nextCoachingWizard','backCoachingWizard','leaveCoachingWizard'].map(name=>source(name)).join('\n'))});
@@ -194,15 +199,15 @@ if (process.argv.includes('--case=choices') || !process.argv.some(arg => arg.sta
     return true;
   })()`;
   execFileSync(process.execPath,['-e',choiceHarness],{stdio:'inherit'});
-  assert(html.includes('id="coachingWizardSessionType"'), 'Choix du type de session absent');
+  assert(!html.includes('id="coachingWizardSessionType"'), 'Ancien choix du type de session encore présent');
   assert(html.includes('id="coachingWizardMode"'), 'Choix du mode absent');
   assert(html.includes('id="coachingWizardCreatorRole"'), 'Choix du rôle absent');
-  assert(html.includes('Intention — à confirmer par le Traceur après la pose'), 'Récapitulatif de l’intention absent');
+  assert(!html.includes('Intention — à confirmer par le Traceur après la pose'), 'Ancienne intention encore affichée dans le récapitulatif');
   for (const name of ['newCoachingWizard','changeCoachingWizard','validCoachingWizard','validCoachingWizardStep','renderCoachingWizard','nextCoachingWizard','backCoachingWizard','leaveCoachingWizard']) {
     assert(!source(name).includes('chooseCoachingSearchV1045'), `${name} ne doit pas appeler chooseCoachingSearchV1045`);
     assert(!source(name).includes('p_search_mode'), `${name} ne doit pas envoyer p_search_mode`);
   }
-  const wizardWiring = app.match(/\$\('coachingWizardSessionType'\)[\s\S]*?\$\('coachingWizardCreatorRole'\)[^\n]*/)?.[0] || '';
+  const wizardWiring = app.match(/\$\('coachingWizardMode'\)[\s\S]*?\$\('coachingWizardCreatorRole'\)[^\n]*/)?.[0] || '';
   assert(wizardWiring && !wizardWiring.includes('chooseCoachingSearchV1045') && !wizardWiring.includes('p_search_mode'), 'Le câblage du wizard ne doit pas appeler la décision Traceur ni envoyer p_search_mode');
 }
 
@@ -213,11 +218,12 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
     'coachingWizardAvailableFriends',
     'coachingWizardAvailableRoles',
     'addCoachingWizardParticipant',
-    'removeCoachingWizardParticipant'
+    'removeCoachingWizardParticipant',
+    'updateCoachingWizardParticipantHint'
   ];
   participantFunctions.forEach(name => source(name));
   const participantHarness = `(function(){
-    const fields={coachingCreatorRole:{value:''},coachingVisibility:{value:''}};
+    const fields={coachingCreatorRole:{value:''},coachingVisibility:{value:''},coachingWizardParticipantFriend:{value:''},coachingWizardParticipantRole:{value:''},coachingWizardParticipantHint:{textContent:''}};
     const $=id=>fields[id]||null;
     const session={user:{id:'creator-1'}};
     const coachingAcceptedFriends=[
@@ -240,17 +246,27 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
     ${source('coachingWizardAvailableRoles')}
     ${source('addCoachingWizardParticipant')}
     ${source('removeCoachingWizardParticipant')}
+    ${source('updateCoachingWizardParticipantHint')}
     ${source('changeCoachingWizard')}
     ${source('validCoachingWizardStep')}
 
-    coachingWizard.change({sessionType:'immediate',mode:'normal',creatorRole:'coach'});
+    coachingWizard.change({mode:'normal',creatorRole:'coach'});
+    fields.coachingWizardParticipantFriend.value='driver-1';
+    fields.coachingWizardParticipantRole.value='driver';
+    updateCoachingWizardParticipantHint();
+    if(!fields.coachingWizardParticipantHint.textContent.includes('Ajoutez ce participant avec +'))throw new Error('la sélection non ajoutée doit expliquer l’usage de +');
+    if(coachingWizard.participants.length!==0)throw new Error('une sélection seule ne doit pas modifier les participants');
+    fields.coachingWizardParticipantFriend.value='';
+    fields.coachingWizardParticipantRole.value='';
+    updateCoachingWizardParticipantHint();
+    if(fields.coachingWizardParticipantHint.textContent!=='')throw new Error('le message de sélection doit disparaître après reset');
     if(!addCoachingWizardParticipant('traceur-1','traceur'))throw new Error('le premier membre intermédiaire valide doit être accepté');
-    if(coachingWizard.participants.length!==1||validCoachingWizardStep(4).ok)throw new Error('le premier membre ne doit pas être confondu avec une équipe complète');
+    if(coachingWizard.participants.length!==1||validCoachingWizardStep(3).ok)throw new Error('le premier membre ne doit pas être confondu avec une équipe complète');
     if(coachingWizardAvailableFriends().some(friend=>friend.user_id==='traceur-1'))throw new Error('une personne déjà utilisée reste proposée');
     const rolesAfterTraceur=coachingWizardAvailableRoles();
     if(rolesAfterTraceur.includes('coach')||rolesAfterTraceur.includes('traceur')||!rolesAfterTraceur.includes('driver')||!rolesAfterTraceur.includes('observer'))throw new Error('les rôles occupés ne sont pas filtrés');
-    if(!addCoachingWizardParticipant('driver-1','driver')||!validCoachingWizardStep(4).ok)throw new Error('équipe Coach complète refusée');
-    if(!addCoachingWizardParticipant('observer-1','observer')||!validCoachingWizardStep(4).ok)throw new Error('observateur facultatif refusé');
+    if(!addCoachingWizardParticipant('driver-1','driver')||!validCoachingWizardStep(3).ok)throw new Error('équipe Coach complète refusée');
+    if(!addCoachingWizardParticipant('observer-1','observer')||!validCoachingWizardStep(3).ok)throw new Error('observateur facultatif refusé');
     if(addCoachingWizardParticipant('driver-1','observer')||addCoachingWizardParticipant('observer-2','driver'))throw new Error('doublon de personne ou de rôle accepté');
     if(coachingFriendInvites.length!==1||coachingFriendInvites[0].user_id!=='legacy-friend')throw new Error('participants synchronisés avant submit vers p_members');
 
@@ -259,20 +275,20 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
       traceur:[{user_id:'driver-1',role:'driver'}],
       driver:[{user_id:'traceur-1',role:'traceur'}]
     };
-    for(const sessionType of ['immediate','deferred'])for(const mode of ['normal','simple_blind','full_blind'])for(const creatorRole of ['coach','traceur','driver']){
-      coachingWizard.change({sessionType,mode,creatorRole});
+    for(const mode of ['normal','simple_blind','full_blind'])for(const creatorRole of ['coach','traceur','driver']){
+      coachingWizard.change({mode,creatorRole});
       coachingWizard.participants=validTeams[creatorRole].map(member=>({...member}));
-      if(!validCoachingWizardStep(4).ok)throw new Error('équipe valide refusée pour '+sessionType+'/'+mode+'/'+creatorRole);
+      if(!validCoachingWizardStep(3).ok)throw new Error('équipe valide refusée pour '+mode+'/'+creatorRole);
       coachingWizard.participants=[...validTeams[creatorRole],{user_id:'observer-1',role:'observer'}];
-      if(!validCoachingWizardStep(4).ok)throw new Error('observateur refusé pour '+sessionType+'/'+mode+'/'+creatorRole);
+      if(!validCoachingWizardStep(3).ok)throw new Error('observateur refusé pour '+mode+'/'+creatorRole);
       if(creatorRole!=='coach'){
         coachingWizard.participants=[...validTeams[creatorRole],{user_id:'coach-1',role:'coach'}];
-        if(!validCoachingWizardStep(4).ok)throw new Error('Coach optionnel refusé pour '+creatorRole);
+        if(!validCoachingWizardStep(3).ok)throw new Error('Coach optionnel refusé pour '+creatorRole);
       }
     }
-    coachingWizard.change({sessionType:'deferred',mode:'full_blind',creatorRole:'coach'});
+    coachingWizard.change({mode:'full_blind',creatorRole:'coach'});
     coachingWizard.participants=[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}];
-    if(!validCoachingWizardStep(4).ok)throw new Error('Coach double aveugle doit pouvoir inviter Traceur et Conducteur');
+    if(!validCoachingWizardStep(3).ok)throw new Error('Coach double aveugle doit pouvoir inviter Traceur et Conducteur');
 
     const invalidTeams=[
       [{user_id:'same',role:'traceur'},{user_id:'same',role:'driver'}],
@@ -281,7 +297,7 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
       [{user_id:'driver-1',role:'driver'}]
     ];
     coachingWizard.creatorRole='coach';
-    for(const participants of invalidTeams){coachingWizard.participants=participants;if(validCoachingWizardStep(4).ok)throw new Error('équipe invalide acceptée: '+JSON.stringify(participants))}
+    for(const participants of invalidTeams){coachingWizard.participants=participants;if(validCoachingWizardStep(3).ok)throw new Error('équipe invalide acceptée: '+JSON.stringify(participants))}
 
     coachingWizard.creatorRole='coach';
     coachingWizard.participants=[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'},{user_id:'observer-1',role:'observer'}];
@@ -313,6 +329,7 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
   })().catch(error=>{console.error(error.message);process.exit(1)})`;
   execFileSync(process.execPath,['-e',asyncFriendsHarness],{stdio:'inherit'});
   for(const id of ['coachingWizardParticipantFriend','coachingWizardParticipantRole','addCoachingWizardParticipant','coachingWizardParticipants'])assert(html.includes(`id="${id}"`), `Contrôle participant absent: ${id}`);
+  assert(html.includes('id="coachingWizardParticipantHint"'), 'Message d’aide participant absent');
 }
 
 if (process.argv.includes('--case=track') || !process.argv.some(arg => arg.startsWith('--case='))) {
@@ -379,7 +396,7 @@ if (process.argv.includes('--case=track') || !process.argv.some(arg => arg.start
     ${source('useCoachingWizardPreparation')}
     ${source('runPlannerSave')}
 
-    coachingWizard.change({sessionType:'immediate',mode:'normal',creatorRole:'coach',participants:[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}]});
+    coachingWizard.change({mode:'normal',creatorRole:'coach',participants:[{user_id:'traceur-1',role:'traceur'},{user_id:'driver-1',role:'driver'}]});
     if(!selectCoachingWizardRoute('route-1'))throw new Error('piste enregistrée valide refusée');
     if(coachingWizard.trackPreparation.method!=='existing'||coachingWizard.trackPreparation.routeId!=='route-1'||coachingWizard.trackPreparation.origin!=='existing'||fields.coachingRouteSelect.value!=='route-1')throw new Error('sélection enregistrée non mémorisée');
     if(selectCoachingWizardRoute('missing'))throw new Error('identifiant de piste inconnu accepté');
@@ -451,7 +468,6 @@ if (process.argv.includes('--case=track') || !process.argv.some(arg => arg.start
 
 if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.startsWith('--case='))) {
   const stepTitles = [
-    'Type de session',
     'Mode',
     'Ton rôle',
     'Participants',
@@ -461,9 +477,9 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
   ];
   const wizardPanel = html.match(/    <div id="coachingWizardPanel"[\s\S]*?<\/div>\n    <div class="record-head">/);
   assert(wizardPanel, 'Shell du wizard introuvable');
-  assert.equal((wizardPanel[0].match(/data-coaching-wizard-step="[1-7]"/g) || []).length, 7, 'Le wizard doit afficher sept étapes');
+  assert.equal((wizardPanel[0].match(/data-coaching-wizard-step="[1-6]"/g) || []).length, 6, 'Le wizard doit afficher six étapes');
   for (const title of stepTitles) assert(wizardPanel[0].includes(`>${title}<`), `Titre d'étape absent: ${title}`);
-  assert(wizardPanel[0].includes('Étape 1 sur 7'), 'Progression initiale absente');
+  assert(wizardPanel[0].includes('Étape 1 sur 6'), 'Progression initiale absente');
   assert(wizardPanel[0].includes('id="coachingWizardBack"'), 'Retour du wizard absent');
   assert(wizardPanel[0].includes('id="coachingWizardNext"'), 'Suivant du wizard absent');
 
@@ -484,7 +500,7 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     const createBlock=element(),joinBlock=element();
     fields.coachingCreatorRole.closest=()=>createBlock;fields.coachingInviteInput.closest=()=>joinBlock;
     fields.coachingPage.classList.add('active');
-    const steps=Array.from({length:7},(_,index)=>{const node=element();node.dataset.coachingWizardStep=String(index+1);return node});
+    const steps=Array.from({length:6},(_,index)=>{const node=element();node.dataset.coachingWizardStep=String(index+1);return node});
     const $=id=>fields[id]||null;
     const setUiText=(id,value)=>{const node=$(id);if(node)node.textContent=value;return node};
     const document={querySelectorAll:selector=>selector==='[data-coaching-wizard-step]'?steps:[]};
@@ -512,17 +528,17 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     ${source('openCoachingEntryTarget')}
     if(!['next','back','leave'].every(name=>typeof coachingWizard[name]==='function'))throw new Error('méthodes de navigation absentes de l’état');
     openCoachingEntryTarget('coachingCreatorRole');
-    if(coachingWizard.currentStep!==1||fields.coachingWizardPanel.classList.contains('hidden')||fields.coachingWizardProgressText.textContent!=='Étape 1 sur 7')throw new Error('Créer doit ouvrir l’étape 1 sur 7');
+    if(coachingWizard.currentStep!==1||fields.coachingWizardPanel.classList.contains('hidden')||fields.coachingWizardProgressText.textContent!=='Étape 1 sur 6')throw new Error('Créer doit ouvrir l’étape 1 sur 6');
     if(!fields.coachingWizardNext.disabled)throw new Error('Suivant doit être indisponible tant que l’étape est invalide');
     if(!createBlock.classList.contains('coaching-entry-hidden')||!joinBlock.classList.contains('coaching-entry-hidden'))throw new Error('anciens formulaires visibles derrière le wizard');
     const beforeInvalid=coachingWizard.currentStep;
     coachingWizard.next();
     if(coachingWizard.currentStep!==beforeInvalid)throw new Error('Suivant invalide a changé d’étape');
-    coachingWizard.sessionType='immediate';stepValid=true;coachingWizard.next();
-    if(coachingWizard.currentStep!==2||fields.coachingWizardProgressText.textContent!=='Étape 2 sur 7'||!steps[0].hidden||steps[1].hidden)throw new Error('progression Suivant incorrecte');
+    stepValid=true;coachingWizard.mode='normal';coachingWizard.next();
+    if(coachingWizard.currentStep!==2||fields.coachingWizardProgressText.textContent!=='Étape 2 sur 6'||!steps[0].hidden||steps[1].hidden)throw new Error('progression Suivant incorrecte');
     coachingWizard.back();
-    if(coachingWizard.currentStep!==1||fields.coachingWizardProgressText.textContent!=='Étape 1 sur 7')throw new Error('Retour interne incorrect');
-    coachingWizard.sessionType=null;coachingWizard.back();
+    if(coachingWizard.currentStep!==1||fields.coachingWizardProgressText.textContent!=='Étape 1 sur 6')throw new Error('Retour interne incorrect');
+    coachingWizard.back();
     if(!calls.some(call=>Array.isArray(call)&&call[0]==='page'&&call[1]==='coachingEntryPage'))throw new Error('Retour initial ne rejoint pas les quatre cartes');
     for(const target of ['coachingInviteInput','coachingSessionsCard']){
       calls.length=0;openCoachingEntryTarget(target);
@@ -559,11 +575,11 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     ${functionOnly('resetCoachingWizard')}
     ${navigationGuardSource}
     ${functionOnly('showPage')}
-    const prepare=()=>{coachingWizard.active=true;coachingWizard.sessionType='immediate';coachingWizard.busy=false;Object.values(pages).forEach(node=>node.classList.remove('active'));pages.coachingPage.classList.add('active');confirmations=0};
+    const prepare=()=>{coachingWizard.active=true;coachingWizard.mode='normal';coachingWizard.busy=false;Object.values(pages).forEach(node=>node.classList.remove('active'));pages.coachingPage.classList.add('active');confirmations=0};
     prepare();
     const rejected=showPage('homePage');
     if(rejected!==false||!pages.coachingPage.classList.contains('active')||pages.homePage.classList.contains('active'))throw new Error('navigation globale non bloquée après refus');
-    if(confirmations!==1||coachingWizard.sessionType!=='immediate'||!coachingWizard.active)throw new Error('refus doit conserver le wizard après une seule confirmation');
+    if(confirmations!==1||!coachingWizard.active)throw new Error('refus doit conserver le wizard après une seule confirmation');
     prepare();
     let stopped=false;
     const nav={dataset:{page:'homePage'}};
@@ -573,7 +589,7 @@ if (process.argv.includes('--case=shell') || !process.argv.some(arg => arg.start
     if(confirmations!==1||!stopped||!pages.coachingPage.classList.contains('active'))throw new Error('un clic persistant refusé doit demander une seule confirmation');
     prepare();confirmResult=true;
     if(showPage('homePage')===false||!pages.homePage.classList.contains('active'))throw new Error('navigation globale acceptée doit aboutir');
-    if(confirmations!==1||coachingWizard.active||coachingWizard.sessionType!==null)throw new Error('acceptation doit réinitialiser le wizard une seule fois');
+    if(confirmations!==1||coachingWizard.active)throw new Error('acceptation doit réinitialiser le wizard une seule fois');
     prepare();coachingWizard.busy=true;confirmResult=true;
     if(showPage('profilePage')!==false||!pages.coachingPage.classList.contains('active')||confirmations!==0)throw new Error('navigation volontaire doit rester bloquée pendant busy');
     prepare();confirmResult=false;plannerReturnTarget='coaching';
@@ -631,7 +647,7 @@ if (process.argv.includes('--case=integration')) {
   assert(!submit.includes('chooseCoachingSearchV1045') && !submit.includes('p_search_mode'), 'le wizard ne doit pas remplacer la décision Traceur');
 
   const integrationHarness = `(async()=>{
-    let coachingWizard={busy:false,error:null,createdSessionId:null,sessionType:'immediate',mode:'normal',creatorRole:'traceur',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:'draw',draft:{name:'Préparation',route:[{lat:48.3,lon:7.4},{lat:48.301,lon:7.401}]},routeId:null,origin:null}};
+    let coachingWizard={busy:false,error:null,createdSessionId:null,mode:'normal',creatorRole:'traceur',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:'draw',draft:{name:'Préparation',route:[{lat:48.3,lon:7.4},{lat:48.301,lon:7.401}]},routeId:null,origin:null}};
     const savedRoute={id:'route-fixture-1',name:'Préparation',route:[{lat:48.3,lon:7.4},{lat:48.301,lon:7.401}]};
     let saveCalls=0,attempt=0,openCalls=0;const requests=[];let trainingRoutes=[];
     const validCoachingWizard=()=>({ok:true});
@@ -647,10 +663,10 @@ if (process.argv.includes('--case=integration')) {
     if(!retry||saveCalls!==1||requests.length!==2||requests[1].routeId!=='route-fixture-1'||coachingWizard.createdSessionId!=='session-fixture-1')throw new Error('retry doit réutiliser la même piste sans doublon');
     if(requests.some(request=>Object.hasOwn(request,'p_search_mode')))throw new Error('p_search_mode ne doit pas être envoyé par le wizard');
     trainingRoutes.push({id:'existing-route',name:'Existante',route:[{lat:48.4,lon:7.5},{lat:48.401,lon:7.501}]});
-    coachingWizard={busy:false,error:null,createdSessionId:null,sessionType:'immediate',mode:'normal',creatorRole:'traceur',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:'existing',draft:null,routeId:'existing-route',origin:'existing'}};
+    coachingWizard={busy:false,error:null,createdSessionId:null,mode:'normal',creatorRole:'traceur',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:'existing',draft:null,routeId:'existing-route',origin:'existing'}};
     const saveBeforeExisting=saveCalls;await submitCoachingWizard();
     if(saveCalls!==saveBeforeExisting||requests.at(-1).routeId!=='existing-route')throw new Error('une piste existante ne doit pas être resauvegardée');
-    coachingWizard={busy:false,error:null,createdSessionId:null,sessionType:'immediate',mode:'full_blind',creatorRole:'coach',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:null,draft:null,routeId:null,origin:null}};
+    coachingWizard={busy:false,error:null,createdSessionId:null,mode:'full_blind',creatorRole:'coach',participants:[{user_id:'driver-1',role:'driver'}],trackPreparation:{method:null,draft:null,routeId:null,origin:null}};
     await submitCoachingWizard();
     if(requests.at(-1).routeId!==null||saveCalls!==saveBeforeExisting)throw new Error('full_blind Coach doit conserver l’absence de piste');
     if(openCalls!==0||trainingRoutes.length!==2)throw new Error('le harnais a observé une mutation parasite');
@@ -659,6 +675,41 @@ if (process.argv.includes('--case=integration')) {
   execFileSync(process.execPath,['-e',integrationHarness],{stdio:'inherit'});
   console.log('V10.48 integration checks: OK');
   process.exit(0);
+}
+
+if (process.argv.includes('--case=lifecycle') || !process.argv.some(arg => arg.startsWith('--case='))) {
+  const completionHarness = `(async()=>{
+    const assert=require('assert/strict');
+    const panel={classList:{hidden:false,add(name){if(name==='hidden')this.hidden=true},remove(name){if(name==='hidden')this.hidden=false}}};
+    const $=id=>id==='coachingWizardPanel'?panel:null;
+    let coachingWizard={active:true,currentStep:6,busy:false,error:null,createdSessionId:null,mode:'full_blind',creatorRole:'coach',participants:[],invitations:[],trackPreparation:{}};
+    let trainingRoutes=[],fail=false,creates=0;
+    const validCoachingWizard=()=>({ok:true});
+    const coachingWizardMembers=()=>[];
+    const coachingWizardHasChoices=()=>true;
+    const confirm=()=>{throw Error('Une préparation terminée ne doit plus demander un abandon')};
+    const renderCoachingWizardParticipants=()=>{},renderCoachingWizardInvitations=()=>{},setUiText=()=>{};
+    const document={querySelectorAll:()=>[]};
+    const openCoachingSession=async()=>{if(fail)throw Error('lecture impossible');panel.classList.add('hidden');return true};
+    const createCoaching=async options=>{creates++;options.onCreated({id:'created'});await openCoachingSession();return {id:'created'}};
+    ${functionOnly('renderCoachingWizard')}
+    ${functionOnly('guardCoachingWizardNavigation')}
+    ${functionOnly('submitCoachingWizard')}
+    await submitCoachingWizard();
+    assert.equal(panel.classList.hidden,true,'Le récapitulatif doit rester masqué après création');
+    assert.equal(coachingWizard.active,false,'La préparation terminée doit être inactive');
+    assert.equal(guardCoachingWizardNavigation('homePage'),true);
+    coachingWizard={...coachingWizard,active:true,createdSessionId:null};fail=true;
+    await submitCoachingWizard();
+    assert.equal(coachingWizard.active,true,'Une ouverture échouée doit conserver le réessai');
+    assert.equal(coachingWizard.createdSessionId,'created');
+    assert.equal(panel.classList.hidden,false);
+    fail=false;const before=creates;await submitCoachingWizard();
+    assert.equal(creates,before,'Réouvrir ne doit pas recréer');
+    assert.equal(panel.classList.hidden,true);
+    assert.equal(coachingWizard.active,false);
+  })().catch(error=>{console.error(error);process.exit(1)})`;
+  execFileSync(process.execPath,['-e',completionHarness],{stdio:'inherit'});
 }
 
 if (process.argv.includes('--case=lifecycle')) {
@@ -695,8 +746,9 @@ assert.equal(
   'Le terrain et les sessions internes doivent rester inchangés'
 );
 
+const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js'];
 const changed = execFileSync('git', ['diff', baseline, '--name-only'], { encoding: 'utf8' })
-  .trim().split('\n').filter(Boolean).filter(path => !path.startsWith('.superpowers/sdd/'));
+  .trim().split('\n').filter(Boolean).filter(path => !path.startsWith('.superpowers/sdd/') && !selfLeaveFiles.includes(path));
 assert.deepEqual(
   changed.sort(),
   [
@@ -711,7 +763,7 @@ assert.deepEqual(
   ].sort(),
   'Task 1 ne doit modifier que le shell et son guard'
 );
-assert(!changed.some(p => p.endsWith('.sql') || p.startsWith('supabase/')), 'Aucun SQL/Supabase');
+assert(!changed.some(p => p.endsWith('.sql') || p.startsWith('supabase/')), 'Aucun SQL/Supabase hors patch self-leave explicitement contrôlé');
 
 if (process.argv.includes('--case=submit')) {
   const submitSource = source('submitCoachingWizard');
