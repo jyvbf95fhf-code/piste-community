@@ -1,0 +1,14 @@
+const fs=require('fs');const assert=require('assert/strict');
+const sql=fs.readFileSync('PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql','utf8');
+const verify=fs.readFileSync('PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql','utf8');
+const need=(text,fragment,message)=>assert(text.includes(fragment),message||`Fragment absent: ${fragment}`);
+assert(!/\b(insert|update|delete|alter|create|drop|grant|revoke)\b/i.test(verify),'VERIFY doit rester en lecture seule');
+for(const fragment of ['coaching_pause_events','set_coaching_pause','role in (\'driver\',\'coach\',\'solo\')','coaching_debrief_observations','primary key (session_id,user_id)','coaching_v1049_is_final_reader','finish_coaching_track_v1049','close_coaching_debrief_v1049','coaching_participation_ledger','participated_at','coaching_sessions_track_source_v1049','gpx_embedded_time','gpx_manual_time','alter publication supabase_realtime add table'])need(sql,fragment);
+assert(/p_paused boolean/.test(sql),'Pause API booléen absent');
+assert(sql.includes("r.debrief_status='closed'"),'Clôture idempotente absente');
+assert(sql.includes("role in ('driver','solo')"),'Fin Conducteur-only absente');
+assert(sql.includes("role in ('driver','coach','solo')"),'Clôture/pause Coach-Conducteur absente');
+assert(sql.includes("user_id=(select auth.uid())"),'Observation auteur-only absente');
+assert(sql.includes("track_started_source in ('live','saved','gpx_embedded_time','gpx_manual_time')"),'Provenance origine absente');
+assert(!sql.includes('coaching_members_self_delete'),'Le patch ne doit pas remplacer le self-leave V10.48');
+console.log('V10.49 backend static checks: OK');
