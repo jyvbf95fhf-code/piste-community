@@ -1,6 +1,7 @@
 const fs = require('fs');
 const assert = require('assert/strict');
 const { execFileSync } = require('child_process');
+const vm = require('vm');
 
 const app = fs.readFileSync('app.js', 'utf8');
 const html = fs.readFileSync('index.html', 'utf8');
@@ -73,6 +74,87 @@ for (const [role, model] of Object.entries(roleSurfaceFixture)) {
 }
 assert.equal({ blind: true, role: 'driver', odorVisible: false }.odorVisible, false, 'blind driver odor must be denied');
 assert.equal({ blind: true, role: 'coach', odorVisible: false }.odorVisible, false, 'blind coach odor must be denied');
+
+// Task 2 exercises the real pure surface model extracted from app.js. A missing
+// or malformed model fails here before any DOM-specific implementation detail.
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `V10.49 guard: production function missing: ${name}`);
+  const bodyStart = source.indexOf('{', start);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === '{') depth += 1;
+    if (source[index] === '}') depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`V10.49 guard: unterminated production function: ${name}`);
+}
+const surfaceContext = {};
+vm.runInNewContext([
+  'coachingPhase',
+  'coachingBlindMode',
+  'coachingMemberCapabilities',
+  'coachingDataVisibility',
+  'coachingActiveSurfaceModel',
+].map(name => extractFunction(app, name)).join('\n'), surfaceContext);
+const surfaceSession = (blindMode = 'normal') => ({
+  status: 'live', workflow_version: 3, visibility_version: 3, blind_mode: blindMode,
+  phase: 'driver_running', coaching_members: [],
+});
+const surfaceCases = [
+  ['driver', 'Conducteur • Parcours en cours', ['pause', 'blackScreen', 'messages', 'finish', 'plus']],
+  ['traceur', 'Traceur • Session en cours', ['blackScreen', 'messages', 'plus']],
+  ['observer', 'Observateur • Session en cours', ['messages', 'plus']],
+  ['coach', 'Coach • Supervision', ['pause', 'messages', 'plus']],
+];
+for (const [role, statusLabel, actions] of surfaceCases) {
+  const model = surfaceContext.coachingActiveSurfaceModel(surfaceSession(), 'driver_running', role);
+  assert.equal(model.statusLabel, statusLabel, `${role} compact status is incorrect`);
+  assert.deepEqual([...model.actions], actions, `${role} active actions are incorrect`);
+  assert.equal(model.mapPriority, true, `${role} active map must have priority`);
+  for (const hidden of ['participants', 'departure', 'preflight', 'phase']) {
+    assert.equal(model.visibleBlocks.includes(hidden), false, `${role} ${hidden} must be hidden after departure`);
+  }
+}
+assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'driver_running', 'driver').odorVisible, false,
+  'double-blind driver must not receive a derived odor surface');
+assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'driver_running', 'coach').odorVisible, false,
+  'double-blind coach without track visibility must not receive a derived odor surface');
+assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'laying', 'traceur').odorVisible, true,
+  'traceur keeps odor access when existing track visibility allows it');
+const ownerWithoutRole = surfaceContext.coachingActiveSurfaceModel({ ...surfaceSession(), owner_id: 'owner' }, 'driver_running', null);
+assert.deepEqual([...ownerWithoutRole.actions], [], 'session ownership without a member role must grant no terrain action');
+assert.equal(ownerWithoutRole.odorVisible, false, 'session ownership without a member role must grant no odor access');
+assert.equal(ownerWithoutRole.mapPriority, true, 'active session without a member role must still apply the restrictive surface');
+const legacyCoachPoseur = surfaceContext.coachingActiveSurfaceModel({
+  status: 'live', workflow_version: 1, visibility_version: 2, visibility_mode: 'all', laying_mode: 'coach',
+}, 'laying', 'coach');
+assert.equal(legacyCoachPoseur.actions.includes('finishLaying'), true,
+  'historical Coach-poseur must keep its laying completion surface');
+assert.equal(legacyCoachPoseur.visibleBlocks.includes('primaryActions'), true,
+  'historical Coach-poseur actions must remain visible');
+const v1040CoachPoseur = surfaceContext.coachingActiveSurfaceModel({
+  status: 'live', workflow_version: 2, visibility_version: 2, blind_mode: 'coach', laying_mode: 'coach',
+}, 'laying', 'coach');
+assert.equal(v1040CoachPoseur.actions.includes('trackReady'), true,
+  'V10.40 Coach-poseur must keep its secure track-ready action');
+const legacySolo = surfaceContext.coachingActiveSurfaceModel({
+  status: 'live', workflow_version: 1, visibility_version: 2, visibility_mode: 'all',
+}, 'driver_running', 'solo');
+assert.equal(legacySolo.actions.includes('finish'), true, 'historical solo driver must keep its finish action');
+has(app, /function setCoachingStage\([\s\S]*?applyV1040RoleSurface\(/, 'stage rendering is not routed through the surface model');
+has(app, /function applyV1040RoleSurface\([\s\S]*?coachingActiveSurfaceModel\(/, 'role rendering is not routed through the surface model');
+has(app, /function applyV1040RoleSurface\([\s\S]*?myCoachingMember\([\s\S]*?coachingActiveSurfaceModel\(/,
+  'surface rendering must derive its role from an actual membership');
+assert.equal(extractFunction(app, 'coachingCanSeeOdor').includes('coachingActiveSurfaceModel('), true,
+  'odor rendering must consume the authorized active surface');
+const mapRenderer = extractFunction(app, 'renderCoachingMap');
+assert.equal(mapRenderer.includes('coachingActiveSurfaceModel(') && mapRenderer.includes('surface.visibility'), true,
+  'map rendering must consume the surface visibility model');
+const surfaceRenderer = extractFunction(app, 'applyCoachingActiveSurface');
+for (const target of ['.coaching-stepper', 'logoutBtn', '[data-coaching-panel="team"]']) {
+  assert.equal(surfaceRenderer.includes(target), true, `active surface must control ${target}`);
+}
 
 // Timing/origin contracts are guarded before their later UI wiring lands.
 has(app, /function finishHoldStart\(/, 'finish hold start missing');

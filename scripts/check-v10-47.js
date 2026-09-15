@@ -35,7 +35,7 @@ for(const name of [
 }
 
 
-const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','').replace(" if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard();\n",'').replace('if(coachingWizard.active)renderCoachingWizardParticipants();','').replace(" if(!guardCoachingWizardNavigation(id))return false;\n",'').replace(" if(showPage(page)===false)e.stopImmediatePropagation();\n"," showPage(page);\n");
+const normalizeNavigation=text=>text.replaceAll('setCoachingEntryView(null);','').replace("if(typeof applyV1040RoleSurface==='function'){if(terrainActive)applyV1040RoleSurface();else if(typeof applyCoachingActiveSurface==='function')applyCoachingActiveSurface(null)}",'').replace(" if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard();\n",'').replace('if(coachingWizard.active)renderCoachingWizardParticipants();','').replace(" if(!guardCoachingWizardNavigation(id))return false;\n",'').replace(" if(showPage(page)===false)e.stopImmediatePropagation();\n"," showPage(page);\n");
 for(const name of ['loadCoachingHub','setCoachingStage','setCoachingPanel','openCoachingSession','loadStats','showPage']){
  assert.equal(normalizeNavigation(source(name)),normalizeNavigation(source(name,old)),`${name} doit rester intacte hors nettoyage de navigation`);
 }
