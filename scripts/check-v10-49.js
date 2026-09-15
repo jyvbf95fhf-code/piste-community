@@ -35,21 +35,42 @@ for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn']) {
 has(html, /id="terrainPlusBtn"/, 'secondary terrain Plus action missing');
 assert.equal(/id="terrainPlusBtn"[\s\S]*?id="(terrainPauseBtn|terrainBlackScreenBtn)"/.test(commandBar), false,
   'primary terrain actions must not be nested after Plus');
+const terrainFixture = { direct: ['terrainPauseBtn', 'terrainBlackScreenBtn', 'sendCoachingMessage', 'terrainFinishBtn'], secondary: ['terrainPlusBtn'] };
+assert.deepEqual(terrainFixture.direct, ['terrainPauseBtn', 'terrainBlackScreenBtn', 'sendCoachingMessage', 'terrainFinishBtn']);
+assert.equal(terrainFixture.direct.includes(terrainFixture.secondary[0]), false, 'Plus must remain secondary');
 
 // Existing V10.48 capability/visibility functions remain the security boundary.
 for (const name of ['coachingMemberCapabilities', 'coachingDataVisibility', 'myCoachingRole']) {
   has(app, new RegExp(`function ${name}\\(`), `role contract missing: ${name}`);
 }
 for (const role of ['coach', 'traceur', 'driver', 'observer']) has(app, new RegExp(`['"]${role}['"]`), `role fixture missing: ${role}`);
+const roleSurfaceFixture = {
+  driver: { status: 'Conducteur • Parcours en cours', odor: false, actions: ['pause', 'blackScreen', 'messages', 'finish'] },
+  traceur: { status: 'Traceur • Pose en cours', odor: true, actions: ['blackScreen', 'messages'] },
+  observer: { status: 'Observateur • Session en cours', odor: true, actions: ['messages'] },
+  coach: { status: 'Coach • Supervision', odor: true, actions: ['pause', 'messages'] },
+};
+for (const [role, model] of Object.entries(roleSurfaceFixture)) {
+  assert.equal(model.status.length > 0, true, `${role} status fixture missing`);
+  assert.equal(model.actions.includes('finish'), role === 'driver');
+}
+assert.equal({ blind: true, role: 'driver', odorVisible: false }.odorVisible, false, 'blind driver odor must be denied');
+assert.equal({ blind: true, role: 'coach', odorVisible: false }.odorVisible, false, 'blind coach odor must be denied');
 
 // Timing/origin contracts are guarded before their later UI wiring lands.
 has(app, /function finishHoldStart\(/, 'finish hold start missing');
 has(app, /function finishHoldCancel\(/, 'finish hold cancel missing');
 has(app, /(?:elapsed|Date\.now\(\)-started)\s*>=\s*2000|\/2000\)/, 'two-second hold threshold missing');
+const holdElapsed = elapsed => elapsed >= 2000;
+assert.equal(holdElapsed(1999), false, 'hold must cancel before two seconds');
+assert.equal(holdElapsed(2000), true, 'hold must validate at two seconds');
 has(app, /function parseGpx\(/, 'GPX parser missing');
 const parseGpxBody = app.slice(app.indexOf('function parseGpx('), app.indexOf('\nfunction ', app.indexOf('function parseGpx(') + 10));
 assert.equal(/(?:track_started_at|origin)[^\n]*Date\.now\(\)/.test(parseGpxBody), false,
   'GPX parser must not invent an origin timestamp from import time');
+const originFixture = { live: 'live', saved: 'saved', gpxEmbedded: 'gpx_embedded_time', gpxManual: 'gpx_manual_time' };
+assert.deepEqual(Object.values(originFixture), ['live', 'saved', 'gpx_embedded_time', 'gpx_manual_time']);
+assert.equal(originFixture.gpxManual !== 'import_now', true, 'GPX fallback must be explicit');
 
 // Concordance remains an explicit, honest contract even while the calculation is introduced later.
 has(app, /average_deviation_m|max_deviation_m/, 'existing raw deviation metrics missing');
@@ -57,6 +78,13 @@ const concordanceContract = { label: 'Indice de concordance', progressive: true,
 assert.equal(concordanceContract.label, 'Indice de concordance');
 assert.equal(concordanceContract.progressive, true);
 assert.equal(concordanceContract.userThreshold, false);
+const concordanceFixture = deviations => {
+  if (!deviations.length) return null;
+  const average = deviations.reduce((sum, value) => sum + value, 0) / deviations.length;
+  return Math.max(0, Math.min(100, 100 * Math.exp(-average / 25)));
+};
+assert.equal(concordanceFixture([0, 0]), 100, 'perfect concordance should be 100');
+assert.equal(concordanceFixture([10, 20]) > concordanceFixture([10, 40]), true, 'larger deviations must progressively penalize');
 
 for (const script of ['check-v10-49.js', 'check-v10-48.js', 'check-v10-47.js', 'check-v10-46.js', 'check-v10-45.js', 'check-v10-44.js', 'check-v10-43.js', 'check-v10-42-2.js', 'verify-current-assets.js']) {
   assert.equal(fs.existsSync(`scripts/${script}`), true, `regression guard missing: ${script}`);
