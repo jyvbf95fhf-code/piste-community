@@ -539,6 +539,11 @@
         <div class="gpx-import-card">
           <div class="gpx-import-copy"><span>📥</span><div><b>Importer une trace GPX</b><small>Depuis Fichiers, Garmin, une randonnée ou une ancienne piste. Le fichier reste sur cet appareil jusqu’à l’enregistrement.</small></div></div>
           <input id="gpxFileInput" class="visually-hidden" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml">
+          <div class="gpx-origin-fields" aria-describedby="gpxOriginHelp">
+            <label>Date et heure réelles du début<input id="gpxTrackStartedAt" type="datetime-local"></label>
+            <label>Fuseau UTC<input id="gpxTrackTimezone" type="text" inputmode="text" maxlength="6" pattern="Z|[+-](?:0[0-9]|1[0-4]):[0-5][0-9]" placeholder="+02:00" autocomplete="off"></label>
+          </div>
+          <small id="gpxOriginHelp" class="muted">Laissez vide si le GPX contient des heures. Sinon, renseignez la date, l’heure et le fuseau sans utiliser l’heure d’import.</small>
           <div class="gpx-import-actions"><button id="chooseGpxBtn" class="secondary" type="button">Choisir un fichier GPX</button><button id="clearImportedGpxBtn" class="ghost-dark hidden" type="button">Retirer l’import</button></div>
           <p id="gpxImportStatus" class="gpx-import-status" role="status">Formats acceptés : trace GPX ou route GPX, 10 Mo maximum.</p>
         </div>

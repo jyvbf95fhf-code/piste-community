@@ -235,6 +235,8 @@ for (const id of ['coachingActiveTime', 'coachingActiveDistance', 'coachingTrack
   assert.equal(bannerNode(id).textContent, '—', `${id} must not manufacture zero`);
   assert.notEqual(bannerNode(id).title, '', `${id} unavailable value needs a reason`);
 }
+bannerContext.renderCoachingActiveBanner({ activeMs: null, activeKm: null, trackAgeMs: null, trackAgeReason: 'Début réel du traçage incohérent : heure future', pauseState: 'running' });
+assert.match(bannerNode('coachingTrackAge').title, /heure future/, 'future origin must be signalled in the active banner');
 for (const token of ['env(safe-area-inset-left', 'env(safe-area-inset-right', 'env(safe-area-inset-bottom', 'data-map-priority="true"', 'minmax(0,1fr)']) {
   has(css, new RegExp(token.replace(/[()]/g, '\\$&')), `active map-priority layout missing ${token}`);
 }
@@ -262,6 +264,7 @@ const sharedMetricContext = {
   routeDistance: points => points[0]?.kind === 'driver' ? 3800 : 9900,
 };
 vm.createContext(sharedMetricContext);
+vm.runInContext(extractFunctionWithParameterDefaults(app, 'resolveTrackOrigin'), sharedMetricContext);
 vm.runInContext(extractFunctionWithParameterDefaults(app, 'updateCoachingTerrainStatus'), sharedMetricContext);
 vm.runInContext(extractFunctionWithParameterDefaults(app, 'updateCoachingLiveMetrics'), sharedMetricContext);
 sharedMetricContext.updateCoachingTerrainStatus();
@@ -298,9 +301,69 @@ has(app, /function parseGpx\(/, 'GPX parser missing');
 const parseGpxBody = app.slice(app.indexOf('function parseGpx('), app.indexOf('\nfunction ', app.indexOf('function parseGpx(') + 10));
 assert.equal(/(?:track_started_at|origin)[^\n]*Date\.now\(\)/.test(parseGpxBody), false,
   'GPX parser must not invent an origin timestamp from import time');
-const originFixture = { live: 'live', saved: 'saved', gpxEmbedded: 'gpx_embedded_time', gpxManual: 'gpx_manual_time' };
-assert.deepEqual(Object.values(originFixture), ['live', 'saved', 'gpx_embedded_time', 'gpx_manual_time']);
-assert.equal(originFixture.gpxManual !== 'import_now', true, 'GPX fallback must be explicit');
+for (const id of ['gpxTrackStartedAt', 'gpxTrackTimezone']) {
+  has(html, new RegExp(`id="${id}"`), `explicit GPX origin control missing: ${id}`);
+}
+
+function fixtureXmlNode(localName, textContent = '', attributes = {}, children = []) {
+  return { localName, textContent, children, getAttribute: name => attributes[name] ?? null };
+}
+class FixtureDOMParser {
+  parseFromString(source) {
+    const points = [...source.matchAll(/<(trkpt|rtept)\b([^>]*)>([\s\S]*?)<\/\1>/g)].map(match => {
+      const attributes = Object.fromEntries([...match[2].matchAll(/([\w:-]+)="([^"]*)"/g)].map(attribute => [attribute[1], attribute[2]]));
+      const time = match[3].match(/<time>([^<]+)<\/time>/)?.[1] || '';
+      return fixtureXmlNode(match[1], '', attributes, time ? [fixtureXmlNode('time', time)] : []);
+    });
+    const rootName = source.match(/<name>([^<]+)<\/name>/)?.[1] || '';
+    return {
+      documentElement: fixtureXmlNode('gpx', '', {}, rootName ? [fixtureXmlNode('name', rootName)] : []),
+      querySelector: () => null,
+      getElementsByTagNameNS: (_namespace, name) => name === 'trkpt' || name === 'rtept' ? points.filter(point => point.localName === name) : [],
+    };
+  }
+}
+const originContext = { DOMParser: FixtureDOMParser, Date, Number, Array, Math, Error, crypto: { randomUUID: () => 'fixture-id' } };
+vm.createContext(originContext);
+vm.runInContext([
+  'gpxElements',
+  'gpxText',
+  'gpxCoordinate',
+  'reduceGpxPoints',
+  'parseExplicitGpxOrigin',
+  'parseGpx',
+  'resolveTrackOrigin',
+].map(name => extractFunctionWithParameterDefaults(app, name)).join('\n'), originContext);
+const timedGpx = originContext.parseGpx('<gpx><name>Ancienne piste</name><trk><trkseg><trkpt lat="48.1" lon="7.1"><time>2026-09-01T08:00:00Z</time></trkpt><trkpt lat="48.2" lon="7.2"><time>2026-09-01T08:10:00Z</time></trkpt></trkseg></trk></gpx>');
+assert.equal(timedGpx.originAt, '2026-09-01T08:00:00.000Z', 'GPX must preserve its first real timestamp');
+assert.equal(timedGpx.originSource, 'gpx_embedded_time');
+assert.equal(timedGpx.points[1].recorded_at, '2026-09-01T08:10:00.000Z', 'point timestamps must survive parsing and reduction');
+const untimedGpx = '<gpx><trk><trkseg><trkpt lat="48.1" lon="7.1"></trkpt><trkpt lat="48.2" lon="7.2"></trkpt></trkseg></trk></gpx>';
+assert.throws(() => originContext.parseGpx(untimedGpx), /date.*heure.*fuseau/i,
+  'an untimed GPX must require explicit date, time and timezone');
+const manualGpx = originContext.parseGpx(untimedGpx, { dateTime: '2026-08-30T07:15', timezone: '+02:00' });
+assert.equal(manualGpx.originAt, '2026-08-30T05:15:00.000Z');
+assert.equal(manualGpx.originSource, 'gpx_manual_time');
+assert.equal(manualGpx.points[0].recorded_at, manualGpx.originAt, 'declared origin must stay attached to the first point');
+assert.throws(() => originContext.parseGpx('<gpx><trk><trkseg><trkpt lat="48.1" lon="7.1"><time>2999-01-01T00:00:00Z</time></trkpt><trkpt lat="48.2" lon="7.2"><time>2999-01-01T00:10:00Z</time></trkpt></trkseg></trk></gpx>'), /future/i,
+  'future GPX timestamps must be rejected instead of clamped');
+
+const hiddenGeometry = metadata => Object.defineProperty({ ...metadata }, 'route', { get() { throw new Error('forbidden geometry read'); } });
+const reusedOrigin = originContext.resolveTrackOrigin({}, hiddenGeometry({
+  track_started_at: '2026-08-20T06:00:00Z', track_started_source: 'gpx_embedded_time',
+}));
+assert.equal(reusedOrigin.instant, '2026-08-20T06:00:00.000Z', 'reused route origin must not reset');
+assert.equal(reusedOrigin.source, 'gpx_embedded_time');
+assert.equal(reusedOrigin.quality, 'recorded');
+const liveOrigin = originContext.resolveTrackOrigin({ track_started_at: '2026-09-10T09:01:02Z', track_started_source: 'live' }, hiddenGeometry());
+assert.equal(liveOrigin.instant, '2026-09-10T09:01:02.000Z', 'live origin must come from the persisted first real point');
+assert.equal(originContext.resolveTrackOrigin({}, hiddenGeometry()).quality, 'unavailable', 'missing historical origin must remain unavailable');
+assert.equal(originContext.resolveTrackOrigin({ track_started_at: '2999-01-01T00:00:00Z', track_started_source: 'live' }, hiddenGeometry()).quality, 'future',
+  'a persisted future origin must be reported as inconsistent');
+const timingBody = extractFunctionWithParameterDefaults(app, 'coachingTimingV1045');
+assert.equal(timingBody.includes('resolveTrackOrigin'), false, 'V10.45 delay semantics must stay separate from track age');
+has(app, /track_started_at:origin\.instant/, 'planner save must persist the resolved origin');
+has(app, /track_started_source:origin\.source/, 'planner save must persist origin provenance');
 
 // Concordance remains an explicit, honest contract even while the calculation is introduced later.
 has(app, /average_deviation_m|max_deviation_m/, 'existing raw deviation metrics missing');
