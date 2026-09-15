@@ -305,7 +305,7 @@ const fetchTerrainWeatherLegacy=fetchOperationalLiveWeather;
 fetchOperationalLiveWeather=function(){const training=recordMode==='training';if(training)recordMode='operational';try{return fetchTerrainWeatherLegacy()}finally{if(training)recordMode='training'}};
 const scheduleTerrainWeatherLegacy=scheduleOperationalLiveWeather;
 scheduleOperationalLiveWeather=function(){const training=recordMode==='training';if(training)recordMode='operational';try{const result=scheduleTerrainWeatherLegacy();if(training&&gps.start&&!gps.paused)fetchOperationalLiveWeather();return result}finally{if(training)recordMode='training'}};
-function coachingCanSeeOdor(){const s=activeCoachingSession,member=myCoachingMember(s),role=member?.role||null;if(!s||!coachingLayerVisibility.odor)return false;if(s.mode==='training'||s.module==='training')return true;return coachingActiveSurfaceModel(s,coachingPhase(s),role).odorVisible}
+function coachingCanSeeOdor(){const s=activeCoachingSession,member=myCoachingMember(s),role=member?.role||null;if(!s||!coachingLayerVisibility.odor)return false;return coachingActiveSurfaceModel(s,coachingPhase(s),role).odorVisible}
 function liveOdorModel(trace,points){const base=activeCoachingSession?.odor_model||{},w=coachingLiveWeather?.status==='ready'?coachingLiveWeather:null,ref=activeCoachingSession?.track_finished_at||null,result=sharedOlfactionEngine({referenceTrack:trace.length>1?trace:activeCoachingSession?.planned_route||[],referenceTime:ref,currentTime:new Date(),liveWeather:w||base,module:'coaching'});return {...base,enabled:true,wind_direction_deg:w?.wind_direction_deg??base.wind_direction_deg??0,wind_speed_kmh:w?.wind_speed_kmh??base.wind_speed_kmh??5,gust_kmh:w?.wind_gusts_kmh??base.gust_kmh,age_hours:result.trackAgeSeconds===null?Number(base.age_hours)||0:result.trackAgeSeconds/3600,source:w?.source||base.source||'historique',fetched_at:w?.fetched_at||base.fetched_at}}
 function addLiveOdorCorridor(trace,points){if(!coachingCanSeeOdor())return null;const route=trace.length>1?trace:(activeCoachingSession?.planned_route||[]);if(route.length<2)return null;return addOdorLayers(coachingMap,route,liveOdorModel(trace,points),coachingLayers)}
 function locateCoachingUser(){const p=coachingPreviewPosition||coachingOwnPosition;if(!p||!coachingMap){setUiText('coachingLiveStatus','Position GPS indisponible pour le moment.');return}coachingKeepViewport=false;const zoom=Math.max(15,coachingMap.getZoom?.()||16);coachingMap.setView([p.lat,p.lon],zoom,{animate:true,duration:.25});$('recenterCoachingMap')?.classList.add('active');setTimeout(()=>coachingMap?.invalidateSize(),80)}
@@ -3001,7 +3001,7 @@ function coachingActiveSurfaceModel(s,phase=coachingPhase(s),role=myCoachingRole
     if(afterDeparture)actions.push('pause','blackScreen','messages','finish','plus');
     else{actions.push('blackScreen','messages');if(['waiting_ready','coach_ready'].includes(phase))actions.push('startDriver');actions.push('plus')}
   }else if(displayRole==='traceur'){
-    actions.push('blackScreen','messages');if(phase==='preparation')actions.push('startLaying');if(phase==='laying')actions.push('trackReady');actions.push('plus');
+    actions.push('blackScreen','messages');if(phase==='preparation')actions.push('startLaying');if(phase==='laying')actions.push(Number(s.workflow_version)>=2?'trackReady':'finishLaying');actions.push('plus');
   }else if(displayRole==='coach'){
     if(afterDeparture)actions.push('pause');
     if(s.laying_mode==='coach'&&Number(s.visibility_version)!==3){if(phase==='preparation')actions.push('startLaying');if(phase==='laying')actions.push(Number(s.workflow_version)>=2?'trackReady':'finishLaying')}
@@ -3010,13 +3010,17 @@ function coachingActiveSurfaceModel(s,phase=coachingPhase(s),role=myCoachingRole
   const statusLabel=displayRole==='driver'?`Conducteur • ${afterDeparture?'Parcours en cours':'Préparation'}`:displayRole==='traceur'?`Traceur • ${phase==='laying'?'Pose en cours':'Session en cours'}`:displayRole==='coach'?'Coach • Supervision':'Observateur • Session en cours';
   const visibleBlocks=['compactStatus','weather','map','commandBar','navigation'];
   if(!afterDeparture&&displayRole==='driver')visibleBlocks.push('departure','preflight','teamPanel');
-  if(actions.some(action=>['startDriver','startLaying','finishLaying','trackReady'].includes(action)))visibleBlocks.push('primaryActions');
+  if(actions.some(action=>['startDriver','startLaying','finishLaying','trackReady','finish'].includes(action)))visibleBlocks.push('primaryActions');
   return {statusLabel,visibleBlocks,actions,mapPriority:true,odorVisible:!!visibility.trace,capabilities,visibility};
+}
+function coachingSurfaceActionTarget(action,s){
+ const targets={pause:'#terrainPauseBtn',blackScreen:'#terrainBlackScreenBtn',messages:'[data-coaching-tab="messages"]',plus:'#terrainPlusBtn',startDriver:'#driverStartBtn',startLaying:'#startLayingBtn',finishLaying:'#finishLayingBtn',trackReady:'#trackReadyBtn',finish:Number(s?.workflow_version)>=2?'#driverFinishBtn':'#terrainFinishBtn'};
+ return targets[action]||null;
 }
 function applyCoachingActiveSurface(model){
  const panel=$('coachingLivePanel');if(!panel)return;
  const blocks={compactStatus:$('coachingLiveStatus'),weather:$('coachingLiveWeather'),map:document.querySelector('#coachingLivePanel .coaching-map-shell'),commandBar:$('coachingTerrainCommandBar'),navigation:document.querySelector('#coachingLivePanel .coaching-tabs'),primaryActions:$('coachingPrimaryActions'),departure:document.querySelector('#coachingLivePanel .coaching-departure'),preflight:document.querySelector('#coachingLivePanel .session-preflight'),participants:$('coachingParticipants'),phase:$('coachingPhase'),instruction:$('coachingRoleInstruction'),stepper:document.querySelector('#coachingPage .coaching-stepper'),logout:$('logoutBtn'),teamPanel:document.querySelector('[data-coaching-panel="team"]')};
- const actionTargets={pause:$('terrainPauseBtn'),blackScreen:$('terrainBlackScreenBtn'),plus:$('terrainPlusBtn'),messages:document.querySelector('[data-coaching-tab="messages"]')},odorControl=document.querySelector('[data-coaching-layer="odor"]')?.closest('label');
+ const actionNames=['pause','blackScreen','messages','plus','startDriver','startLaying','finishLaying','trackReady','finish'],actionTargets=Object.fromEntries(actionNames.map(action=>[action,document.querySelector(coachingSurfaceActionTarget(action,activeCoachingSession))])),odorControl=document.querySelector('[data-coaching-layer="odor"]')?.closest('label');
  if(!model?.mapPriority){delete panel.dataset.mapPriority;Object.values(blocks).forEach(element=>element?.style.removeProperty('display'));odorControl?.classList.remove('hidden');odorControl?.removeAttribute('aria-hidden');return}
  panel.dataset.mapPriority='true';
  const visible=new Set(model.visibleBlocks),toggle=(element,key)=>{if(!element)return;if(visible.has(key))element.style.removeProperty('display');else element.style.setProperty('display','none','important')};

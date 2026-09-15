@@ -96,6 +96,7 @@ vm.runInNewContext([
   'coachingMemberCapabilities',
   'coachingDataVisibility',
   'coachingActiveSurfaceModel',
+  'coachingSurfaceActionTarget',
 ].map(name => extractFunction(app, name)).join('\n'), surfaceContext);
 const surfaceSession = (blindMode = 'normal') => ({
   status: 'live', workflow_version: 3, visibility_version: 3, blind_mode: blindMode,
@@ -116,12 +117,20 @@ for (const [role, statusLabel, actions] of surfaceCases) {
     assert.equal(model.visibleBlocks.includes(hidden), false, `${role} ${hidden} must be hidden after departure`);
   }
 }
+assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession(), 'driver_running', 'driver').visibleBlocks.includes('primaryActions'), true,
+  'current Conducteur finish target parent must remain visible before Task 9');
 assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'driver_running', 'driver').odorVisible, false,
   'double-blind driver must not receive a derived odor surface');
 assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'driver_running', 'coach').odorVisible, false,
   'double-blind coach without track visibility must not receive a derived odor surface');
 assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'laying', 'traceur').odorVisible, true,
   'traceur keeps odor access when existing track visibility allows it');
+for (const decorated of [{ mode: 'training' }, { module: 'training' }]) {
+  assert.equal(surfaceContext.coachingActiveSurfaceModel({ ...surfaceSession('full_blind'), ...decorated }, 'driver_running', 'driver').odorVisible, false,
+    'training-like metadata must not bypass blind driver odor denial');
+  assert.equal(surfaceContext.coachingActiveSurfaceModel({ ...surfaceSession('full_blind'), ...decorated }, 'driver_running', 'coach').odorVisible, false,
+    'training-like metadata must not bypass blind coach odor denial');
+}
 const ownerWithoutRole = surfaceContext.coachingActiveSurfaceModel({ ...surfaceSession(), owner_id: 'owner' }, 'driver_running', null);
 assert.deepEqual([...ownerWithoutRole.actions], [], 'session ownership without a member role must grant no terrain action');
 assert.equal(ownerWithoutRole.odorVisible, false, 'session ownership without a member role must grant no odor access');
@@ -142,6 +151,18 @@ const legacySolo = surfaceContext.coachingActiveSurfaceModel({
   status: 'live', workflow_version: 1, visibility_version: 2, visibility_mode: 'all',
 }, 'driver_running', 'solo');
 assert.equal(legacySolo.actions.includes('finish'), true, 'historical solo driver must keep its finish action');
+const emittedActions = new Set([...surfaceCases.flatMap(([role]) => surfaceContext.coachingActiveSurfaceModel(surfaceSession(), 'driver_running', role).actions), ...legacyCoachPoseur.actions, ...v1040CoachPoseur.actions, ...legacySolo.actions]);
+for (const action of emittedActions) {
+  const selector = surfaceContext.coachingSurfaceActionTarget(action, action === 'finish' && legacySolo.actions.includes(action) ? { workflow_version: 1 } : surfaceSession());
+  assert.equal(typeof selector, 'string', `surface action has no rendered target: ${action}`);
+  if (selector.startsWith('#')) has(html, new RegExp(`id="${selector.slice(1)}"`), `surface action target missing from DOM: ${action}`);
+  else assert.equal(selector === '[data-coaching-tab="messages"]' && html.includes('data-coaching-tab="messages"'), true,
+    `surface action target missing from DOM: ${action}`);
+}
+assert.equal(surfaceContext.coachingSurfaceActionTarget('finish', surfaceSession()), '#driverFinishBtn',
+  'current Conducteur finish must route to the workflow finish button');
+assert.equal(surfaceContext.coachingSurfaceActionTarget('finish', { workflow_version: 1 }), '#terrainFinishBtn',
+  'historical finish must retain its legacy target');
 has(app, /function setCoachingStage\([\s\S]*?applyV1040RoleSurface\(/, 'stage rendering is not routed through the surface model');
 has(app, /function applyV1040RoleSurface\([\s\S]*?coachingActiveSurfaceModel\(/, 'role rendering is not routed through the surface model');
 has(app, /function applyV1040RoleSurface\([\s\S]*?myCoachingMember\([\s\S]*?coachingActiveSurfaceModel\(/,
@@ -155,6 +176,8 @@ const surfaceRenderer = extractFunction(app, 'applyCoachingActiveSurface');
 for (const target of ['.coaching-stepper', 'logoutBtn', '[data-coaching-panel="team"]']) {
   assert.equal(surfaceRenderer.includes(target), true, `active surface must control ${target}`);
 }
+assert.equal(extractFunction(app, 'coachingCanSeeOdor').includes("mode==='training'") || extractFunction(app, 'coachingCanSeeOdor').includes("module==='training'"), false,
+  'Coaching odor authorization must not have a training metadata bypass');
 
 // Timing/origin contracts are guarded before their later UI wiring lands.
 has(app, /function finishHoldStart\(/, 'finish hold start missing');
