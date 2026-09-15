@@ -89,6 +89,25 @@ function extractFunction(source, name) {
   }
   throw new Error(`V10.49 guard: unterminated production function: ${name}`);
 }
+function extractFunctionWithParameterDefaults(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `V10.49 guard: production function missing: ${name}`);
+  const parametersStart = source.indexOf('(', start);
+  let parentheses = 0;
+  let bodyStart = -1;
+  for (let index = parametersStart; index < source.length; index += 1) {
+    if (source[index] === '(') parentheses += 1;
+    if (source[index] === ')') parentheses -= 1;
+    if (parentheses === 0) { bodyStart = source.indexOf('{', index); break; }
+  }
+  let braces = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === '{') braces += 1;
+    if (source[index] === '}') braces -= 1;
+    if (braces === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`V10.49 guard: unterminated production function: ${name}`);
+}
 const surfaceContext = {};
 vm.runInNewContext([
   'coachingPhase',
@@ -221,6 +240,48 @@ for (const token of ['env(safe-area-inset-left', 'env(safe-area-inset-right', 'e
 }
 assert.equal(extractFunction(app, 'applyCoachingActiveSurface').includes('coachingActiveBannerState={activeKm:null}'), true,
   'leaving a session must clear cached active distance before another session opens');
+
+const sharedMetricCalls = [];
+const sharedMetricContext = {
+  Date,
+  Map,
+  Object,
+  activeCoachingSession: {
+    started_at: '2026-09-15T10:00:00Z',
+    laying_started_at: '2026-09-15T10:05:00Z',
+    track_finished_at: '2026-09-15T10:45:00Z',
+    driver_started_at: '2026-09-15T11:00:00Z',
+    driver_finished_at: '2026-09-15T11:05:00Z',
+    pause_state: 'running',
+  },
+  coachingActiveBannerState: { activeKm: null },
+  coachingTerrainPaused: false,
+  myCoachingRole: () => 'traceur',
+  renderCoachingActiveBanner: metrics => sharedMetricCalls.push(metrics),
+  coachingMemberRole: () => 'driver',
+  routeDistance: points => points[0]?.kind === 'driver' ? 3800 : 9900,
+};
+vm.createContext(sharedMetricContext);
+vm.runInContext(extractFunctionWithParameterDefaults(app, 'updateCoachingTerrainStatus'), sharedMetricContext);
+vm.runInContext(extractFunctionWithParameterDefaults(app, 'updateCoachingLiveMetrics'), sharedMetricContext);
+sharedMetricContext.updateCoachingTerrainStatus();
+assert.equal(sharedMetricCalls.at(-1).activeMs, 5 * 60000,
+  'Traceur must see the shared Conducteur active time, not laying time');
+sharedMetricContext.activeCoachingSession.driver_started_at = null;
+sharedMetricContext.activeCoachingSession.driver_finished_at = null;
+sharedMetricContext.updateCoachingTerrainStatus();
+assert.equal(sharedMetricCalls.at(-1).activeMs, null,
+  'pose time must stay separate when the Conducteur has not started');
+sharedMetricContext.activeCoachingSession.driver_started_at = '2026-09-15T11:00:00Z';
+sharedMetricContext.activeCoachingSession.driver_finished_at = '2026-09-15T11:05:00Z';
+const driverMetricPoints = [{ kind: 'driver', recorded_at: '2026-09-15T11:00:00Z' }, { kind: 'driver', recorded_at: '2026-09-15T11:05:00Z' }];
+const traceMetricPoints = [{ kind: 'trace', recorded_at: '2026-09-15T10:05:00Z' }, { kind: 'trace', recorded_at: '2026-09-15T10:45:00Z' }];
+sharedMetricContext.updateCoachingLiveMetrics(new Map([['driver-user', driverMetricPoints]]), traceMetricPoints);
+assert.equal(sharedMetricCalls.at(-1).activeKm, 3.8,
+  'Traceur must see the shared Conducteur active distance, not pose distance');
+
+has(css, /@media\(max-height:[^)]+\),\(orientation:landscape\)[\s\S]*?\.coaching-map-shell:not\(\.fullscreen\)[\s\S]*?height:clamp\(/,
+  'short landscape and keyboard-reduced viewports need a bounded map height');
 
 // Timing/origin contracts are guarded before their later UI wiring lands.
 has(app, /function finishHoldStart\(/, 'finish hold start missing');
