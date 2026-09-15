@@ -310,7 +310,7 @@ function fixtureXmlNode(localName, textContent = '', attributes = {}, children =
 }
 class FixtureDOMParser {
   parseFromString(source) {
-    const points = [...source.matchAll(/<(trkpt|rtept)\b([^>]*)>([\s\S]*?)<\/\1>/g)].map(match => {
+    const points = [...source.matchAll(/<(trkpt|rtept|wpt)\b([^>]*)>([\s\S]*?)<\/\1>/g)].map(match => {
       const attributes = Object.fromEntries([...match[2].matchAll(/([\w:-]+)="([^"]*)"/g)].map(attribute => [attribute[1], attribute[2]]));
       const time = match[3].match(/<time>([^<]+)<\/time>/)?.[1] || '';
       return fixtureXmlNode(match[1], '', attributes, time ? [fixtureXmlNode('time', time)] : []);
@@ -319,7 +319,7 @@ class FixtureDOMParser {
     return {
       documentElement: fixtureXmlNode('gpx', '', {}, rootName ? [fixtureXmlNode('name', rootName)] : []),
       querySelector: () => null,
-      getElementsByTagNameNS: (_namespace, name) => name === 'trkpt' || name === 'rtept' ? points.filter(point => point.localName === name) : [],
+      getElementsByTagNameNS: (_namespace, name) => ['trkpt', 'rtept', 'wpt'].includes(name) ? points.filter(point => point.localName === name) : [],
     };
   }
 }
@@ -347,6 +347,20 @@ assert.equal(manualGpx.originSource, 'gpx_manual_time');
 assert.equal(manualGpx.points[0].recorded_at, manualGpx.originAt, 'declared origin must stay attached to the first point');
 assert.throws(() => originContext.parseGpx('<gpx><trk><trkseg><trkpt lat="48.1" lon="7.1"><time>2999-01-01T00:00:00Z</time></trkpt><trkpt lat="48.2" lon="7.2"><time>2999-01-01T00:10:00Z</time></trkpt></trkseg></trk></gpx>'), /future/i,
   'future GPX timestamps must be rejected instead of clamped');
+const lateTimedGpx = '<gpx><trk><trkseg><trkpt lat="48.1" lon="7.1"></trkpt><trkpt lat="48.2" lon="7.2"><time>2026-09-01T08:10:00Z</time></trkpt></trkseg></trk></gpx>';
+assert.throws(() => originContext.parseGpx(lateTimedGpx), /date.*heure.*fuseau/i,
+  'a later timestamp must not masquerade as the first real track coordinate timestamp');
+const lateTimedManual = originContext.parseGpx(lateTimedGpx, { dateTime: '2026-09-01T08:00', timezone: 'Z' });
+assert.equal(lateTimedManual.originAt, '2026-09-01T08:00:00.000Z');
+assert.equal(lateTimedManual.originSource, 'gpx_manual_time');
+const ambiguousTimedGpx = '<gpx><trk><trkseg><trkpt lat="48.1" lon="7.1"><time>2026-09-01T08:00:00</time></trkpt><trkpt lat="48.2" lon="7.2"><time>2026-09-01T08:10:00</time></trkpt></trkseg></trk></gpx>';
+assert.throws(() => originContext.parseGpx(ambiguousTimedGpx), /date.*heure.*fuseau/i,
+  'an embedded timestamp without UTC offset must require an explicit origin');
+assert.equal(originContext.parseGpx(ambiguousTimedGpx, { dateTime: '2026-09-01T08:00', timezone: '+02:00' }).originSource, 'gpx_manual_time');
+assert.throws(() => originContext.parseGpx(untimedGpx, { dateTime: '2026-02-30T07:15', timezone: '+01:00' }), /invalide/i,
+  'an impossible manual calendar date must be rejected instead of normalized');
+const waypointWithBadTime = originContext.parseGpx('<gpx><trk><trkseg><trkpt lat="48.1" lon="7.1"><time>2026-09-01T08:00:00Z</time></trkpt><trkpt lat="48.2" lon="7.2"><time>2026-09-01T08:10:00Z</time></trkpt></trkseg></trk><wpt lat="48.15" lon="7.15"><time>not-a-track-time</time><name>Objet</name></wpt></gpx>');
+assert.equal(waypointWithBadTime.waypoints.length, 1, 'waypoint metadata time must not invalidate a correctly timed track');
 
 const hiddenGeometry = metadata => Object.defineProperty({ ...metadata }, 'route', { get() { throw new Error('forbidden geometry read'); } });
 const reusedOrigin = originContext.resolveTrackOrigin({}, hiddenGeometry({
