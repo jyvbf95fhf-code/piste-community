@@ -282,6 +282,10 @@ assert.equal(sharedMetricCalls.at(-1).activeKm, 3.8,
 
 has(css, /@media\(max-height:[^)]+\),\(orientation:landscape\)[\s\S]*?\.coaching-map-shell:not\(\.fullscreen\)[\s\S]*?height:clamp\(/,
   'short landscape and keyboard-reduced viewports need a bounded map height');
+const mapPriorityCss = css.slice(css.indexOf('/* V10.49 — bandeau terrain unique et carte prioritaire. */'));
+const genericMapPriorityCss = mapPriorityCss.slice(0, mapPriorityCss.indexOf('@media(max-height:'));
+assert.equal(genericMapPriorityCss.includes(',760px)') || genericMapPriorityCss.includes(',620px)'), false,
+  'generic active map height must not be capped on tall screens');
 
 // Timing/origin contracts are guarded before their later UI wiring lands.
 has(app, /function finishHoldStart\(/, 'finish hold start missing');
