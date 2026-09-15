@@ -35,9 +35,17 @@ for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn']) {
 has(html, /id="terrainPlusBtn"/, 'secondary terrain Plus action missing');
 assert.equal(/id="terrainPlusBtn"[\s\S]*?id="(terrainPauseBtn|terrainBlackScreenBtn)"/.test(commandBar), false,
   'primary terrain actions must not be nested after Plus');
-const terrainFixture = { direct: ['terrainPauseBtn', 'terrainBlackScreenBtn', 'sendCoachingMessage', 'terrainFinishBtn'], secondary: ['terrainPlusBtn'] };
-assert.deepEqual(terrainFixture.direct, ['terrainPauseBtn', 'terrainBlackScreenBtn', 'sendCoachingMessage', 'terrainFinishBtn']);
-assert.equal(terrainFixture.direct.includes(terrainFixture.secondary[0]), false, 'Plus must remain secondary');
+const terrainFixture = [
+  { id: 'terrainPauseBtn', surface: 'command' },
+  { id: 'terrainBlackScreenBtn', surface: 'command' },
+  { id: 'sendCoachingMessage', surface: 'command' },
+  { id: 'terrainFinishBtn', surface: 'command' },
+  { id: 'terrainPlusBtn', surface: 'secondary' },
+];
+const directIds = terrainFixture.filter(action => action.surface === 'command').map(action => action.id);
+assert.deepEqual(directIds, ['terrainPauseBtn', 'terrainBlackScreenBtn', 'sendCoachingMessage', 'terrainFinishBtn']);
+assert.equal(terrainFixture.filter(action => action.surface === 'secondary').map(action => action.id).includes('terrainPlusBtn'), true);
+assert.equal(directIds.includes('terrainPlusBtn'), false, 'Plus must remain secondary');
 
 // Existing V10.48 capability/visibility functions remain the security boundary.
 for (const name of ['coachingMemberCapabilities', 'coachingDataVisibility', 'myCoachingRole']) {
