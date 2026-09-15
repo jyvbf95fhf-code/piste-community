@@ -406,6 +406,8 @@ const weatherReady = weatherContext.coachingWeatherViewModel({
 }, Date.parse('2026-09-15T10:00:00.000Z'));
 assert.equal(weatherReady.compact, 'SO 225° · 18 km/h');
 assert.equal(weatherReady.stale, false);
+assert.equal(weatherReady.detail.includes('Vent venant de SO 225°'), true,
+  'weather detail must state that direction is where the wind comes from');
 assert.equal(weatherReady.detail.includes('Humidité 83 %'), true);
 assert.equal(weatherReady.detail.includes('Pluie 1,2 mm'), true);
 const weatherCached = weatherContext.coachingWeatherViewModel({
@@ -427,6 +429,13 @@ assert.equal(weatherContext.coachingWeatherRequestMatches(4, 'session-a', 4, 'se
 const weatherFetchBody = extractFunction(app, 'fetchCoachingLiveWeather');
 assert.equal((weatherFetchBody.match(/coachingWeatherRequestMatches/g) || []).length >= 2, true,
   'weather fetch must guard both success and fallback commits against session switches');
+has(weatherFetchBody, /renderCoachingMap\(\{preserveViewport:true\}\)/,
+  'weather refresh must redraw its dependent map layers without moving the viewport');
+const weatherSchedulerBody = extractFunction(app, 'scheduleCoachingLiveWeather');
+assert.equal(weatherSchedulerBody.includes('renderCoachingMap'), false,
+  'weather scheduler must not trigger a second full map render');
+const coachingMapBody = extractFunctionWithParameterDefaults(app, 'renderCoachingMap');
+has(coachingMapBody, /preserveViewport/, 'coaching map must support a weather refresh that preserves the viewport');
 const noWeatherPointBranch = weatherFetchBody.slice(weatherFetchBody.indexOf('if(!requestedSessionId||!point)'), weatherFetchBody.indexOf('coachingWeatherLoading=true'));
 assert.equal(noWeatherPointBranch.includes('coachingWeatherLoading=false'), true,
   'a superseding request without a position must release the weather loading state');
