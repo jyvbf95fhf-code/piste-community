@@ -23,8 +23,10 @@ for (const marker of ['AUTH DEBUG', 'APP BOOT', 'JS PREFLIGHT', 'AUTH DEBUG BUIL
   }
 }
 
-// Terrain actions stay directly addressable instead of being hidden behind Plus.
-for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn', 'coachingDriverTrackFinish', 'sendCoachingMessage']) {
+// Task 1 guards the existing direct entry points. Task 8 will consolidate them
+// into the final bottom dock; until then this assertion follows the real DOM
+// instead of declaring a detached fixture to be the intended surface.
+for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn', 'coachingDriverTrackFinish']) {
   has(html, new RegExp(`id="${id}"`), `direct terrain action missing: ${id}`);
 }
 const commandBar = html.match(/<div id="coachingTerrainCommandBar"[\s\S]*?<\/div>/)?.[0] || '';
@@ -35,17 +37,24 @@ for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn']) {
 has(html, /id="terrainPlusBtn"/, 'secondary terrain Plus action missing');
 assert.equal(/id="terrainPlusBtn"[\s\S]*?id="(terrainPauseBtn|terrainBlackScreenBtn)"/.test(commandBar), false,
   'primary terrain actions must not be nested after Plus');
-const terrainFixture = [
-  { id: 'terrainPauseBtn', surface: 'command' },
-  { id: 'terrainBlackScreenBtn', surface: 'command' },
-  { id: 'sendCoachingMessage', surface: 'command' },
-  { id: 'terrainFinishBtn', surface: 'command' },
-  { id: 'terrainPlusBtn', surface: 'secondary' },
-];
-const directIds = terrainFixture.filter(action => action.surface === 'command').map(action => action.id);
-assert.deepEqual(directIds, ['terrainPauseBtn', 'terrainBlackScreenBtn', 'sendCoachingMessage', 'terrainFinishBtn']);
-assert.equal(terrainFixture.filter(action => action.surface === 'secondary').map(action => action.id).includes('terrainPlusBtn'), true);
-assert.equal(directIds.includes('terrainPlusBtn'), false, 'Plus must remain secondary');
+const coachingTabs = html.match(/<nav class="coaching-tabs"[\s\S]*?<\/nav>/)?.[0] || '';
+has(coachingTabs, /data-coaching-tab="messages"/, 'direct Messages entry missing from terrain navigation');
+const directFinish = html.match(/<button id="coachingDriverTrackFinish"[\s\S]*?<\/button>/)?.[0] || '';
+has(directFinish, /(?:Terminer|Fin de) la piste/, 'direct conductor finish entry missing');
+const plusPanelStart = html.indexOf('<div class="coaching-tab-panel" data-coaching-panel="session">');
+const plusPanelEnd = html.indexOf('<div id="coachingDebriefStage"', plusPanelStart);
+assert.notEqual(plusPanelStart, -1, 'V10.49 guard: Plus panel missing');
+assert.notEqual(plusPanelEnd, -1, 'V10.49 guard: Plus panel boundary missing');
+const plusPanel = html.slice(plusPanelStart, plusPanelEnd);
+assert.equal(plusPanel.includes('coachingDriverTrackFinish'), false,
+  'driver Fin de piste must remain directly accessible outside Plus');
+assert.deepEqual({
+  pause: commandBar.includes('id="terrainPauseBtn"'),
+  blackScreen: commandBar.includes('id="terrainBlackScreenBtn"'),
+  messages: coachingTabs.includes('data-coaching-tab="messages"'),
+  finish: directFinish.length > 0 && html.indexOf(directFinish) < plusPanelStart,
+}, { pause: true, blackScreen: true, messages: true, finish: true },
+'terrain direct-action surface must be derived from the current DOM');
 
 // Existing V10.48 capability/visibility functions remain the security boundary.
 for (const name of ['coachingMemberCapabilities', 'coachingDataVisibility', 'myCoachingRole']) {
