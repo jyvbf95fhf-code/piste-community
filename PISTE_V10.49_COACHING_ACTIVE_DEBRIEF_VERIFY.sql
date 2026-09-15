@@ -11,17 +11,22 @@ order by table_name,conname;
 
 select schemaname,tablename,policyname,cmd,roles,qual,with_check
 from pg_policies
-where schemaname='public' and tablename in ('coaching_pause_events','coaching_participation_ledger','coaching_debrief_observations')
+where schemaname='public' and tablename in ('coaching_sessions','coaching_live_points','coaching_trace_points','coaching_markers','coaching_debriefs','coaching_pause_events','coaching_participation_ledger','coaching_debrief_observations')
 order by tablename,policyname;
 
 select n.nspname as schema_name,p.proname,pg_get_function_identity_arguments(p.oid) as args,p.prosecdef
 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-where (n.nspname,p.proname) in (('public','set_coaching_pause'),('public','finish_coaching_track_v1049'),('public','close_coaching_debrief_v1049'),('private','coaching_v1049_is_final_reader'),('private','coaching_v1049_observation_guard'))
+where n.nspname in ('public','private') and p.proname like '%v1049%'
+order by 1,2;
+
+select n.nspname as schema_name,p.proname,pg_get_function_identity_arguments(p.oid) as args,p.prosecdef,p.proacl
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname in ('public','private') and p.proname like '%v1049%'
 order by 1,2;
 
 select routine_schema,routine_name,grantee,privilege_type
 from information_schema.routine_privileges
-where (routine_schema,routine_name) in (('public','set_coaching_pause'),('public','finish_coaching_track_v1049'),('public','close_coaching_debrief_v1049'))
+where routine_schema in ('public','private') and routine_name like '%v1049%'
 order by routine_name,grantee,privilege_type;
 
 select table_schema,table_name,grantee,privilege_type
