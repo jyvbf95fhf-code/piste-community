@@ -738,6 +738,7 @@ function withoutWizard(text) {
 
 function withoutV1049ActiveMetrics(text) {
   return text
+    .replace(/      <div id="coachingLiveWeather"[\s\S]*?(?=      <div id="coachingHistoricalWeather")/, '')
     .replace(/^      <div id="coachingTerrainStatus"[^\n]*\n/m, '')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
 }

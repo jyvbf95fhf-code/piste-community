@@ -379,6 +379,60 @@ assert.equal(timingBody.includes('resolveTrackOrigin'), false, 'V10.45 delay sem
 has(app, /track_started_at:origin\.instant/, 'planner save must persist the resolved origin');
 has(app, /track_started_source:origin\.source/, 'planner save must persist origin provenance');
 
+// Task 5: the active terrain keeps weather compact while exposing useful
+// detail, resilient cache states and a request identity tied to the session.
+for (const id of ['coachingWeatherDetailTrigger', 'coachingWeatherCompact', 'coachingWeatherDetail', 'refreshCoachingWeather']) {
+  has(html, new RegExp(`id="${id}"`), `coaching weather control missing: ${id}`);
+}
+has(html, /<details[^>]+id="coachingWeatherDetails"/, 'weather detail must use an accessible disclosure');
+has(app, /setInterval\([\s\S]*?,420000\)/, 'coaching weather auto refresh must remain seven minutes');
+has(app, /bindClick\('refreshCoachingWeather',fetchCoachingLiveWeather\)/,
+  'coaching weather manual refresh must call the live source');
+has(app, /piste-coaching-weather-/, 'coaching weather cache must remain local to user and session');
+
+const weatherContext = {};
+vm.runInNewContext([
+  extractFunction(app, 'coachingWeatherNumber'),
+  extractFunctionWithParameterDefaults(app, 'coachingWeatherViewModel'),
+  extractFunction(app, 'coachingWeatherRequestMatches'),
+].join('\n'), weatherContext);
+assert.equal(weatherContext.coachingWeatherNumber(null), null, 'null weather values must not become zero');
+assert.equal(weatherContext.coachingWeatherNumber(''), null, 'empty weather values must remain unavailable');
+assert.equal(weatherContext.coachingWeatherNumber('12.5'), 12.5, 'numeric weather values must be normalized');
+const weatherReady = weatherContext.coachingWeatherViewModel({
+  status: 'ready', fetched_at: '2026-09-15T09:58:00.000Z', source: 'Open-Meteo',
+  wind_direction_deg: 225, wind_speed_kmh: 17.6, wind_gusts_kmh: 29,
+  temperature_c: 14.4, humidity_pct: 83, precipitation_mm: 1.2,
+}, Date.parse('2026-09-15T10:00:00.000Z'));
+assert.equal(weatherReady.compact, 'SO 225° · 18 km/h');
+assert.equal(weatherReady.stale, false);
+assert.equal(weatherReady.detail.includes('Humidité 83 %'), true);
+assert.equal(weatherReady.detail.includes('Pluie 1,2 mm'), true);
+const weatherCached = weatherContext.coachingWeatherViewModel({
+  status: 'ready', cached: true, error: 'offline', fetched_at: '2026-09-15T09:30:00.000Z',
+  wind_direction_deg: null, wind_speed_kmh: null, wind_gusts_kmh: null,
+  temperature_c: null, humidity_pct: null, precipitation_mm: null,
+}, Date.parse('2026-09-15T10:00:00.000Z'));
+assert.equal(weatherCached.compact, 'Vent — · — km/h', 'missing wind fields need an honest compact state');
+assert.equal(weatherCached.stale, true, 'old cached weather must be marked stale');
+assert.equal(weatherCached.stateLabel, 'Dernières données conservées · données anciennes · réseau indisponible');
+const weatherUnavailable = weatherContext.coachingWeatherViewModel({ status: 'unavailable', error: 'HTTP 503' });
+assert.equal(weatherUnavailable.compact, 'Météo indisponible');
+assert.equal(weatherUnavailable.stateLabel, 'Actualisation impossible');
+assert.equal(weatherContext.coachingWeatherRequestMatches(4, 'session-a', 4, 'session-a'), true);
+assert.equal(weatherContext.coachingWeatherRequestMatches(4, 'session-a', 5, 'session-a'), false,
+  'a superseded weather request must not commit');
+assert.equal(weatherContext.coachingWeatherRequestMatches(4, 'session-a', 4, 'session-b'), false,
+  'a previous session weather response must not commit after session switch');
+const weatherFetchBody = extractFunction(app, 'fetchCoachingLiveWeather');
+assert.equal((weatherFetchBody.match(/coachingWeatherRequestMatches/g) || []).length >= 2, true,
+  'weather fetch must guard both success and fallback commits against session switches');
+const noWeatherPointBranch = weatherFetchBody.slice(weatherFetchBody.indexOf('if(!requestedSessionId||!point)'), weatherFetchBody.indexOf('coachingWeatherLoading=true'));
+assert.equal(noWeatherPointBranch.includes('coachingWeatherLoading=false'), true,
+  'a superseding request without a position must release the weather loading state');
+has(css, /\.coaching-weather-trigger/, 'compact weather trigger styles missing');
+has(css, /\.coaching-weather-detail/, 'weather detail styles missing');
+
 // Concordance remains an explicit, honest contract even while the calculation is introduced later.
 has(app, /average_deviation_m|max_deviation_m/, 'existing raw deviation metrics missing');
 const concordanceContract = { label: 'Indice de concordance', progressive: true, userThreshold: false };
