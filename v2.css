@@ -963,6 +963,20 @@ body.coaching-session-active #coachingPage{
 .coaching-unread-badge[hidden],.coaching-message-toast[hidden]{display:none}
 .coaching-message-toast{position:fixed;z-index:9200;right:16px;bottom:calc(92px + env(safe-area-inset-bottom));max-width:calc(100vw - 32px);padding:9px 12px;border:1px solid rgba(185,214,108,.38);border-radius:12px;background:rgba(9,26,32,.94);box-shadow:0 8px 24px rgba(0,0,0,.3);color:#e8f3d6;font-size:12px;font-weight:750;pointer-events:none}
 
+/* V10.49 — bandeau terrain unique et carte prioritaire. */
+body.coaching-session-active #coachingPage{padding-right:max(10px,env(safe-area-inset-right,0px));padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));padding-left:max(10px,env(safe-area-inset-left,0px))}
+body.coaching-session-active #coachingPage>.record-head{display:none!important}
+#coachingLivePanel.active-terrain[data-map-priority="true"]{display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;min-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 20px);padding-top:max(8px,env(safe-area-inset-top,0px));padding-bottom:max(8px,env(safe-area-inset-bottom,0px))}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-active-banner{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:center;margin:5px 0;padding:7px 4px;border:1px solid rgba(112,220,255,.2);border-radius:12px;background:rgba(8,25,32,.9)}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-active-banner>span{display:grid;gap:2px;min-width:0;padding:2px 7px;text-align:center;background:transparent}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-active-banner>i{display:none}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-active-banner small{color:var(--v2-muted);font-size:9px;white-space:nowrap}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-active-banner strong{overflow:hidden;color:#f3f8f6;font-size:clamp(12px,3.4vw,16px);text-overflow:ellipsis;white-space:nowrap}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-active-banner.paused{border-color:rgba(240,192,96,.55);background:rgba(56,39,18,.9)}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen){min-height:max(420px,calc(100dvh - 240px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));margin:4px 0 7px}
+#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen) #coachingMap{height:max(420px,calc(100dvh - 240px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));min-height:420px;margin-top:0}
+@media(max-width:600px){#coachingLivePanel.active-terrain[data-map-priority="true"]{padding-right:6px;padding-left:6px}#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-live-head{display:grid;grid-template-columns:minmax(0,1fr) auto}#coachingLivePanel.active-terrain[data-map-priority="true"] .invite-chip{margin-top:0}#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen),#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen) #coachingMap{height:max(360px,calc(100dvh - 250px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));min-height:360px}}
+
 /* V10.47 — Entrée Coaching */
 #coachingEntryPage .record-head{flex-wrap:wrap;gap:12px}
 #coachingEntryPage h2{font-size:clamp(20px,6vw,26px);line-height:1.25}

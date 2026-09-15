@@ -179,6 +179,49 @@ for (const target of ['.coaching-stepper', 'logoutBtn', '[data-coaching-panel="t
 assert.equal(extractFunction(app, 'coachingCanSeeOdor').includes("mode==='training'") || extractFunction(app, 'coachingCanSeeOdor').includes("module==='training'"), false,
   'Coaching odor authorization must not have a training metadata bypass');
 
+// Task 3: the active surface has one semantic, permanent metrics banner. Its
+// renderer must distinguish unavailable data from a measured zero.
+for (const label of ['Temps actif', 'Distance active', 'Âge piste']) {
+  assert.equal((html.match(new RegExp(`>${label}<`, 'g')) || []).length, 1,
+    `${label} must appear exactly once on the active surface`);
+}
+has(html, /id="coachingTerrainStatus"[^>]*role="status"[^>]*data-coaching-active-banner/,
+  'semantic active Coaching banner missing');
+assert.equal(html.includes('class="coaching-live-metrics"'), false,
+  'legacy map metric overlay duplicates the permanent banner');
+
+const bannerNodes = new Map();
+const bannerNode = id => {
+  if (!bannerNodes.has(id)) bannerNodes.set(id, {
+    textContent: '', title: '', dataset: {},
+    classList: { toggle() {} },
+  });
+  return bannerNodes.get(id);
+};
+const bannerContext = {
+  Intl,
+  $: bannerNode,
+  formatExactDuration: ms => `${Math.floor(ms / 60000)} min`,
+  formatOperationalTrackAge: ms => `${Math.floor(ms / 3600000)} h ${String(Math.floor(ms % 3600000 / 60000)).padStart(2, '0')}`,
+};
+vm.createContext(bannerContext);
+vm.runInContext(extractFunction(app, 'renderCoachingActiveBanner'), bannerContext);
+bannerContext.renderCoachingActiveBanner({ activeMs: 42 * 60000, activeKm: 3.8, trackAgeMs: 6 * 3600000 + 25 * 60000, pauseState: 'paused' });
+assert.equal(bannerNode('coachingActiveTime').textContent, '42 min');
+assert.equal(bannerNode('coachingActiveDistance').textContent, '3,80 km');
+assert.equal(bannerNode('coachingTrackAge').textContent, '6 h 25');
+assert.equal(bannerNode('coachingTerrainStatus').dataset.pauseState, 'paused');
+bannerContext.renderCoachingActiveBanner({ activeMs: null, activeKm: undefined, trackAgeMs: Number.NaN, pauseState: 'running' });
+for (const id of ['coachingActiveTime', 'coachingActiveDistance', 'coachingTrackAge']) {
+  assert.equal(bannerNode(id).textContent, '—', `${id} must not manufacture zero`);
+  assert.notEqual(bannerNode(id).title, '', `${id} unavailable value needs a reason`);
+}
+for (const token of ['env(safe-area-inset-left', 'env(safe-area-inset-right', 'env(safe-area-inset-bottom', 'data-map-priority="true"', 'minmax(0,1fr)']) {
+  has(css, new RegExp(token.replace(/[()]/g, '\\$&')), `active map-priority layout missing ${token}`);
+}
+assert.equal(extractFunction(app, 'applyCoachingActiveSurface').includes('coachingActiveBannerState={activeKm:null}'), true,
+  'leaving a session must clear cached active distance before another session opens');
+
 // Timing/origin contracts are guarded before their later UI wiring lands.
 has(app, /function finishHoldStart\(/, 'finish hold start missing');
 has(app, /function finishHoldCancel\(/, 'finish hold cancel missing');

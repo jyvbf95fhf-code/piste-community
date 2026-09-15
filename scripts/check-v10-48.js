@@ -736,13 +736,19 @@ function withoutWizard(text) {
   return text.replace(/    <div id="coachingWizardPanel"[\s\S]*?(?=    <div class="record-head">)/, '');
 }
 
+function withoutV1049ActiveMetrics(text) {
+  return text
+    .replace(/^      <div id="coachingTerrainStatus"[^\n]*\n/m, '')
+    .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
+}
+
 const currentCoachingPage = html.match(/  <section id="coachingPage"[\s\S]*?(?=  <section id="mapPage")/);
 const oldHtml = execFileSync('git', ['show', `${baseline}:index.html`], { encoding: 'utf8' });
 const oldCoachingPage = oldHtml.match(/  <section id="coachingPage"[\s\S]*?(?=  <section id="mapPage")/);
 assert(currentCoachingPage && oldCoachingPage, 'Section Coaching introuvable');
 assert.equal(
-  withoutWizard(currentCoachingPage[0]),
-  withoutWizard(oldCoachingPage[0]),
+  withoutV1049ActiveMetrics(withoutWizard(currentCoachingPage[0])),
+  withoutV1049ActiveMetrics(withoutWizard(oldCoachingPage[0])),
   'Le terrain et les sessions internes doivent rester inchangés'
 );
 
