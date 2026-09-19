@@ -271,9 +271,17 @@ assert.equal(sessionChange.includes('coachingGlobalPhase('), true,
   'realtime duplicate events must reconcile through the global phase');
 assert.equal(sessionChange.includes('showCoachingDriverTrackFinish('), true,
   'a completed driver run must still wait for the explicit Fin de piste hold');
+assert.equal(sessionChange.includes('currentStatus=activeCoachingSession.status'), true,
+  'poll/reload reconciliation must route from refreshed session status');
+assert.equal(/currentStatus==='cancelled'\)\{await handleCoachingSessionCancelled\(id\)/.test(sessionChange), true,
+  'cancelled realtime sessions need their own cleanup route');
+assert.equal(app.includes('async function handleCoachingSessionCancelled('), true,
+  'cancelled session cleanup route is missing');
 const openSession = extractFunctionWithParameterDefaults(app, 'openCoachingSession');
 assert.equal(openSession.includes('coachingGlobalPhase('), true,
   'reload routing must reconcile through the durable global phase');
+assert.equal(openSession.includes("if(globalPhase==='active')requestCoachingPreviewLocation()"), true,
+  'reload of a final session must not restart Terrain preview GPS');
 const resumeSession = extractFunction(app, 'resumeCoachingV10423');
 assert.equal(resumeSession.includes('coachingGlobalPhase('), true,
   'a saved session finishing during reload must route to Debrief, never Terrain');
@@ -786,7 +794,10 @@ assert.equal(/(?:textContent|innerHTML|setUiText|insertAdjacentHTML)[^\n]*odor_c
 // Keep syntax validation in the guard so every task catches parse regressions.
 execFileSync(process.execPath, ['--check', 'app.js'], { stdio: 'pipe' });
 
-const task10DebriefContext = rpc => {
+const task10DebriefContext = (rpc, refresh = context => {
+  context.activeCoachingSession.debrief_status = 'in_progress';
+  return true;
+}) => {
   const nodes = new Map();
   const context = {
     Map,
@@ -796,13 +807,11 @@ const task10DebriefContext = rpc => {
     rpcCalls: 0,
     calculationCalls: 0,
     loadCalls: 0,
+    stageCalls: [],
     supabase: { rpc: async (...args) => { context.rpcCalls += 1; return rpc(context, ...args); } },
     coachingDriverTrackPending: () => false,
     showCoachingDriverTrackFinish: async () => true,
-    refreshActiveCoachingSession: async () => {
-      context.activeCoachingSession.debrief_status = 'in_progress';
-      return true;
-    },
+    refreshActiveCoachingSession: async () => refresh(context),
     coachingToast() {},
     stopCoachingPresence() {},
     stopTraceurTracking() {},
@@ -812,7 +821,7 @@ const task10DebriefContext = rpc => {
     updateCoachingPhase() {},
     updateCoachingPrimaryActions() {},
     updateCoachingDebriefAccess() {},
-    setCoachingStage() {},
+    setCoachingStage: stage => { context.stageCalls.push(stage); },
     refreshCoachingMapLayout() {},
     setUiText() {},
     calculateCoachingDebrief: async () => { context.calculationCalls += 1; },
@@ -847,6 +856,72 @@ const task10DebriefContext = rpc => {
   assert.equal(await lostResponse.openCoachingDebriefOnce('session-10', 'Débrief disponible'), true,
     'a lost begin response must reconcile from the durable refreshed state');
   assert.equal(lostResponse.activeCoachingSession.debrief_status, 'in_progress');
+
+  let rejectedAttempts = 0;
+  const rejected = task10DebriefContext(async () => {
+    rejectedAttempts += 1;
+    return rejectedAttempts === 1
+      ? { data: null, error: new Error('permission denied') }
+      : { data: true, error: null };
+  }, context => {
+    if (rejectedAttempts > 1) context.activeCoachingSession.debrief_status = 'in_progress';
+    return true;
+  });
+  assert.equal(await rejected.openCoachingDebriefOnce('session-10', 'Débrief disponible'), false,
+    'a rejected begin RPC with track_finished still durable must remain retryable');
+  assert.equal(rejected.coachingSessionEndHandledId, null,
+    'a rejected begin RPC must not mark Debrief entry handled');
+  assert.equal(rejected.calculationCalls, 0,
+    'a rejected begin RPC must not calculate an unavailable Debrief');
+  assert.equal(await rejected.openCoachingDebriefOnce('session-10', 'Débrief disponible'), true,
+    'the next event must retry begin after a rejected RPC');
+  assert.equal(rejected.rpcCalls, 2, 'the rejected begin RPC must remain retryable');
+
+  const unconfirmed = task10DebriefContext(async () => ({ data: false, error: null }), () => true);
+  assert.equal(await unconfirmed.openCoachingDebriefOnce('session-10', 'Débrief disponible'), false,
+    'an unconfirmed begin RPC must not expose Debrief');
+  assert.equal(unconfirmed.coachingSessionEndHandledId, null,
+    'an unconfirmed begin RPC must remain retryable');
+
+  for (const role of ['driver', 'traceur', 'observer', 'coach']) {
+    const finalRole = task10DebriefContext(async () => ({ data: true, error: null }));
+    finalRole.role = role;
+    finalRole.activeCoachingSession.debrief_status = 'in_progress';
+    assert.equal(await finalRole.openCoachingDebriefOnce('session-10', 'Débrief disponible'), true,
+      `${role} must enter the shared Debrief`);
+    assert.deepEqual(finalRole.stageCalls, ['debrief'],
+      `${role} final routing must never reopen Terrain`);
+  }
+
+  const trackPendingContext = {
+    activeCoachingSession: null,
+    coachingDriverTrackConfirmedKey: '',
+    session: { user: { id: 'driver-user' } },
+    localStorage: { getItem: () => null },
+    coachingPhase: row => row?.phase,
+    myCoachingRole: () => 'driver',
+  };
+  vm.createContext(trackPendingContext);
+  for (const name of ['coachingGlobalPhase', 'coachingDriverTrackKey', 'coachingDriverTrackPending']) {
+    vm.runInContext(extractFunctionWithParameterDefaults(app, name), trackPendingContext);
+  }
+  assert.equal(trackPendingContext.coachingDriverTrackPending({ status: 'ended', phase: 'completed' }), false,
+    'legacy ended reload must enter Debrief instead of reopening the finish hold');
+  assert.equal(trackPendingContext.coachingDriverTrackPending({ id: 'live-1', status: 'live', phase: 'completed', debrief_status: 'none' }), true,
+    'a live completed run must retain the explicit finish hold');
+
+  const cancelledCalls = [];
+  const cancelledContext = {
+    activeCoachingSession: { id: 'cancelled-1' },
+    clearVerifiedActiveCoaching: id => cancelledCalls.push(['clear', id]),
+    returnToCoachingSessions: async filter => cancelledCalls.push(['sessions', filter]),
+    coachingToast: message => cancelledCalls.push(['toast', message]),
+  };
+  vm.createContext(cancelledContext);
+  vm.runInContext(`async ${extractFunction(app, 'handleCoachingSessionCancelled')}`, cancelledContext);
+  assert.equal(await cancelledContext.handleCoachingSessionCancelled('cancelled-1'), true);
+  assert.deepEqual(cancelledCalls.map(call => call[0]), ['clear', 'sessions', 'toast'],
+    'cancelled realtime cleanup must leave Terrain without entering Debrief');
 
   console.log('V10.49 guardrails PASS');
 })().catch(error => {
