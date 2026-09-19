@@ -59,7 +59,8 @@ const protectedFunctions = [
   'coachingWithoutPreparedRouteV1045',
   'chooseCoachingSearchV1045',
   'coachingTimingV1045',
-  'openCoachingSession',
+  // V10.49 routes durable finish/debrief states on realtime and reload.
+  // scripts/check-v10-49.js owns the convergence and no-reopen contract.
   'clearCoachingRealtime',
   'sendCoachingMessage',
   'loadCoachingMessages'
@@ -752,6 +753,8 @@ function withoutV1049ActiveMetrics(text) {
     .replace('aria-label="Informations secondaires de la session"', 'aria-label="Informations de la session"')
     .replace(/<button data-coaching-tab="messages">[\s\S]*?<\/button>/, '')
     .replace('<button data-coaching-tab="session">Informations</button>', '<button data-coaching-tab="session">Plus</button>')
+    .replace(' data-coaching-stage-container="debrief"', '')
+    .replace(/<header class="coaching-debrief-entry">[\s\S]*?<\/header>/, '')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
 }
 

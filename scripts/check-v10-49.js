@@ -236,6 +236,54 @@ for (const target of ['.coaching-stepper', 'logoutBtn', '[data-coaching-panel="t
 assert.equal(extractFunction(app, 'coachingCanSeeOdor').includes("mode==='training'") || extractFunction(app, 'coachingCanSeeOdor').includes("module==='training'"), false,
   'Coaching odor authorization must not have a training metadata bypass');
 
+// Task 10: the durable V10.49 state is the single routing authority. Finishing
+// and realtime duplicates must converge every role on the same Debrief view,
+// while a completed driver run still waits for the explicit two-second finish.
+const globalPhaseContext = {};
+vm.createContext(globalPhaseContext);
+vm.runInContext(extractFunction(app, 'coachingGlobalPhase'), globalPhaseContext);
+for (const [row, expected] of [
+  [{ status: 'live', phase: 'driver_running', debrief_status: 'none' }, 'active'],
+  [{ status: 'live', phase: 'completed', debrief_status: 'none' }, 'active'],
+  [{ status: 'ended', phase: 'completed', debrief_status: 'track_finished' }, 'track_finished'],
+  [{ status: 'ended', phase: 'completed', debrief_status: 'in_progress' }, 'debrief'],
+  [{ status: 'ended', phase: 'completed', debrief_status: 'closed' }, 'closed'],
+  [{ status: 'ended', phase: 'completed' }, 'debrief'],
+]) assert.equal(globalPhaseContext.coachingGlobalPhase(row), expected,
+  `global Coaching phase must reconcile ${row.debrief_status || 'legacy ended'}`);
+
+const safeRealtime = extractFunction(app, 'applySafeCoachingRealtimeStatus');
+for (const field of ['debrief_status', 'track_finished_at']) {
+  assert.equal(safeRealtime.includes(`'${field}'`), true,
+    `realtime session reconciliation must retain ${field}`);
+}
+const openDebrief = extractFunction(app, 'openCoachingDebriefOnce');
+assert.equal(openDebrief.includes("supabase.rpc('begin_coaching_debrief_v1049'"), true,
+  'track_finished must initialize the shared Debrief through its RPC');
+assert.equal(openDebrief.includes('coachingGlobalPhase('), true,
+  'Debrief opening must use the durable global phase');
+assert.equal(openDebrief.includes('coachingDebriefOpenPromises.get(') && openDebrief.includes('coachingDebriefOpenPromises.set('), true,
+  'duplicate realtime events must share one Debrief-opening operation');
+assert.equal(openDebrief.includes('saveCoachingDebrief'), false,
+  'Debrief entry must not depend on observation validation');
+const sessionChange = extractFunction(app, 'handleCoachingSessionChange');
+assert.equal(sessionChange.includes('coachingGlobalPhase('), true,
+  'realtime duplicate events must reconcile through the global phase');
+assert.equal(sessionChange.includes('showCoachingDriverTrackFinish('), true,
+  'a completed driver run must still wait for the explicit Fin de piste hold');
+const openSession = extractFunctionWithParameterDefaults(app, 'openCoachingSession');
+assert.equal(openSession.includes('coachingGlobalPhase('), true,
+  'reload routing must reconcile through the durable global phase');
+const resumeSession = extractFunction(app, 'resumeCoachingV10423');
+assert.equal(resumeSession.includes('coachingGlobalPhase('), true,
+  'a saved session finishing during reload must route to Debrief, never Terrain');
+assert.equal(extractFunction(app, 'setCoachingStage').includes('calculateCoachingDebrief()'), false,
+  'stage selection must not duplicate the explicit Debrief calculation');
+has(html, /id="coachingDebriefStage"[^>]*data-coaching-stage-container="debrief"/,
+  'Debrief must have a dedicated global stage container');
+has(css, /#coachingDebriefStage\.debrief-entry/,
+  'Debrief entry state must be visually explicit');
+
 // Task 3: the active surface has one semantic, permanent metrics banner. Its
 // renderer must distinguish unavailable data from a measured zero.
 for (const label of ['Temps actif', 'Distance active', 'Âge piste']) {
@@ -738,4 +786,70 @@ assert.equal(/(?:textContent|innerHTML|setUiText|insertAdjacentHTML)[^\n]*odor_c
 // Keep syntax validation in the guard so every task catches parse regressions.
 execFileSync(process.execPath, ['--check', 'app.js'], { stdio: 'pipe' });
 
-console.log('V10.49 guardrails PASS');
+const task10DebriefContext = rpc => {
+  const nodes = new Map();
+  const context = {
+    Map,
+    activeCoachingSession: { id: 'session-10', status: 'ended', phase: 'completed', debrief_status: 'track_finished' },
+    coachingDebriefOpenPromises: new Map(),
+    coachingSessionEndHandledId: null,
+    rpcCalls: 0,
+    calculationCalls: 0,
+    loadCalls: 0,
+    supabase: { rpc: async (...args) => { context.rpcCalls += 1; return rpc(context, ...args); } },
+    coachingDriverTrackPending: () => false,
+    showCoachingDriverTrackFinish: async () => true,
+    refreshActiveCoachingSession: async () => {
+      context.activeCoachingSession.debrief_status = 'in_progress';
+      return true;
+    },
+    coachingToast() {},
+    stopCoachingPresence() {},
+    stopTraceurTracking() {},
+    closeFakeLock: async () => {},
+    clearCoachingRealtime() {},
+    clearVerifiedActiveCoaching() {},
+    updateCoachingPhase() {},
+    updateCoachingPrimaryActions() {},
+    updateCoachingDebriefAccess() {},
+    setCoachingStage() {},
+    refreshCoachingMapLayout() {},
+    setUiText() {},
+    calculateCoachingDebrief: async () => { context.calculationCalls += 1; },
+    loadSavedCoachingDebrief: async () => { context.loadCalls += 1; },
+    $: id => {
+      if (!nodes.has(id)) nodes.set(id, { classList: { remove() {} }, scrollIntoView() {} });
+      return nodes.get(id);
+    },
+  };
+  vm.createContext(context);
+  vm.runInContext(extractFunction(app, 'coachingGlobalPhase'), context);
+  vm.runInContext(`async ${extractFunction(app, 'openCoachingDebriefOnce')}`, context);
+  return context;
+};
+
+(async () => {
+  let releaseRpc;
+  const duplicate = task10DebriefContext(async () => {
+    await new Promise(resolve => { releaseRpc = resolve; });
+    return { data: true, error: null };
+  });
+  const first = duplicate.openCoachingDebriefOnce('session-10', 'Débrief disponible');
+  const second = duplicate.openCoachingDebriefOnce('session-10', 'Débrief disponible');
+  while (!releaseRpc) await new Promise(resolve => setImmediate(resolve));
+  releaseRpc();
+  assert.deepEqual(await Promise.all([first, second]), [true, true]);
+  assert.equal(duplicate.rpcCalls, 1, 'duplicate realtime delivery must call begin RPC once');
+  assert.equal(duplicate.calculationCalls, 1, 'duplicate realtime delivery must calculate Debrief once');
+  assert.equal(duplicate.loadCalls, 1, 'duplicate realtime delivery must load Debrief once');
+
+  const lostResponse = task10DebriefContext(async () => { throw new Error('response lost'); });
+  assert.equal(await lostResponse.openCoachingDebriefOnce('session-10', 'Débrief disponible'), true,
+    'a lost begin response must reconcile from the durable refreshed state');
+  assert.equal(lostResponse.activeCoachingSession.debrief_status, 'in_progress');
+
+  console.log('V10.49 guardrails PASS');
+})().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
