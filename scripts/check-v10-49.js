@@ -943,6 +943,35 @@ assert.equal(app.includes('vérité scientifique'), true,
 assert.equal(extractFunction(app, 'calculateCoachingDebrief').includes('computeCoachingConcordance('), true,
   'statistics must be recomputed immediately from authorized raw traces');
 
+// Task 13: every final-debrief reader loads the complete observation set, while
+// writes derive the author from the authenticated session and use revision CAS.
+for (const name of ['loadParticipantObservations', 'saveParticipantObservation', 'renderParticipantObservations', 'submitParticipantObservation']) {
+  assert.equal(app.includes(`function ${name}(`) || app.includes(`async function ${name}(`), true,
+    `Task 13 production function missing: ${name}`);
+}
+const observationLoader = extractFunction(app, 'loadParticipantObservations');
+assert.equal(observationLoader.includes("from('coaching_debrief_observations')"), true,
+  'participant observations must load from their dedicated backend table');
+assert.equal(observationLoader.includes("eq('user_id'"), false,
+  'authorized readers must load all participant observations, not only their own');
+const observationSaver = extractFunction(app, 'saveParticipantObservation');
+for (const token of ["from('coaching_debrief_observations')", 'session?.user?.id', "eq('revision',version)", 'revision:version+1']) {
+  assert.equal(observationSaver.includes(token), true, `observation save is missing ${token}`);
+}
+assert.equal(/\brole\s*:/.test(observationSaver), false,
+  'the client must never forge the server-derived observation role');
+assert.equal(extractFunction(app, 'submitParticipantObservation').includes('setCoachingStage('), false,
+  'editing an observation must never reopen or reroute Terrain');
+assert.equal(extractFunctionWithParameterDefaults(app, 'renderParticipantObservations').includes('dataset.dirty'), true,
+  'realtime observation refresh must preserve an unsaved local draft for conflict resolution');
+assert.equal(extractFunction(app, 'updateCoachingDebriefAccess').includes("['in_progress','closed']"), true,
+  'personal observation UI must follow the backend final-reader states exactly');
+has(html, /id="coachingParticipantObservations"/, 'participant observation section missing');
+has(html, /id="coachingObservationList"[^>]*aria-live="polite"/, 'shared participant observation list missing');
+assert.equal(/id=["']coachingObservationBody["'][^>]*\brequired\b/.test(app + html), false,
+  'a participant observation must be allowed to remain empty');
+has(css, /\.coaching-observation-card/, 'participant observation card styles missing');
+
 for (const script of ['check-v10-49.js', 'check-v10-48.js', 'check-v10-47.js', 'check-v10-46.js', 'check-v10-45.js', 'check-v10-44.js', 'check-v10-43.js', 'check-v10-42-2.js', 'verify-current-assets.js']) {
   assert.equal(fs.existsSync(`scripts/${script}`), true, `regression guard missing: ${script}`);
 }
@@ -998,6 +1027,62 @@ const task10DebriefContext = (rpc, refresh = context => {
 };
 
 (async () => {
+  const observationRows = [{ session_id: 'session-13', user_id: 'other', role: 'traceur', body: 'Lecture commune', revision: 1 }];
+  const observationWrites = [];
+  const observationSupabase = {
+    from(table) {
+      assert.equal(table, 'coaching_debrief_observations');
+      let operation = 'select', payload = null;
+      const filters = {};
+      const builder = {
+        select() { return builder; },
+        eq(key, value) { filters[key] = value; return builder; },
+        order: async () => ({ data: observationRows.filter(row => row.session_id === filters.session_id), error: null }),
+        insert(value) { operation = 'insert'; payload = value; observationWrites.push({ operation, payload }); return builder; },
+        update(value) { operation = 'update'; payload = value; observationWrites.push({ operation, payload }); return builder; },
+        async maybeSingle() {
+          if (operation === 'insert') {
+            assert.equal(payload.user_id, 'author-13', 'insert author must come from the authenticated session');
+            assert.equal(Object.hasOwn(payload, 'role'), false, 'insert must not forge a role');
+            if (observationRows.some(row => row.session_id === payload.session_id && row.user_id === payload.user_id)) {
+              return { data: null, error: { code: '23505', message: 'duplicate' } };
+            }
+            const row = { ...payload, role: 'observer', revision: 1 };
+            observationRows.push(row);
+            return { data: row, error: null };
+          }
+          const row = observationRows.find(candidate => candidate.session_id === filters.session_id && candidate.user_id === filters.user_id && candidate.revision === filters.revision);
+          if (!row) return { data: null, error: null };
+          Object.assign(row, payload, { role: row.role });
+          return { data: { ...row }, error: null };
+        },
+      };
+      return builder;
+    },
+  };
+  const observationContext = { supabase: observationSupabase, session: { user: { id: 'author-13' } }, activeCoachingSession: null };
+  vm.createContext(observationContext);
+  vm.runInContext(`async ${extractFunction(app, 'loadParticipantObservations')}`, observationContext);
+  vm.runInContext(`async ${extractFunction(app, 'saveParticipantObservation')}`, observationContext);
+  const sharedRows = await observationContext.loadParticipantObservations('session-13');
+  assert.equal(sharedRows.length, 1, 'authorized readers must receive other participant observations');
+  const empty = await observationContext.saveParticipantObservation('session-13', '', null);
+  assert.equal(empty.body, '', 'an empty personal observation must be accepted');
+  assert.equal(empty.role, 'observer', 'the server response must supply the author role');
+  await assert.rejects(
+    observationContext.saveParticipantObservation('session-13', 'stale draft', 0),
+    error => error?.code === 'OBSERVATION_CONFLICT',
+    'a stale same-author revision must produce an explicit conflict',
+  );
+  assert.equal(observationRows.find(row => row.user_id === 'author-13').body, '',
+    'a stale save must preserve the stored observation');
+  const updated = await observationContext.saveParticipantObservation('session-13', 'version two', 1);
+  assert.equal(updated.revision, 2);
+  assert.equal(observationRows.filter(row => row.user_id === 'author-13').length, 1,
+    'one author must retain exactly one observation row');
+  assert.equal(observationWrites.every(write => !Object.hasOwn(write.payload, 'role')), true,
+    'no observation write may send a client-selected role');
+
   let releaseRpc;
   const duplicate = task10DebriefContext(async () => {
     await new Promise(resolve => { releaseRpc = resolve; });

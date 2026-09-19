@@ -757,6 +757,7 @@ function withoutV1049ActiveMetrics(text) {
     .replace(/<header class="coaching-debrief-entry">[\s\S]*?<\/header>/, '')
     .replace(/<section class="coaching-debrief-overlay"[\s\S]*?<\/section>/, '')
     .replace('<section id="coachingAutoDebrief" class="auto-debrief hidden" aria-label="Statistiques du débrief" aria-live="polite"></section>', '<div id="coachingAutoDebrief" class="auto-debrief hidden"></div>')
+    .replace(/^      <section id="coachingParticipantObservations"[^\n]*\n?/m, '')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
 }
 
