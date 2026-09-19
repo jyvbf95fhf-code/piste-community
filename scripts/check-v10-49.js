@@ -292,6 +292,68 @@ has(html, /id="coachingDebriefStage"[^>]*data-coaching-stage-container="debrief"
 has(css, /#coachingDebriefStage\.debrief-entry/,
   'Debrief entry state must be visually explicit');
 
+// Task 11: final Debrief uses only the real Traceur and Conducteur paths. The
+// role proof combines active members with the participation ledger so a
+// departed participant stays classifiable without restoring Terrain access.
+for (const name of ['coachingDebriefRoleIndex', 'coachingDebriefPaths', 'coachingDebriefMarkerPopup', 'loadCoachingDebriefData', 'renderDebriefOverlay']) {
+  assert.equal(app.includes(`function ${name}(`) || app.includes(`async function ${name}(`), true,
+    `Task 11 production function missing: ${name}`);
+}
+const overlayContext = {
+  Map,
+  LIVE_MARKERS: {
+    object: { icon: '📦', label: 'Objet' },
+    note: { icon: '📍', label: 'Note' },
+  },
+  esc: value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character])),
+};
+vm.createContext(overlayContext);
+for (const name of ['coachingDebriefRoleIndex', 'coachingDebriefPaths', 'coachingDebriefMarkerPopup']) {
+  vm.runInContext(extractFunctionWithParameterDefaults(app, name), overlayContext);
+}
+const overlayPaths = overlayContext.coachingDebriefPaths(
+  [
+    { owner_id: 'driver', lat: 48, lon: 7, recorded_at: '2026-01-01T10:00:00Z' },
+    { owner_id: 'coach', lat: 49, lon: 8, recorded_at: '2026-01-01T10:00:01Z' },
+    { owner_id: 'observer', lat: 50, lon: 9, recorded_at: '2026-01-01T10:00:02Z' },
+  ],
+  [
+    { owner_id: 'traceur', lat: 48.1, lon: 7.1, recorded_at: '2026-01-01T09:00:00Z' },
+    { owner_id: 'coach', lat: 49.1, lon: 8.1, recorded_at: '2026-01-01T09:00:01Z' },
+  ],
+  [
+    { user_id: 'traceur', role: 'traceur' },
+    { user_id: 'coach', role: 'coach' },
+    { user_id: 'observer', role: 'observer' },
+  ],
+  [{ user_id: 'driver', role: 'driver', participated_at: '2026-01-01T10:00:00Z' }],
+);
+assert.deepEqual(JSON.parse(JSON.stringify(overlayPaths.traceurPoints.map(point => point.owner_id))), ['traceur'],
+  'Debrief overlay must exclude Coach paths from the Traceur line');
+assert.deepEqual(JSON.parse(JSON.stringify(overlayPaths.driverPoints.map(point => point.owner_id))), ['driver'],
+  'Debrief overlay must exclude Coach/Observer paths from the Conducteur line');
+assert.equal(overlayContext.coachingDebriefPaths([], [], [], []).traceurPoints.length, 0,
+  'a missing real Traceur path must stay missing instead of substituting the planned route');
+const hostilePopup = overlayContext.coachingDebriefMarkerPopup({ marker_type: 'object', note: '<img src=x onerror=alert(1)>' });
+assert.equal(hostilePopup.includes('&lt;img src=x onerror=alert(1)&gt;'), true,
+  'marker properties must be escaped in clickable popups');
+assert.equal(hostilePopup.includes('<img'), false, 'marker popup must not inject marker HTML');
+const debriefLoader = extractFunction(app, 'loadCoachingDebriefData');
+for (const selection of ['accuracy_m', 'author_id', 'marker_type', 'note', 'coaching_participation_ledger']) {
+  assert.equal(debriefLoader.includes(selection), true, `Debrief loader must request ${selection}`);
+}
+assert.equal(debriefLoader.includes('planned_route'), false,
+  'Debrief loader must not substitute planned geometry for a missing real trace');
+const overlayRenderer = extractFunctionWithParameterDefaults(app, 'renderDebriefOverlay');
+for (const token of ['TRACE_PALETTE.traceur', 'TRACE_PALETTE.conducteur', 'coachingDebriefMarkerPopup', 'coachingDebriefOverlayState']) {
+  assert.equal(overlayRenderer.includes(token), true, `Debrief overlay renderer missing ${token}`);
+}
+has(html, /id="coachingDebriefOverlayLegend"[\s\S]*?Traceur[\s\S]*?Conducteur[\s\S]*?Rep[eè]res/,
+  'Debrief overlay legend must identify both real paths and markers');
+has(html, /id="coachingDebriefMarkerDetail"[^>]*aria-live="polite"/,
+  'clickable marker detail surface missing');
+has(css, /\.coaching-debrief-overlay-legend/, 'Debrief overlay legend styles missing');
+
 // Task 3: the active surface has one semantic, permanent metrics banner. Its
 // renderer must distinguish unavailable data from a measured zero.
 for (const label of ['Temps actif', 'Distance active', 'Âge piste']) {

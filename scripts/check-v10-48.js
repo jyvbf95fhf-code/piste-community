@@ -755,6 +755,7 @@ function withoutV1049ActiveMetrics(text) {
     .replace('<button data-coaching-tab="session">Informations</button>', '<button data-coaching-tab="session">Plus</button>')
     .replace(' data-coaching-stage-container="debrief"', '')
     .replace(/<header class="coaching-debrief-entry">[\s\S]*?<\/header>/, '')
+    .replace(/<section class="coaching-debrief-overlay"[\s\S]*?<\/section>/, '')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
 }
 
