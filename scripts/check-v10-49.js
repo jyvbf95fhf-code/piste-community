@@ -831,19 +831,117 @@ assert.equal(odorSyncSource.includes("authorized?(enabled?'Activé pour cette se
 has(css, /\.coaching-odor-toggle/, 'direct map odor toggle styles missing');
 has(css, /\.coaching-odor-preference/, 'preparation odor preference styles missing');
 
-// Concordance remains an explicit, honest contract even while the calculation is introduced later.
-has(app, /average_deviation_m|max_deviation_m/, 'existing raw deviation metrics missing');
-const concordanceContract = { label: 'Indice de concordance', progressive: true, userThreshold: false };
-assert.equal(concordanceContract.label, 'Indice de concordance');
-assert.equal(concordanceContract.progressive, true);
-assert.equal(concordanceContract.userThreshold, false);
-const concordanceFixture = deviations => {
-  if (!deviations.length) return null;
-  const average = deviations.reduce((sum, value) => sum + value, 0) / deviations.length;
-  return Math.max(0, Math.min(100, 100 * Math.exp(-average / 25)));
-};
-assert.equal(concordanceFixture([0, 0]), 100, 'perfect concordance should be 100');
-assert.equal(concordanceFixture([10, 20]) > concordanceFixture([10, 40]), true, 'larger deviations must progressively penalize');
+// Task 12 exercises the real, bidirectional and length-weighted concordance
+// calculation. Literal geometric fixtures keep the expectations independent
+// from the implementation and catch binary or one-way scoring regressions.
+const concordanceContext = { Math, Date };
+vm.createContext(concordanceContext);
+for (const name of ['hav', 'routeDistance', 'distanceToSegmentMeters', 'deviationFromRoute', 'computeCoachingConcordance']) {
+  vm.runInContext(extractFunctionWithParameterDefaults(app, name), concordanceContext);
+}
+const concordanceLine = (coordinates, accuracy = 10) => coordinates.map(([lat, lon], index) => ({
+  lat,
+  lon,
+  accuracy_m: accuracy,
+  recorded_at: new Date(Date.UTC(2026, 0, 1, 10, 0, index)).toISOString(),
+}));
+const traceStraight = concordanceLine([[48, 7], [48, 7.001], [48, 7.002]]);
+const identical = concordanceContext.computeCoachingConcordance(traceStraight, traceStraight, 25);
+assert.equal(identical.indexPct, 100, 'identical traces must score 100');
+assert.equal(identical.meanDeviationM, 0, 'identical traces must have no mean deviation');
+assert.equal(identical.maxDeviationM, 0, 'identical traces must have no maximum deviation');
+assert.equal(identical.traceurDistanceM > 140 && identical.driverDistanceM > 140, true,
+  'concordance must expose both measured trace distances');
+
+const parallelNear = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48.00009, 7], [48.00009, 7.001], [48.00009, 7.002]]),
+  25,
+);
+const parallelFar = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48.00027, 7], [48.00027, 7.001], [48.00027, 7.002]]),
+  25,
+);
+assert.equal(parallelNear.indexPct > parallelFar.indexPct, true,
+  'larger deviations must progressively penalize concordance');
+assert.equal(parallelNear.meanDeviationM < parallelFar.meanDeviationM, true,
+  'mean deviation must preserve progressive geometry');
+
+const differentlySampled = concordanceContext.computeCoachingConcordance(
+  concordanceLine([[48, 7], [48, 7.002]]),
+  concordanceLine([[48, 7], [48, 7.0005], [48, 7.001], [48, 7.0015], [48, 7.002]]),
+  25,
+);
+assert.equal(differentlySampled.indexPct, 100,
+  'different point densities on the same polyline must not change concordance');
+
+const reversed = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48, 7.002], [48, 7.001], [48, 7]]),
+  25,
+);
+assert.equal(reversed.indexPct, 100, 'reversing the same geometry must preserve concordance');
+
+const partial = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48, 7], [48, 7.001]]),
+  25,
+);
+assert.equal(partial.indexPct < 100 && partial.maxDeviationM > 70, true,
+  'bidirectional comparison must penalize a partial driver path');
+
+const crossing = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[47.9995, 7.001], [48, 7.001], [48.0005, 7.001]]),
+  25,
+);
+assert.equal(crossing.indexPct > 0 && crossing.indexPct < 100, true,
+  'a crossing must receive a progressive score rather than a binary result');
+
+const loop = concordanceLine([[48, 7], [48, 7.001], [48.001, 7.001], [48.001, 7], [48, 7]]);
+const reverseLoop = concordanceLine([[48, 7], [48.001, 7], [48.001, 7.001], [48, 7.001], [48, 7]]);
+assert.equal(concordanceContext.computeCoachingConcordance(loop, reverseLoop, 25).indexPct, 100,
+  'the complete loop geometry must compare independently of travel direction');
+
+const noisyHighAccuracy = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48.00018, 7], [48.00018, 7.001], [48.00018, 7.002]], 5000),
+  25,
+);
+const noisyBoundedAccuracy = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48.00018, 7], [48.00018, 7.001], [48.00018, 7.002]], 55),
+  25,
+);
+assert.equal(noisyHighAccuracy.indexPct, noisyBoundedAccuracy.indexPct,
+  'aberrant GPS accuracy must be bounded and cannot manufacture concordance');
+const zeroAccuracy = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48.00018, 7], [48.00018, 7.001], [48.00018, 7.002]], 0),
+  25,
+);
+const minimumAccuracy = concordanceContext.computeCoachingConcordance(
+  traceStraight,
+  concordanceLine([[48.00018, 7], [48.00018, 7.001], [48.00018, 7.002]], 1),
+  25,
+);
+assert.equal(zeroAccuracy.indexPct, minimumAccuracy.indexPct,
+  'finite GPS accuracy must be clamped to the one metre minimum');
+const missingAccuracy = traceStraight.map(({ accuracy_m, ...point }) => point);
+const missingAccuracyResult = concordanceContext.computeCoachingConcordance(missingAccuracy, missingAccuracy, 25);
+assert.equal(missingAccuracyResult.indexPct, 100);
+assert.equal(missingAccuracyResult.quality.level, 'low', 'missing accuracy must lower quality explicitly');
+assert.equal(concordanceContext.computeCoachingConcordance([], traceStraight, 25).indexPct, null,
+  'a missing real trace must return a non-calculable index');
+
+for (const label of ['Indice de concordance', 'Écart moyen', 'Écart maximal', 'Distance Traceur', 'Distance Conducteur']) {
+  assert.equal(app.includes(label), true, `Debrief must display ${label}`);
+}
+assert.equal(app.includes('vérité scientifique'), true,
+  'the concordance result must state that it is not a scientific truth');
+assert.equal(extractFunction(app, 'calculateCoachingDebrief').includes('computeCoachingConcordance('), true,
+  'statistics must be recomputed immediately from authorized raw traces');
 
 for (const script of ['check-v10-49.js', 'check-v10-48.js', 'check-v10-47.js', 'check-v10-46.js', 'check-v10-45.js', 'check-v10-44.js', 'check-v10-43.js', 'check-v10-42-2.js', 'verify-current-assets.js']) {
   assert.equal(fs.existsSync(`scripts/${script}`), true, `regression guard missing: ${script}`);
