@@ -258,13 +258,18 @@ const sharedMetricContext = {
   },
   coachingActiveBannerState: { activeKm: null },
   coachingTerrainPaused: false,
+  coachingPauseIntervals: [],
   myCoachingRole: () => 'traceur',
+  renderCoachingPauseState() {},
   renderCoachingActiveBanner: metrics => sharedMetricCalls.push(metrics),
   coachingMemberRole: () => 'driver',
   routeDistance: points => points[0]?.kind === 'driver' ? 3800 : 9900,
 };
 vm.createContext(sharedMetricContext);
 vm.runInContext(extractFunctionWithParameterDefaults(app, 'resolveTrackOrigin'), sharedMetricContext);
+vm.runInContext(extractFunctionWithParameterDefaults(app, 'coachingPauseState'), sharedMetricContext);
+vm.runInContext(extractFunctionWithParameterDefaults(app, 'coachingActiveDurationMs'), sharedMetricContext);
+vm.runInContext(extractFunctionWithParameterDefaults(app, 'coachingActiveDistance'), sharedMetricContext);
 vm.runInContext(extractFunctionWithParameterDefaults(app, 'updateCoachingTerrainStatus'), sharedMetricContext);
 vm.runInContext(extractFunctionWithParameterDefaults(app, 'updateCoachingLiveMetrics'), sharedMetricContext);
 sharedMetricContext.updateCoachingTerrainStatus();
@@ -282,6 +287,66 @@ const traceMetricPoints = [{ kind: 'trace', recorded_at: '2026-09-15T10:05:00Z' 
 sharedMetricContext.updateCoachingLiveMetrics(new Map([['driver-user', driverMetricPoints]]), traceMetricPoints);
 assert.equal(sharedMetricCalls.at(-1).activeKm, 3.8,
   'Traceur must see the shared Conducteur active distance, not pose distance');
+
+// Task 7: shared pause is authoritative, survives reload and filters only the
+// active metrics. Raw GPS acquisition and point arrays remain untouched.
+for (const name of ['coachingCanControlPause', 'coachingPauseState', 'coachingActiveDurationMs', 'coachingActiveDistance', 'requestSharedPause']) {
+  has(app, new RegExp(`function ${name}\\(`), `shared pause contract missing: ${name}`);
+}
+const pauseContext = { Date, Math, Number, coachingPauseIntervals: [], coachingPauseIntervalsSessionId: null, routeDistance: points => (points.length - 1) * 100 };
+vm.createContext(pauseContext);
+vm.runInContext([
+  'coachingCanControlPause',
+  'coachingPauseState',
+  'coachingActiveDurationMs',
+  'coachingActiveDistance',
+].map(name => extractFunctionWithParameterDefaults(app, name)).join('\n'), pauseContext);
+assert.equal(pauseContext.coachingCanControlPause('driver'), true, 'Conducteur must control shared pause');
+assert.equal(pauseContext.coachingCanControlPause('coach'), true, 'Coach must control shared pause');
+assert.equal(pauseContext.coachingCanControlPause('traceur'), false, 'Traceur must be read-only for shared pause');
+assert.equal(pauseContext.coachingCanControlPause('observer'), false, 'Observer must be read-only for shared pause');
+const pauseEvents = [
+  { started_at: '2026-09-15T11:02:00Z', ended_at: '2026-09-15T11:05:00Z' },
+  { started_at: '2026-09-15T11:08:00Z', ended_at: null },
+];
+const pausedState = pauseContext.coachingPauseState({
+  pause_state: 'paused', pause_started_at: '2026-09-15T11:08:00Z', pause_total_ms: 180000,
+}, pauseEvents, Date.parse('2026-09-15T11:10:00Z'));
+assert.equal(pausedState.paused, true, 'reload must reconstruct the shared paused state');
+assert.equal(pausedState.changedAt, '2026-09-15T11:08:00.000Z');
+assert.equal(pausedState.intervals.length, 2, 'server pause journal must be preserved');
+assert.equal(pauseContext.coachingActiveDurationMs('2026-09-15T11:00:00Z', '2026-09-15T11:10:00Z', pausedState), 5 * 60000,
+  'active duration must subtract closed and open shared pauses');
+const rawPausePoints = [
+  { recorded_at: '2026-09-15T11:00:00Z' },
+  { recorded_at: '2026-09-15T11:01:00Z' },
+  { recorded_at: '2026-09-15T11:03:00Z' },
+  { recorded_at: '2026-09-15T11:06:00Z' },
+  { recorded_at: '2026-09-15T11:07:00Z' },
+  { recorded_at: '2026-09-15T11:09:00Z' },
+];
+assert.equal(pauseContext.coachingActiveDistance(rawPausePoints, pausedState), 200,
+  'active distance must not bridge a pause or include movement during pause');
+assert.equal(rawPausePoints.length, 6, 'active metrics must not mutate the raw GPS trace');
+const pauseRequestBody = extractFunctionWithParameterDefaults(app, 'requestSharedPause');
+has(pauseRequestBody, /rpc\(['"]set_coaching_pause['"]/, 'shared pause must use the atomic backend RPC');
+assert.equal(/from\(['"]coaching_sessions['"]\)\.update/.test(pauseRequestBody), false,
+  'shared pause must not bypass the RPC with a direct update');
+assert.equal(pauseRequestBody.includes('coachingPauseRequest'), true,
+  'concurrent pause commands need one in-flight request');
+const togglePauseBody = extractFunctionWithParameterDefaults(app, 'toggleTerrainPause');
+assert.equal(togglePauseBody.includes('stopCoachingPresence') || togglePauseBody.includes('stopTraceurTracking'), false,
+  'pausing metrics must not stop raw GPS watchers');
+assert.equal(togglePauseBody.includes('startCoachingGpsTracking'), false,
+  'resuming metrics must not restart or duplicate GPS watchers');
+has(app, /coaching_pause_events[\s\S]*?started_at[\s\S]*?ended_at/, 'pause journal must reload from the server');
+for (const field of ['pause_state', 'pause_started_at', 'pause_started_by', 'pause_total_ms']) {
+  assert.equal(extractFunction(app, 'applySafeCoachingRealtimeStatus').includes(`'${field}'`), true,
+    `realtime reconciliation missing ${field}`);
+}
+has(html, /id="terrainPauseLabel"/, 'shared pause action label missing');
+has(html, /id="terrainPauseState"[^>]*aria-live="polite"/, 'shared pause confirmation state missing');
+has(css, /data-pause-pending="true"/, 'shared pause pending style missing');
 
 has(css, /@media\(max-height:[^)]+\),\(orientation:landscape\)[\s\S]*?\.coaching-map-shell:not\(\.fullscreen\)[\s\S]*?height:clamp\(/,
   'short landscape and keyboard-reduced viewports need a bounded map height');

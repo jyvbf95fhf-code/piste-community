@@ -743,6 +743,7 @@ function withoutV1049ActiveMetrics(text) {
     .replace(/<label><input type="checkbox" data-coaching-layer="odor" checked> Olfactif estimé<\/label>/, '')
     .replace(/      <div id="coachingLiveWeather"[\s\S]*?(?=      <div id="coachingHistoricalWeather")/, '')
     .replace(/^      <div id="coachingTerrainStatus"[^\n]*\n/m, '')
+    .replace(/<button id="terrainPauseBtn"[\s\S]*?<\/button>/, '<button id="terrainPauseBtn" class="secondary" type="button">Pause</button>')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
 }
 

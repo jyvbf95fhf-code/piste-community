@@ -830,6 +830,10 @@ body.v10-30-aurora{
 #coachingLivePanel.active-terrain .coaching-terrain-command-bar{margin:6px 0;gap:6px}
 #coachingLivePanel.active-terrain .coaching-terrain-command-bar button,
 #coachingLivePanel.active-terrain .coaching-tabs button{min-height:44px}
+#coachingLivePanel.active-terrain #terrainPauseBtn{display:grid;justify-items:center;gap:2px}
+#coachingLivePanel.active-terrain #terrainPauseBtn small{font-size:.68rem;font-weight:600;opacity:.75}
+#coachingLivePanel.active-terrain #terrainPauseBtn[data-pause-state="paused"]{border-color:#f0bf5a;background:rgba(240,191,90,.14)}
+#coachingLivePanel.active-terrain #terrainPauseBtn[data-pause-pending="true"]{cursor:wait;opacity:.72}
 #coachingLivePanel.active-terrain .coaching-primary-actions{gap:7px;margin:8px 0 calc(10px + env(safe-area-inset-bottom,0px));padding:9px}
 #coachingLivePanel.active-terrain .coaching-departure{gap:8px;margin:8px 0;padding:10px}
 #coachingLivePanel.active-terrain .coaching-tabs{display:grid!important;gap:4px;margin:8px 0 6px;padding:4px}
