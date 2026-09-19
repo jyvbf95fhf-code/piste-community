@@ -393,13 +393,79 @@ const genericMapPriorityCss = mapPriorityCss.slice(0, mapPriorityCss.indexOf('@m
 assert.equal(genericMapPriorityCss.includes(',760px)') || genericMapPriorityCss.includes(',620px)'), false,
   'generic active map height must not be capped on tall screens');
 
-// Timing/origin contracts are guarded before their later UI wiring lands.
-has(app, /function finishHoldStart\(/, 'finish hold start missing');
-has(app, /function finishHoldCancel\(/, 'finish hold cancel missing');
-has(app, /(?:elapsed|Date\.now\(\)-started)\s*>=\s*2000|\/2000\)/, 'two-second hold threshold missing');
-const holdElapsed = elapsed => elapsed >= 2000;
-assert.equal(holdElapsed(1999), false, 'hold must cancel before two seconds');
-assert.equal(holdElapsed(2000), true, 'hold must validate at two seconds');
+// Task 9: only the Conducteur's continuous two-second hold may submit the
+// atomic global finish. Release/lifecycle cancellation and duplicate starts
+// must never synthesize a second RPC.
+for (const name of ['coachingCanFinishTrack', 'submitCoachingFinishHold', 'finishHoldStart', 'finishHoldCancel']) {
+  has(app, new RegExp(`function ${name}\\(`), `finish hold function missing: ${name}`);
+}
+const finishSubmitBody = extractFunctionWithParameterDefaults(app, 'submitCoachingFinishHold');
+has(finishSubmitBody, /rpc\(['"]finish_coaching_track_v1049['"]/, 'global finish must use the V10.49 atomic RPC');
+assert.equal(finishSubmitBody.includes("finish_driver_run"), false, 'global finish must not use the old driver transition');
+assert.equal(finishSubmitBody.includes('refreshActiveCoachingSession'), true, 'global finish must reconcile authoritative server state');
+assert.equal(/bindClick\(['"]driverFinishBtn['"],\s*finishDriverRun\)/.test(app), false,
+  'Fin de piste must not have a click/tap submission path');
+for (const event of ['pointerup', 'pointercancel', 'pointerleave']) {
+  has(app, new RegExp(`driverFinishBtn[\\s\\S]{0,1400}${event}`), `driver finish hold must cancel on ${event}`);
+}
+has(app, /window\.addEventListener\(['"]blur['"],\s*finishHoldCancel\)/,
+  'driver finish hold must cancel when the window loses focus');
+has(app, /visibilitychange[\s\S]{0,180}finishHoldCancel/, 'driver finish hold must cancel when the document is hidden');
+has(html, /id="driverFinishBtn"[^>]*[\s\S]*?Maintenir 2 secondes[\s\S]*?<\/button>/,
+  'driver finish control must explain the two-second hold');
+has(css, /#driverFinishBtn::before[\s\S]*?--finish-progress/, 'driver finish progress indicator missing');
+
+const finishButtonFixture = {
+  id: 'driverFinishBtn', disabled: false, hidden: false, attributes: {},
+  classList: { values: new Set(), add(name) { this.values.add(name); }, remove(name) { this.values.delete(name); } },
+  style: { values: new Map(), setProperty(name, value) { this.values.set(name, value); }, removeProperty(name) { this.values.delete(name); } },
+  setAttribute(name, value) { this.attributes[name] = value; },
+};
+let finishNow = 0;
+let finishTick = null;
+let finishRpcCalls = 0;
+const finishContext = {
+  Date: { now: () => finishNow },
+  activeCoachingSession: { id: 'session-9', status: 'live', workflow_version: 2, phase: 'driver_running' },
+  coachingFinishTimer: null,
+  coachingFinishArmed: false,
+  coachingFinishSessionId: null,
+  coachingFinishTargetId: null,
+  coachingFinishSubmittingSessionId: null,
+  coachingFinishSubmittedSessionId: null,
+  $: id => id === 'driverFinishBtn' ? finishButtonFixture : null,
+  myCoachingRole: () => 'driver',
+  coachingPhase: session => session.phase,
+  setInterval(callback) { finishTick = callback; return 9; },
+  clearInterval() { finishTick = null; },
+  submitCoachingFinishHold() { finishRpcCalls += 1; },
+};
+vm.createContext(finishContext);
+vm.runInContext([
+  extractFunctionWithParameterDefaults(app, 'coachingCanFinishTrack'),
+  extractFunctionWithParameterDefaults(app, 'finishHoldCancel'),
+  extractFunctionWithParameterDefaults(app, 'finishHoldStart'),
+].join('\n'), finishContext);
+const finishEvent = type => ({ type, button: 0, currentTarget: finishButtonFixture, preventDefault() {}, stopPropagation() {} });
+finishContext.finishHoldStart(finishEvent('pointerdown'));
+finishNow = 1999;
+finishTick();
+finishContext.finishHoldCancel(finishEvent('pointerup'));
+assert.equal(finishRpcCalls, 0, 'release at 1999 ms must cancel without an RPC');
+for (const type of ['pointercancel', 'pointerleave', 'blur']) {
+  finishNow = 0;
+  finishContext.finishHoldStart(finishEvent('pointerdown'));
+  finishContext.finishHoldCancel(finishEvent(type));
+  assert.equal(finishRpcCalls, 0, `${type} must cancel without an RPC`);
+}
+finishNow = 0;
+finishContext.finishHoldStart(finishEvent('pointerdown'));
+finishContext.finishHoldStart(finishEvent('pointerdown'));
+finishNow = 2000;
+finishTick();
+assert.equal(finishRpcCalls, 1, 'the 2000 ms threshold must submit exactly one RPC');
+finishContext.finishHoldStart(finishEvent('pointerdown'));
+assert.equal(finishRpcCalls, 1, 'an in-flight/terminal hold must not submit twice');
 has(app, /function parseGpx\(/, 'GPX parser missing');
 const parseGpxBody = app.slice(app.indexOf('function parseGpx('), app.indexOf('\nfunction ', app.indexOf('function parseGpx(') + 10));
 assert.equal(/(?:track_started_at|origin)[^\n]*Date\.now\(\)/.test(parseGpxBody), false,

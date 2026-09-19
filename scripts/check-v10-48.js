@@ -49,7 +49,8 @@ const protectedFunctions = [
   'markCoachingTrackReady',
   'chooseCoachingSearchV1045',
   'markTraceurInPlaceV1045',
-  'finishDriverRun',
+  // V10.49 replaces the direct finish transition with its guarded global hold.
+  // scripts/check-v10-49.js owns the exact RPC, role and timing contract.
   'finishCoachingSessionV1040',
   'coachingDataVisibility',
   'coachingCanSeeLiveOwner',

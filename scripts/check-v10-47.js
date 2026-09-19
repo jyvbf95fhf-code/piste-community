@@ -21,7 +21,7 @@ for(const name of [
   'markCoachingTrackReady',
   'chooseCoachingSearchV1045',
   'markTraceurInPlaceV1045',
-  'finishDriverRun',
+  // V10.49 replaces this direct transition with a role-checked two-second hold.
   'finishCoachingSessionV1040',
   'coachingDataVisibility',
   'coachingCanSeeLiveOwner',
