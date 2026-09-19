@@ -442,6 +442,82 @@ assert.equal(noWeatherPointBranch.includes('coachingWeatherLoading=false'), true
 has(css, /\.coaching-weather-trigger/, 'compact weather trigger styles missing');
 has(css, /\.coaching-weather-detail/, 'weather detail styles missing');
 
+// Task 6: the odor corridor is a per-user/per-session local preference, but
+// authorization remains the final gate and must fail closed before geometry is read.
+for (const id of ['coachingOdorMapToggle', 'coachingOdorPreferenceState']) {
+  has(html, new RegExp(`id="${id}"`), `personal odor preference control missing: ${id}`);
+}
+assert.equal((html.match(/data-coaching-odor-preference/g) || []).length >= 2, true,
+  'odor preference must be available during preparation and directly on the active map');
+
+const odorStorageValues = new Map();
+const odorStorage = {
+  getItem: key => odorStorageValues.has(key) ? odorStorageValues.get(key) : null,
+  setItem: (key, value) => odorStorageValues.set(key, String(value)),
+};
+function odorPreferenceContext(storage = odorStorage) {
+  const context = {
+    Object, Boolean, String,
+    localStorage: storage,
+    coachingOdorPreferenceMemory: Object.create(null),
+    coachingLayerVisibility: { odor: true },
+    activeCoachingSession: null,
+    session: { user: { id: 'user-a' } },
+    myCoachingRole: () => 'traceur',
+    coachingDataVisibility: (_session, role) => ({ trace: role === 'traceur' || role === 'observer' }),
+    sharedOlfactionEngine: () => ({ trackAgeSeconds: 3600 }),
+    coachingLiveWeather: null,
+    Date,
+    Number,
+  };
+  vm.createContext(context);
+  vm.runInContext([
+    'coachingOdorPreferenceKey',
+    'getLocalOdorPreference',
+    'setLocalOdorPreference',
+    'coachingCanSeeOdor',
+    'liveOdorModel',
+  ].map(name => extractFunctionWithParameterDefaults(app, name)).join('\n'), context);
+  return context;
+}
+const odorContext = odorPreferenceContext();
+assert.equal(odorContext.setLocalOdorPreference('user-a', 'session-1', true).enabled, true);
+assert.equal(odorContext.setLocalOdorPreference('user-b', 'session-1', false).enabled, false);
+assert.equal(odorContext.getLocalOdorPreference('user-a', 'session-1'), true,
+  'user A must retain its own enabled choice');
+assert.equal(odorContext.getLocalOdorPreference('user-b', 'session-1'), false,
+  'user B must retain its own disabled choice');
+const reloadedOdorContext = odorPreferenceContext();
+assert.equal(reloadedOdorContext.getLocalOdorPreference('user-b', 'session-1'), false,
+  'odor preference must survive a same-device reload');
+const unavailableStorage = { getItem() { throw new Error('storage denied'); }, setItem() { throw new Error('storage denied'); } };
+const memoryOdorContext = odorPreferenceContext(unavailableStorage);
+assert.equal(memoryOdorContext.setLocalOdorPreference('user-a', 'session-2', false).persisted, false,
+  'storage failure must be reported to the UI');
+assert.equal(memoryOdorContext.getLocalOdorPreference('user-a', 'session-2'), false,
+  'storage failure must keep a usable in-memory preference');
+
+const hiddenOdorSession = Object.defineProperties({ id: 'blind-session', status: 'live' }, {
+  planned_route: { get() { throw new Error('hidden planned geometry read'); } },
+  odor_model: { get() { throw new Error('hidden odor model read'); } },
+});
+odorContext.session.user.id = 'driver-user';
+odorContext.coachingLayerVisibility.odor = true;
+assert.equal(odorContext.coachingCanSeeOdor(hiddenOdorSession, 'driver'), false,
+  'blind Conducteur must be denied regardless of its local preference');
+assert.equal(odorContext.coachingCanSeeOdor(hiddenOdorSession, 'coach'), false,
+  'blind Coach without trace visibility must be denied regardless of preference');
+assert.equal(odorContext.liveOdorModel([], [], hiddenOdorSession, 'driver'), null,
+  'denied odor model must return before reading hidden geometry');
+assert.equal(odorContext.liveOdorModel([], [], hiddenOdorSession, 'coach'), null,
+  'denied Coach odor model must return before reading hidden geometry');
+assert.equal(odorContext.coachingCanSeeOdor({ id: 'allowed-session' }, 'traceur'), true,
+  'Traceur must retain odor access when existing visibility allows it');
+assert.equal(odorContext.coachingCanSeeOdor({ id: 'allowed-session' }, 'observer'), true,
+  'Observer must retain odor access when existing visibility allows it');
+has(css, /\.coaching-odor-toggle/, 'direct map odor toggle styles missing');
+has(css, /\.coaching-odor-preference/, 'preparation odor preference styles missing');
+
 // Concordance remains an explicit, honest contract even while the calculation is introduced later.
 has(app, /average_deviation_m|max_deviation_m/, 'existing raw deviation metrics missing');
 const concordanceContract = { label: 'Indice de concordance', progressive: true, userThreshold: false };

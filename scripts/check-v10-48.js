@@ -738,6 +738,9 @@ function withoutWizard(text) {
 
 function withoutV1049ActiveMetrics(text) {
   return text
+    .replace(/<div class="coaching-odor-preference">[\s\S]*?<\/div>/, '')
+    .replace(/<label id="coachingOdorMapToggle"[\s\S]*?<\/label>/, '')
+    .replace(/<label><input type="checkbox" data-coaching-layer="odor" checked> Olfactif estimé<\/label>/, '')
     .replace(/      <div id="coachingLiveWeather"[\s\S]*?(?=      <div id="coachingHistoricalWeather")/, '')
     .replace(/^      <div id="coachingTerrainStatus"[^\n]*\n/m, '')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
