@@ -32,14 +32,17 @@ for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn', 'coachingDriverTra
 }
 const commandBar = html.match(/<div id="coachingTerrainCommandBar"[\s\S]*?<\/div>/)?.[0] || '';
 has(html, /id="coachingTerrainCommandBar"/, 'terrain command bar missing');
-for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn']) {
+for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn', 'terrainMessagesBtn', 'driverFinishBtn']) {
   has(commandBar, new RegExp(`id="${id}"`), `${id} must stay directly in terrain command bar`);
 }
+has(commandBar, /id="terrainMessagesBtn"[\s\S]*?id="coachingMessageUnreadBadge"/, 'Messages dock action must preserve its unread badge');
+has(commandBar, /id="driverFinishBtn"[\s\S]*?>Fin de piste</, 'Conducteur dock action must use the Fin de piste label');
 has(html, /id="terrainPlusBtn"/, 'secondary terrain Plus action missing');
 assert.equal(/id="terrainPlusBtn"[\s\S]*?id="(terrainPauseBtn|terrainBlackScreenBtn)"/.test(commandBar), false,
   'primary terrain actions must not be nested after Plus');
 const coachingTabs = html.match(/<nav class="coaching-tabs"[\s\S]*?<\/nav>/)?.[0] || '';
-has(coachingTabs, /data-coaching-tab="messages"/, 'direct Messages entry missing from terrain navigation');
+assert.equal(coachingTabs.includes('coachingMessageUnreadBadge'), false,
+  'the unread badge must have one owner in the direct Messages dock action');
 const directFinish = html.match(/<button id="coachingDriverTrackFinish"[\s\S]*?<\/button>/)?.[0] || '';
 has(directFinish, /(?:Terminer|Fin de) la piste/, 'direct conductor finish entry missing');
 const plusPanelStart = html.indexOf('<div class="coaching-tab-panel" data-coaching-panel="session">');
@@ -52,8 +55,8 @@ assert.equal(plusPanel.includes('coachingDriverTrackFinish'), false,
 assert.deepEqual({
   pause: commandBar.includes('id="terrainPauseBtn"'),
   blackScreen: commandBar.includes('id="terrainBlackScreenBtn"'),
-  messages: coachingTabs.includes('data-coaching-tab="messages"'),
-  finish: directFinish.length > 0 && html.indexOf(directFinish) < plusPanelStart,
+  messages: commandBar.includes('id="terrainMessagesBtn"'),
+  finish: commandBar.includes('id="driverFinishBtn"'),
 }, { pause: true, blackScreen: true, messages: true, finish: true },
 'terrain direct-action surface must be derived from the current DOM');
 
@@ -175,13 +178,48 @@ for (const action of emittedActions) {
   const selector = surfaceContext.coachingSurfaceActionTarget(action, action === 'finish' && legacySolo.actions.includes(action) ? { workflow_version: 1 } : surfaceSession());
   assert.equal(typeof selector, 'string', `surface action has no rendered target: ${action}`);
   if (selector.startsWith('#')) has(html, new RegExp(`id="${selector.slice(1)}"`), `surface action target missing from DOM: ${action}`);
-  else assert.equal(selector === '[data-coaching-tab="messages"]' && html.includes('data-coaching-tab="messages"'), true,
-    `surface action target missing from DOM: ${action}`);
+  else assert.fail(`surface action must resolve to a rendered id: ${action}`);
 }
+assert.equal(surfaceContext.coachingSurfaceActionTarget('messages', surfaceSession()), '#terrainMessagesBtn',
+  'Messages must route to the direct terrain dock action');
 assert.equal(surfaceContext.coachingSurfaceActionTarget('finish', surfaceSession()), '#driverFinishBtn',
   'current Conducteur finish must route to the workflow finish button');
 assert.equal(surfaceContext.coachingSurfaceActionTarget('finish', { workflow_version: 1 }), '#terrainFinishBtn',
   'historical finish must retain its legacy target');
+
+// Task 8: the bottom dock consumes the role surface instead of granting
+// capabilities from DOM presence. Native buttons preserve keyboard/pointer use.
+const dockNodes = new Map(['coachingTerrainCommandBar', 'terrainPauseBtn', 'terrainBlackScreenBtn', 'terrainMessagesBtn', 'driverFinishBtn', 'terrainPlusBtn'].map(id => [id, {
+  id, hidden: false, attributes: {},
+  classList: { values: new Set(), toggle(name, force) { if (force) this.values.add(name); else this.values.delete(name); } },
+  setAttribute(name, value) { this.attributes[name] = value; },
+}]));
+const dockContext = { $: id => dockNodes.get(id), renderCoachingPauseState() {} };
+vm.createContext(dockContext);
+vm.runInContext(extractFunction(app, 'renderCoachingTerrainDock'), dockContext);
+const dockVisibility = id => !dockNodes.get(id).classList.values.has('hidden');
+for (const [role, expected] of [
+  ['driver', ['terrainPauseBtn', 'terrainBlackScreenBtn', 'terrainMessagesBtn', 'driverFinishBtn', 'terrainPlusBtn']],
+  ['traceur', ['terrainBlackScreenBtn', 'terrainMessagesBtn', 'terrainPlusBtn']],
+  ['observer', ['terrainMessagesBtn', 'terrainPlusBtn']],
+  ['coach', ['terrainPauseBtn', 'terrainMessagesBtn', 'terrainPlusBtn']],
+]) {
+  dockContext.renderCoachingTerrainDock(surfaceContext.coachingActiveSurfaceModel(surfaceSession(), 'driver_running', role));
+  for (const id of ['terrainPauseBtn', 'terrainBlackScreenBtn', 'terrainMessagesBtn', 'driverFinishBtn', 'terrainPlusBtn']) {
+    assert.equal(dockVisibility(id), expected.includes(id), `${role} dock visibility is incorrect for ${id}`);
+    assert.equal(dockNodes.get(id).attributes['aria-hidden'], String(!expected.includes(id)), `${role} dock accessibility is incorrect for ${id}`);
+  }
+}
+dockContext.renderCoachingTerrainDock(legacySolo);
+assert.equal(dockVisibility('driverFinishBtn'), false,
+  'historical finish flow must not be replaced by the V10.49 Conducteur dock action');
+dockContext.renderCoachingTerrainDock(null);
+assert.equal(dockNodes.get('coachingTerrainCommandBar').classList.values.has('hidden'), true,
+  'dock must leave the active surface when no terrain model is rendered');
+assert.equal(/data-message-preset|message-pr[eé]rempli/i.test(html), false,
+  'terrain dock must not reintroduce canned messages');
+has(css, /#coachingLivePanel\.active-terrain \.coaching-terrain-command-bar[\s\S]*?position:sticky[\s\S]*?safe-area-inset-bottom/,
+  'terrain dock must remain reachable above the device safe area');
 has(app, /function setCoachingStage\([\s\S]*?applyV1040RoleSurface\(/, 'stage rendering is not routed through the surface model');
 has(app, /function applyV1040RoleSurface\([\s\S]*?coachingActiveSurfaceModel\(/, 'role rendering is not routed through the surface model');
 has(app, /function applyV1040RoleSurface\([\s\S]*?myCoachingMember\([\s\S]*?coachingActiveSurfaceModel\(/,

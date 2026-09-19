@@ -744,6 +744,13 @@ function withoutV1049ActiveMetrics(text) {
     .replace(/      <div id="coachingLiveWeather"[\s\S]*?(?=      <div id="coachingHistoricalWeather")/, '')
     .replace(/^      <div id="coachingTerrainStatus"[^\n]*\n/m, '')
     .replace(/<button id="terrainPauseBtn"[\s\S]*?<\/button>/, '<button id="terrainPauseBtn" class="secondary" type="button">Pause</button>')
+    .replace(/<button id="terrainMessagesBtn"[\s\S]*?<\/button>/, '')
+    .replace(/<button id="driverFinishBtn" class="danger-button hidden"[\s\S]*?<\/button>/, '')
+    .replace(' data-terrain-secondary', '')
+    .replace(/^        <div><button id="driverFinishBtn"[^\n]*\n/m, '')
+    .replace('aria-label="Informations secondaires de la session"', 'aria-label="Informations de la session"')
+    .replace(/<button data-coaching-tab="messages">[\s\S]*?<\/button>/, '')
+    .replace('<button data-coaching-tab="session">Informations</button>', '<button data-coaching-tab="session">Plus</button>')
     .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
 }
 

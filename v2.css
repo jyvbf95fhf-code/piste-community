@@ -988,6 +988,17 @@ body.coaching-session-active #coachingPage>.record-head{display:none!important}
 @media(max-width:600px){#coachingLivePanel.active-terrain[data-map-priority="true"]{padding-right:6px;padding-left:6px}#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-live-head{display:grid;grid-template-columns:minmax(0,1fr) auto}#coachingLivePanel.active-terrain[data-map-priority="true"] .invite-chip{margin-top:0}#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen){height:max(240px,calc(100dvh - 250px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));min-height:min(240px,42dvh)}}
 @media(max-height:600px),(orientation:landscape) and (max-height:800px){#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen){height:clamp(140px,calc(100dvh - 190px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)),460px);min-height:min(140px,38dvh)}}
 
+/* V10.49 — dock Terrain direct, filtré par rôle. */
+#coachingLivePanel.active-terrain .coaching-terrain-command-bar{position:sticky;z-index:1600;bottom:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(64px,1fr));gap:6px;margin:6px -4px 0;padding:7px 4px calc(7px + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(112,220,255,.2);background:linear-gradient(180deg,rgba(7,19,24,.88),rgba(7,19,24,.98));backdrop-filter:blur(10px)}
+#coachingLivePanel.active-terrain .coaching-terrain-command-bar button{min-width:0;min-height:50px;padding:7px 5px;border-radius:12px;font-size:11px;line-height:1.15;white-space:normal}
+#coachingLivePanel.active-terrain .coaching-terrain-command-bar button.hidden{display:none!important}
+#coachingLivePanel.active-terrain #terrainPauseBtn,#coachingLivePanel.active-terrain #terrainBlackScreenBtn,#coachingLivePanel.active-terrain #terrainMessagesBtn,#coachingLivePanel.active-terrain #driverFinishBtn,#coachingLivePanel.active-terrain #terrainPlusBtn{order:initial;flex:initial;width:auto}
+#coachingLivePanel.active-terrain #terrainMessagesBtn{display:inline-flex;align-items:center;justify-content:center;gap:3px}
+#coachingLivePanel.active-terrain #driverFinishBtn{background:linear-gradient(135deg,#b9534f,#7f2e35);color:#fff}
+#coachingLivePanel.active-terrain .coaching-tabs{display:none!important}
+#coachingLivePanel.active-terrain.plus-open .coaching-tabs{display:grid!important}
+@media(max-width:380px){#coachingLivePanel.active-terrain .coaching-terrain-command-bar{grid-template-columns:repeat(auto-fit,minmax(56px,1fr))}#coachingLivePanel.active-terrain .coaching-terrain-command-bar button{font-size:10px}}
+
 /* V10.47 — Entrée Coaching */
 #coachingEntryPage .record-head{flex-wrap:wrap;gap:12px}
 #coachingEntryPage h2{font-size:clamp(20px,6vw,26px);line-height:1.25}
