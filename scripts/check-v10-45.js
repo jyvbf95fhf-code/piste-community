@@ -4,7 +4,9 @@ const baseline='91fe23c88cc81836a797dad33ee2badd8b649a4c';
 assert.equal(execFileSync('git',['rev-parse','stable-v10.44^{}'],{encoding:'utf8'}).trim(),baseline);execFileSync('git',['merge-base','--is-ancestor',baseline,'HEAD']);
 function source(name,text=app){const start=text.search(new RegExp(`^(?:async )?function ${name}\\(`,'m'));assert(start>=0,name);const rest=text.slice(start),next=rest.slice(1).search(/\n(?:async )?function /);return next<0?rest:rest.slice(0,next+1);}
 const old=execFileSync('git',['show',`${baseline}:app.js`],{encoding:'utf8'});
-for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','coachingMemberCapabilities','validateCoachingMembers','saveCoachingDriverFeedback','startCoachingDriverTrackHold','reportActivitySource'])assert.equal(source(name),source(name,old),`${name}: baseline security/workflow preserved`);
+// V10.49 separates personal feedback saves from global Debrief closure;
+// scripts/check-v10-49.js owns that role/idempotency/no-Terrain contract.
+for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','coachingMemberCapabilities','validateCoachingMembers','startCoachingDriverTrackHold','reportActivitySource'])assert.equal(source(name),source(name,old),`${name}: baseline security/workflow preserved`);
 const dry=read('PISTE_V10.45_PATCH/PISTE_V10.45_DRY_RUN.sql'),sql=read('PISTE_V10.45_PATCH/PISTE_V10.45_APPLY.sql'),legacy=read('PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql');
 assert.equal(dry.replace(/rollback;\s*$/,'END'),sql.replace(/commit;\s*$/,'END'));
 assert(/rollback;\s*$/.test(dry)&&/commit;\s*$/.test(sql));

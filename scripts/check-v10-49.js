@@ -972,6 +972,34 @@ assert.equal(/id=["']coachingObservationBody["'][^>]*\brequired\b/.test(app + ht
   'a participant observation must be allowed to remain empty');
 has(css, /\.coaching-observation-card/, 'participant observation card styles missing');
 
+// Task 14: global Debrief closure is independent from optional observations and
+// remains a consultation/editing state instead of reopening or leaving Terrain.
+for (const name of ['canCloseCoachingDebrief', 'closeCoachingDebrief', 'submitCoachingDebriefClosure']) {
+  assert.equal(app.includes(`function ${name}(`) || app.includes(`async function ${name}(`), true,
+    `Task 14 production function missing: ${name}`);
+}
+const closeDebrief = extractFunction(app, 'closeCoachingDebrief');
+assert.equal(closeDebrief.includes("supabase.rpc('close_coaching_debrief_v1049'"), true,
+  'global Debrief closure must use the dedicated V10.49 RPC');
+assert.equal(closeDebrief.includes('finish_coaching_session'), false,
+  'Debrief closure must not reuse the Terrain/session finish RPC');
+for (const forbidden of ['coachingObservationBody', 'submitParticipantObservation', 'setCoachingStage(', 'activeCoachingSession=null']) {
+  assert.equal(closeDebrief.includes(forbidden), false,
+    `Debrief closure must stay independent from observations and routing: ${forbidden}`);
+}
+const coachDebriefSave = extractFunctionWithParameterDefaults(app, 'saveCoachingDebrief');
+assert.equal(/if\(Number\(s\.workflow_version\|\|0\)<2\)\{await completeCoachingDebriefReturnHome/.test(coachDebriefSave), true,
+  'only legacy Coach publication may retain its historical return-home behavior');
+const driverFeedbackSave = extractFunction(app, 'saveCoachingDriverFeedback');
+assert.equal(/if\(Number\(s\.workflow_version\|\|0\)<2\)\{await finalizeSavedCoachingSession/.test(driverFeedbackSave), true,
+  'only legacy Conducteur feedback may retain its historical session-finalization behavior');
+has(html, /id="coachingDebriefClosure"/, 'global Debrief closure section missing');
+has(html, /id="closeCoachingDebriefBtn"[^>]*>Valider le débriefing</,
+  'global Debrief closure action must use the validated label');
+has(html, /id="coachingDebriefClosureState"[^>]*aria-live="polite"/,
+  'global Debrief closure state must be announced accessibly');
+has(css, /\.coaching-debrief-closure/, 'global Debrief closure styles missing');
+
 for (const script of ['check-v10-49.js', 'check-v10-48.js', 'check-v10-47.js', 'check-v10-46.js', 'check-v10-45.js', 'check-v10-44.js', 'check-v10-43.js', 'check-v10-42-2.js', 'verify-current-assets.js']) {
   assert.equal(fs.existsSync(`scripts/${script}`), true, `regression guard missing: ${script}`);
 }
@@ -1082,6 +1110,69 @@ const task10DebriefContext = (rpc, refresh = context => {
     'one author must retain exactly one observation row');
   assert.equal(observationWrites.every(write => !Object.hasOwn(write.payload, 'role')), true,
     'no observation write may send a client-selected role');
+
+  const roleContext = { activeCoachingSession: null, myCoachingRole: sessionRow => sessionRow.role };
+  vm.createContext(roleContext);
+  vm.runInContext(extractFunctionWithParameterDefaults(app, 'canCloseCoachingDebrief'), roleContext);
+  for (const role of ['driver', 'coach']) {
+    assert.equal(roleContext.canCloseCoachingDebrief({ debrief_status: 'in_progress', role }, role), true,
+      `${role} must be allowed to close an in-progress Debrief`);
+  }
+  for (const role of ['traceur', 'observer']) {
+    assert.equal(roleContext.canCloseCoachingDebrief({ debrief_status: 'in_progress', role }, role), false,
+      `${role} must be rejected from global Debrief closure`);
+  }
+  for (const state of ['track_finished', 'closed', 'none']) {
+    assert.equal(roleContext.canCloseCoachingDebrief({ debrief_status: state, role: 'driver' }, 'driver'), false,
+      `${state} must not expose a new global closure action`);
+  }
+
+  const closureContext = (role, state = 'in_progress') => {
+    const context = {
+      Map,
+      activeCoachingSession: { id: 'session-14', status: 'ended', phase: 'completed', debrief_status: state },
+      coachingDebriefClosePromises: new Map(),
+      rpcCalls: 0,
+      stages: [],
+      myCoachingRole: () => role,
+      canCloseCoachingDebrief: (row, candidate) => row?.debrief_status === 'in_progress' && ['driver', 'coach'].includes(candidate),
+      supabase: { rpc: async name => { context.rpcCalls += 1; assert.equal(name, 'close_coaching_debrief_v1049'); return { data: true, error: null }; } },
+      refreshActiveCoachingSession: async () => { context.activeCoachingSession.debrief_status = 'closed'; return context.activeCoachingSession; },
+      updateCoachingDebriefAccess() {},
+      setUiText() {},
+      coachingToast() {},
+      setCoachingStage: stage => context.stages.push(stage),
+    };
+    vm.createContext(context);
+    vm.runInContext(`async ${extractFunction(app, 'closeCoachingDebrief')}`, context);
+    return context;
+  };
+  for (const role of ['driver', 'coach']) {
+    const closure = closureContext(role);
+    const result = await closure.closeCoachingDebrief('session-14');
+    assert.equal(result.status, 'closed');
+    assert.equal(closure.rpcCalls, 1, `${role} closure must call the backend exactly once`);
+    assert.deepEqual(closure.stages, [], `${role} closure must not reopen or reroute Terrain`);
+  }
+  for (const role of ['traceur', 'observer']) {
+    const closure = closureContext(role);
+    const result = await closure.closeCoachingDebrief('session-14');
+    assert.equal(result.ok, false, `${role} closure must be rejected`);
+    assert.equal(closure.rpcCalls, 0, `${role} rejection must happen before the RPC`);
+  }
+  const alreadyClosed = closureContext('driver', 'closed');
+  assert.equal((await alreadyClosed.closeCoachingDebrief('session-14')).alreadyClosed, true,
+    'repeated closure must converge idempotently');
+  assert.equal(alreadyClosed.rpcCalls, 0, 'already closed Debrief must not issue another RPC');
+
+  const closedReload = task10DebriefContext(async () => {
+    throw new Error('closed reload must not call begin');
+  });
+  closedReload.activeCoachingSession.debrief_status = 'closed';
+  assert.equal(await closedReload.openCoachingDebriefOnce('session-10', 'Débrief clôturé'), true,
+    'a closed Debrief reload must reopen consultation');
+  assert.equal(closedReload.rpcCalls, 0, 'closed reload must not replay a Debrief transition');
+  assert.deepEqual(closedReload.stageCalls, ['debrief'], 'closed reload must never reopen Terrain');
 
   let releaseRpc;
   const duplicate = task10DebriefContext(async () => {

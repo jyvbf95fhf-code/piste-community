@@ -30,7 +30,9 @@ for(const name of ['renderCoachingMap','drawCoachingReplay','renderMissionMap'])
 for(const name of ['renderOperationalLiveGpx','renderOperationalCallMap','renderOperationalGpxList']){assert(source(name).includes('TRACE_PALETTE.external'));assert(!source(name).includes('track.color'))}
 assert(source('feedTrackPreview').includes('TRACE_PALETTE[layer]'));
 assert(!css.includes('stroke:#168de2'));
-for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','saveCoachingDriverFeedback','savePendingFieldMarker','reportActivitySource']){
+// V10.49 separates personal feedback saves from global Debrief closure;
+// scripts/check-v10-49.js owns that role/idempotency/no-Terrain contract.
+for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','savePendingFieldMarker','reportActivitySource']){
  const previous=execFileSync('git',['show','ee3ac12:app.js'],{encoding:'utf8'}),start=previous.search(new RegExp(`(?:async )?function ${name}\\(`)),rest=previous.slice(start),next=rest.slice(1).search(/\n(?:async )?function \w+\(/);
  assert.equal(source(name),next<0?rest:rest.slice(0,next+1),`${name}: business/security/data unchanged`);
 }
