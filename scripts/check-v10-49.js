@@ -396,7 +396,7 @@ assert.equal(genericMapPriorityCss.includes(',760px)') || genericMapPriorityCss.
 // Task 9: only the Conducteur's continuous two-second hold may submit the
 // atomic global finish. Release/lifecycle cancellation and duplicate starts
 // must never synthesize a second RPC.
-for (const name of ['coachingCanFinishTrack', 'submitCoachingFinishHold', 'finishHoldStart', 'finishHoldCancel']) {
+for (const name of ['coachingCanFinishTrack', 'submitCoachingFinishHold', 'finishHoldStart', 'finishHoldRelease', 'finishHoldCancel']) {
   has(app, new RegExp(`function ${name}\\(`), `finish hold function missing: ${name}`);
 }
 const finishSubmitBody = extractFunctionWithParameterDefaults(app, 'submitCoachingFinishHold');
@@ -431,6 +431,7 @@ const finishContext = {
   coachingFinishArmed: false,
   coachingFinishSessionId: null,
   coachingFinishTargetId: null,
+  coachingFinishStartedAt: null,
   coachingFinishSubmittingSessionId: null,
   coachingFinishSubmittedSessionId: null,
   $: id => id === 'driverFinishBtn' ? finishButtonFixture : null,
@@ -444,13 +445,15 @@ vm.createContext(finishContext);
 vm.runInContext([
   extractFunctionWithParameterDefaults(app, 'coachingCanFinishTrack'),
   extractFunctionWithParameterDefaults(app, 'finishHoldCancel'),
+  extractFunctionWithParameterDefaults(app, 'finishHoldComplete'),
+  extractFunctionWithParameterDefaults(app, 'finishHoldRelease'),
   extractFunctionWithParameterDefaults(app, 'finishHoldStart'),
 ].join('\n'), finishContext);
 const finishEvent = type => ({ type, button: 0, currentTarget: finishButtonFixture, preventDefault() {}, stopPropagation() {} });
 finishContext.finishHoldStart(finishEvent('pointerdown'));
 finishNow = 1999;
 finishTick();
-finishContext.finishHoldCancel(finishEvent('pointerup'));
+finishContext.finishHoldRelease(finishEvent('pointerup'));
 assert.equal(finishRpcCalls, 0, 'release at 1999 ms must cancel without an RPC');
 for (const type of ['pointercancel', 'pointerleave', 'blur']) {
   finishNow = 0;
@@ -458,14 +461,26 @@ for (const type of ['pointercancel', 'pointerleave', 'blur']) {
   finishContext.finishHoldCancel(finishEvent(type));
   assert.equal(finishRpcCalls, 0, `${type} must cancel without an RPC`);
 }
+for (const elapsed of [2000, 2001]) {
+  finishContext.activeCoachingSession.id = `release-${elapsed}`;
+  finishContext.coachingFinishSubmittedSessionId = null;
+  finishNow = 0;
+  finishContext.finishHoldStart(finishEvent('pointerdown'));
+  finishNow = elapsed;
+  finishContext.finishHoldRelease(finishEvent('pointerup'));
+  assert.equal(finishRpcCalls, elapsed === 2000 ? 1 : 2,
+    `release at ${elapsed} ms must submit before the next visual tick`);
+}
+finishContext.activeCoachingSession.id = 'tick-threshold';
+finishContext.coachingFinishSubmittedSessionId = null;
 finishNow = 0;
 finishContext.finishHoldStart(finishEvent('pointerdown'));
 finishContext.finishHoldStart(finishEvent('pointerdown'));
 finishNow = 2000;
 finishTick();
-assert.equal(finishRpcCalls, 1, 'the 2000 ms threshold must submit exactly one RPC');
+assert.equal(finishRpcCalls, 3, 'the 2000 ms visual tick must submit exactly one RPC');
 finishContext.finishHoldStart(finishEvent('pointerdown'));
-assert.equal(finishRpcCalls, 1, 'an in-flight/terminal hold must not submit twice');
+assert.equal(finishRpcCalls, 3, 'an in-flight/terminal hold must not submit twice');
 has(app, /function parseGpx\(/, 'GPX parser missing');
 const parseGpxBody = app.slice(app.indexOf('function parseGpx('), app.indexOf('\nfunction ', app.indexOf('function parseGpx(') + 10));
 assert.equal(/(?:track_started_at|origin)[^\n]*Date\.now\(\)/.test(parseGpxBody), false,
