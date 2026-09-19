@@ -186,7 +186,7 @@ has(app, /function setCoachingStage\([\s\S]*?applyV1040RoleSurface\(/, 'stage re
 has(app, /function applyV1040RoleSurface\([\s\S]*?coachingActiveSurfaceModel\(/, 'role rendering is not routed through the surface model');
 has(app, /function applyV1040RoleSurface\([\s\S]*?myCoachingMember\([\s\S]*?coachingActiveSurfaceModel\(/,
   'surface rendering must derive its role from an actual membership');
-assert.equal(extractFunction(app, 'coachingCanSeeOdor').includes('coachingActiveSurfaceModel('), true,
+assert.equal(extractFunction(app, 'coachingOdorAuthorized').includes('coachingActiveSurfaceModel('), true,
   'odor rendering must consume the authorized active surface');
 const mapRenderer = extractFunction(app, 'renderCoachingMap');
 assert.equal(mapRenderer.includes('coachingActiveSurfaceModel(') && mapRenderer.includes('surface.visibility'), true,
@@ -475,6 +475,7 @@ function odorPreferenceContext(storage = odorStorage) {
     'coachingOdorPreferenceKey',
     'getLocalOdorPreference',
     'setLocalOdorPreference',
+    'coachingOdorAuthorized',
     'coachingCanSeeOdor',
     'liveOdorModel',
   ].map(name => extractFunctionWithParameterDefaults(app, name)).join('\n'), context);
@@ -515,6 +516,16 @@ assert.equal(odorContext.coachingCanSeeOdor({ id: 'allowed-session' }, 'traceur'
   'Traceur must retain odor access when existing visibility allows it');
 assert.equal(odorContext.coachingCanSeeOdor({ id: 'allowed-session' }, 'observer'), true,
   'Observer must retain odor access when existing visibility allows it');
+odorContext.setLocalOdorPreference('driver-user', 'disabled-session', false);
+assert.equal(odorContext.coachingOdorAuthorized({ id: 'disabled-session' }, 'traceur'), true,
+  'disabled preference must not erase the Traceur authorization state');
+assert.equal(odorContext.coachingCanSeeOdor({ id: 'disabled-session' }, 'traceur'), false,
+  'disabled preference must still prevent corridor rendering');
+const odorSyncSource = extractFunctionWithParameterDefaults(app, 'syncCoachingOdorPreference');
+assert.equal(odorSyncSource.includes('coachingOdorAuthorized('), true,
+  'preference UI must distinguish authorization from the enabled choice');
+assert.equal(odorSyncSource.includes("authorized?(enabled?'Activé pour cette session sur cet appareil.':'Désactivé pour cette session sur cet appareil.')"), true,
+  'authorized disabled users must see a disabled state rather than unavailable');
 has(css, /\.coaching-odor-toggle/, 'direct map odor toggle styles missing');
 has(css, /\.coaching-odor-preference/, 'preparation odor preference styles missing');
 
