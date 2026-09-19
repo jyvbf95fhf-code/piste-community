@@ -3092,7 +3092,7 @@ function coachingActiveSurfaceModel(s,phase=coachingPhase(s),role=myCoachingRole
   const statusLabel=displayRole==='driver'?`Conducteur • ${afterDeparture?'Parcours en cours':'Préparation'}`:displayRole==='traceur'?`Traceur • ${phase==='laying'?'Pose en cours':'Session en cours'}`:displayRole==='coach'?'Coach • Supervision':'Observateur • Session en cours';
   const visibleBlocks=['compactStatus','weather','map','commandBar','navigation'];
   if(!afterDeparture&&displayRole==='driver')visibleBlocks.push('departure','preflight','teamPanel');
-  if(actions.some(action=>['startDriver','startLaying','finishLaying','trackReady','finish'].includes(action)))visibleBlocks.push('primaryActions');
+  if(actions.some(action=>['startDriver','startLaying','finishLaying','trackReady'].includes(action))||(actions.includes('finish')&&finishTarget==='legacy'))visibleBlocks.push('primaryActions');
   return {statusLabel,visibleBlocks,actions,mapPriority:true,odorVisible:!!visibility.trace,finishTarget,capabilities,visibility};
 }
 function coachingSurfaceActionTarget(action,s){

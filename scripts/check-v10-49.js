@@ -139,8 +139,8 @@ for (const [role, statusLabel, actions] of surfaceCases) {
     assert.equal(model.visibleBlocks.includes(hidden), false, `${role} ${hidden} must be hidden after departure`);
   }
 }
-assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession(), 'driver_running', 'driver').visibleBlocks.includes('primaryActions'), true,
-  'current Conducteur finish target parent must remain visible before Task 9');
+assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession(), 'driver_running', 'driver').visibleBlocks.includes('primaryActions'), false,
+  'current Conducteur dock finish must not reveal duplicated primary actions');
 assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'driver_running', 'driver').odorVisible, false,
   'double-blind driver must not receive a derived odor surface');
 assert.equal(surfaceContext.coachingActiveSurfaceModel(surfaceSession('full_blind'), 'driver_running', 'coach').odorVisible, false,
