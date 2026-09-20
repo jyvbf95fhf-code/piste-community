@@ -29,9 +29,15 @@ ok(/stopCoachingPresence\(\);stopTraceurTracking\(\)/.test(app),'solo finish sto
 ok(/function resumeSoloCoachingPhaseGps/.test(app)&&/await resumeSoloCoachingPhaseGps\(s\)/.test(app),'reload restores Solo GPS only for an already active phase');
 ok(/supabase\.rpc\('start_solo_run'/.test(app),'Solo start uses the direct backend RPC');
 ok(/isSoloCoaching\(s\)[\s\S]{0,160}supabase\.rpc\('finish_solo_run'/.test(app),'Solo finish uses the direct backend RPC');
-ok(/startSoloRun/.test(app)&&/bindClick\('startLayingBtn',\(\)=>isSoloCoaching\(activeCoachingSession\)\?startSoloRun\(\):startCoachingLaying\)/.test(app),'Solo preparation button uses the direct start handler');
+ok(/startSoloRun/.test(app)&&/bindClick\('startLayingBtn',handleCoachingStartLaying\)/.test(app),'Solo preparation button uses the direct start handler');
 ok(/role==='solo'&&phase==='preparation'/.test(app),'Solo preparation has its own direct action branch');
 ok(!/isSoloCoaching\(s\)[\s\S]{0,300}start_coaching_laying/.test(app),'Solo start must not call the laying RPC');
+ok(/async function handleCoachingStartLaying\(\)/.test(app),'classic/Solo start handler is explicit');
+ok(/role==='solo'[\s\S]{0,120}startSoloRun\(\)[\s\S]{0,120}role==='traceur'[\s\S]{0,120}startCoachingLaying\(\)/.test(app),'Traceur classic dispatches to the historical laying flow');
+ok(/bindClick\('startLayingBtn',handleCoachingStartLaying\)/.test(app),'start button uses the explicit role dispatcher');
+ok(/async function handleCoachingStartLaying\(\)[\s\S]*role==='traceur'[\s\S]*startCoachingLaying\(\)/.test(app),'classic Traceur start remains available');
+ok(/async function startCoachingLaying\(\)[\s\S]*coachingTransitionV1040\('start_coaching_laying'\)[\s\S]*startTraceurTracking\(\)/.test(app),'classic Traceur start calls laying RPC then GPS');
+ok(/async function markCoachingTrackReady\(\)[\s\S]*mark_coaching_track_ready[\s\S]*stopTraceurTracking\(\)/.test(app),'classic Traceur can finish the laying phase');
 
 
 for(const file of ['scripts/check-v10-49.js','scripts/check-v10-49-backend.js','scripts/check-v10-48.js','scripts/check-v10-47.js'])ok(fs.existsSync(file),`${file} missing`);
