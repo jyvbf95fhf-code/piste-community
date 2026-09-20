@@ -22,12 +22,17 @@ ok(/coachingCanSeeOdor\(activeCoachingSession/.test(app),'final debrief odor cor
 ok(/supabase\.rpc\('join_coaching_session'/.test(app),'join by code uses the server admission RPC');
 ok(/p_role:role/.test(app),'join by code preserves role validation on the server');
 ok(/if\(access\.canActTerrain&&!isSoloCoaching\(s\)\)requestCoachingPreviewLocation\(\)/.test(app),'solo opening does not start preview GPS');
-ok(/soloPose=rawRole==='solo'&&\['preparation','laying'\]\.includes\(phase\)/.test(app),'solo surface derives pose phase explicitly');
-ok(/role==='traceur'\|\|isSoloCoaching\(s\)/.test(app),'solo can act as traceur during laying');
-ok(/coachingPhase\(s\)==='laying'&&coachingGpsRole\(s\)==='solo'/.test(app),'solo laying uses trace GPS watch');
-ok(/role==='solo'\?'Départ de piste'/.test(app)&&/role==='solo'\?'Fin de pose'/.test(app)&&/setUiText\('driverStartBtn','Démarrer le relevé'\)/.test(app),'solo phase action labels are explicit');
+ok(/rawRole==='solo'\?\(soloPose\?'traceur':'driver'\):rawRole/.test(app),'solo surface derives direct run role by phase');
+ok(/role==='solo'&&phase==='preparation'/.test(app)&&/actions\.push\('startSoloRun'\)/.test(app),'solo preparation exposes only direct start action');
+ok(!/role==='solo'\?'Fin de pose'/.test(app)&&!/setUiText\('driverStartBtn','Démarrer le relevé'\)/.test(app),'solo direct flow removes intermediate actions');
 ok(/stopCoachingPresence\(\);stopTraceurTracking\(\)/.test(app),'solo finish stops GPS watches before debrief');
 ok(/function resumeSoloCoachingPhaseGps/.test(app)&&/await resumeSoloCoachingPhaseGps\(s\)/.test(app),'reload restores Solo GPS only for an already active phase');
+ok(/supabase\.rpc\('start_solo_run'/.test(app),'Solo start uses the direct backend RPC');
+ok(/isSoloCoaching\(s\)[\s\S]{0,160}supabase\.rpc\('finish_solo_run'/.test(app),'Solo finish uses the direct backend RPC');
+ok(/startSoloRun/.test(app)&&/bindClick\('startLayingBtn',\(\)=>isSoloCoaching\(activeCoachingSession\)\?startSoloRun\(\):startCoachingLaying\)/.test(app),'Solo preparation button uses the direct start handler');
+ok(/role==='solo'&&phase==='preparation'/.test(app),'Solo preparation has its own direct action branch');
+ok(!/isSoloCoaching\(s\)[\s\S]{0,300}start_coaching_laying/.test(app),'Solo start must not call the laying RPC');
+
 
 for(const file of ['scripts/check-v10-49.js','scripts/check-v10-49-backend.js','scripts/check-v10-48.js','scripts/check-v10-47.js'])ok(fs.existsSync(file),`${file} missing`);
 console.log('V10.49.1 targeted guard: PASS');
