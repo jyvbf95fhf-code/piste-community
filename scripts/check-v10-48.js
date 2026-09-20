@@ -316,6 +316,7 @@ if (process.argv.includes('--case=participants') || !process.argv.some(arg => ar
     const $=()=>null,esc=value=>String(value),fmt=value=>String(value);
     const updateHomeCoachingState=()=>{},refreshActiveSessionShortcut=()=>{},loadTrainingRoutes=async()=>{},renderCoachingFriendInvites=()=>{};
     const renderCoachingWizardParticipants=()=>{wizardRenders++;renderedFriend=coachingAcceptedFriends[0]?.user_id||null};
+    const loadHistoricalCoachingSessions=async()=>[];
     const readActiveCoachingRef=()=>null,clearActiveCoachingRef=()=>{},saveActiveCoachingRef=()=>{},renderCoachingSessions=()=>{};
     const supabase={
       rpc:async name=>name==='get_friends'?{data:[{user_id:'friend-1',display_name:'Ami',status:'accepted'},{user_id:'pending-1',status:'pending'}]}:{data:[],error:null},
@@ -759,7 +760,8 @@ function withoutV1049ActiveMetrics(text) {
     .replace('<section id="coachingAutoDebrief" class="auto-debrief hidden" aria-label="Statistiques du débrief" aria-live="polite"></section>', '<div id="coachingAutoDebrief" class="auto-debrief hidden"></div>')
     .replace(/^      <section id="coachingParticipantObservations"[^\n]*\n?/m, '')
     .replace(/^      <section id="coachingDebriefClosure"[^\n]*\n?/m, '')
-    .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"');
+    .replace(/<div class="coaching-live-metrics">[\s\S]*?<\/div><button id="recenterCoachingMap"/, '<button id="recenterCoachingMap"')
+    .replace(/<button data-session-filter="ended">Débriefs<\/button>/, '');
 }
 
 const currentCoachingPage = html.match(/  <section id="coachingPage"[\s\S]*?(?=  <section id="mapPage")/);
