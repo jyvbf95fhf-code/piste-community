@@ -290,8 +290,8 @@ assert.equal(app.includes('async function handleCoachingSessionCancelled('), tru
 const openSession = extractFunctionWithParameterDefaults(app, 'openCoachingSession');
 assert.equal(openSession.includes('coachingGlobalPhase('), true,
   'reload routing must reconcile through the durable global phase');
-assert.equal(openSession.includes("if(access.canActTerrain)requestCoachingPreviewLocation()"), true,
-  'reload without active membership must not restart Terrain preview GPS');
+assert.equal(openSession.includes("if(access.canActTerrain&&!isSoloCoaching(s))requestCoachingPreviewLocation()"), true,
+  'Solo reload must not restart Terrain preview GPS before its phase action');
 const resumeSession = extractFunction(app, 'resumeCoachingV10423');
 assert.equal(resumeSession.includes('coachingGlobalPhase('), true,
   'a saved session finishing during reload must route to Debrief, never Terrain');

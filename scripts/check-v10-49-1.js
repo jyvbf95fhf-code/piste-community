@@ -21,5 +21,13 @@ ok(/coaching-session-ended.*coaching-terrain-command-bar/.test(css),'ended sessi
 ok(/coachingCanSeeOdor\(activeCoachingSession/.test(app),'final debrief odor corridor is permission gated');
 ok(/supabase\.rpc\('join_coaching_session'/.test(app),'join by code uses the server admission RPC');
 ok(/p_role:role/.test(app),'join by code preserves role validation on the server');
+ok(/if\(access\.canActTerrain&&!isSoloCoaching\(s\)\)requestCoachingPreviewLocation\(\)/.test(app),'solo opening does not start preview GPS');
+ok(/soloPose=rawRole==='solo'&&\['preparation','laying'\]\.includes\(phase\)/.test(app),'solo surface derives pose phase explicitly');
+ok(/role==='traceur'\|\|isSoloCoaching\(s\)/.test(app),'solo can act as traceur during laying');
+ok(/coachingPhase\(s\)==='laying'&&coachingGpsRole\(s\)==='solo'/.test(app),'solo laying uses trace GPS watch');
+ok(/role==='solo'\?'Départ de piste'/.test(app)&&/role==='solo'\?'Fin de pose'/.test(app)&&/setUiText\('driverStartBtn','Démarrer le relevé'\)/.test(app),'solo phase action labels are explicit');
+ok(/stopCoachingPresence\(\);stopTraceurTracking\(\)/.test(app),'solo finish stops GPS watches before debrief');
+ok(/function resumeSoloCoachingPhaseGps/.test(app)&&/await resumeSoloCoachingPhaseGps\(s\)/.test(app),'reload restores Solo GPS only for an already active phase');
+
 for(const file of ['scripts/check-v10-49.js','scripts/check-v10-49-backend.js','scripts/check-v10-48.js','scripts/check-v10-47.js'])ok(fs.existsSync(file),`${file} missing`);
 console.log('V10.49.1 targeted guard: PASS');
