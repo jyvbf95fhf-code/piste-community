@@ -38,6 +38,8 @@ ok(/bindClick\('startLayingBtn',handleCoachingStartLaying\)/.test(app),'start bu
 ok(/async function handleCoachingStartLaying\(\)[\s\S]*role==='traceur'[\s\S]*startCoachingLaying\(\)/.test(app),'classic Traceur start remains available');
 ok(/async function startCoachingLaying\(\)[\s\S]*coachingTransitionV1040\('start_coaching_laying'\)[\s\S]*startTraceurTracking\(\)/.test(app),'classic Traceur start calls laying RPC then GPS');
 ok(/async function markCoachingTrackReady\(\)[\s\S]*mark_coaching_track_ready[\s\S]*stopTraceurTracking\(\)/.test(app),'classic Traceur can finish the laying phase');
+ok(/function renderSoloPreparationAction\(s=activeCoachingSession\)/.test(app),'Solo preparation action renderer exists');
+ok(/setCoachingStage\(stage\)[\s\S]*renderSoloPreparationAction\(activeCoachingSession\)/.test(app),'Solo preparation action survives the waiting-room stage');
 
 
 for(const file of ['scripts/check-v10-49.js','scripts/check-v10-49-backend.js','scripts/check-v10-48.js','scripts/check-v10-47.js'])ok(fs.existsSync(file),`${file} missing`);
