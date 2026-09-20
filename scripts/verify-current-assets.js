@@ -4,8 +4,8 @@ const assert = require('assert/strict');
 module.exports = function verifyCurrentAssets() {
   const html = fs.readFileSync('index.html', 'utf8');
   const sw = fs.readFileSync('sw.js', 'utf8');
-  assert.match(sw, /^const C='piste-community-v2123';$/m);
-  const assets = ['app.js?v=1048-1', 'v2.css?v=2084', 'v2.js?v=2022', 'styles.css?v=1027'];
+  assert.match(sw, /^const C='piste-community-v2124';$/m);
+  const assets = ['app.js?v=1049-1', 'v2.css?v=2085', 'v2.js?v=2022', 'styles.css?v=1027'];
   assert(html.includes('./admin.css?v=1044-1'));
   assert(fs.readFileSync('app.js','utf8').includes("'./admin.js?v=1044-1'"));
   for (const extra of ['admin.js?v=1044-1','admin.css?v=1044-1']) assert(sw.includes(`'./${extra}'`));

@@ -11,6 +11,16 @@ const has = (source, pattern, message) => {
   if (!pattern.test(source)) fail(message);
 };
 
+// Release metadata is versioned separately from the functional contracts.
+assert.equal(app.match(/const APP_VERSION='([^']+)'/)?.[1], '10.49', 'APP_VERSION doit être 10.49');
+assert(html.includes('./app.js?v=1049-1'), 'Référence app.js V10.49 absente');
+assert(html.includes('./v2.css?v=2085'), 'Référence v2.css V10.49 absente');
+const serviceWorker = fs.readFileSync('sw.js', 'utf8');
+assert.match(serviceWorker, /const C='piste-community-v2124';/, 'Cache V10.49 absent');
+assert(serviceWorker.includes("'./app.js?v=1049-1'"), 'app.js V10.49 absent du précache');
+assert(serviceWorker.includes("'./v2.css?v=2085'"), 'v2.css V10.49 absent du précache');
+assert(app.includes("{version:'10.49'"), 'Release note V10.49 absente');
+
 // V10.48 preparation remains a six-step wizard.
 has(app, /Math\.min\(6|step===6|sur 6/, 'wizard six-step contract absent');
 assert.equal((html.match(/data-coaching-wizard-step=/g) || []).length, 6,

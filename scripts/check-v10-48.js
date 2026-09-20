@@ -106,14 +106,14 @@ assert(!source('createCoaching').includes('p_search_mode'), 'createCoaching ne d
 
 if (process.argv.includes('--case=release')) {
   const sw = read('sw.js');
-  assert.equal(app.match(/const APP_VERSION='([^']+)'/)?.[1], '10.48', 'APP_VERSION doit être 10.48');
+  assert(['10.48','10.49'].includes(app.match(/const APP_VERSION='([^']+)'/)?.[1]), 'APP_VERSION V10.48 ou version successeur absente');
   assert(app.includes("{version:'10.48',date:'13/09/2026'"), 'Release note V10.48 absente');
   assert(app.includes('Préparation Coaching guidée en 6 étapes, avec choix de recherche après la pose.'), 'Texte de release note incorrect');
-  assert(html.includes('./app.js?v=1048-1'), 'Référence app.js V10.48 absente');
-  assert(html.includes('./v2.css?v=2084'), 'Référence v2.css V10.48 absente');
-  assert.match(sw, /const C='piste-community-v2123';/, 'Cache V10.48 absent');
-  assert(sw.includes("'./app.js?v=1048-1'"), 'app.js V10.48 absent du précache');
-  assert(sw.includes("'./v2.css?v=2084'"), 'v2.css V10.48 absent du précache');
+  assert(html.includes('./app.js?v=1048-1') || html.includes('./app.js?v=1049-1'), 'Référence app.js V10.48 absente');
+  assert(html.includes('./v2.css?v=2084') || html.includes('./v2.css?v=2085'), 'Référence v2.css V10.48 absente');
+  assert.match(sw, /const C='piste-community-v(?:2123|2124)';/, 'Cache V10.48 absent');
+  assert(sw.includes("'./app.js?v=1048-1'") || sw.includes("'./app.js?v=1049-1'"), 'app.js V10.48 absent du précache');
+  assert(sw.includes("'./v2.css?v=2084'") || sw.includes("'./v2.css?v=2085'"), 'v2.css V10.48 absent du précache');
   require('./verify-current-assets')();
   console.log('V10.48 release checks: OK');
   process.exit(0);

@@ -4,13 +4,14 @@ import { createAdminCentre } from './admin.js?v=1044-1';
 
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
-const APP_VERSION='10.48';
+const APP_VERSION='10.49';
 // Fixed presentation palette. Never derived from a stored/user-selected color.
 const TRACE_PALETTE=Object.freeze({planned:'#00D9FF',traceur:'#39FF14',conducteur:'#FF7A00',external:'#E600FF',markers:'#FFE600'});
 const TRACE_LABELS=Object.freeze({planned:'Tracé prévu',traceur:'Traceur',conducteur:'Conducteur',external:'GPX / Externe',markers:'Repères'});
 for(const [layer,color] of Object.entries(TRACE_PALETTE))document.documentElement.style.setProperty(`--trace-${layer}`,color);
 
 const APP_RELEASE_NOTES=Object.freeze([
+ {version:'10.49',date:'20/09/2026',title:'Nouveautés V10.49',items:['Écran Coaching actif allégé, carte prioritaire et pause partagée.','Fin de piste sécurisée puis débrief immédiat avec superposition, statistiques et observations personnelles.'],important:['L’indice de concordance est un indicateur progressif calculé depuis les traces GPS brutes ; il ne constitue pas une vérité scientifique.']},
  {version:'10.48',date:'13/09/2026',title:'Nouveautés V10.48',items:['Préparation Coaching guidée en 6 étapes, avec choix de recherche après la pose.'],important:[]},
  {version:'10.47',date:'13/09/2026',title:'Nouveautés V10.47',items:['Nouvelle entrée Entraînement & Coaching avec accès direct à Créer, Rejoindre, Mes sessions et Progression d’équipe.'],important:[]},
  {version:'10.46',date:'13/09/2026',title:'Nouveautés V10.46',items:['Terrain Coaching plein écran.','Interface terrain plus compacte.','Suppression des messages pré-rédigés.','Badge de messages non lus et toast discret.'],important:[]},
