@@ -1071,6 +1071,9 @@ body.coaching-session-active #coachingPage>.record-head{display:none!important}
  .coaching-layer-panel{display:none;max-height:34vh;overflow:auto;flex-direction:column;align-items:stretch;gap:6px;padding:4px 0}
  .coaching-layer-panel:not(.hidden){display:flex}
  .coaching-layer-panel label{display:flex;align-items:center;gap:7px;padding:6px 4px}
+ .coaching-layer-panel .coaching-odor-toggle{position:static;z-index:auto;max-width:none;margin:0;padding:6px 4px;border:0;border-radius:9px;background:rgba(255,255,255,.045);box-shadow:none;font-size:11px;font-weight:750;white-space:normal}
+ .coaching-layer-controls{z-index:1500;max-height:calc(100% - 16px);overflow:visible;pointer-events:auto}
+ .coaching-layer-panel{position:relative;z-index:1501;max-height:min(34dvh,260px);padding:4px;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
 }
 /* Hold-to-unlock duration is intentionally two seconds. */
 .fake-lock-screen button.holding i{animation:fakeUnlockHold 2s linear forwards}
