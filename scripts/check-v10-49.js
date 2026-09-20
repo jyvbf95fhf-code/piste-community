@@ -280,8 +280,8 @@ assert.equal(app.includes('async function handleCoachingSessionCancelled('), tru
 const openSession = extractFunctionWithParameterDefaults(app, 'openCoachingSession');
 assert.equal(openSession.includes('coachingGlobalPhase('), true,
   'reload routing must reconcile through the durable global phase');
-assert.equal(openSession.includes("if(globalPhase==='active')requestCoachingPreviewLocation()"), true,
-  'reload of a final session must not restart Terrain preview GPS');
+assert.equal(openSession.includes("if(access.canActTerrain)requestCoachingPreviewLocation()"), true,
+  'reload without active membership must not restart Terrain preview GPS');
 const resumeSession = extractFunction(app, 'resumeCoachingV10423');
 assert.equal(resumeSession.includes('coachingGlobalPhase('), true,
   'a saved session finishing during reload must route to Debrief, never Terrain');
@@ -964,8 +964,8 @@ assert.equal(extractFunction(app, 'submitParticipantObservation').includes('setC
   'editing an observation must never reopen or reroute Terrain');
 assert.equal(extractFunctionWithParameterDefaults(app, 'renderParticipantObservations').includes('dataset.dirty'), true,
   'realtime observation refresh must preserve an unsaved local draft for conflict resolution');
-assert.equal(extractFunction(app, 'updateCoachingDebriefAccess').includes("['in_progress','closed']"), true,
-  'personal observation UI must follow the backend final-reader states exactly');
+assert.equal(extractFunction(app, 'updateCoachingDebriefAccess').includes('coachingHistoricalAccess(s)'), true,
+  'personal observation UI must follow the backend final-reader capability exactly');
 has(html, /id="coachingParticipantObservations"/, 'participant observation section missing');
 has(html, /id="coachingObservationList"[^>]*aria-live="polite"/, 'shared participant observation list missing');
 assert.equal(/id=["']coachingObservationBody["'][^>]*\brequired\b/.test(app + html), false,
@@ -999,6 +999,72 @@ has(html, /id="closeCoachingDebriefBtn"[^>]*>Valider le débriefing</,
 has(html, /id="coachingDebriefClosureState"[^>]*aria-live="polite"/,
   'global Debrief closure state must be announced accessibly');
 has(css, /\.coaching-debrief-closure/, 'global Debrief closure styles missing');
+
+// Task 15: a proved former participant may reopen only the final Debrief. The
+// deleted active membership must never be recreated or treated as Terrain
+// authority, while the server remains the source of truth for every read/write.
+for (const name of ['coachingHistoricalProof', 'coachingHistoricalAccess', 'loadHistoricalCoachingSessions', 'loadCoachingSessionForDebrief']) {
+  assert.equal(app.includes(`function ${name}(`) || app.includes(`async function ${name}(`), true,
+    `Task 15 production function missing: ${name}`);
+}
+const historicalContext = { session: { user: { id: 'former-15' } } };
+for (const name of ['coachingGlobalPhase', 'coachingHistoricalProof', 'coachingHistoricalAccess']) {
+  vm.runInNewContext(extractFunctionWithParameterDefaults(app, name), historicalContext);
+}
+const historicalFinal = {
+  id: 'session-15', status: 'ended', phase: 'completed', debrief_status: 'closed',
+  coaching_members: [],
+  _coaching_history: [{ user_id: 'former-15', role: 'coach', participated_at: '2026-09-15T10:00:00Z' }],
+};
+assert.deepEqual(
+  JSON.parse(JSON.stringify(historicalContext.coachingHistoricalAccess(historicalFinal, 'former-15'))),
+  { canReadDebrief: true, canEditOwnObservation: true, canActTerrain: false },
+  'proved self-leaver must retain only final-Debrief capabilities',
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(historicalContext.coachingHistoricalAccess(historicalFinal, 'stranger-15'))),
+  { canReadDebrief: false, canEditOwnObservation: false, canActTerrain: false },
+  'a nonparticipant must not inherit final-Debrief access',
+);
+const historicalActive = { ...historicalFinal, status: 'live', phase: 'driver_running', debrief_status: 'none' };
+assert.deepEqual(
+  JSON.parse(JSON.stringify(historicalContext.coachingHistoricalAccess(historicalActive, 'former-15'))),
+  { canReadDebrief: false, canEditOwnObservation: false, canActTerrain: false },
+  'ledger proof must expose nothing before the final Debrief',
+);
+const activeMember = {
+  ...historicalActive,
+  coaching_members: [{ user_id: 'former-15', role: 'driver', invitation_status: 'active' }],
+  _coaching_history: [],
+};
+assert.equal(historicalContext.coachingHistoricalAccess(activeMember, 'former-15').canActTerrain, true,
+  'an accepted active member must retain the existing Terrain path');
+has(html, /data-session-filter="ended"[^>]*>Débriefs</,
+  'the Coaching session list must expose a historical Debrief entry');
+const historicalLoader = extractFunction(app, 'loadHistoricalCoachingSessions');
+for (const token of ["from('coaching_participation_ledger')", "from('coaching_sessions')", "['in_progress','closed']"]) {
+  assert.equal(historicalLoader.includes(token), true, `historical loader is missing ${token}`);
+}
+assert.equal(historicalLoader.includes("from('coaching_members')"), false,
+  'historical loading must never recreate or depend on active membership');
+const sessionOpener = extractFunctionWithParameterDefaults(app, 'openCoachingSession');
+assert.equal(sessionOpener.includes('loadCoachingSessionForDebrief('), true,
+  'session opening must fall back to the RLS-protected historical Debrief path');
+assert.equal(sessionOpener.includes('coachingHistoricalAccess(s).canActTerrain'), true,
+  'historical reload must be gated before any GPS/terrain restart');
+const libraryOpener = extractFunction(app, 'openLibraryItem');
+assert.equal(libraryOpener.includes("type==='coaching'") && libraryOpener.includes('openCoachingSession(id)'), true,
+  'historical Coaching details must open the editable final Debrief route');
+const observationSave = extractFunction(app, 'saveParticipantObservation');
+assert.equal(observationSave.includes('canEditOwnObservation'), true,
+  'personal observation writes must require final-reader edit capability');
+const selfLeave = extractFunction(app, 'leaveActiveCoaching');
+assert.equal(selfLeave.includes("from('coaching_members').delete()"), true,
+  'self-leave must remove only the active membership');
+assert.equal(selfLeave.includes("from('coaching_sessions').delete()"), false,
+  'self-leave must leave the creator session intact');
+assert.equal(/from\('coaching_members'\)\.(?:insert|upsert)\(/.test(app), false,
+  'the frontend must never recreate membership as a historical-access workaround');
 
 for (const script of ['check-v10-49.js', 'check-v10-48.js', 'check-v10-47.js', 'check-v10-46.js', 'check-v10-45.js', 'check-v10-44.js', 'check-v10-43.js', 'check-v10-42-2.js', 'verify-current-assets.js']) {
   assert.equal(fs.existsSync(`scripts/${script}`), true, `regression guard missing: ${script}`);
@@ -1088,8 +1154,19 @@ const task10DebriefContext = (rpc, refresh = context => {
       return builder;
     },
   };
-  const observationContext = { supabase: observationSupabase, session: { user: { id: 'author-13' } }, activeCoachingSession: null };
+  const observationContext = {
+    supabase: observationSupabase,
+    session: { user: { id: 'author-13' } },
+    activeCoachingSession: {
+      id: 'session-13', status: 'ended', phase: 'completed', debrief_status: 'in_progress',
+      coaching_members: [{ user_id: 'author-13', role: 'observer', invitation_status: 'active' }],
+    },
+    renderParticipantObservations() {},
+  };
   vm.createContext(observationContext);
+  for (const name of ['coachingGlobalPhase', 'coachingHistoricalProof', 'coachingHistoricalAccess']) {
+    vm.runInContext(extractFunctionWithParameterDefaults(app, name), observationContext);
+  }
   vm.runInContext(`async ${extractFunction(app, 'loadParticipantObservations')}`, observationContext);
   vm.runInContext(`async ${extractFunction(app, 'saveParticipantObservation')}`, observationContext);
   const sharedRows = await observationContext.loadParticipantObservations('session-13');
