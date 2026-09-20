@@ -744,6 +744,9 @@ body.v10-30-aurora{
 .fake-lock-screen .fake-lock-emergency{touch-action:manipulation!important;-webkit-tap-highlight-color:transparent}.coaching-debrief-state{margin:0;padding:10px 12px;border-radius:12px;background:#102329;color:#cbd8d1}.debrief-save-actions{display:flex;flex-wrap:wrap;gap:9px}.debrief-save-actions button{flex:1 1 180px}
 /* V10.49.1 responsive overrides */
 .fake-lock-screen button.holding i{animation:fakeUnlockHold 2s linear forwards}
+/* V10.49.1: layers live below the map instead of covering it. */
+.coaching-layer-controls{position:relative;z-index:1500;left:auto;right:auto;bottom:auto;max-width:none;margin:8px 0;overflow:visible;pointer-events:auto}
+@media(max-width:700px){.coaching-layer-controls{width:100%;margin:8px 0 6px;box-sizing:border-box}.coaching-layer-panel{max-width:100%;box-sizing:border-box}.coaching-layer-panel label{min-height:34px;box-sizing:border-box}}
 .coaching-pause-map-badge{position:absolute;top:12px;left:50%;transform:translateX(-50%);z-index:1200;padding:6px 11px;border:1px solid rgba(255,220,126,.7);border-radius:999px;background:rgba(45,34,10,.92);color:#ffe39a;font-size:11px;font-weight:900;letter-spacing:.08em;pointer-events:none;box-shadow:0 3px 12px rgba(0,0,0,.28)}
 .coaching-layer-toggle{display:none;min-height:34px;padding:7px 10px;border:1px solid rgba(185,214,108,.45);border-radius:10px;background:#0b1b21;color:#eef5e9;font-weight:800}
 .coaching-layer-panel{display:flex;gap:8px;flex-wrap:wrap;align-items:center}

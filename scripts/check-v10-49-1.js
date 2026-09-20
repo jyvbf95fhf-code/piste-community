@@ -8,6 +8,7 @@ ok(html.includes('id="coachingPauseMapBadge"'),'pause map badge markup exists');
 ok(/coachingPauseMapBadge.*classList\.toggle\('hidden',!state\.paused\)/.test(app),'pause badge follows shared pause state');
 ok(html.includes('id="coachingLayerToggle"')&&html.includes('id="coachingLayerPanel"'),'map layers have a single mobile panel');
 ok(/id="coachingLayerPanel"[\s\S]*id="coachingOdorMapToggle"[\s\S]*<\/div>/.test(html)&&!/id="coachingOdorMapToggle"[\s\S]*id="coachingLayerControls"/.test(html),'odor option is contained by the layers panel');
+ok(/coachingMapContext[\s\S]*coachingLayerControls[\s\S]*coachingTerrainCommandBar/.test(html),'layers bar is placed between map and terrain actions');
 ok(/bindClick\('coachingLayerToggle'/.test(app)&&/coaching-layer-panel:not\(\.hidden\)/.test(css),'map layers panel is interactive and responsive');
 ok(/session-ended/.test(app+css)&&/exitPublishedCoachingContext/.test(app),'published debrief exits active session context');
 ok(/coaching-session-ended.*coaching-terrain-command-bar/.test(css),'ended sessions hide terrain controls');
