@@ -6,6 +6,8 @@ set local lock_timeout='5s';
 set local statement_timeout='30s';
 
 do $preflight$
+declare
+  _name text;
 begin
   foreach _name in array array[
     'public.start_coaching_laying(uuid)',
