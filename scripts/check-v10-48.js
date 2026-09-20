@@ -741,6 +741,16 @@ function withoutWizard(text) {
 
 function withoutV1049ActiveMetrics(text) {
   return text
+    // V10.49.1 renders the layer controls below the map on mobile. Remove
+    // both the standalone panel and the legacy in-map variant before comparing
+    // the V10.48 shell; the map context menu remains part of the shell.
+    .replace(/<div id="coachingLayerControls"[\s\S]*?<\/div><\/div>/g, '')
+    .replace(/<div id="coachingLayerControls"[\s\S]*?<\/div>(?=<div id="coachingMapContext")/g, '')
+    .replace(/<div id="coachingMapContext"[^>]*><\/div>/g, '')
+    .replace(/<\/div>\s*(<div id="coachingTerrainCommandBar")/, '$1')
+    .replace(/(<button id="fullscreenCoachingMap"[\s\S]*?<\/button>)\s*(<div id="coachingTerrainCommandBar")/, '$1\n      $2')
+    .replace(/<div id="coachingLayerControls"[\s\S]*?<\/div><\/div><div id="coachingMapContext"/, '<div id="coachingMapContext"')
+    .replace(/<div id="coachingLayerControls"[\s\S]*?<\/div><\/div><div id="coachingTerrainCommandBar"/, '<div id="coachingTerrainCommandBar"')
     .replace(/<div id="coachingPauseMapBadge"[^>]*>.*?<\/div>/, '')
     .replace(/<button id="coachingLayerToggle"[\s\S]*?<\/button><div id="coachingLayerPanel"[^>]*>/, '')
     .replace(/<\/div><\/div><div id="coachingMapContext"/, '</div><div id="coachingMapContext"')
@@ -778,7 +788,7 @@ assert.equal(
   'Le terrain et les sessions internes doivent rester inchangés'
 );
 
-const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql', 'scripts/check-v10-49-backend.js', 'scripts/check-v10-49.js', 'scripts/check-v10-49-1.js', 'docs/superpowers/specs/2026-09-14-v10-49-coaching-active-session-debrief-design.md', 'docs/superpowers/plans/2026-09-14-v10-49-coaching-active-session-debrief.md'];
+const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql','PISTE_V10.49.1B_COACHING_SOLO_JOIN.sql','PISTE_V10.49.1B_COACHING_SOLO_JOIN_VERIFY.sql', 'scripts/check-v10-49-backend.js', 'scripts/check-v10-49.js', 'scripts/check-v10-49-1.js', 'docs/superpowers/specs/2026-09-14-v10-49-coaching-active-session-debrief-design.md', 'docs/superpowers/plans/2026-09-14-v10-49-coaching-active-session-debrief.md'];
 const changed = execFileSync('git', ['diff', baseline, '--name-only'], { encoding: 'utf8' })
   .trim().split('\n').filter(Boolean).filter(path => !path.startsWith('.superpowers/sdd/') && !selfLeaveFiles.includes(path));
 assert.deepEqual(
@@ -791,6 +801,7 @@ assert.deepEqual(
     'scripts/check-v10-45.js',
     'scripts/check-v10-44.js',
     'scripts/check-v10-43.js',
+    'scripts/check-v10-49-1b-backend.js',
     'scripts/check-v10-48.js',
     'scripts/check-v10-42-2.js',
     'scripts/verify-current-assets.js',
