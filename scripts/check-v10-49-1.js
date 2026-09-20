@@ -7,6 +7,12 @@ ok(!/closeEmergency|add\(window,'blur'|add\(window,'pagehide'|add\(window,'error
 ok(html.includes('id="coachingPauseMapBadge"'),'pause map badge markup exists');
 ok(/coachingPauseMapBadge.*classList\.toggle\('hidden',!state\.paused\)/.test(app),'pause badge follows shared pause state');
 ok(html.includes('id="coachingLayerToggle"')&&html.includes('id="coachingLayerPanel"'),'map layers have a single mobile panel');
+ok(html.includes('id="coachingWizardFlow"')&&html.includes('value="classic"')&&html.includes('value="solo"'),'wizard offers classic and solo session modes');
+ok(/sessionType:'classic'/.test(app)&&/coachingWizard\.sessionType==='solo'/.test(app),'wizard stores an explicit solo session mode');
+ok(/coachingWizard\.sessionType==='solo'[\s\S]*role:'solo'/.test(app),'solo creation sends the current user as the sole solo member');
+ok(/sessionType==='solo'[\s\S]*routeId:null/.test(app),'solo creation never sends a prepared route');
+ok(/coachingWizard\.sessionType==='solo'\?\[\{user_id:creatorId,role:'solo'\}/.test(app)&&/previous\.participants=\[\]/.test(app),'solo creation does not require distinct driver or traceur participants');
+ok(/sessionType==='classic'/.test(app)&&/coachingWizardMembers\(\)/.test(app),'classic wizard path remains available');
 ok(/id="coachingLayerPanel"[\s\S]*id="coachingOdorMapToggle"[\s\S]*<\/div>/.test(html)&&!/id="coachingOdorMapToggle"[\s\S]*id="coachingLayerControls"/.test(html),'odor option is contained by the layers panel');
 ok(/coachingMapContext[\s\S]*coachingLayerControls[\s\S]*coachingTerrainCommandBar/.test(html),'layers bar is placed between map and terrain actions');
 ok(/bindClick\('coachingLayerToggle'/.test(app)&&/coaching-layer-panel:not\(\.hidden\)/.test(css),'map layers panel is interactive and responsive');
