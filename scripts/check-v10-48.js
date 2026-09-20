@@ -741,6 +741,10 @@ function withoutWizard(text) {
 
 function withoutV1049ActiveMetrics(text) {
   return text
+    .replace(/<div id="coachingPauseMapBadge"[^>]*>.*?<\/div>/, '')
+    .replace(/<button id="coachingLayerToggle"[\s\S]*?<\/button><div id="coachingLayerPanel"[^>]*>/, '')
+    .replace(/<\/div><\/div><div id="coachingMapContext"/, '</div><div id="coachingMapContext"')
+    .replace(/Maintenir 2 secondes<\/small>/g, 'Clôture de secours — maintenir 2 secondes</small>')
     .replace(/<div class="coaching-odor-preference">[\s\S]*?<\/div>/, '')
     .replace(/<label id="coachingOdorMapToggle"[\s\S]*?<\/label>/, '')
     .replace(/<label><input type="checkbox" data-coaching-layer="odor" checked> Olfactif estimé<\/label>/, '')
@@ -774,7 +778,7 @@ assert.equal(
   'Le terrain et les sessions internes doivent rester inchangés'
 );
 
-const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql', 'scripts/check-v10-49-backend.js', 'scripts/check-v10-49.js', 'docs/superpowers/specs/2026-09-14-v10-49-coaching-active-session-debrief-design.md', 'docs/superpowers/plans/2026-09-14-v10-49-coaching-active-session-debrief.md'];
+const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql', 'scripts/check-v10-49-backend.js', 'scripts/check-v10-49.js', 'scripts/check-v10-49-1.js', 'docs/superpowers/specs/2026-09-14-v10-49-coaching-active-session-debrief-design.md', 'docs/superpowers/plans/2026-09-14-v10-49-coaching-active-session-debrief.md'];
 const changed = execFileSync('git', ['diff', baseline, '--name-only'], { encoding: 'utf8' })
   .trim().split('\n').filter(Boolean).filter(path => !path.startsWith('.superpowers/sdd/') && !selfLeaveFiles.includes(path));
 assert.deepEqual(

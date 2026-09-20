@@ -1,0 +1,17 @@
+const fs=require('fs');const assert=require('assert');
+const app=fs.readFileSync('app.js','utf8'),html=fs.readFileSync('index.html','utf8'),css=fs.readFileSync('v2.css','utf8');
+const ok=(condition,message)=>assert(condition,message);
+ok(!/fakeUnlockEmergency|Sortie de secours|sortie de secours|Clôture de secours/.test(app+html+css),'black screen emergency escape remains');
+ok(/setTimeout\(completeFakeUnlock,2000\)/.test(app),'black screen unlock uses a two-second hold');
+ok(!/closeEmergency|add\(window,'blur'|add\(window,'pagehide'|add\(window,'error'|add\(window,'unhandledrejection'/.test(app),'black screen has an accidental lifecycle escape');
+ok(html.includes('id="coachingPauseMapBadge"'),'pause map badge markup exists');
+ok(/coachingPauseMapBadge.*classList\.toggle\('hidden',!state\.paused\)/.test(app),'pause badge follows shared pause state');
+ok(html.includes('id="coachingLayerToggle"')&&html.includes('id="coachingLayerPanel"'),'map layers have a single mobile panel');
+ok(/bindClick\('coachingLayerToggle'/.test(app)&&/coaching-layer-panel:not\(\.hidden\)/.test(css),'map layers panel is interactive and responsive');
+ok(/session-ended/.test(app+css)&&/exitPublishedCoachingContext/.test(app),'published debrief exits active session context');
+ok(/coaching-session-ended.*coaching-terrain-command-bar/.test(css),'ended sessions hide terrain controls');
+ok(/coachingCanSeeOdor\(activeCoachingSession/.test(app),'final debrief odor corridor is permission gated');
+ok(/supabase\.rpc\('join_coaching_session'/.test(app),'join by code uses the server admission RPC');
+ok(/p_role:role/.test(app),'join by code preserves role validation on the server');
+for(const file of ['scripts/check-v10-49.js','scripts/check-v10-49-backend.js','scripts/check-v10-48.js','scripts/check-v10-47.js'])ok(fs.existsSync(file),`${file} missing`);
+console.log('V10.49.1 targeted guard: PASS');
