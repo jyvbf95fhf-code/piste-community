@@ -40,6 +40,10 @@ ok(/async function startCoachingLaying\(\)[\s\S]*coachingTransitionV1040\('start
 ok(/async function markCoachingTrackReady\(\)[\s\S]*mark_coaching_track_ready[\s\S]*stopTraceurTracking\(\)/.test(app),'classic Traceur can finish the laying phase');
 ok(/function renderSoloPreparationAction\(s=activeCoachingSession\)/.test(app),'Solo preparation action renderer exists');
 ok(/setCoachingStage\(stage\)[\s\S]*renderSoloPreparationAction\(activeCoachingSession\)/.test(app),'Solo preparation action survives the waiting-room stage');
+ok(/function renderSoloPreparationAction\(s=activeCoachingSession\)[\s\S]*button\.disabled=false[\s\S]*removeAttribute\('aria-disabled'\)/.test(app),'Solo departure button is explicitly enabled when rendered');
+ok(/async function startSoloRun\(\)[\s\S]{0,1800}supabase\.rpc\('start_solo_run',\{p_session_id:s\.id\}\)/.test(app),'Solo departure calls the RPC with the session id');
+ok(/async function startSoloRun\(\)[\s\S]{0,2400}catch\(error\)[\s\S]{0,240}coachingToast\(`Départ impossible/.test(app),'Solo departure surfaces RPC exceptions to the user');
+ok(/async function startSoloRun\(\)[\s\S]{0,2600}finally\{[\s\S]{0,240}button\.disabled=false/.test(app),'Solo departure re-enables the button after completion');
 
 
 for(const file of ['scripts/check-v10-49.js','scripts/check-v10-49-backend.js','scripts/check-v10-48.js','scripts/check-v10-47.js'])ok(fs.existsSync(file),`${file} missing`);
