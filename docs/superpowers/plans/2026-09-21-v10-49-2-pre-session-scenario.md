@@ -32,7 +32,7 @@ Application vanilla JS (`app.js`, `index.html`, `v2.css`), Supabase Postgres/RLS
 - [ ] Task 2 — Finaliser la migration idempotente après validation : conserver les colonnes legacy, ajouter tables scénario/lectures, contraintes, RLS, Storage, RPC, trigger de verrouillage et publications realtime. Aucun APPLY avant approbation.
 - [ ] Task 3 — Ajouter le modèle wizard facultatif : activation, texte, cinq photos, validation, nettoyage et payload sans régression.
 - [ ] Task 4 — Ajouter l'UI de préparation et les droits d'édition/lecture, sans afficher le scénario Terrain.
-- [ ] Task 5 — Ajouter lecture serveur, « J'ai lu », verrouillage realtime, late joiner et accès débrief.
+- [ ] Task 5 — Ajouter le cycle photo `pending → uploads → ready`, abort/cleanup des uploads partiels, puis lecture serveur, « J'ai lu », verrouillage realtime, late joiner et accès débrief.
 - [ ] Task 6 — Étendre le panneau Debug avec métadonnées scénario uniquement.
 - [ ] Task 7 — Guards et tests : dix scénarios métier, sécurité double aveugle, absence de scénario et limites Storage.
 - [ ] Task 8 — Review globale, batterie V10.49.2 + régressions V10.49→V10.42.2, commit(s) et Preview uniquement après validation finale.
@@ -46,7 +46,7 @@ Application vanilla JS (`app.js`, `index.html`, `v2.css`), Supabase Postgres/RLS
 
 ## Résultats d'audit à porter dans la migration
 
-- La RPC historique doit rester compatible ; l'enveloppe versionnée crée le texte/scénario sans photo, puis les photos sont uploadées avec l'ID de session et attachées avant le départ. L'API refuse des chemins photo dans l'appel initial, car l'ID n'existe pas avant l'appel historique.
+- La RPC historique doit rester compatible ; l'enveloppe versionnée crée le scénario `pending` sans photo. Après obtention de l'ID, le client téléverse au maximum cinq photos, finalise en `ready`, ou appelle l'abort serveur qui supprime la ligne et les objets déjà uploadés. L'API refuse des chemins photo dans l'appel initial, car l'ID n'existe pas avant l'appel historique.
 - Le Traceur initiateur est prouvé par `owner_id` égal au membre `user_id`, rôle `traceur`, statut `accepted/active`.
 - Le bucket existant `dog-photos` est privé et ses policies utilisent `storage.foldername(name)[1] = auth.uid()`. Le bucket scénario devra être privé avec un chemin session-scénario et des policies dédiées, sans réutiliser `dog-photos`.
 - `coaching_sessions`, `coaching_live_points`, `coaching_trace_points`, `coaching_markers`, `coaching_messages` et `coaching_debrief_observations` sont déjà realtime ; `coaching_session_scenarios` et `coaching_scenario_reads` devront être ajoutées sans retirer les publications existantes.

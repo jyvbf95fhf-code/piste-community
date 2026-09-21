@@ -26,6 +26,7 @@ begin
   if to_regprocedure('public.create_coaching_scenario_v10492(uuid,text,jsonb)') is not null
      or to_regprocedure('public.update_coaching_scenario_v10492(uuid,text,jsonb)') is not null
      or to_regprocedure('public.delete_coaching_scenario_v10492(uuid)') is not null
+     or to_regprocedure('public.abort_coaching_scenario_v10492(uuid,jsonb)') is not null
      or to_regprocedure('public.mark_coaching_scenario_read_v10492(uuid)') is not null
      or to_regprocedure('public.get_coaching_scenario_v10492(uuid)') is not null
      or to_regprocedure('public.create_coaching_people_session_v10492(uuid,jsonb,text,boolean,text,jsonb)') is not null then
@@ -38,6 +39,7 @@ create table public.coaching_session_scenarios (
   author_id uuid not null references auth.users(id) on delete restrict,
   scenario_text text not null default '',
   photo_paths jsonb not null default '[]'::jsonb,
+  upload_status text not null default 'pending',
   created_at timestamptz not null default statement_timestamp(),
   updated_at timestamptz not null default statement_timestamp(),
   locked_at timestamptz,
@@ -45,6 +47,7 @@ create table public.coaching_session_scenarios (
   constraint coaching_scenario_text_length_v10492 check (char_length(scenario_text) <= 5000),
   constraint coaching_scenario_photos_array_v10492 check (jsonb_typeof(photo_paths)='array'),
   constraint coaching_scenario_photos_count_v10492 check (jsonb_array_length(photo_paths) between 0 and 5),
+  constraint coaching_scenario_upload_status_v10492 check (upload_status in ('pending','ready')),
   constraint coaching_scenario_lock_pair_v10492 check ((locked_at is null and locked_by is null) or (locked_at is not null and locked_by is not null))
 );
 create index coaching_session_scenarios_author_v10492 on public.coaching_session_scenarios(author_id);
@@ -113,7 +116,7 @@ begin
   if not private.coaching_v10492_validate_paths(p_session_id,coalesce(p_photo_paths,'[]'::jsonb)) then raise exception 'Photos de scénario invalides'; end if;
   insert into public.coaching_session_scenarios(session_id,author_id,scenario_text,photo_paths)
   values(p_session_id,uid,coalesce(p_text,''),coalesce(p_photo_paths,'[]'::jsonb)) returning * into row_data;
-  return jsonb_build_object('session_id',row_data.session_id,'author_id',row_data.author_id,'text',row_data.scenario_text,'photo_paths',row_data.photo_paths,'created_at',row_data.created_at,'updated_at',row_data.updated_at,'locked_at',row_data.locked_at,'locked_by',row_data.locked_by);
+  return jsonb_build_object('session_id',row_data.session_id,'author_id',row_data.author_id,'text',row_data.scenario_text,'photo_paths',row_data.photo_paths,'upload_status',row_data.upload_status,'created_at',row_data.created_at,'updated_at',row_data.updated_at,'locked_at',row_data.locked_at,'locked_by',row_data.locked_by);
 end $$;
 
 create or replace function public.update_coaching_scenario_v10492(p_session_id uuid,p_text text,p_photo_paths jsonb)
@@ -122,9 +125,20 @@ declare uid uuid:=(select auth.uid()); row_data public.coaching_session_scenario
 begin
   if uid is null or not private.coaching_v10492_editor(p_session_id,uid) then raise exception 'Éditeur du scénario requis'; end if;
   if not private.coaching_v10492_validate_paths(p_session_id,coalesce(p_photo_paths,'[]'::jsonb)) then raise exception 'Photos de scénario invalides'; end if;
-  update public.coaching_session_scenarios set scenario_text=coalesce(p_text,''),photo_paths=coalesce(p_photo_paths,'[]'::jsonb) where session_id=p_session_id and locked_at is null returning * into row_data;
+  update public.coaching_session_scenarios set scenario_text=coalesce(p_text,''),photo_paths=coalesce(p_photo_paths,'[]'::jsonb),upload_status='ready' where session_id=p_session_id and locked_at is null returning * into row_data;
   if not found then raise exception 'Scénario absent ou verrouillé'; end if;
-  return jsonb_build_object('session_id',row_data.session_id,'author_id',row_data.author_id,'text',row_data.scenario_text,'photo_paths',row_data.photo_paths,'created_at',row_data.created_at,'updated_at',row_data.updated_at,'locked_at',row_data.locked_at,'locked_by',row_data.locked_by);
+  return jsonb_build_object('session_id',row_data.session_id,'author_id',row_data.author_id,'text',row_data.scenario_text,'photo_paths',row_data.photo_paths,'upload_status',row_data.upload_status,'created_at',row_data.created_at,'updated_at',row_data.updated_at,'locked_at',row_data.locked_at,'locked_by',row_data.locked_by);
+end $$;
+
+create or replace function public.abort_coaching_scenario_v10492(p_session_id uuid,p_photo_paths jsonb default '[]'::jsonb)
+returns boolean language plpgsql security definer set search_path='' as $$
+declare uid uuid:=(select auth.uid());
+begin
+  if uid is null or not private.coaching_v10492_editor(p_session_id,uid) then raise exception 'Éditeur du scénario requis'; end if;
+  if not private.coaching_v10492_validate_paths(p_session_id,coalesce(p_photo_paths,'[]'::jsonb)) then raise exception 'Photos de scénario invalides'; end if;
+  delete from storage.objects where bucket_id='coaching-scenarios' and name in (select jsonb_array_elements_text(coalesce(p_photo_paths,'[]'::jsonb)));
+  delete from public.coaching_session_scenarios where session_id=p_session_id and locked_at is null;
+  return found;
 end $$;
 
 create or replace function public.delete_coaching_scenario_v10492(p_session_id uuid)
@@ -143,6 +157,7 @@ declare uid uuid:=(select auth.uid()); member_role text; locked_row public.coach
 begin
   select m.role into member_role from public.coaching_members m where m.session_id=p_session_id and m.user_id=uid and m.invitation_status in ('accepted','active');
   if uid is null or member_role is null or member_role not in ('driver','solo') then raise exception 'Conducteur autorisé requis'; end if;
+  if not exists(select 1 from public.coaching_session_scenarios s where s.session_id=p_session_id and s.upload_status='ready') then raise exception 'Scénario non finalisé'; end if;
   insert into public.coaching_scenario_reads(session_id,user_id,read_at,role) values(p_session_id,uid,read_time,member_role)
     on conflict(session_id,user_id) do update set read_at=coalesce(public.coaching_scenario_reads.read_at,excluded.read_at),role=excluded.role;
   update public.coaching_session_scenarios set locked_at=coalesce(locked_at,read_time),locked_by=coalesce(locked_by,uid) where session_id=p_session_id returning * into locked_row;
@@ -180,12 +195,14 @@ using (private.coaching_v10492_member(session_id,(select auth.uid())));
 revoke all on function public.create_coaching_scenario_v10492(uuid,text,jsonb) from public,anon,authenticated;
 revoke all on function public.update_coaching_scenario_v10492(uuid,text,jsonb) from public,anon,authenticated;
 revoke all on function public.delete_coaching_scenario_v10492(uuid) from public,anon,authenticated;
+revoke all on function public.abort_coaching_scenario_v10492(uuid,jsonb) from public,anon,authenticated;
 revoke all on function public.mark_coaching_scenario_read_v10492(uuid) from public,anon,authenticated;
 revoke all on function public.get_coaching_scenario_v10492(uuid) from public,anon,authenticated;
 revoke all on function public.create_coaching_people_session_v10492(uuid,jsonb,text,boolean,text,jsonb) from public,anon,authenticated;
 grant execute on function public.create_coaching_scenario_v10492(uuid,text,jsonb) to authenticated;
 grant execute on function public.update_coaching_scenario_v10492(uuid,text,jsonb) to authenticated;
 grant execute on function public.delete_coaching_scenario_v10492(uuid) to authenticated;
+grant execute on function public.abort_coaching_scenario_v10492(uuid,jsonb) to authenticated;
 grant execute on function public.mark_coaching_scenario_read_v10492(uuid) to authenticated;
 grant execute on function public.get_coaching_scenario_v10492(uuid) to authenticated;
 grant execute on function public.create_coaching_people_session_v10492(uuid,jsonb,text,boolean,text,jsonb) to authenticated;

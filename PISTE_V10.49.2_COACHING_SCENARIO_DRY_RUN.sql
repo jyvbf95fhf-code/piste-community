@@ -12,7 +12,7 @@ order by table_name,ordinal_position;
 
 select conrelid::regclass::text as table_name,conname,pg_get_constraintdef(oid) as definition
 from pg_constraint
-where conrelid in ('public.coaching_session_scenarios'::regclass,'public.coaching_scenario_reads'::regclass)
+where conrelid in (to_regclass('public.coaching_session_scenarios'),to_regclass('public.coaching_scenario_reads'))
 order by table_name,conname;
 
 select table_schema,table_name,column_name
@@ -23,12 +23,12 @@ order by column_name;
 
 select n.nspname as schema_name,p.proname,pg_get_function_identity_arguments(p.oid) as args,p.prosecdef,coalesce(p.proacl::text,'') as acl
 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-where n.nspname in ('public','private') and p.proname in ('coaching_v10492_member','coaching_v10492_editor','coaching_v10492_validate_paths','coaching_v10492_scenario_guard','create_coaching_scenario_v10492','update_coaching_scenario_v10492','delete_coaching_scenario_v10492','mark_coaching_scenario_read_v10492','get_coaching_scenario_v10492','create_coaching_people_session_v10492')
+where n.nspname in ('public','private') and p.proname in ('coaching_v10492_member','coaching_v10492_editor','coaching_v10492_validate_paths','coaching_v10492_scenario_guard','create_coaching_scenario_v10492','update_coaching_scenario_v10492','delete_coaching_scenario_v10492','abort_coaching_scenario_v10492','mark_coaching_scenario_read_v10492','get_coaching_scenario_v10492','create_coaching_people_session_v10492')
 order by schema_name,proname,args;
 
 select routine_schema,routine_name,grantee,privilege_type
 from information_schema.routine_privileges
-where routine_schema='public' and routine_name in ('create_coaching_scenario_v10492','update_coaching_scenario_v10492','delete_coaching_scenario_v10492','mark_coaching_scenario_read_v10492','get_coaching_scenario_v10492','create_coaching_people_session_v10492')
+where routine_schema='public' and routine_name in ('create_coaching_scenario_v10492','update_coaching_scenario_v10492','delete_coaching_scenario_v10492','abort_coaching_scenario_v10492','mark_coaching_scenario_read_v10492','get_coaching_scenario_v10492','create_coaching_people_session_v10492')
 order by routine_name,grantee,privilege_type;
 
 select schemaname,tablename,policyname,cmd,roles,qual,with_check

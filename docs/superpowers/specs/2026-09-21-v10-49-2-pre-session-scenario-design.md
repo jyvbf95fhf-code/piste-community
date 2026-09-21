@@ -7,7 +7,7 @@ Ajouter au wizard Coaching une préparation facultative composée d'un texte et 
 ## Règles métier
 
 - Sans scénario activé, le flux V10.49.1 reste inchangé et aucune ligne ni photo n'est créée.
-- Avec scénario, le texte est libre mais borné à 5000 caractères et le nombre de photos est limité à cinq. Les PDF sont refusés.
+- Avec scénario, le texte est libre mais borné à 5000 caractères et le nombre de photos est limité à cinq. Les PDF sont refusés. Le scénario DB commence en état `pending`, puis devient `ready` uniquement après la fin des uploads et la finalisation serveur.
 - En session Coach + Traceur + Conducteur, seul le Coach créateur peut créer, modifier ou supprimer avant lecture.
 - En session sans Coach où le Traceur initiateur crée la session, seul ce Traceur peut créer, modifier ou supprimer avant lecture.
 - Les autres participants lisent uniquement.
@@ -25,7 +25,7 @@ Les écritures passent par des RPC SECURITY DEFINER à `search_path=''` : créat
 
 Les fichiers sont stockés dans un bucket privé dédié `coaching-scenarios`. Le client demande des URLs signées après lecture RLS. Les policies Storage vérifient la session et le chemin ; aucune URL permanente n'est enregistrée dans le scénario.
 
-La création du texte du scénario est atomique avec la création de session via une RPC versionnée ; la RPC V10.45 historique reste inchangée. Comme l'identifiant de session est généré par la RPC historique, les photos sont téléversées ensuite dans le bucket privé puis attachées par une mise à jour autorisée avant le départ. Le serveur interdit tout démarrage tant que la préparation applicative n'est pas terminée, et toutes les écritures restent avant verrouillage.
+La création du texte du scénario est atomique avec la création de session via une RPC versionnée ; la RPC V10.45 historique reste inchangée. Comme l'identifiant de session est généré par la RPC historique, le scénario est créé `pending` sans photo, puis les photos sont téléversées séquentiellement dans le bucket privé avec des chemins préfixés par cet UUID. Une finalisation `update_coaching_scenario_v10492` passe l'état à `ready` après validation des cinq chemins maximum. En cas d'échec, `abort_coaching_scenario_v10492` supprime les objets déjà téléversés et la ligne scénario ; l'UI affiche l'échec et ne présente jamais la session comme préparée avec scénario. Il n'y a aucune prétention de transaction atomique entre PostgreSQL et Storage.
 
 Le realtime porte sur `coaching_session_scenarios` et `coaching_scenario_reads`. Le client reconstruit l'état après chaque événement et ne fait aucun rendu du scénario dans la surface Terrain.
 
