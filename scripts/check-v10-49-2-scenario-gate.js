@@ -17,3 +17,14 @@ assert.match(app,/scenarioGateBlockedTerrain|blockedTerrain/,'terrain blocked on
 assert.match(css,/\.coaching-scenario-gate/,'gate styling present');
 assert.match(css,/\.coaching-scenario-photo-viewer/,'photo viewer styling present');
 console.log('V10.49.2 scenario gate guard: PASS');
+assert.match(app,/coachingScenarioActiveHiddenAfterRead/,'active-session scenario hide state');
+assert.match(app,/scenarioActiveSessionHiddenAfterRead/,'debug hide state');
+assert.match(app,/scenarioAvailableInDebrief/,'debug debrief availability');
+assert.match(app,/scenarioAvailableInHistory/,'debug history availability');
+assert.match(app,/body\.classList\.add\('scenario-viewer-open'\)/,'viewer locks background scroll');
+assert.match(app,/scenarioViewerDistance|touchStartDistance/,'pinch zoom support');
+assert.match(app,/dblclick/,'double tap/click zoom support');
+assert.match(app,/scale=Math\.max\(1/,'bounded zoom level');
+assert.match(app,/data-scenario-photo-index/,'multi-photo navigation source');
+assert.match(css,/scenario-viewer-open/,'viewer background lock style');
+console.log('V10.49.2 scenario gate/photo UX guard: PASS');
