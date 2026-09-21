@@ -16,3 +16,5 @@ Plan: docs/superpowers/plans/2026-09-21-v10-50-global-live-sync.md
 - Task 3: complete — scoped invalidation, coalesced resync and visible/online 30 s fallback.
 - Task 4: complete — auth lifecycle cleanup and non-sensitive snapshot instrumentation.
 - Task 5: complete — full regression battery, syntax/assets/diff checks passed; no SQL/backend changes.
+
+- Preview READY: `https://stats-piste-community-171njdmnb-mw2f59b8p2-4030s-projects.vercel.app` (`dpl_2qszmH4a5N8zpgRBsq3zvK89LywZ`, target `preview`).
