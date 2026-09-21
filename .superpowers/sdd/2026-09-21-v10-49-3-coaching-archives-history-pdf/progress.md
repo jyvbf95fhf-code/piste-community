@@ -15,4 +15,4 @@ Plan: docs/superpowers/plans/2026-09-21-v10-49-3-coaching-archives-history-pdf.m
 - Task 3: complete — library and Coaching session list route ended/history entries to mission archive.
 - Task 4: complete — archive renders scenario/photos through the existing viewer and read-only debrief observations.
 - Task 5: complete — mission report/PDF includes scenario and participant observations.
-- Task 6: in progress — targeted guards pass; full battery and Preview remain.
+- Task 6: complete — whole-branch review and full historical battery pass; no V10.49.3 SQL/backend changes.
