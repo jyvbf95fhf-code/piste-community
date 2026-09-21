@@ -66,7 +66,7 @@ const protectedFunctions = [
 
 for (const name of protectedFunctions) {
   if (name === 'clearCoachingRealtime') {
-    const current = source(name).replace(/if\(coachingScenarioChannel\)\{supabase\.removeChannel\(coachingScenarioChannel\);coachingScenarioChannel=null\}coachingScenarioState=\{status:'absent',sessionId:null,scenario:null,reads:\[\],sync:'idle',lastEvent:'—',error:null\}/, '');
+    const current = source(name).replace(/if\(typeof coachingScenarioChannel!=='undefined'&&coachingScenarioChannel\)\{supabase\.removeChannel\(coachingScenarioChannel\);coachingScenarioChannel=null\}if\(typeof coachingScenarioState!=='undefined'\)coachingScenarioState=\{status:'absent',sessionId:null,scenario:null,reads:\[\],sync:'idle',lastEvent:'—',error:null\}/, '');
     assert.equal(current, source(name, old), `${name}: moteur historique modifié hors extension scénario`);
   } else assert.equal(source(name), source(name, old), `${name}: moteur Coaching modifié`);
 }
