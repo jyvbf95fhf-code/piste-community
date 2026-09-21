@@ -25,6 +25,7 @@ begin
   end if;
   if to_regprocedure('public.create_coaching_scenario_v10492(uuid,text,jsonb)') is not null
      or to_regprocedure('public.update_coaching_scenario_v10492(uuid,text,jsonb)') is not null
+     or to_regprocedure('public.append_coaching_scenario_photo_v10492(uuid,text)') is not null
      or to_regprocedure('public.delete_coaching_scenario_v10492(uuid)') is not null
      or to_regprocedure('public.abort_coaching_scenario_v10492(uuid,jsonb)') is not null
      or to_regprocedure('public.mark_coaching_scenario_read_v10492(uuid)') is not null
@@ -130,14 +131,28 @@ begin
   return jsonb_build_object('session_id',row_data.session_id,'author_id',row_data.author_id,'text',row_data.scenario_text,'photo_paths',row_data.photo_paths,'upload_status',row_data.upload_status,'created_at',row_data.created_at,'updated_at',row_data.updated_at,'locked_at',row_data.locked_at,'locked_by',row_data.locked_by);
 end $$;
 
+create or replace function public.append_coaching_scenario_photo_v10492(p_session_id uuid,p_path text)
+returns jsonb language plpgsql security definer set search_path='' as $$
+declare uid uuid:=(select auth.uid()); row_data public.coaching_session_scenarios; paths jsonb;
+begin
+  if uid is null or not private.coaching_v10492_editor(p_session_id,uid) then raise exception 'Éditeur du scénario requis'; end if;
+  if p_path is null or p_path not like p_session_id::text||'/%' or p_path like '%.pdf' or p_path like '%.PDF' then raise exception 'Chemin de photo invalide'; end if;
+  select * into row_data from public.coaching_session_scenarios where session_id=p_session_id for update;
+  if not found or row_data.upload_status<>'pending' or row_data.locked_at is not null then raise exception 'Scénario non disponible pour upload'; end if;
+  paths:=row_data.photo_paths||to_jsonb(p_path);
+  if jsonb_array_length(paths)>5 then raise exception 'Maximum de cinq photos'; end if;
+  update public.coaching_session_scenarios set photo_paths=paths where session_id=p_session_id returning * into row_data;
+  return jsonb_build_object('session_id',row_data.session_id,'photo_paths',row_data.photo_paths,'upload_status',row_data.upload_status);
+end $$;
+
 create or replace function public.abort_coaching_scenario_v10492(p_session_id uuid,p_photo_paths jsonb default '[]'::jsonb)
 returns boolean language plpgsql security definer set search_path='' as $$
 declare uid uuid:=(select auth.uid());
 begin
   if uid is null or not private.coaching_v10492_editor(p_session_id,uid) then raise exception 'Éditeur du scénario requis'; end if;
   if not private.coaching_v10492_validate_paths(p_session_id,coalesce(p_photo_paths,'[]'::jsonb)) then raise exception 'Photos de scénario invalides'; end if;
-  delete from storage.objects where bucket_id='coaching-scenarios' and name in (select jsonb_array_elements_text(coalesce(p_photo_paths,'[]'::jsonb)));
-  delete from public.coaching_session_scenarios where session_id=p_session_id and locked_at is null;
+  if not exists(select 1 from public.coaching_session_scenarios where session_id=p_session_id and upload_status='pending' and locked_at is null) then raise exception 'Seul un scénario pending peut être abandonné'; end if;
+  delete from public.coaching_session_scenarios where session_id=p_session_id and upload_status='pending' and locked_at is null;
   return found;
 end $$;
 
@@ -195,6 +210,7 @@ using (private.coaching_v10492_member(session_id,(select auth.uid())));
 revoke all on function public.create_coaching_scenario_v10492(uuid,text,jsonb) from public,anon,authenticated;
 revoke all on function public.update_coaching_scenario_v10492(uuid,text,jsonb) from public,anon,authenticated;
 revoke all on function public.delete_coaching_scenario_v10492(uuid) from public,anon,authenticated;
+revoke all on function public.append_coaching_scenario_photo_v10492(uuid,text) from public,anon,authenticated;
 revoke all on function public.abort_coaching_scenario_v10492(uuid,jsonb) from public,anon,authenticated;
 revoke all on function public.mark_coaching_scenario_read_v10492(uuid) from public,anon,authenticated;
 revoke all on function public.get_coaching_scenario_v10492(uuid) from public,anon,authenticated;
@@ -203,6 +219,7 @@ grant execute on function public.create_coaching_scenario_v10492(uuid,text,jsonb
 grant execute on function public.update_coaching_scenario_v10492(uuid,text,jsonb) to authenticated;
 grant execute on function public.delete_coaching_scenario_v10492(uuid) to authenticated;
 grant execute on function public.abort_coaching_scenario_v10492(uuid,jsonb) to authenticated;
+grant execute on function public.append_coaching_scenario_photo_v10492(uuid,text) to authenticated;
 grant execute on function public.mark_coaching_scenario_read_v10492(uuid) to authenticated;
 grant execute on function public.get_coaching_scenario_v10492(uuid) to authenticated;
 grant execute on function public.create_coaching_people_session_v10492(uuid,jsonb,text,boolean,text,jsonb) to authenticated;
