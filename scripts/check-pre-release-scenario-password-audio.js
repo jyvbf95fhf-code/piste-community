@@ -69,6 +69,6 @@ assert.equal(JSON.stringify(cleaned.track), JSON.stringify({ method: 'none', dra
 assert.equal(wizard({ sessionType: 'solo', mode: 'normal', creatorRole: null, participants: [] }).withoutRoute, true);
 assert.equal(wizard({ sessionType: 'classic', mode: 'full_blind', creatorRole: 'coach', participants: [{ user_id: 'driver', role: 'driver' }] }).withoutRoute, true);
 
-assert(/preReleaseDebugSanitize\(value\)[\s\S]*JSON\.stringify/.test(source), 'erreurs Supabase non sérialisées');
-assert(/routeSent:!withoutRoute/.test(source), 'payload route_id non exposé dans le diagnostic');
+assert(!/preReleaseCoachingDebug|preReleaseDebug|coachingMapDebug/.test(source), 'instrumentation Debug temporaire encore présente');
+assert(/coachingToast\(/.test(source), 'erreurs utilisateur non remontées');
 console.log('Pre-release Coaching creation scenarios: PASS');
