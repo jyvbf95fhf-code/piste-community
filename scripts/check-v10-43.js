@@ -32,10 +32,13 @@ assert(source('feedTrackPreview').includes('TRACE_PALETTE[layer]'));
 assert(!css.includes('stroke:#168de2'));
 // V10.49 separates personal feedback saves from global Debrief closure;
 // scripts/check-v10-49.js owns that role/idempotency/no-Terrain contract.
-for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','savePendingFieldMarker','reportActivitySource']){
+for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','savePendingFieldMarker']){
  const previous=execFileSync('git',['show','ee3ac12:app.js'],{encoding:'utf8'}),start=previous.search(new RegExp(`(?:async )?function ${name}\\(`)),rest=previous.slice(start),next=rest.slice(1).search(/\n(?:async )?function \w+\(/);
  assert.equal(source(name),next<0?rest:rest.slice(0,next+1),`${name}: business/security/data unchanged`);
 }
+// V10.49.3 intentionally enriches the read-only historical source with optional archive data.
+assert(source('reportActivitySource').includes("get_coaching_scenario_v10492"));
+assert(source('reportActivitySource').includes("coaching_debrief_observations"));
 const values={};const ctx=vm.createContext({Date,Set,Map,Number,String,Array,console,$:id=>({value:values[id]||''}),activityLibraryFilters:{status:'all'},libraryName:x=>x.name||'',formatExactDuration:ms=>`${ms} ms`,hasValue:v=>v!==null&&v!==undefined&&v!=='',esc:v=>String(v).replace(/</g,'&lt;'),LIVE_MARKERS:{note:{label:'Note'},loss:{label:'Perte'},recovery:{label:'Reprise'}},libraryRow:()=>({id:'s',planned_route:[{lat:1,lon:1}]}),TerrainBlackBox:{points:x=>Array.isArray(x)?x:[],analyse:()=>({}),facts:()=>[]}});
 for(const name of ['missionDate','missionDateLabel','missionStatus','missionLibraryMatch','missionLibrarySort','missionTimeline','missionAge','missionDebriefHtml','missionPhotoUrl','missionReadRows','reportActivitySource'])vm.runInContext(source(name),ctx);
 assert.equal(ctx.missionDate({}),null);assert.equal(ctx.missionDate({date:'bad'}),null);assert.equal(ctx.missionStatus({_type:'coaching',phase:'completed',status:'live'}),'En cours');assert.equal(ctx.missionStatus({_type:'coaching',status:'ended'}),'Terminé');
