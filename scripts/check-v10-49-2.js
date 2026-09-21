@@ -59,4 +59,5 @@ assert.match(app,/coachingScenarioDebrief/,'debrief-only scenario surface');
 assert.match(app,/s\.status!=='waiting'/,'terrain scenario hidden outside preparation');
 assert.match(app,/coachingScenarioChannel/,'scenario realtime channel');
 assert.doesNotMatch(app,/coachingScenarioReveal[\s\S]{0,300}scenario_text/,'terrain reveal does not expose scenario text');
+for(const marker of ['MAP_RENDER_START','MAP_DATA_LOADED','TRACEUR_MARKER_CREATE','TRACEUR_MARKER_UPDATE','DRIVER_MARKER_CREATE','DRIVER_MARKER_UPDATE','MARKER_REMOVE','MAP_RENDER_DONE','tracePointsCount','livePointsCount','currentPositionsCount','participantMarkersCount','markerElementPresent','coaching_current_positions','coachingLayerVisibility.actual','coachingLayerVisibility.trace'])assert.match(app,new RegExp(marker),`GPS/MAP diagnostic missing: ${marker}`);
 console.log('V10.49.2 preparation guard: PASS (spec, plan, dry-run and test contract)');
