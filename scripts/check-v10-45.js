@@ -6,7 +6,7 @@ function source(name,text=app){const start=text.search(new RegExp(`^(?:async )?f
 const old=execFileSync('git',['show',`${baseline}:app.js`],{encoding:'utf8'});
 // V10.49 separates personal feedback saves from global Debrief closure;
 // scripts/check-v10-49.js owns that role/idempotency/no-Terrain contract.
-for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','coachingMemberCapabilities','validateCoachingMembers','startCoachingDriverTrackHold','reportActivitySource'])assert.equal(source(name),source(name,old),`${name}: baseline security/workflow preserved`);
+for(const name of ['coachingDataVisibility','coachingCanSeeLiveOwner','coachingDriverTrail','coachingMemberCapabilities','validateCoachingMembers','startCoachingDriverTrackHold'])assert.equal(source(name),source(name,old),`${name}: baseline security/workflow preserved`);assert(source('reportActivitySource').includes('get_coaching_scenario_v10492'));assert(source('reportActivitySource').includes('coaching_debrief_observations'));
 const dry=read('PISTE_V10.45_PATCH/PISTE_V10.45_DRY_RUN.sql'),sql=read('PISTE_V10.45_PATCH/PISTE_V10.45_APPLY.sql'),legacy=read('PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql');
 assert.equal(dry.replace(/rollback;\s*$/,'END'),sql.replace(/commit;\s*$/,'END'));
 assert(/rollback;\s*$/.test(dry)&&/commit;\s*$/.test(sql));
