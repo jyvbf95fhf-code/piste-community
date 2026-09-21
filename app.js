@@ -28,6 +28,51 @@ const RELEASE_SEEN_KEY='piste-last-seen-release-v1';
 const $=id=>document.getElementById(id);
 const setUiText=(id,value)=>{const el=$(id);if(el)el.textContent=value;return el};
 const bindClick=(id,handler)=>{const el=$(id);if(el)el.addEventListener('click',handler);return el};
+/* V10.50 — one registry for app-level synchronization. Terrain channels remain owned by Coaching. */
+const globalLiveSync={
+ channels:new Map(),timers:new Map(),listeners:new Map(),inFlight:new Map(),dirtyScopes:new Set(),
+ counters:{events:0,resyncs:0,fetches:0,duplicates:0},userId:null,started:false,visible:true,online:true,
+ resyncTimer:null,resyncPromise:null,fallbackIntervalMs:30000,
+ addListener(key,target,event,handler){if(this.listeners.has(key)){this.counters.duplicates++;return}target.addEventListener(event,handler);this.listeners.set(key,{target,event,handler})},
+ addChannel(key,channel){if(this.channels.has(key)){this.counters.duplicates++;try{supabase.removeChannel(channel)}catch{};return null}this.channels.set(key,channel);return channel},
+ removeChannels(){for(const channel of this.channels.values())try{supabase.removeChannel(channel)}catch{};this.channels.clear()},
+ subscribeGlobalChannels(){
+  if(!this.userId||!supabase?.channel)return;
+  const channel=this.addChannel('global-app',supabase.channel(`global-live-sync-${this.userId}`)
+   .on('postgres_changes',{event:'*',schema:'public',table:'coaching_sessions'},()=>this.invalidate('coaching','coaching_sessions'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'coaching_session_scenarios'},()=>this.invalidate('coaching','coaching_session_scenarios'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'coaching_scenario_reads'},()=>this.invalidate('scenario','coaching_scenario_reads'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'coaching_debrief_observations'},()=>this.invalidate('debrief','coaching_debrief_observations')));
+  channel?.subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){this.invalidate('coaching','realtime-fallback');this.retrySubscriptions()}});
+ },
+ retrySubscriptions(){if(!this.started||!this.online||!this.visible||this.timers.has('resubscribe'))return;const timer=setTimeout(()=>{this.timers.delete('resubscribe');this.removeChannels();this.subscribeGlobalChannels()},1000);this.timers.set('resubscribe',timer)},
+ scheduleFallback(){if(this.timers.has('fallback'))return;const timer=setInterval(()=>{if(this.started&&this.visible&&this.online)this.resyncAppData(['history','dogs','goals','social'])},this.fallbackIntervalMs);this.timers.set('fallback',timer)},
+ clearTimer(key){const timer=this.timers.get(key);if(timer){clearTimeout(timer);clearInterval(timer);this.timers.delete(key)}},
+ invalidate(scope,reason='event'){if(!this.started||!scope)return;this.counters.events++;this.dirtyScopes.add(scope);if(scope==='gps')return;if(!this.visible||!this.online)return;this.clearTimer('resync');this.timers.set('resync',setTimeout(()=>{this.timers.delete('resync');this.resyncAppData()},120))},
+ async resyncAppData(scopes){
+  if(!this.started||!this.visible||!this.online)return false;
+  if(this.resyncPromise)return this.resyncPromise;
+  const requested=new Set(scopes||[]);this.dirtyScopes.forEach(scope=>requested.add(scope));if(!requested.size)return true;
+  this.dirtyScopes.clear();this.counters.resyncs++;
+  this.resyncPromise=(async()=>{const jobs=[];const add=(scope,fn)=>{if(!requested.has(scope))return;jobs.push(Promise.resolve().then(()=>{this.counters.fetches++;return fn()}).catch(error=>{this.dirtyScopes.add(scope);if(GLOBAL_LIVE_SYNC_DEV)console.warn('[globalLiveSync]',scope,error)}))};
+    add('coaching',async()=>{if(this.inFlight.has('coaching'))return this.inFlight.get('coaching');const p=loadCoachingHub().finally(()=>this.inFlight.delete('coaching'));this.inFlight.set('coaching',p);return p});
+    add('scenario',async()=>activeCoachingSession?.id&&typeof loadCoachingScenario==='function'?loadCoachingScenario(activeCoachingSession.id):null);
+    add('debrief',async()=>missionSource?.type==='coaching'?openMissionDossier('coaching',missionSource.row.id):loadCoachingHub());
+    add('history',async()=>{await refreshMine();await refreshTrainings();renderActivityLibrary()});
+    add('dogs',loadDogs);add('goals',loadGoals);add('social',refreshSocialBadge);add('admin',()=>adminCentre.refreshAccess());
+    await Promise.all(jobs);return true})().finally(()=>{this.resyncPromise=null});return this.resyncPromise;
+ },
+ installLifecycle(){
+  this.addListener('visibility',document,'visibilitychange',()=>{this.visible=document.visibilityState!=='hidden';if(this.visible){this.retrySubscriptions();this.resyncAppData()}});
+  this.addListener('pageshow',window,'pageshow',()=>{this.visible=true;this.retrySubscriptions();this.resyncAppData()});
+  this.addListener('online',window,'online',()=>{this.online=true;this.retrySubscriptions();this.resyncAppData()});
+  this.addListener('offline',window,'offline',()=>{this.online=false;this.clearTimer('resync')});
+ },
+ start(userId){if(!userId)return;if(this.started&&this.userId===userId)return;if(this.started)this.stop();this.userId=userId;this.started=true;this.visible=document.visibilityState!=='hidden';this.online=navigator.onLine!==false;this.installLifecycle();this.subscribeGlobalChannels();this.scheduleFallback()},
+ stop(){for(const entry of this.listeners.values())entry.target.removeEventListener(entry.event,entry.handler);this.listeners.clear();this.removeChannels();for(const key of [...this.timers.keys()])this.clearTimer(key);this.dirtyScopes.clear();this.inFlight.clear();this.resyncPromise=null;this.userId=null;this.started=false},
+ snapshot(){return{started:this.started,channels:this.channels.size,timers:this.timers.size,listeners:this.listeners.size,dirtyScopes:[...this.dirtyScopes],inFlight:[...this.inFlight.keys()],counters:{...this.counters}}}
+};
+const GLOBAL_LIVE_SYNC_DEV=false;
 let session=null, me=null, mine=[], trainings=[], friendFeedRows=[], dogs=[], goals=[], trainingRoutes=[], selectedTrainingRoute=null, recordMode="piste";
 const adminCentre=createAdminCentre({client:supabase,getUserId:()=>session?.user?.id,navigate:(id,verified)=>showPage(id,verified)});
 let currentStatsScope='mine';
@@ -1855,14 +1900,15 @@ async function boot(){
  if(await loadPublicShareFromUrl())return;
  const {data:{session:s}}=await supabase.auth.getSession();
  session=s;
- if(!s){$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
+ if(!s){globalLiveSync.stop();$('authScreen').classList.remove('hidden');$('appScreen').classList.add('hidden');$('logoutBtn').classList.add('hidden');return}
+ globalLiveSync.start(s.user.id);
  $('authScreen').classList.add('hidden');$('appScreen').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
  const bootTasks=[['profil',ensureProfile],['pistes',refreshMine],['entraînements',refreshTrainings],['chiens',loadDogs],['objectifs',loadGoals],['tracés préparés',loadTrainingRoutes],['Coaching',loadCoachingHub],['Admin',()=>adminCentre.refreshAccess()]];
  const results=await Promise.all(bootTasks.map(([label,task])=>Promise.resolve().then(task).then(()=>({ok:true,label}),error=>({ok:false,label,error}))));
  results.forEach(result=>{if(!result.ok)console.error(`Initialisation ${result.label} indisponible`,result.error)});
  updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');if(location.hash==='#admin'||new URLSearchParams(location.search).get('page')==='admin')void adminCentre.open();refreshSocialBadge();renderReleaseNotesHistory();setTimeout(()=>{openTutorial(false);showReleaseNotesIfNeeded()},350);
 }
-$('logoutBtn').onclick=async()=>{clearVerifiedActiveCoaching();activeCoachingSession=null;await supabase.auth.signOut();location.reload()};
+$('logoutBtn').onclick=async()=>{globalLiveSync.stop();clearVerifiedActiveCoaching();activeCoachingSession=null;await supabase.auth.signOut();location.reload()};
 
 $('loginForm').onsubmit=async e=>{
  e.preventDefault();$('loginMsg').textContent="Connexion…";
@@ -1887,10 +1933,11 @@ $('signupForm').onsubmit=async e=>{
 };
 
 supabase.auth.onAuthStateChange(async(event,s)=>{
- if(event==='SIGNED_OUT'){adminCentre.reset();clearVerifiedActiveCoaching();activeCoachingSession=null;session=null}
+ if(event==='SIGNED_OUT'){globalLiveSync.stop();adminCentre.reset();clearVerifiedActiveCoaching();activeCoachingSession=null;session=null}
  if(event==='SIGNED_IN'&&s){
    if(session?.user?.id!==s.user.id)adminCentre.reset();
    session=s;
+   globalLiveSync.start(s.user.id);
    const pending=localStorage.getItem('pending_display_name');
    if(pending){
      setTimeout(async()=>{
@@ -2578,8 +2625,6 @@ function markSocialSeen(){
  localStorage.setItem(SOCIAL_SEEN_KEY,new Date().toISOString());
  const badge=$('socialNavBadge');if(badge){badge.textContent='0';badge.classList.add('hidden')}
 }
-window.addEventListener('focus',()=>refreshSocialBadge());
-setInterval(()=>refreshSocialBadge(),60000);
 
 function feedTrackPreview(track,layer='conducteur'){
  if(!Array.isArray(track)||track.length<2)return '';
@@ -3171,11 +3216,7 @@ document.querySelectorAll('[data-planner-tool]').forEach(b=>b.onclick=()=>setPla
 $('coachingCreatorRole').onchange=renderCoachingTeamSummaryV10423;
 $('coachingVisibility').addEventListener('change',updateCoachingCreationV1045);
 renderCoachingFriendInvites();
-window.addEventListener('online',()=>{renderCoachingReliabilityV10423();if(activeCoachingSession)refreshActiveCoachingSession(activeCoachingSession.id)});
-window.addEventListener('offline',renderCoachingReliabilityV10423);
-window.addEventListener('pageshow',()=>{if(session?.user?.id&&!activeCoachingSession)resumeCoachingV10423()});
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&session?.user?.id&&!activeCoachingSession)resumeCoachingV10423()});
-coachingSyncTimer=setInterval(renderCoachingReliabilityV10423,5000);
+coachingSyncTimer=setInterval(()=>{if(document.visibilityState!=='hidden')renderCoachingReliabilityV10423()},5000);
 document.querySelectorAll('[data-coaching-stage]').forEach(b=>b.onclick=()=>{if(b.dataset.coachingStage!=='prepare'&&!activeCoachingSession){$('coachingJoinMsg').textContent='Ouvre d’abord une session.';return}setCoachingStage(b.dataset.coachingStage)});
 document.querySelectorAll('[data-coaching-layer]').forEach(input=>input.onchange=()=>{coachingLayerVisibility[input.dataset.coachingLayer]=input.checked;renderCoachingMap()});
 document.querySelectorAll('[data-coaching-odor-preference]').forEach(input=>input.onchange=()=>changeCoachingOdorPreference(input));

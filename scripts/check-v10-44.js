@@ -36,7 +36,7 @@ assert(apply.includes('values(p_id,uid,btrim(p_subject),btrim(p_message),p_conte
 assert(!src.includes('client.from(')&&!src.includes('localStorage')&&!src.includes('sessionStorage'));
 assert.match(html,/<button id="openAdminCentre"[^>]* hidden>/);
 assert(app.includes("if(id==='adminPage'&&!adminVerified)"));
-assert(app.includes("location.hash==='#admin'"));assert(app.includes("if(event==='SIGNED_OUT'){adminCentre.reset()"));
+assert(app.includes("location.hash==='#admin'"));assert(app.includes("if(event==='SIGNED_OUT'){globalLiveSync.stop();adminCentre.reset()")||app.includes("if(event==='SIGNED_OUT'){adminCentre.reset()"));
 const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);assert.equal(ids.length,new Set(ids).size,'No duplicate HTML ID');
 assert(css.includes('overflow-x:auto')&&css.includes('minmax(0,1fr)')&&css.includes('min-height:44px'));
 require('./verify-current-assets')();
