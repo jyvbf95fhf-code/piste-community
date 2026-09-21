@@ -1080,3 +1080,9 @@ body.coaching-session-active #coachingPage>.record-head{display:none!important}
 }
 /* Hold-to-unlock duration is intentionally two seconds. */
 .fake-lock-screen button.holding i{animation:fakeUnlockHold 2s linear forwards}
+#preReleaseCoachingDebugToggle{position:fixed;right:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:25000;min-height:36px;padding:7px 11px;border:1px solid #b9d66c;border-radius:999px;background:#142329;color:#edf3ee;font:700 12px/1 system-ui,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,.28)}
+#preReleaseCoachingDebugPanel{position:fixed;right:12px;bottom:calc(58px + env(safe-area-inset-bottom,0px));z-index:25001;width:min(440px,calc(100vw - 24px));max-height:min(76vh,700px);overflow:auto;padding:12px;border:1px solid #b9d66c;border-radius:12px;background:rgba(12,25,30,.98);color:#edf3ee;box-shadow:0 8px 28px rgba(0,0,0,.4);font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace}
+#preReleaseCoachingDebugPanel.hidden{display:none}
+#preReleaseCoachingDebugPanel pre{margin:8px 0;white-space:pre-wrap;overflow-wrap:anywhere}
+#preReleaseCoachingDebugPanel .pre-release-debug-head,#preReleaseCoachingDebugPanel .pre-release-debug-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+#preReleaseCoachingDebugPanel button{min-height:32px;padding:5px 8px;border:1px solid rgba(185,214,108,.7);border-radius:7px;background:#20373d;color:#edf3ee;font:600 11px/1.2 system-ui,sans-serif}
