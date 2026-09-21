@@ -1,0 +1,12 @@
+const fs=require('fs');
+const assert=require('assert/strict');
+const app=fs.readFileSync('app.js','utf8');
+assert.match(app,/ensureCoachingParticipantPane/);
+assert.match(app,/createPane\('coachingParticipantPane'\)/);
+assert.match(app,/pane\.style\.zIndex='750'/);
+assert.match(app,/pane:\s*'coachingParticipantPane'/);
+assert.match(app,/coachingMap\?\.hasLayer\?\.\(marker\)/);
+assert.match(app,/marker\._map===coachingMap/);
+for(const event of ['MARKER_LAYER_ATTACHED','MARKER_LAYER_ATTACH_FAILED'])assert.match(app,new RegExp(event));
+for(const field of ['markerPaneClass','markerDisplay','markerVisibility','markerOpacity','markerZIndex'])assert.match(app,new RegExp(field));
+console.log('Coaching participant pane guard: PASS');
