@@ -65,7 +65,10 @@ const protectedFunctions = [
 ];
 
 for (const name of protectedFunctions) {
-  assert.equal(source(name), source(name, old), `${name}: moteur Coaching modifié`);
+  if (name === 'clearCoachingRealtime') {
+    const current = source(name).replace(/if\(coachingScenarioChannel\)\{supabase\.removeChannel\(coachingScenarioChannel\);coachingScenarioChannel=null\}coachingScenarioState=\{status:'absent',sessionId:null,scenario:null,reads:\[\],sync:'idle',lastEvent:'—',error:null\}/, '');
+    assert.equal(current, source(name, old), `${name}: moteur historique modifié hors extension scénario`);
+  } else assert.equal(source(name), source(name, old), `${name}: moteur Coaching modifié`);
 }
 
 const createHarness = `(async()=>{
@@ -768,6 +771,7 @@ function withoutV1049ActiveMetrics(text) {
     .replace('<button data-coaching-tab="session">Informations</button>', '<button data-coaching-tab="session">Plus</button>')
     .replace(' data-coaching-stage-container="debrief"', '')
     .replace(/<header class="coaching-debrief-entry">[\s\S]*?<\/header>/, '')
+    .replace(/<section id="coachingScenarioDebrief"[\s\S]*?<\/section>/, '')
     .replace(/<section class="coaching-debrief-overlay"[\s\S]*?<\/section>/, '')
     .replace('<section id="coachingAutoDebrief" class="auto-debrief hidden" aria-label="Statistiques du débrief" aria-live="polite"></section>', '<div id="coachingAutoDebrief" class="auto-debrief hidden"></div>')
     .replace(/^      <section id="coachingParticipantObservations"[^\n]*\n?/m, '')
@@ -786,7 +790,7 @@ assert.equal(
   'Le terrain et les sessions internes doivent rester inchangés'
 );
 
-const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql','PISTE_V10.49.1B_COACHING_SOLO_JOIN.sql','PISTE_V10.49.1B_COACHING_SOLO_JOIN_VERIFY.sql','PISTE_V10.49.1C_COACHING_SOLO_TRANSITIONS.sql','PISTE_V10.49.1C_COACHING_SOLO_TRANSITIONS_VERIFY.sql','PISTE_V10.49.1D_COACHING_SOLO_DIRECT_RUN.sql','PISTE_V10.49.1D_COACHING_SOLO_DIRECT_RUN_VERIFY.sql','PISTE_V10.49.1D_FIX_SOLO_START.sql','PISTE_V10.49.1D_FIX_SOLO_START_VERIFY.sql','PISTE_V10.49.1D_FIX_SOLO_SEARCH_CHOICE.sql','PISTE_V10.49.1D_FIX_SOLO_SEARCH_CHOICE_VERIFY.sql', 'scripts/check-v10-49-backend.js', 'scripts/check-v10-49.js', 'scripts/check-v10-49-1.js','scripts/check-v10-49-1c-backend.js','scripts/check-v10-49-1d-backend.js','scripts/check-v10-49-1d-fix-backend.js','scripts/check-v10-49-1d-fix-solo-search-backend.js','scripts/check-pre-release-scenario-password-audio.js', 'docs/superpowers/specs/2026-09-14-v10-49-coaching-active-session-debrief-design.md', 'docs/superpowers/plans/2026-09-14-v10-49-coaching-active-session-debrief.md'];
+const selfLeaveFiles = ['PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE.sql', 'PISTE_V10.48_COACHING_MEMBER_SELF_LEAVE_DRY_RUN.sql', 'scripts/check-v10-48-coaching-member-self-leave.js', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql', 'PISTE_V10.49_COACHING_ACTIVE_DEBRIEF_VERIFY.sql','PISTE_V10.49.1B_COACHING_SOLO_JOIN.sql','PISTE_V10.49.1B_COACHING_SOLO_JOIN_VERIFY.sql','PISTE_V10.49.1C_COACHING_SOLO_TRANSITIONS.sql','PISTE_V10.49.1C_COACHING_SOLO_TRANSITIONS_VERIFY.sql','PISTE_V10.49.1D_COACHING_SOLO_DIRECT_RUN.sql','PISTE_V10.49.1D_COACHING_SOLO_DIRECT_RUN_VERIFY.sql','PISTE_V10.49.1D_FIX_SOLO_START.sql','PISTE_V10.49.1D_FIX_SOLO_START_VERIFY.sql','PISTE_V10.49.1D_FIX_SOLO_SEARCH_CHOICE.sql','PISTE_V10.49.1D_FIX_SOLO_SEARCH_CHOICE_VERIFY.sql', 'scripts/check-v10-49-backend.js', 'scripts/check-v10-49.js', 'scripts/check-v10-49-1.js','scripts/check-v10-49-1c-backend.js','scripts/check-v10-49-1d-backend.js','scripts/check-v10-49-1d-fix-backend.js','scripts/check-v10-49-1d-fix-solo-search-backend.js','scripts/check-pre-release-scenario-password-audio.js', 'docs/superpowers/specs/2026-09-14-v10-49-coaching-active-session-debrief-design.md', 'docs/superpowers/plans/2026-09-14-v10-49-coaching-active-session-debrief.md','PISTE_V10.49.2_COACHING_SCENARIO.sql','PISTE_V10.49.2_COACHING_SCENARIO_DRY_RUN.sql','scripts/check-v10-49-2.js','docs/superpowers/specs/2026-09-21-v10-49-2-pre-session-scenario-design.md','docs/superpowers/plans/2026-09-21-v10-49-2-pre-session-scenario.md'];
 const changed = execFileSync('git', ['diff', baseline, '--name-only'], { encoding: 'utf8' })
   .trim().split('\n').filter(Boolean).filter(path => !path.startsWith('.superpowers/sdd/') && !selfLeaveFiles.includes(path));
 assert.deepEqual(

@@ -38,4 +38,25 @@ const requirements=[
   'débrief réaffiche le scénario figé'
 ];
 assert.equal(requirements.length,10);
+assert.match(html,/coachingScenarioEnabled/,'wizard scenario toggle present');
+assert.match(html,/coachingScenarioText/,'wizard scenario text present');
+assert.match(html,/coachingScenarioPhotos/,'wizard scenario photo input present');
+assert.match(app,/create_coaching_people_session_v10492/,'versioned scenario creation RPC');
+assert.match(app,/append_coaching_scenario_photo_v10492/,'photo append RPC');
+assert.match(app,/abort_coaching_scenario_v10492/,'pending abort RPC');
+assert.match(app,/supabase\.storage\.from\(['"]coaching-scenarios['"]\)/,'private scenario bucket');
+assert.match(app,/coaching_session_scenarios/,'scenario realtime table');
+assert.match(app,/coaching_scenario_reads/,'scenario reads realtime table');
+assert.match(app,/mark_coaching_scenario_read_v10492/,'server read acknowledgement');
+assert.match(app,/renderCoachingScenarioDebrief/,'debrief scenario renderer');
+assert.match(app,/coachingTerrain|coachingLivePanel/,'terrain surface exists');
+assert.match(app,/scenarioStatus/,'scenario debug metadata');
+assert.match(app,/cleanupCoachingScenarioFiles/,'Storage API cleanup helper');
+assert.match(app,/abort_coaching_scenario_v10492/,'pending abort after cleanup');
+assert.match(app,/upload_status==='ready'/,'ready status gate');
+assert.match(app,/coachingScenarioRead/,'conducteur read action');
+assert.match(app,/coachingScenarioDebrief/,'debrief-only scenario surface');
+assert.match(app,/s\.status!=='waiting'/,'terrain scenario hidden outside preparation');
+assert.match(app,/coachingScenarioChannel/,'scenario realtime channel');
+assert.doesNotMatch(app,/coachingScenarioReveal[\s\S]{0,300}scenario_text/,'terrain reveal does not expose scenario text');
 console.log('V10.49.2 preparation guard: PASS (spec, plan, dry-run and test contract)');
