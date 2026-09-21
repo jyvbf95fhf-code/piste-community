@@ -11,7 +11,7 @@ Ajouter au wizard Coaching une préparation facultative composée d'un texte et 
 - En session Coach + Traceur + Conducteur, seul le Coach créateur peut créer, modifier ou supprimer avant lecture.
 - En session sans Coach où le Traceur initiateur crée la session, seul ce Traceur peut créer, modifier ou supprimer avant lecture.
 - Les autres participants lisent uniquement.
-- Le scénario et ses photos sont lisibles par les participants autorisés dès la préparation, y compris les late joiners admis. Les données ne sont jamais exposées à un utilisateur non admis.
+- Le scénario et ses photos sont lisibles par les participants autorisés dès la préparation, y compris les late joiners admis. Les données ne sont jamais exposées à un utilisateur non admis. La règle serveur du Traceur initiateur est `coaching_sessions.owner_id = coaching_members.user_id` avec `role='traceur'` et `invitation_status in ('accepted','active')`; une simple invitation ne suffit pas.
 - « J'ai lu » est une écriture serveur realtime, idempotente par session et utilisateur. Le premier Conducteur autorisé qui la valide renseigne le verrou global. Une seule validation Conducteur suffit si plusieurs Conducteurs existent.
 - Avant verrouillage, l'auteur autorisé peut modifier ou supprimer. La suppression retire l'obligation de lecture et efface les références aux photos après contrôle serveur.
 - Après verrouillage, aucune modification ni suppression n'est acceptée par le serveur. Le contenu verrouillé est celui présenté dans le débrief.
@@ -19,7 +19,7 @@ Ajouter au wizard Coaching une préparation facultative composée d'un texte et 
 
 ## Architecture retenue
 
-`public.coaching_session_scenarios` contient au plus une ligne par session (`session_id` primary key), le texte, un tableau JSONB de chemins Storage, l'auteur, les timestamps et `locked_at`/`locked_by`. `public.coaching_scenario_reads` contient une ligne par participant et session (`unique(session_id,user_id)`), `read_at` et le rôle serveur observé.
+L'audit réel montre que `coaching_sessions` contient déjà les colonnes legacy `scenario_title`, `scenario_text`, `scenario_photo_url` et `scenario_acknowledged_at`, et que le frontend a un ancien rendu localStorage. Ces colonnes restent lisibles pour les anciennes sessions mais ne suffisent pas pour cinq photos, les droits par auteur et les lectures individuelles. La source de vérité V10.49.2 sera donc `public.coaching_session_scenarios`, au plus une ligne par session (`session_id` primary key), avec texte, tableau JSONB de chemins Storage, auteur, timestamps et `locked_at`/`locked_by`; les anciennes colonnes ne seront ni supprimées ni réécrites. `public.coaching_scenario_reads` contient une ligne par participant et session (`unique(session_id,user_id)`), `read_at` et le rôle serveur observé.
 
 Les écritures passent par des RPC SECURITY DEFINER à `search_path=''` : création liée à la session, mise à jour, suppression avant verrouillage, et validation de lecture. Les RPC vérifient `auth.uid()`, l'adhésion effective, le rôle autorisé et l'état global. Un trigger protège les métadonnées et interdit toute mutation après `locked_at`. Les tables restent RLS, avec lecture bornée aux membres admis et au statut de session prévu.
 

@@ -11,12 +11,27 @@ where (table_schema='public' and table_name in ('coaching_sessions','coaching_me
    or (table_schema='storage' and table_name='objects')
 order by table_schema,table_name,ordinal_position;
 
+select conrelid::regclass::text as table_name,conname,pg_get_constraintdef(oid) as definition
+from pg_constraint
+where conrelid in ('public.coaching_sessions'::regclass,'public.coaching_members'::regclass,'public.coaching_debriefs'::regclass)
+order by table_name,conname;
+
 select n.nspname as schema_name,p.proname,pg_get_function_identity_arguments(p.oid) as args,
        p.prosecdef,pg_get_userbyid(p.proowner) as owner,coalesce(p.proacl::text,'') as acl
 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
 where n.nspname in ('public','private')
   and (p.proname ilike '%coaching%session%' or p.proname ilike '%scenario%' or p.proname ilike '%debrief%')
 order by schema_name,p.proname,args;
+
+select n.nspname as schema_name,p.proname,pg_get_function_identity_arguments(p.oid) as args,
+       p.prosecdef,pg_get_functiondef(p.oid) as definition
+from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+where n.nspname='public' and p.proname='create_coaching_people_session_v1045';
+
+select n.nspname as schema_name,c.relname,c.relrowsecurity,c.relforcerowsecurity
+from pg_class c join pg_namespace n on n.oid=c.relnamespace
+where n.nspname='public' and c.relname like 'coaching%'
+order by c.relname;
 
 select schemaname,tablename,policyname,cmd,roles,qual,with_check
 from pg_policies
