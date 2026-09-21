@@ -25,7 +25,7 @@ Les écritures passent par des RPC SECURITY DEFINER à `search_path=''` : créat
 
 Les fichiers sont stockés dans un bucket privé dédié `coaching-scenarios`. Le client demande des URLs signées après lecture RLS. Les policies Storage vérifient la session et le chemin ; aucune URL permanente n'est enregistrée dans le scénario.
 
-La création du scénario est atomique avec la création de session : le payload de création transporte une section scénario facultative validée par la RPC existante ou une RPC de création versionnée. Si l'inspection confirme que la signature V10.45 ne peut pas évoluer sans casser les appelants, une RPC V10.49.2 dédiée est créée ; la RPC historique reste inchangée.
+La création du texte du scénario est atomique avec la création de session via une RPC versionnée ; la RPC V10.45 historique reste inchangée. Comme l'identifiant de session est généré par la RPC historique, les photos sont téléversées ensuite dans le bucket privé puis attachées par une mise à jour autorisée avant le départ. Le serveur interdit tout démarrage tant que la préparation applicative n'est pas terminée, et toutes les écritures restent avant verrouillage.
 
 Le realtime porte sur `coaching_session_scenarios` et `coaching_scenario_reads`. Le client reconstruit l'état après chaque événement et ne fait aucun rendu du scénario dans la surface Terrain.
 

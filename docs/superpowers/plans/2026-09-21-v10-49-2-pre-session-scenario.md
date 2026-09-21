@@ -46,7 +46,7 @@ Application vanilla JS (`app.js`, `index.html`, `v2.css`), Supabase Postgres/RLS
 
 ## Résultats d'audit à porter dans la migration
 
-- La RPC historique doit rester compatible ; une RPC versionnée ou une enveloppe dédiée est nécessaire pour transporter le scénario atomiquement.
+- La RPC historique doit rester compatible ; l'enveloppe versionnée crée le texte/scénario sans photo, puis les photos sont uploadées avec l'ID de session et attachées avant le départ. L'API refuse des chemins photo dans l'appel initial, car l'ID n'existe pas avant l'appel historique.
 - Le Traceur initiateur est prouvé par `owner_id` égal au membre `user_id`, rôle `traceur`, statut `accepted/active`.
 - Le bucket existant `dog-photos` est privé et ses policies utilisent `storage.foldername(name)[1] = auth.uid()`. Le bucket scénario devra être privé avec un chemin session-scénario et des policies dédiées, sans réutiliser `dog-photos`.
 - `coaching_sessions`, `coaching_live_points`, `coaching_trace_points`, `coaching_markers`, `coaching_messages` et `coaching_debrief_observations` sont déjà realtime ; `coaching_session_scenarios` et `coaching_scenario_reads` devront être ajoutées sans retirer les publications existantes.
