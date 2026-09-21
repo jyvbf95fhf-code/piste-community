@@ -1,0 +1,2 @@
+const fs=require('fs');const assert=require('assert/strict');const app=fs.readFileSync('app.js','utf8');
+assert.match(app,/ensureCoachingParticipantPane/);assert.match(app,/createPane\('coachingParticipantPane'\)/);assert.match(app,/pane\.style\.zIndex='750'/);assert.match(app,/pane:\s*'coachingParticipantPane'/);assert.match(app,/participantMarker\(/);console.log('Coaching participant pane guard: PASS');

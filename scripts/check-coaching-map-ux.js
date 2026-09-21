@@ -1,0 +1,13 @@
+const fs=require('fs');
+const assert=require('assert/strict');
+const app=fs.readFileSync('app.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+assert.match(html,/id="recenterCoachingMap"[^>]*>⌖ Me recentrer/,'recenter button label');
+assert.match(app,/coachingAutoCenteredSessionId/,'first GPS center state');
+assert.match(app,/coachingAutoCenteredSessionId!==id/,'center only once per session');
+assert.match(app,/coachingKeepViewport/,'manual viewport lock retained');
+assert.match(app,/coachingMap\.setView\(\[p\.lat,p\.lon\]/,'explicit recenter action');
+assert.match(app,/dragstart zoomstart rotatestart/,'manual map movement disables auto-center');
+assert.match(app,/trace\.filter\(point=>point\.owner_id===session\.user\.id\)/,'traceur current GPS fallback');
+assert.match(app,/coachingPreviewPosition/,'current GPS position fallback');
+console.log('Coaching map UX guard: PASS');

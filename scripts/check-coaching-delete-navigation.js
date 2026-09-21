@@ -1,0 +1,13 @@
+const fs=require('fs');
+const assert=require('assert/strict');
+const app=fs.readFileSync('app.js','utf8');
+const start=app.indexOf('async function deleteActiveCoaching');
+const end=app.indexOf('async function leaveActiveCoaching',start);
+assert(start>=0&&end>start,'deleteActiveCoaching absent');
+const fn=app.slice(start,end);
+assert.doesNotMatch(fn,/returnToCoachingSessions/,'suppression ne doit pas revenir au hub Coaching');
+for(const marker of ['stopCoachingPresence','stopTraceurTracking','clearCoachingRealtime','closeFakeLock','clearVerifiedActiveCoaching(id)','activeCoachingSession=null','coachingLivePanel','showPage(\x27homePage\x27)','bootHome'])assert(fn.includes(marker),`cleanup/destination missing: ${marker}`);
+assert.match(fn,/window\.history\.replaceState/,'URL home must be restored');
+assert.match(app,/async function cancelActiveCoaching[\s\S]{0,1000}returnToCoachingSessions/,'legacy cancel path remains explicit');
+assert.match(app,/async function leaveActiveCoaching[\s\S]{0,1000}returnToCoachingSessions/,'legacy leave path remains explicit');
+console.log('Coaching delete navigation guard: PASS');
