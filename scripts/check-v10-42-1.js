@@ -3,7 +3,7 @@ const app=fs.readFileSync('app.js','utf8');
 const html=fs.readFileSync('index.html','utf8');
 const sw=fs.readFileSync('sw.js','utf8');
 const checks=[
- ['version 10.42.x',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44|45)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44|45)'/.test(app)],
+ ['version 10.42.x',/const APP_VERSION=['"]10\.(?:42\.(?:2|3)|43|44|45|48|49|50|51)['"]/.test(app)&&/version:'10\.(?:42\.(?:2|3)|43|44|45|48|49|50|51)'/.test(app)],
  ['session terrain active protégée',/function hasActiveTerrainSession\(\)/.test(app)&&/resetGpsUI\(clear=true,\{force=false\}=\{\}\)/.test(app)&&/!force&&hasActiveTerrainSession\(\)/.test(app)],
  ['restoreDraft non destructive',/async function restoreDraft\(\)\{if\(hasActiveTerrainSession\(\)\)/.test(app)&&/redrawLiveRecordingMap\(\);return/.test(app)],
  ['reprise active non destructive',/function resumeActiveSession\(\).*hasActiveTerrainSession\(\).*redrawLiveRecordingMap/s.test(app)],
@@ -13,7 +13,7 @@ const checks=[
  ['démarrage pose RPC',/async function startCoachingLaying\(\).*start_coaching_laying.*startTraceurTracking/s.test(app)],
  ['Piste prête uniquement après pose',/layingActor&&phase==='laying'.*setUiText\('trackReadyBtn','Piste tracée'\)/s.test(app)],
  ['Conducteur transitions',/driverStartBtn/.test(app)&&/waiting_ready.*coach_ready/.test(app)&&/start_driver_run/.test(app)&&/finish_driver_run/.test(app)],
- ['phase realtime réévaluée',/const nextPhase=coachingPhase\(activeCoachingSession\).*nextPhase!==previousPhase/s.test(app)],
+ ['phase realtime réévaluée',/nextPhase=coachingPhase\(activeCoachingSession\).*nextPhase!==previousPhase/s.test(app)],
  ['GPS trace points',/coaching_trace_points/.test(app)&&/navigator\.geolocation\.watchPosition/.test(app)],
  ['cache courant cohérent',(require('./verify-current-assets')(),true)],
  ['Coach propriétaire poseur',/function isCurrentUserLayingActor/.test(app)&&/isCoachingOwner\(s\)&&role==='coach'&&s\.laying_mode==='coach'/.test(app)]
