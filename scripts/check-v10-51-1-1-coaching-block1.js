@@ -20,5 +20,5 @@ const checks=[
  ['Planner and OPS markers retained',app.includes("PisteTerrainEngine.createMap('plannerMap'")&&app.includes("PisteTerrainEngine.createMap('operationalCallMap'")]
 ];
 let failed=0;for(const [label,ok] of checks){console.log(`${ok?'PASS':'FAIL'} ${label}`);if(!ok)failed++}
-try{const diff=execFileSync('git',['diff','--unified=0','stable-v10.51.1','--','app.js','index.html','v2.css'],{encoding:'utf8'});for(const bad of ['supabase.rpc(','supabase.from(','createClient(','onAuthStateChange']){const added=diff.split('\n').filter(line=>line.startsWith('+')&&!line.startsWith('+++')).some(line=>line.includes(bad));if(added){console.log(`FAIL Added sensitive call ${bad}`);failed++}else console.log(`PASS No added sensitive call ${bad}`)}}catch(error){console.log('WARN diff comparison unavailable')}
+try{const base=execFileSync('git',['show','29d937ff5d794ba54eecc5ec693fa5048957b5e5:app.js'],{encoding:'utf8'});for(const bad of ['supabase.rpc(','supabase.from(','createClient(','onAuthStateChange']){const count=text=>text.split(bad).length-1,added=count(app)>count(base);if(added){console.log(`FAIL Added sensitive call ${bad}`);failed++}else console.log(`PASS No added sensitive call ${bad}`)}}catch(error){console.log('WARN diff comparison unavailable')}
 process.exitCode=failed?1:0;

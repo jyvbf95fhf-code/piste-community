@@ -1122,3 +1122,26 @@ body.scenario-viewer-open{overflow:hidden;touch-action:none}.coaching-scenario-p
 #coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen){height:clamp(420px,76dvh,760px);min-height:420px}
 #coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen) #coachingMap{height:100%;min-height:420px}
 @media(max-width:700px){#coachingLivePanel.active-terrain[data-map-priority="true"] .coaching-map-shell:not(.fullscreen){height:clamp(420px,76dvh,760px);min-height:420px}}
+
+/* V10.51.1.2 guided Coaching debrief. */
+.coaching-debrief-stepper{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 12px;padding:5px;border:1px solid var(--v2-line);border-radius:14px;background:#0c1920}
+.coaching-debrief-stepper button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:8px 6px;border:0;border-radius:10px;background:transparent;color:var(--v2-muted);font-size:11px;font-weight:850}
+.coaching-debrief-stepper button span{display:grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#1a2a30}
+.coaching-debrief-stepper button.active{background:#30451f;color:#e8f3d6}
+.coaching-debrief-stepper button.active span{background:#9fbd65;color:#102018}
+.coaching-debrief-step.hidden{display:none!important}
+.coaching-debrief-step-actions{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px}
+.coaching-debrief-step-actions button{min-height:44px}
+.coaching-debrief-step .coaching-debrief-overlay{margin-top:0}
+.debrief-weather-summary{display:grid;gap:5px;margin-top:12px;padding:11px 12px;border:1px solid rgba(112,220,255,.22);border-radius:12px;background:rgba(8,25,32,.72);color:#e7f6f4}
+.debrief-weather-summary span{font-size:11px;color:#d3e1dc}
+.coaching-debrief-complete{display:grid;place-items:center;gap:10px;min-height:300px;padding:28px 18px;text-align:center;border:1px solid rgba(159,189,101,.35);border-radius:18px;background:linear-gradient(145deg,rgba(159,189,101,.13),rgba(8,22,28,.96))}
+.coaching-debrief-complete.hidden{display:none}
+.coaching-debrief-complete .complete-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:#9fbd65;color:#102018;font-size:34px;font-weight:950}
+.coaching-debrief-complete h3,.coaching-debrief-complete p{margin:0}.coaching-debrief-complete p{max-width:420px;color:var(--v2-muted)}
+#coachingLivePanel[data-debrief-step="summary"] .coaching-map-shell,#coachingLivePanel[data-debrief-step="observations"] .coaching-map-shell,#coachingLivePanel[data-debrief-step="complete"] .coaching-map-shell{display:none}
+#coachingLivePanel[data-debrief-step="summary"] .coaching-layer-controls,#coachingLivePanel[data-debrief-step="observations"] .coaching-layer-controls,#coachingLivePanel[data-debrief-step="complete"] .coaching-layer-controls{display:none}
+#coachingLivePanel[data-debrief-step="map"] .coaching-debrief-stage{max-width:none}
+#coachingLivePanel .coaching-map-shell.guided-debrief-map-expanded{position:fixed;z-index:4000;inset:0;width:100vw;height:100dvh;margin:0;border-radius:0;background:#071119}
+#coachingLivePanel .coaching-map-shell.guided-debrief-map-expanded #coachingMap{height:100dvh;min-height:100dvh;border-radius:0}
+@media(max-width:700px){.coaching-debrief-stepper button{font-size:10px;min-height:40px}.coaching-debrief-step-actions{display:grid;grid-template-columns:1fr 1fr}.coaching-debrief-step-actions button{width:100%}.coaching-debrief-complete{min-height:260px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}}
