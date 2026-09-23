@@ -21,12 +21,17 @@ check('existing closure reused',html.includes('id="coachingDebriefClosure"')&&ap
 check('completion screen and home return',html.includes('id="coachingDebriefComplete"')&&html.includes('id="coachingDebriefReturnHome"')&&app.includes('showCoachingDebriefComplete')&&app.includes('completeCoachingDebriefReturnHome'));
 check('historical access path retained',app.includes('loadHistoricalCoachingSessions')&&app.includes('coachingHistoricalAccess')&&app.includes("openCoachingDebriefOnce(id"));
 check('historical library opens guided debrief',app.includes("if(route.mode==='archive')return openCoachingHistoricalDebrief(id)"));
-check('view track reopens current session',app.includes('openCoachingHistoricalDebrief(activeCoachingSession.id)'));
+check('view track returns to library',app.includes('openCoachingLibraryTrack(activeCoachingSession.id)'));
 check('guided map renders planned route and GPX',app.includes('renderGuidedDebriefPlannedLayers')&&app.includes('renderGuidedDebriefGpxLayers'));
 check('historical weather fallback',app.includes('coachingDebriefWeatherSource')&&app.includes('coachingV1040WeatherCache'));
 check('odor corridor requires usable weather',app.includes('coachingDebriefOdorDataAvailable')&&app.includes('Couloir indisponible'));
 check('map reparenting is idempotent',app.includes('coachingDebriefMapReparented')&&app.includes('invalidateSize()'));
 check('no second Leaflet instance',!app.includes("createPisteMap('coachingDebriefMap')"));
+check('GPS lifecycle resets between sessions',app.includes('resetCoachingGpsTransientState')&&app.includes('clearWatch(coachingPreviewWatch)')&&app.includes('traceurLastPointAt=0'));
+check('guided fullscreen has accessible close',html.includes('id="coachingDebriefMapClose"')&&app.includes('closeCoachingDebriefMapExpanded')&&css.includes('guided-debrief-map-close'));
+check('observation save feedback',app.includes('✓ Observation enregistrée')&&app.includes('Observation non enregistrée — votre texte est conservé'));
+check('historical role is hydrated from proof',app.includes('hydrateCoachingHistoricalRole')&&app.includes('proof?.role'));
+check('debrief exit always available',html.includes('id="coachingDebriefExit"')&&app.includes("$('coachingDebriefExit').onclick"));
 check('existing role/state functions retained',app.includes('function myCoachingRole')&&app.includes('function coachingBlindMode')&&app.includes('function coachingGlobalPhase')&&app.includes('finishCoachingSessionV1040'));
 check('map provider retained',app.includes("PisteTerrainEngine.createMap('coachingMap'")&&app.includes('setCoachingBaseLayer'));
 check('dedicated guided mode hides operational UI',app.includes('setCoachingDebriefMode')&&app.includes('guided-debrief-active')&&css.includes('guided-debrief-active .bottom-nav')&&css.includes('#coachingLivePanel.guided-debrief-active> :not(#coachingDebriefStage)'));

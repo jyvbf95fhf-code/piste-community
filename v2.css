@@ -1204,3 +1204,10 @@ body.guided-debrief-active .bottom-nav{display:none!important}
  .guided-debrief-analysis b{font-size:11px}
  .coaching-debrief-complete-actions{display:grid;width:100%}
 }
+
+/* V10.51.1.2 hotfix: guided debrief exits and fullscreen close control. */
+.coaching-debrief-entry{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.guided-debrief-exit{white-space:nowrap;min-height:38px}
+.guided-debrief-map-close{display:none;position:absolute;top:calc(10px + env(safe-area-inset-top,0px));right:calc(10px + env(safe-area-inset-right,0px));z-index:4100;width:44px;height:44px;border:1px solid rgba(255,255,255,.45);border-radius:50%;background:rgba(7,17,25,.88);color:#fff;font-size:28px;line-height:1;place-items:center;box-shadow:0 5px 18px rgba(0,0,0,.35)}
+#coachingLivePanel .coaching-map-shell.guided-debrief-map-expanded .guided-debrief-map-close{display:grid}
+@media(max-width:700px){.coaching-debrief-entry{align-items:center}.guided-debrief-exit{padding:8px 10px;font-size:11px}}
