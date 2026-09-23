@@ -20,6 +20,13 @@ check('existing observations reused',html.includes('id="coachingParticipantObser
 check('existing closure reused',html.includes('id="coachingDebriefClosure"')&&app.includes('closeCoachingDebrief')&&app.includes('submitCoachingDebriefClosure'));
 check('completion screen and home return',html.includes('id="coachingDebriefComplete"')&&html.includes('id="coachingDebriefReturnHome"')&&app.includes('showCoachingDebriefComplete')&&app.includes('completeCoachingDebriefReturnHome'));
 check('historical access path retained',app.includes('loadHistoricalCoachingSessions')&&app.includes('coachingHistoricalAccess')&&app.includes("openCoachingDebriefOnce(id"));
+check('historical library opens guided debrief',app.includes("if(route.mode==='archive')return openCoachingHistoricalDebrief(id)"));
+check('view track reopens current session',app.includes('openCoachingHistoricalDebrief(activeCoachingSession.id)'));
+check('guided map renders planned route and GPX',app.includes('renderGuidedDebriefPlannedLayers')&&app.includes('renderGuidedDebriefGpxLayers'));
+check('historical weather fallback',app.includes('coachingDebriefWeatherSource')&&app.includes('coachingV1040WeatherCache'));
+check('odor corridor requires usable weather',app.includes('coachingDebriefOdorDataAvailable')&&app.includes('Couloir indisponible'));
+check('map reparenting is idempotent',app.includes('coachingDebriefMapReparented')&&app.includes('invalidateSize()'));
+check('no second Leaflet instance',!app.includes("createPisteMap('coachingDebriefMap')"));
 check('existing role/state functions retained',app.includes('function myCoachingRole')&&app.includes('function coachingBlindMode')&&app.includes('function coachingGlobalPhase')&&app.includes('finishCoachingSessionV1040'));
 check('map provider retained',app.includes("PisteTerrainEngine.createMap('coachingMap'")&&app.includes('setCoachingBaseLayer'));
 check('dedicated guided mode hides operational UI',app.includes('setCoachingDebriefMode')&&app.includes('guided-debrief-active')&&css.includes('guided-debrief-active .bottom-nav')&&css.includes('#coachingLivePanel.guided-debrief-active> :not(#coachingDebriefStage)'));
