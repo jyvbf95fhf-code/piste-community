@@ -1145,3 +1145,62 @@ body.scenario-viewer-open{overflow:hidden;touch-action:none}.coaching-scenario-p
 #coachingLivePanel .coaching-map-shell.guided-debrief-map-expanded{position:fixed;z-index:4000;inset:0;width:100vw;height:100dvh;margin:0;border-radius:0;background:#071119}
 #coachingLivePanel .coaching-map-shell.guided-debrief-map-expanded #coachingMap{height:100dvh;min-height:100dvh;border-radius:0}
 @media(max-width:700px){.coaching-debrief-stepper button{font-size:10px;min-height:40px}.coaching-debrief-step-actions{display:grid;grid-template-columns:1fr 1fr}.coaching-debrief-step-actions button{width:100%}.coaching-debrief-complete{min-height:260px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}}
+
+/* V10.51.1.2 — dedicated guided debrief presentation. */
+body.guided-debrief-active .bottom-nav{display:none!important}
+#coachingPage.guided-debrief-active>.record-head,#coachingPage.guided-debrief-active>.coaching-stepper,#coachingPage.guided-debrief-active>#coachingPrepareStage,#coachingPage.guided-debrief-active>#coachingSessionsCard,#coachingPage.guided-debrief-active>#coachingReliabilityBar{display:none!important}
+#coachingLivePanel.guided-debrief-active{display:block!important;padding:12px!important;background:transparent!important;border:0!important;box-shadow:none!important}
+#coachingLivePanel.guided-debrief-active> :not(#coachingDebriefStage){display:none!important}
+#coachingLivePanel.guided-debrief-active #coachingDebriefStage{display:block!important;max-width:760px;margin:0 auto}
+#coachingLivePanel.guided-debrief-active #coachingScenarioDebrief{display:none!important}
+.guided-debrief-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin:0 0 10px;padding:3px 0}
+.guided-debrief-heading h3{margin:4px 0 2px;font-size:clamp(20px,5vw,27px)}
+.guided-debrief-heading p{margin:0}
+.coaching-debrief-stepper{grid-template-columns:repeat(4,minmax(0,1fr));position:sticky;top:6px;z-index:900}
+.coaching-debrief-stepper button:disabled{opacity:.56;cursor:default}
+.coaching-debrief-step{padding:0}
+.guided-debrief-summary-copy{display:grid;gap:3px;margin:4px 0 8px}
+.guided-debrief-summary-copy p{margin:0}
+.guided-debrief-primary-kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.guided-debrief-primary-kpis article{display:grid;gap:5px;min-height:70px;padding:11px 12px;border:1px solid var(--v2-line);border-radius:13px;background:rgba(255,255,255,.035)}
+.guided-debrief-primary-kpis article span{color:var(--v2-muted);font-size:10px;line-height:1.25}
+.guided-debrief-primary-kpis article strong{color:#e9f1e9;font-size:16px;line-height:1.2;font-variant-numeric:tabular-nums}
+.guided-debrief-primary-kpis article.traceur{border-color:rgba(88,214,164,.34)}
+.guided-debrief-primary-kpis article.traceur strong{color:#9ce8c8}
+.guided-debrief-primary-kpis article.driver{border-color:rgba(230,169,87,.38)}
+.guided-debrief-primary-kpis article.driver strong{color:#f0bd7d}
+.guided-debrief-primary-kpis article.age-kpi{border-color:rgba(159,189,101,.34)}
+.guided-debrief-all-stats{margin-top:11px;border:1px solid var(--v2-line);border-radius:13px;background:rgba(7,19,25,.55)}
+.guided-debrief-all-stats>summary{cursor:pointer;padding:12px 13px;color:#d8e8bc;font-weight:850;list-style:none}
+.guided-debrief-all-stats>summary::-webkit-details-marker{display:none}
+.guided-debrief-all-stats>summary:after{content:'＋';float:right;color:var(--v2-green)}
+.guided-debrief-all-stats[open]>summary:after{content:'−'}
+.guided-debrief-all-stats-content{padding:0 11px 11px}
+.guided-debrief-all-stats-content .debrief-role-grid{margin-top:0}
+.guided-debrief-disclaimer{margin:12px 0 0}
+.coaching-debrief-map-canvas{position:relative;min-height:0}
+.coaching-debrief-map-canvas .coaching-map-shell{height:clamp(420px,64dvh,680px);min-height:420px;margin:0;border-radius:16px;overflow:hidden}
+.coaching-debrief-map-canvas .coaching-map-shell #coachingMap{height:100%;min-height:0;border-radius:0}
+.coaching-debrief-map-canvas .coaching-layer-controls{left:10px;right:10px;bottom:10px}
+.guided-debrief-analysis{display:grid;gap:8px;margin-top:10px;padding:11px 12px;border:1px solid var(--v2-line);border-radius:13px;background:rgba(7,19,25,.55)}
+.guided-debrief-analysis>strong{font-size:11px;color:#d8e8bc}
+.guided-debrief-analysis>div{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.guided-debrief-analysis span{display:grid;gap:3px;color:var(--v2-muted);font-size:9px}
+.guided-debrief-analysis b{color:#edf4ed;font-size:13px;font-variant-numeric:tabular-nums}
+.coaching-debrief-complete-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.guided-debrief-back-library{display:none!important}
+#coachingDebriefStepObservations .coaching-participant-observations>p.small.muted{font-size:11px}
+@media(max-width:700px){
+ #coachingLivePanel.guided-debrief-active{margin:0!important;padding:8px 0 calc(12px + env(safe-area-inset-bottom))!important}
+ .coaching-debrief-stepper{top:2px;gap:3px;padding:4px}
+ .coaching-debrief-stepper button{display:grid;gap:3px;padding:7px 2px;font-size:9px}
+ .coaching-debrief-stepper button span{margin:auto;width:20px;height:20px}
+ .guided-debrief-heading{align-items:center}
+ .guided-debrief-heading h3{font-size:20px}
+ .coaching-debrief-map-canvas .coaching-map-shell{height:64dvh;min-height:390px}
+ .coaching-debrief-map-canvas .coaching-layer-controls{left:7px;right:7px;bottom:7px}
+ .guided-debrief-analysis>div{gap:4px}
+ .guided-debrief-analysis span{font-size:8px}
+ .guided-debrief-analysis b{font-size:11px}
+ .coaching-debrief-complete-actions{display:grid;width:100%}
+}
