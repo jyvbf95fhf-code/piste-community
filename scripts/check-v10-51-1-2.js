@@ -50,6 +50,8 @@ check('planner fullscreen close clears bottom nav',css.includes('.planner-map-fl
 check('planner tools remove duplicate creation modes',html.includes('id="plannerToolsGpxBtn"')&&css.includes('#plannerAdvancedArea .planner-mode-guide{display:none'));
 check('planner tools keep GPX and base choices',app.includes("plannerToolsGpxBtn")&&html.includes('id="plannerBaseClassic"')&&html.includes('id="plannerBaseOutdoor"'));
 check('planner primary routing modes remain',html.includes('id="routingStreetBtn"')&&html.includes('id="routingTrailBtn"')&&html.includes('id="routingFreeBtn"')&&html.includes('id="plannerDirectBtn"'));
+check('role-aware observation step',app.includes('function canCurrentUserContributeToDebriefObservations')&&app.includes("hasCoachingCapability('coach',s)")&&app.includes("hasCoachingCapability('drive',s)")&&app.includes("mapNext.dataset.debriefNext=canContribute?'observations':'complete'")&&html.includes('id="coachingDebriefMapNext"'));
+check('non-contributors reach completion',app.includes("step==='observations'?'complete'")&&app.includes("completeStep?.classList.toggle('hidden',canContribute)"));
 check('no SQL files changed',execFileSync('git',['diff','--name-only','29d937ff5d794ba54eecc5ec693fa5048957b5e5','HEAD'],{encoding:'utf8'}).split('\n').filter(Boolean).every(file=>!/(^|\/)(supabase|.*\.sql)(\/|$)/.test(file)));
 try{
  const base=execFileSync('git',['show','29d937ff5d794ba54eecc5ec693fa5048957b5e5:app.js'],{encoding:'utf8'});
