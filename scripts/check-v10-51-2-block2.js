@@ -26,6 +26,9 @@ try{
  check('runtime Session B creates a new watcher',watcherA!==watcherB&&reusedA===watcherA&&runtimeRegistry.get('coaching_presence')===watcherB&&runtimeRegistry.session('coaching_presence')==='B');
 }catch(error){check('runtime Session A/B registry simulation',false);console.error(error.message)}
 check('coaching preview watcher carries session id',/gpsWatchRegistry\.start\('coaching_preview'[\s\S]*?timeout:15000\},id\)/.test(app));
+check('participant marker reattaches when detached',/function coachingMarkerIsAttachedToCurrentMap\(marker,map=coachingMap\)/.test(app)&&/if\(marker&&!coachingMarkerIsAttachedToCurrentMap\(marker,coachingMap\)\)[\s\S]*?marker=null/.test(app)&&/addTo\(coachingMap\)/.test(app));
+try{const markerSource=app.match(/function coachingMarkerIsAttachedToCurrentMap\([\s\S]*?\n/)[0];const markerSandbox={coachingMap:null};vm.runInNewContext(`globalThis.__attached=${markerSource.replace('function coachingMarkerIsAttachedToCurrentMap','function __attached')}`,markerSandbox);const map={hasLayer:marker=>marker._map===map};const attached={_map:map},detached={_map:null};check('runtime marker attachment distinguishes current map',markerSandbox.__attached(attached,map)&&!markerSandbox.__attached(detached,map))}catch(error){check('runtime marker attachment distinguishes current map',false);console.error(error.message)}
+
 check('coaching presence watcher carries session id',/gpsWatchRegistry\.start\('coaching_presence',[\s\S]{0,260}?trackedSessionId/.test(app));
 check('traceur watcher carries session id',/gpsWatchRegistry\.start\('coaching_traceur',[\s\S]{0,260}?s\.id/.test(app));
 check('preview stale session cannot block restart',/gpsWatchRegistry\.session\('coaching_preview'\)!==previewSessionId/.test(app)&&/gpsWatchRegistry\.stop\('coaching_preview'\)/.test(app));
