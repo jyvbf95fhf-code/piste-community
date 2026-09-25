@@ -3359,6 +3359,7 @@ $('plannerDirectBtn').onclick=togglePlannerFollow;
 $('plannerOdorToggle').onclick=togglePlannerOdorCorridor;
 $('plannerControlsToggle').onclick=togglePlannerControls;
 $('plannerBaseClassic').onclick=()=>setPlannerBaseLayer('classic');$('plannerBaseOutdoor').onclick=()=>setPlannerBaseLayer('outdoor');
+$('plannerToolsGpxBtn').onclick=()=>$('chooseGpxBtn')?.click();
 $('plannerAdvancedToggle').onclick=()=>{const area=$('plannerAdvancedArea'),tools=$('plannerToolsPanel'),button=$('plannerAdvancedToggle'),open=area.classList.toggle('hidden')===false;tools?.classList.toggle('hidden',!open);button.setAttribute('aria-expanded',String(open));button.setAttribute('aria-label',open?'Fermer les outils avancés':'Ouvrir les outils avancés');button.setAttribute('title',open?'Fermer les outils avancés':'Ouvrir les outils avancés');button.classList.toggle('active',open);button.textContent='⋯';setTimeout(()=>plannerMap?.invalidateSize(),80)};
 $('loadWeatherBtn').onclick=loadPlannerWeather;
 $('loadRecordWeatherBtn').onclick=loadRecordWeather;

@@ -1221,3 +1221,7 @@ body.guided-debrief-active .bottom-nav{display:none!important}
   .planner-map-shell .planner-map-floating-distance{right:8px;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
   .planner-map-shell .planner-map-floating-actions{right:8px;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
 }
+.planner-card #plannerAdvancedArea .planner-mode-guide{display:none!important;}
+.planner-tools-import{display:grid;gap:6px;padding-top:4px;border-top:1px solid rgba(255,255,255,.12)}
+.planner-tools-import b{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b9d66c}
+.planner-tools-import button{width:100%;min-height:36px}

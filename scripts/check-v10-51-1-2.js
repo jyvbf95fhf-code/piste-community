@@ -47,6 +47,9 @@ check('planner base registry reused',app.includes('plannerBaseLayers')&&app.incl
 check('planner odor control stays below quickbar',css.includes('.planner-odor-toggle{position:absolute')&&css.includes('top:92px'));
 check('planner distance badge bottom right',css.includes('.planner-map-floating-distance{position:absolute')&&css.includes('right:10px')&&css.includes('left:auto'));
 check('planner fullscreen close clears bottom nav',css.includes('.planner-map-floating-actions{')&&css.includes('bottom:calc(56px + env(safe-area-inset-bottom'));
+check('planner tools remove duplicate creation modes',html.includes('id="plannerToolsGpxBtn"')&&css.includes('#plannerAdvancedArea .planner-mode-guide{display:none'));
+check('planner tools keep GPX and base choices',app.includes("plannerToolsGpxBtn")&&html.includes('id="plannerBaseClassic"')&&html.includes('id="plannerBaseOutdoor"'));
+check('planner primary routing modes remain',html.includes('id="routingStreetBtn"')&&html.includes('id="routingTrailBtn"')&&html.includes('id="routingFreeBtn"')&&html.includes('id="plannerDirectBtn"'));
 check('no SQL files changed',execFileSync('git',['diff','--name-only','29d937ff5d794ba54eecc5ec693fa5048957b5e5','HEAD'],{encoding:'utf8'}).split('\n').filter(Boolean).every(file=>!/(^|\/)(supabase|.*\.sql)(\/|$)/.test(file)));
 try{
  const base=execFileSync('git',['show','29d937ff5d794ba54eecc5ec693fa5048957b5e5:app.js'],{encoding:'utf8'});
