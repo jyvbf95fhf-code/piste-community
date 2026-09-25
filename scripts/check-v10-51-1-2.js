@@ -20,7 +20,10 @@ check('existing observations reused',html.includes('id="coachingParticipantObser
 check('existing closure reused',html.includes('id="coachingDebriefClosure"')&&app.includes('closeCoachingDebrief')&&app.includes('submitCoachingDebriefClosure'));
 check('completion screen and home return',html.includes('id="coachingDebriefComplete"')&&html.includes('id="coachingDebriefReturnHome"')&&app.includes('showCoachingDebriefComplete')&&app.includes('completeCoachingDebriefReturnHome'));
 check('historical access path retained',app.includes('loadHistoricalCoachingSessions')&&app.includes('coachingHistoricalAccess')&&app.includes("openCoachingDebriefOnce(id"));
-check('historical library opens guided debrief',app.includes("if(route.mode==='archive')return openCoachingHistoricalDebrief(id)"));
+check('historical library opens dedicated archive',app.includes("if(route.mode==='archive')return openMissionDossier('coaching',id)"));
+check('archive tabs are distinct from closure flow',app.includes("missionTabTimeline:'Statistiques'")&&app.includes("missionTabAnalysis:'Notes'")&&app.includes("missionTabReport:'Rapport'")&&app.includes('Archive de piste'));
+check('archive state persists for refresh',app.includes('COACHING_ARCHIVE_STATE_KEY')&&app.includes('restoreCoachingArchiveState'));
+check('archive fallback returns to library',app.includes('archive introuvable')&&app.includes("showPage('libraryPage')"));
 check('view track returns to library',app.includes('openCoachingLibraryTrack(activeCoachingSession.id)'));
 check('guided map renders planned route and GPX',app.includes('renderGuidedDebriefPlannedLayers')&&app.includes('renderGuidedDebriefGpxLayers'));
 check('historical weather fallback',app.includes('coachingDebriefWeatherSource')&&app.includes('coachingV1040WeatherCache'));
@@ -39,6 +42,8 @@ check('map reuses coachingMap and invalidates size',app.includes('coachingMapOri
 check('mobile guided styles',css.includes('.coaching-debrief-stepper')&&css.includes('safe-area-inset-bottom')&&css.includes('coaching-debrief-map-canvas'));
 check('no duplicated calculation logic',!app.includes('computeCoachingConcordance(trace,points,25,25)')&&app.includes('calculateCoachingDebrief'));
 check('no new polling',!app.includes('setInterval(setCoachingDebriefStep')&&!app.includes('setInterval(coachingDebrief'));
+check('planner base restore helper',app.includes('ensurePlannerBaseLayerAttached')&&app.includes('restorePlannerMapAfterShow')&&app.includes('plannerMap?.invalidateSize'));
+check('planner base registry reused',app.includes('plannerBaseLayers')&&app.includes('setPlannerBaseLayer'));
 check('no SQL files changed',execFileSync('git',['diff','--name-only','29d937ff5d794ba54eecc5ec693fa5048957b5e5','HEAD'],{encoding:'utf8'}).split('\n').filter(Boolean).every(file=>!/(^|\/)(supabase|.*\.sql)(\/|$)/.test(file)));
 try{
  const base=execFileSync('git',['show','29d937ff5d794ba54eecc5ec693fa5048957b5e5:app.js'],{encoding:'utf8'});

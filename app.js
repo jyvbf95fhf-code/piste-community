@@ -316,6 +316,8 @@ async function finalizeCoachingScenario(sessionId,scenario={}){
 async function submitCoachingWizard(){if(coachingWizard.busy)return false;const valid=validCoachingWizard();if(!valid.ok){coachingWizard.error=valid.message;renderCoachingWizard();return false}coachingWizard.busy=true;coachingWizard.error=null;renderCoachingWizard();let created=null;try{if(coachingWizard.createdSessionId){const opened=await openCoachingSession(coachingWizard.createdSessionId);if(opened!==false)coachingWizard.active=false;return opened!==false}const preparation=coachingWizard.trackPreparation,withoutRoute=typeof coachingWizardWithoutPreparedRoute==='function'?coachingWizardWithoutPreparedRoute():false;if(!withoutRoute&&!preparation.routeId&&preparation.draft){const saved=await saveCoachingWizardDraft();if(!saved?.id){coachingWizard.error='La piste n’a pas pu être enregistrée.';renderCoachingWizard();return false}preparation.routeId=saved.id;preparation.origin='saved';if(!trainingRoutes.some(route=>String(route.id)===String(saved.id)))trainingRoutes=[saved,...trainingRoutes]}if(!withoutRoute&&preparation.routeId&&!trainingRoutes.some(route=>String(route.id)===String(preparation.routeId))){coachingWizard.error='La piste sélectionnée est introuvable.';renderCoachingWizard();return false}const routeId=coachingWizard.sessionType==='solo'?null:(withoutRoute?null:preparation.routeId);created=await createCoaching({validated:true,routeId,members:coachingWizardMembers(),blindMode:coachingWizard.mode,withoutRoute,scenario:coachingWizard.scenario,onCreated:data=>{coachingWizard.createdSessionId=data?.id||null}});if(!created)return false;coachingWizard.createdSessionId=created.id;coachingWizard.active=false;return true}catch(error){coachingWizard.error=error.message||'Création impossible.';renderCoachingWizard();return false}finally{coachingWizard.busy=false;renderCoachingWizard()}}
 let plannerOdorModel={enabled:false,version:'prototype-1',wind_direction_deg:0,wind_speed_kmh:5,age_hours:1,environment:'mixed',temperature_c:null,humidity_pct:null,source:'manual'};
 let coachingLayerVisibility={planned:true,trace:true,actual:true,odor:true,markers:true},coachingOdorPreferenceMemory=Object.create(null),plannerDraftTimer=null,plannerReturnTarget='library',plannerPendingLatLng=null,plannerTouchTimer=null,plannerTouchOrigin=null,plannerSuppressClickUntil=0,plannerWizardContext=null;
+const COACHING_ARCHIVE_STATE_KEY='piste-coaching-archive-state-v1';
+let coachingArchiveRestoreInFlight=false;
 let routeSuggestionSeed=0;
 let dogHealthEvents=[],dogDuties=[],dogShares=[],dogHubFriends=[]; // V10.25_DOG_HUB
 let operationalCalls=[],activeOperationalCallId=null,currentOperationalCall=null,operationalCallMap=null,operationalCallLayers=[],operationalCallPoint=null,operationalCallMarkers=[],operationalCallGpxTracks=[],operationalCallWeather={},operationalCallAnalysis={},operationalCallStep=1,operationalBaseLayers=null,operationalBaseLayerName='osm',operationalTopoTileErrors=0,operationalFallbackToOsmCount=0; // V10.27_OPERATIONAL_CALL
@@ -585,10 +587,34 @@ function switchAuth(mode){
 $('showLogin').onclick=()=>switchAuth('login');
 $('showSignup').onclick=()=>switchAuth('signup');
 
+function plannerBasePreference(){try{const value=localStorage.getItem('piste-planner-base-layer');return value==='topo'?'topo':'osm'}catch{return 'osm'}}
+function ensurePlannerBaseLayerAttached(){
+ const map=plannerMap,entry=PISTE_TERRAIN_ENGINE_MODE!=='legacy'?PisteTerrainEngine.entry('plannerMap'):null,candidates=entry?.baseLayers||plannerBaseLayers;
+ if(!map||!candidates)return false;
+ const targetName=candidates[plannerBaseLayerName]?plannerBaseLayerName:'osm',target=candidates[targetName];
+ if(!target)return false;
+ if(!map.hasLayer(target))target.addTo(map);
+ Object.entries(candidates).forEach(([name,layer])=>{if(name!==targetName&&layer&&map.hasLayer(layer))map.removeLayer(layer)});
+ plannerBaseLayerName=targetName;if(entry)entry.baseLayer=targetName;
+ $('plannerBaseClassic')?.classList.toggle('active',targetName==='osm');$('plannerBaseOutdoor')?.classList.toggle('active',targetName==='topo');
+ return map.hasLayer(target);
+}
+function restorePlannerMapAfterShow(){
+ if(!plannerMap)return false;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  if(!plannerMap)return;
+  ensurePlannerBaseLayerAttached();
+  plannerMap.invalidateSize();
+  redrawPlanner(false);
+ }));
+ return true;
+}
+
 function showPage(id,adminVerified=false){
  if(!guardCoachingWizardNavigation(id))return false;
  if(id==='recordPage'&&coachingWizard.active)resetCoachingWizard();
  if(id==='recordPage')updateOperationalCorridorControl();
+ if(id==='libraryPage')clearCoachingArchiveState();
  if(id==='adminPage'&&!adminVerified){void adminCentre.open();return}
  if(id!=='adminPage')adminCentre.leave();
  if(id!=='missionPage')closeMissionDossier();
@@ -606,7 +632,7 @@ function showPage(id,adminVerified=false){
  if(id==='dogPage')loadDogHub();
  if(id==='trainingPage'){loadTrainings();loadTrainingRoutes();}
  if(id==='operationalCallPage')initOperationalCallPage();
- if(id==='plannerPage')initPlanner();else stopPlannerFollow();
+ if(id==='plannerPage'){if(plannerMap)restorePlannerMapAfterShow();else initPlanner()}else stopPlannerFollow();
  if(id==='coachingPage')loadCoachingHub();
  if(id==='recordPage')initLiveMap(true);
  setTimeout(()=>{
@@ -703,12 +729,13 @@ function initPlanner(route=null){
  setTimeout(()=>{
   if(!$('plannerMap'))return;
   setPlannerSection('map');plannerImportedGpx=false;$('clearImportedGpxBtn')?.classList.add('hidden');if($('gpxImportStatus'))$('gpxImportStatus').textContent='Formats acceptés : trace GPX ou route GPX, 10 Mo maximum.';
-  plannerWeatherFetchInFlight=null;plannerWeatherAvailable=false;plannerBaseLayers=null;plannerBaseLayerName='osm';plannerTopoTileErrors=0;plannerBaseSwitchCount=0;setPlannerOdorState('off');
+  plannerWeatherFetchInFlight=null;plannerWeatherAvailable=false;plannerBaseLayers=null;plannerBaseLayerName=plannerBasePreference();plannerTopoTileErrors=0;plannerBaseSwitchCount=0;setPlannerOdorState('off');
   if(plannerMap){plannerMap.remove();plannerMap=null}plannerUserMarker=null;plannerAccuracyCircle=null;
   if(PISTE_TERRAIN_ENGINE_MODE==='legacy'){
    plannerMap=createPisteMap('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
    plannerBaseLayers=addCleanBaseLayers(plannerMap,{mapId:'plannerMap',showLayerControl:false});
   }else {plannerMap=PisteTerrainEngine.createMap('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);plannerBaseLayers=PisteTerrainEngine.entry('plannerMap')?.baseLayers||null}
+  if(plannerBaseLayerName==='topo')setPlannerBaseLayer('outdoor');
   const source=plannerSourceForInit(route),draft=!route&&!plannerWizardContext?source:null;if(source?.routing_mode)setPlannerRoutingMode(source.routing_mode);else if(plannerWizardContext?.method==='draw')setPlannerRoutingMode('free');
   TerrainEngine.configure('planner');updateTerrainCommonStatus();
   plannerPoints=source&&Array.isArray(source.route)?source.route.map(x=>({...x,lat:Number(x.lat),lon:Number(x.lon)})):[];plannerRedoStack=[];plannerTrackOrigin=resolveTrackOrigin(null,source);
@@ -785,7 +812,7 @@ function navigatePlannerStart(){if(!plannerPoints.length){$('plannerMsg').textCo
 async function searchPlannerLocation(){clearTimeout(plannerSearchTimer);plannerSearchTimer=setTimeout(async()=>{const q=$('plannerSearchInput').value.trim();if(q.length<2){$('plannerLocationStatus').textContent=q?'Indique au moins 2 caractères.':'';plannerSearchSelected=false;return}plannerSearchController?.abort();plannerSearchController=new AbortController();plannerSearchRequestCount++;plannerSearchSelected=false;$('plannerLocationStatus').textContent='Recherche du lieu…';try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=fr&q=${encodeURIComponent(q)}`,{headers:{Accept:'application/json'},signal:plannerSearchController.signal});if(!r.ok)throw 0;const [place]=await r.json();if(!place){$('plannerLocationStatus').textContent='Lieu introuvable.';return}plannerMap?.setView([Number(place.lat),Number(place.lon)],16);const shortName=String(place.name||place.display_name||'Lieu trouvé').split(',')[0].trim().slice(0,70);$('plannerSearchInput').value=shortName;$('plannerLocationStatus').textContent=`Lieu sélectionné · ${shortName}`;$('plannerLocationStatus').classList.add('selected');plannerSearchSelected=true;$('plannerSearchInput').blur();setTimeout(()=>plannerMap?.invalidateSize(),80)}catch(error){if(error?.name!=='AbortError')$('plannerLocationStatus').textContent='Recherche indisponible. Réessaie plus tard.'}},280)}
 function togglePlannerFullscreen(){const card=document.querySelector('.planner-card');if(!card)return;const active=card.classList.toggle('map-fullscreen');document.body.classList.toggle('planner-fullscreen-open',active);$('fullscreenPlannerBtn').textContent=active?'✕ Fermer':'⛶ Plein écran';setTimeout(()=>plannerMap?.invalidateSize(),100)}
 function togglePlannerControls(){const button=$('plannerControlsToggle'),panel=$('plannerOptionsPanel'),sheet=$('plannerBottomSheet');if(!button||!panel||!sheet)return false;const open=panel.classList.toggle('hidden')===false;panel.setAttribute('aria-hidden',String(!open));sheet.classList.toggle('collapsed',!open);button.setAttribute('aria-expanded',String(open));button.textContent=open?'⌄ Fermer les options':'⌃ Options et enregistrement';setTimeout(()=>plannerMap?.invalidateSize(),80);return open}
-function setPlannerBaseLayer(name,{fallback=false}={}){const layer=name==='outdoor'?'topo':'osm',entry=PISTE_TERRAIN_ENGINE_MODE!=='legacy'?PisteTerrainEngine.entry('plannerMap'):null,map=entry?.map||plannerMap,candidates=entry?.baseLayers||plannerBaseLayers;if(!map||!candidates?.[layer])return false;const target=candidates[layer],previous=candidates[plannerBaseLayerName],center=map.getCenter?.(),zoom=map.getZoom?.();if(target===previous&&map.hasLayer(target))return true;target.addTo(map);if(previous&&previous!==target&&map.hasLayer(previous))map.removeLayer(previous);plannerBaseLayerName=layer;plannerBaseSwitchCount++;plannerTopoTileErrors=layer==='topo'?plannerTopoTileErrors:0;if(fallback)plannerFallbackToOsmCount++;if(entry)entry.baseLayer=layer;$('plannerBaseClassic')?.classList.toggle('active',layer==='osm');$('plannerBaseOutdoor')?.classList.toggle('active',layer==='topo');if(center&&Number.isFinite(zoom))map.setView(center,zoom,{animate:false});map.invalidateSize();terrainDebugRefresh();return true}
+function setPlannerBaseLayer(name,{fallback=false}={}){const layer=name==='outdoor'?'topo':'osm',entry=PISTE_TERRAIN_ENGINE_MODE!=='legacy'?PisteTerrainEngine.entry('plannerMap'):null,map=entry?.map||plannerMap,candidates=entry?.baseLayers||plannerBaseLayers;if(!map||!candidates?.[layer])return false;const target=candidates[layer],previous=candidates[plannerBaseLayerName],center=map.getCenter?.(),zoom=map.getZoom?.();if(target===previous&&map.hasLayer(target)){try{localStorage.setItem('piste-planner-base-layer',layer)}catch{}return true}target.addTo(map);if(previous&&previous!==target&&map.hasLayer(previous))map.removeLayer(previous);plannerBaseLayerName=layer;plannerBaseSwitchCount++;plannerTopoTileErrors=layer==='topo'?plannerTopoTileErrors:0;if(fallback)plannerFallbackToOsmCount++;if(entry)entry.baseLayer=layer;try{localStorage.setItem('piste-planner-base-layer',layer)}catch{}$('plannerBaseClassic')?.classList.toggle('active',layer==='osm');$('plannerBaseOutdoor')?.classList.toggle('active',layer==='topo');if(center&&Number.isFinite(zoom))map.setView(center,zoom,{animate:false});map.invalidateSize();terrainDebugRefresh();return true}
 function plannerEndpointIcon(label,kind){return L.divIcon({className:`planner-endpoint-icon planner-endpoint-${kind}`,html:`<span>${label}</span>`,iconSize:[34,34],iconAnchor:[17,17]})}
 function redrawPlanner(fit=true){
  if(!plannerMap)return;
@@ -872,6 +899,7 @@ async function loadCoachingHub(){
  coachingShortcutValidated=true;
  renderCoachingSessions();
  updateHomeCoachingState();
+ if(readCoachingArchiveState()&&!document.querySelector('.page.active#missionPage'))setTimeout(()=>{void restoreCoachingArchiveState()},0);
 }
 function updateHomeCoachingState(mode='ready'){
  const state=$('homeCoachingState'),info=$('homeCoachingStateInfo'),action=$('homeCoachingStateAction');
@@ -1677,27 +1705,29 @@ function missionWeather(source){const r=source.row,w=[...source.markers].reverse
 function missionWeatherHistory(source){const snapshots=[...source.actual.map(p=>p.weather_snapshot),...source.markers.map(m=>m.weather)].filter(w=>w?.fetched_at&&Number.isFinite(Date.parse(w.fetched_at))),unique=[...new Map(snapshots.map(w=>[w.fetched_at,w])).values()].sort((a,b)=>Date.parse(a.fetched_at)-Date.parse(b.fetched_at));if(unique.length<2)return '';return '<h3>Évolution météo enregistrée</h3>'+unique.map(w=>missionInfo([['Heure',dateTimeFr(w.fetched_at)],['Température',hasValue(w.temperature_c)?`${w.temperature_c} °C`:null],['Vent',hasValue(w.wind_speed_kmh)?`${w.wind_speed_kmh} km/h`:null],['Humidité',hasValue(w.humidity_pct)?`${w.humidity_pct} %`:null]])).join('')}
 function missionDebriefHtml(source){const d=source.debrief||{},section=(title,text)=>text?`<article class="mission-contribution"><h3>${esc(title)}</h3><p>${esc(text)}</p></article>`:'';if(source.type==='coaching'){const observations=(source.observations||[]).map(o=>`${o.role||'Participant'} : ${o.body||''}`.trim()).filter(Boolean).join('\n\n');return section('Retour du Conducteur',d.driver_notes)+section('Analyse du Coach',[d.coach_notes,d.strengths,d.improvement_area,d.statistics_notes].filter(Boolean).join('\n\n'))+section('Observations des participants',observations)||'<p>Aucune contribution accessible.</p>'}return section('Notes de terrain',[source.row.observation,source.row.comportement,source.row.points_positifs,source.row.difficultes,source.row.axes_travail].filter(Boolean).join('\n\n'))||'<p>Aucune note enregistrée.</p>'}
 function closeMissionDossier(){setMissionMapExpanded(false);missionLoadSequence++;missionSource=null;if(missionMap){missionMap.remove();missionMap=null}if(missionResizeObserver){missionResizeObserver.disconnect();missionResizeObserver=null}if($('missionReport'))$('missionReport').innerHTML='';}
-async function openMissionDossier(type,id){
+async function openMissionDossier(type,id,{restore=false}={}){
  closeMissionDossier();const request=missionLoadSequence;showPage('missionPage');$('missionHeader').innerHTML='<h2>Dossier de mission</h2>';
  document.querySelectorAll('[data-mission-panel]').forEach(p=>{if(!['map','report'].includes(p.dataset.missionPanel))p.innerHTML=''});
  $('missionState').textContent='Chargement des données autorisées…';setMissionTab('summary');
- try{const source=await reportActivitySource(type,id);if(request!==missionLoadSequence)return;if(!source)throw new Error('Piste introuvable.');missionSource=source;renderMissionDossier(source);$('missionState').textContent=''}catch(error){if(request===missionLoadSequence)$('missionState').textContent=`Dossier indisponible : ${error.message||'réessayez'}`}
+ try{const source=await reportActivitySource(type,id);if(request!==missionLoadSequence)return false;if(!source)throw new Error('Piste introuvable.');missionSource=source;renderMissionDossier(source);if(type==='coaching')saveCoachingArchiveState(id,restore?readCoachingArchiveState()?.tab||'summary':'summary');$('missionState').textContent='';return true}catch(error){if(request===missionLoadSequence)$('missionState').textContent=`Dossier indisponible : ${error.message||'réessayez'}`;return false}
 }
 function renderMissionDossier(source){
  const r=source.row,meta=libraryTypeMeta(source.type),roles=source.members.filter(m=>m.invitation_status!=='declined'),general=[['Type',meta.label],['Distance prévue',source.type==='prepared'&&source.planned.length>1?`${fmt(libraryTrackDistanceKm(source.planned),2)} km`:null],['Chien',r.dog_id?dogDisplay(r.dog_id):null],['Lieu',r.commune_depart||r.location_name],['Terrain',r.terrain],...missionMetrics(source)];
  if(source.operationalCall)general.push(['Urgence',source.operationalCall.urgency],['Contexte',source.operationalCall.circumstances],['Terrain',source.operationalCall.terrain_notes],['Dernier point connu',source.operationalCall.last_known_label],['GPX associés',source.gpx.length]);
  if(source.type==='coaching'){general.push(['Recherche',coachingSearchLabelV1045(r)],['Fin de pose',r.track_finished_at?coachingTimestampV1045(r.track_finished_at):null],['Traceur en place',r.traceur_ready_at?coachingTimestampV1045(r.traceur_ready_at):null],['Votre rôle',reportRoleLabel(myCoachingRole(r))],['Visibilité',({normal:'Normal',all:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'})[coachingBlindMode(r)]||null]);for(const role of ['traceur','driver','coach']){const people=roles.filter(m=>m.role===role||(role==='driver'&&m.role==='solo'));if(people.length)general.push([reportRoleLabel(role),people.map(m=>m.display_name||m.user_alias||reportRoleLabel(m.role)).join(', ')])}general.push(['Observateurs',roles.filter(m=>m.role==='observer').length])}
- $('missionHeader').innerHTML=`<h2>${esc(libraryName({...r,_type:source.type}))}</h2><p>${esc(missionDateLabel(r))}</p><span class="mission-status">${esc(meta.label)} · ${esc(missionStatus({...r,_type:source.type}))}</span>`;
+ const coachingArchive=source.type==='coaching';
+ $('missionHeader').innerHTML=`<h2>${esc(libraryName({...r,_type:source.type}))}</h2><p>${esc(missionDateLabel(r))}</p><span class="mission-status">${esc(meta.label)} · ${esc(coachingArchive?'Archive de piste':missionStatus({...r,_type:source.type}))}</span>`;
+ if(coachingArchive){const labels={missionTabSummary:'Résumé',missionTabMap:'Carte',missionTabTimeline:'Statistiques',missionTabAnalysis:'Notes',missionTabReport:'Rapport'};Object.entries(labels).forEach(([id,label])=>setUiText(id,label));$('missionTabDebrief')?.classList.add('hidden');$('missionDebrief')?.classList.add('hidden')}else{$('missionTabDebrief')?.classList.remove('hidden');$('missionDebrief')?.classList.remove('hidden')}
  const archiveScenario=source.type==='coaching'&&source.scenario;const scenarioHtml=archiveScenario?`<section class="mission-scenario-archive"><h3>SCÉNARIO</h3>${source.scenario.scenario_text?`<p>${esc(source.scenario.scenario_text)}</p>`:'<p class="muted">Aucun texte renseigné.</p>'}${source.scenarioPhotos?.length?`<div class="scenario-photos mission-scenario-photos">${source.scenarioPhotos.map((url,index)=>`<img data-scenario-photo-index="${index}" src="${esc(url)}" alt="Photo du scénario ${index+1}" loading="lazy">`).join('')}</div>`:''}<p class="small muted">${source.scenario.locked_at?'Scénario verrouillé après lecture.':source.scenario.upload_status==='ready'?'Scénario enregistré.':'Scénario partiellement disponible.'}</p></section>`:'';$('missionSummary').innerHTML=`<h3>INFORMATIONS GÉNÉRALES</h3>${missionInfo(general)}${missionInfo(missionWeather(source))}${scenarioHtml}<button class="primary" data-mission-go-map>Voir la carte</button>${source.type==='coaching'&&!['ended','cancelled'].includes(r.status)&&coachingArchiveRouting(r).mode==='session'?'<button class="secondary" data-mission-resume>Reprendre la piste</button>':''}`;if(archiveScenario)bindScenarioPhotoViewer($('missionSummary'),source.scenarioPhotos||[]);
  $('missionSummary').querySelector('[data-mission-go-map]').onclick=()=>setMissionTab('map');const resume=$('missionSummary').querySelector('[data-mission-resume]');if(resume)resume.onclick=()=>{showPage('coachingPage');openCoachingSession(r.id)};
- const timeline=missionTimeline(source);$('missionTimeline').innerHTML='<h3>CHRONOLOGIE</h3>'+(timeline.length?'<ol class="mission-timeline">'+timeline.map(e=>`<li><time>${esc(source.type==='coaching'?coachingTimestampV1045(e.at):dateTimeFr(e.at))}</time><b>${esc(e.title)}</b>${e.detail?`<p>${esc(e.detail)}</p>`:''}</li>`).join('')+'</ol>':'<p>Aucun événement horodaté disponible.</p>');
+ const timeline=missionTimeline(source);$('missionTimeline').innerHTML=coachingArchive?`<h3>STATISTIQUES</h3>${missionInfo([...missionMetrics(source),['Distance référence',source.metrics.planned_points>1?`${fmt(source.metrics.planned_distance_km,2)} km`:null],['Écart moyen',source.metrics.deviation.average_m!==null?`${fmt(source.metrics.deviation.average_m,1)} m`:null],['Écart maximal',source.metrics.deviation.max_m!==null?`${fmt(source.metrics.deviation.max_m,1)} m`:null],['Qualité GPS',source.metrics.quality.label],['Arrêts détectés',source.metrics.pauses.length],['Repères',source.markers.length]])}<h3>ÉVÉNEMENTS</h3>${timeline.length?'<ol class="mission-timeline">'+timeline.map(e=>`<li><time>${esc(coachingTimestampV1045(e.at))}</time><b>${esc(e.title)}</b>${e.detail?`<p>${esc(e.detail)}</p>`:''}</li>`).join('')+'</ol>':'<p>Aucun événement horodaté disponible.</p>'}`:'<h3>CHRONOLOGIE</h3>'+(timeline.length?'<ol class="mission-timeline">'+timeline.map(e=>`<li><time>${esc(source.type==='coaching'?coachingTimestampV1045(e.at):dateTimeFr(e.at))}</time><b>${esc(e.title)}</b>${e.detail?`<p>${esc(e.detail)}</p>`:''}</li>`).join('')+'</ol>':'<p>Aucun événement horodaté disponible.</p>');
  const m=source.metrics;$('missionAnalysis').innerHTML=`<h3>ANALYSE OLFACTIVE & CONDITIONS</h3>${missionInfo(missionWeather(source))}${missionWeatherHistory(source)}<p class="mission-estimate">Le couloir olfactif reste une estimation / aide à l’interprétation.</p>${missionInfo([...missionMetrics(source),['Distance référence',m.planned_points>1?`${fmt(m.planned_distance_km,2)} km`:null],['Écart aux points de référence',m.deviation.average_m!==null?`${m.deviation.average_m} m moyen · ${m.deviation.max_m} m maximal`:null],['Intervalles GPS ≥ 1 min',m.pauses.length||null],['Repères',source.markers.length],['Objets',source.markers.filter(x=>x.type==='object').length],['Pertes',source.markers.filter(x=>x.type==='loss').length],['Reprises',source.markers.filter(x=>x.type==='recovery').length]])}<p class="muted">Les intervalles GPS ne prouvent pas un arrêt. Les écarts aux points dépendent de la fréquence d’enregistrement.</p>`;
- $('missionDebrief').innerHTML=missionDebriefHtml(source);$('missionMapKpis').innerHTML=missionInfo([...missionMetrics(source),...missionWeather(source)]);
+ $('missionDebrief').innerHTML=missionDebriefHtml(source);$('missionAnalysis').innerHTML=coachingArchive?`<h3>NOTES</h3>${missionDebriefHtml(source)}`:$('missionAnalysis').innerHTML;$('missionMapKpis').innerHTML=missionInfo([...missionMetrics(source),...missionWeather(source)]);
  $('missionReport').innerHTML='<h3>RAPPORT DE MISSION</h3><p>Consultez le rapport avant de l’exporter. Les données de la mission restent inchangées.</p><button class="primary" data-mission-preview>Voir le rapport</button><div class="mission-report-preview"></div>';
  $('missionReport').querySelector('[data-mission-preview]').onclick=()=>renderMissionReport(source);
  setMissionTab('summary');
 }
-function setMissionTab(tab){if(tab!=='map')setMissionMapExpanded(false);document.querySelectorAll('[data-mission-tab]').forEach(b=>{const active=b.dataset.missionTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1});document.querySelectorAll('[data-mission-panel]').forEach(p=>p.classList.toggle('hidden',p.dataset.missionPanel!==tab));if(tab==='map'&&missionSource)renderMissionMap(missionSource)}
+function setMissionTab(tab){if(tab!=='map')setMissionMapExpanded(false);document.querySelectorAll('[data-mission-tab]').forEach(b=>{const active=b.dataset.missionTab===tab;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1});document.querySelectorAll('[data-mission-panel]').forEach(p=>p.classList.toggle('hidden',p.dataset.missionPanel!==tab));if(missionSource?.type==='coaching')saveCoachingArchiveState(missionSource.row.id,tab);if(tab==='map'&&missionSource)renderMissionMap(missionSource)}
 function missionPhotoUrl(value){return typeof value==='string'&&/^data:image\/(jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(value)?value:null}
 function renderMissionMap(source){
  if(missionMap){missionMap.invalidateSize();return}
@@ -1722,6 +1752,20 @@ async function renderMissionReport(source){
 
 function libraryTrack(x){return x._type==='coaching'?(x.planned_route||[]):x._type==='prepared'?(x.route||[]):(x.track||[])}
 function libraryTrackDistanceKm(points){return Array.isArray(points)?points.slice(1).reduce((sum,p,i)=>sum+hav(points[i],p),0)/1000:0}
+function saveCoachingArchiveState(id,tab='summary'){if(!id)return;try{localStorage.setItem(COACHING_ARCHIVE_STATE_KEY,JSON.stringify({sessionId:id,tab,updatedAt:Date.now()}))}catch{}}
+function readCoachingArchiveState(){try{const state=JSON.parse(localStorage.getItem(COACHING_ARCHIVE_STATE_KEY)||'null');return state?.sessionId?state:null}catch{return null}}
+function clearCoachingArchiveState(){try{localStorage.removeItem(COACHING_ARCHIVE_STATE_KEY)}catch{}}
+async function restoreCoachingArchiveState(){
+ if(coachingArchiveRestoreInFlight||!session?.user?.id)return false;
+ const state=readCoachingArchiveState();if(!state)return false;
+ coachingArchiveRestoreInFlight=true;
+ try{
+  const opened=await openMissionDossier('coaching',state.sessionId,{restore:true});
+  if(!opened||!missionSource){throw new Error('archive introuvable')}
+  setMissionTab(state.tab||'summary');return true;
+ }catch(error){clearCoachingArchiveState();showPage('libraryPage');const toast=$('globalToast')||$('coachingCreateMsg');if(toast){toast.textContent='Cette archive est indisponible. Retour à Mes pistes.';toast.classList.remove('hidden');setTimeout(()=>toast.classList.add('hidden'),3500)}return false}
+ finally{coachingArchiveRestoreInFlight=false}
+}
 /* V10.37 — boîte noire factuelle commune aux trois modules. Les points sont
    toujours lus depuis leur source historique; aucun calcul ne les réécrit. */
 const BLACK_BOX_VERSION=APP_VERSION;
@@ -1890,7 +1934,7 @@ async function duplicateActivity(type,id){
  const {error}=await supabase.from(table).insert(copy);if(error)return alert('Duplication impossible : '+error.message);await Promise.all([refreshMine(),refreshTrainings()]);renderActivityLibrary();
 }
 function coachingArchiveRouting(session){const status=session?.status||null,phase=coachingGlobalPhase(session),members=session?.coaching_members||[],uid=session?.owner_id||session?.user_id||session?.created_by,member=members.find(m=>m.user_id===session?.viewer_user_id)||members.find(m=>m.user_id===session?.owner_id),active=status&&['waiting','live'].includes(status)&&phase==='active';const resumable=!!active&&(!members.length||!!member||session?.owner_id===session?.user_id);return{mode:resumable?'session':'archive',resumable,phase,status}}
-async function openLibraryItem(type,id){if(type==='coaching'){const row=libraryRow(type,id),route=coachingArchiveRouting(row);if(route.mode==='archive')return openCoachingHistoricalDebrief(id);showPage('coachingPage');return openCoachingSession(id)}return openMissionDossier(type,id)}
+async function openLibraryItem(type,id){if(type==='coaching'){const row=libraryRow(type,id),route=coachingArchiveRouting(row);if(route.mode==='archive')return openMissionDossier('coaching',id);showPage('coachingPage');return openCoachingSession(id)}return openMissionDossier(type,id)}
 async function manageLibraryItem(type,id){
  const row=libraryRow(type,id);if(!row||!libraryOwned(row))return;
  if(type==='prepared')return editTrainingRoute(id);
