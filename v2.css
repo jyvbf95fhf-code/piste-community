@@ -1214,11 +1214,11 @@ body.guided-debrief-active .bottom-nav{display:none!important}
 
 /* V10.51.1.2 micro-polish: map controls stay separated from the quickbar and bottom nav. */
 .planner-map-shell .planner-odor-toggle{top:92px;}
-.planner-map-shell .planner-map-floating-distance{left:auto;right:10px;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
+.planner-map-shell .planner-map-floating-distance{left:10px;right:auto;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
 .planner-map-shell .planner-map-floating-actions{bottom:calc(56px + env(safe-area-inset-bottom,0px));}
 @media(max-width:700px){
   .planner-map-shell .planner-odor-toggle{top:88px;}
-  .planner-map-shell .planner-map-floating-distance{right:8px;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
+  .planner-map-shell .planner-map-floating-distance{left:8px;right:auto;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
   .planner-map-shell .planner-map-floating-actions{right:8px;bottom:calc(56px + env(safe-area-inset-bottom,0px));}
 }
 .planner-card #plannerAdvancedArea .planner-mode-guide{display:none!important;}

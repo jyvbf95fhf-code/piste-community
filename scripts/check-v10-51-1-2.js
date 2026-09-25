@@ -45,7 +45,7 @@ check('no new polling',!app.includes('setInterval(setCoachingDebriefStep')&&!app
 check('planner base restore helper',app.includes('ensurePlannerBaseLayerAttached')&&app.includes('restorePlannerMapAfterShow')&&app.includes('plannerMap?.invalidateSize'));
 check('planner base registry reused',app.includes('plannerBaseLayers')&&app.includes('setPlannerBaseLayer'));
 check('planner odor control stays below quickbar',css.includes('.planner-odor-toggle{position:absolute')&&css.includes('top:92px'));
-check('planner distance badge bottom right',css.includes('.planner-map-floating-distance{position:absolute')&&css.includes('right:10px')&&css.includes('left:auto'));
+check('planner distance badge bottom left',css.includes('.planner-map-floating-distance{position:absolute')&&css.includes('left:10px')&&css.includes('right:auto'));
 check('planner fullscreen close clears bottom nav',css.includes('.planner-map-floating-actions{')&&css.includes('bottom:calc(56px + env(safe-area-inset-bottom'));
 check('planner tools remove duplicate creation modes',html.includes('id="plannerToolsGpxBtn"')&&css.includes('#plannerAdvancedArea .planner-mode-guide{display:none'));
 check('planner tools keep GPX and base choices',app.includes("plannerToolsGpxBtn")&&html.includes('id="plannerBaseClassic"')&&html.includes('id="plannerBaseOutdoor"'));
