@@ -28,6 +28,9 @@ try{
 check('coaching preview watcher carries session id',/gpsWatchRegistry\.start\('coaching_preview'[\s\S]*?timeout:15000\},id\)/.test(app));
 check('coaching presence watcher carries session id',/gpsWatchRegistry\.start\('coaching_presence',[\s\S]{0,260}?trackedSessionId/.test(app));
 check('traceur watcher carries session id',/gpsWatchRegistry\.start\('coaching_traceur',[\s\S]{0,260}?s\.id/.test(app));
+check('preview stale session cannot block restart',/gpsWatchRegistry\.session\('coaching_preview'\)!==previewSessionId/.test(app)&&/gpsWatchRegistry\.stop\('coaching_preview'\)/.test(app));
+check('presence stale session cannot block restart',/gpsWatchRegistry\.session\('coaching_presence'\)!==presenceSessionId/.test(app)&&/gpsWatchRegistry\.stop\('coaching_presence'\)/.test(app));
+check('traceur stale session cannot block restart',/gpsWatchRegistry\.session\('coaching_traceur'\)!==s\?\.id/.test(app));
 check('coaching cleanup stops all GPS contexts',/function resetCoachingGpsTransientState\(\)[\s\S]*?stopMany\(\['coaching_presence','coaching_traceur','coaching_preview'\]\)/.test(app));
 check('coaching cleanup clears transient position/error state',/function resetCoachingGpsTransientState\(\)[\s\S]*?coachingOwnPosition=null[\s\S]*?coachingPreviewPosition=null[\s\S]*?coachingLastPointAt=0[\s\S]*?coachingGpsReady=false[\s\S]*?coachingGpsError=''/ .test(app));
 check('new coaching session resets transient GPS state',/async function openCoachingSession\([\s\S]*?clearCoachingRealtime\(\);resetCoachingGpsTransientState\(\)/.test(app));
