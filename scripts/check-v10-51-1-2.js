@@ -44,6 +44,9 @@ check('no duplicated calculation logic',!app.includes('computeCoachingConcordanc
 check('no new polling',!app.includes('setInterval(setCoachingDebriefStep')&&!app.includes('setInterval(coachingDebrief'));
 check('planner base restore helper',app.includes('ensurePlannerBaseLayerAttached')&&app.includes('restorePlannerMapAfterShow')&&app.includes('plannerMap?.invalidateSize'));
 check('planner base registry reused',app.includes('plannerBaseLayers')&&app.includes('setPlannerBaseLayer'));
+check('planner odor control stays below quickbar',css.includes('.planner-odor-toggle{position:absolute')&&css.includes('top:92px'));
+check('planner distance badge bottom right',css.includes('.planner-map-floating-distance{position:absolute')&&css.includes('right:10px')&&css.includes('left:auto'));
+check('planner fullscreen close clears bottom nav',css.includes('.planner-map-floating-actions{')&&css.includes('bottom:calc(56px + env(safe-area-inset-bottom'));
 check('no SQL files changed',execFileSync('git',['diff','--name-only','29d937ff5d794ba54eecc5ec693fa5048957b5e5','HEAD'],{encoding:'utf8'}).split('\n').filter(Boolean).every(file=>!/(^|\/)(supabase|.*\.sql)(\/|$)/.test(file)));
 try{
  const base=execFileSync('git',['show','29d937ff5d794ba54eecc5ec693fa5048957b5e5:app.js'],{encoding:'utf8'});
