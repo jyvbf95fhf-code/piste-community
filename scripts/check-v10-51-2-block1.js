@@ -12,8 +12,8 @@ check('permission helper declared',/gpsPermission/.test(app)&&/async getState\(\
 check('Permissions API feature detected and protected',/navigator\.permissions/.test(app)&&/typeof permissions\.query!=='function'/.test(app)&&/try\{/.test(app));
 check('no global GPS initialization',!/(GPS_STALE_AFTER_MS|gpsDiagnostics|gpsManager|safeResume)/.test(app+html));
 check('watch registry declared',/gpsWatchRegistry/.test(app)&&/start\(/.test(app)&&/stop\(/.test(app)&&/has\(/.test(app));
-check('single watcher guard',/if\(watches\.has\(context\)\)/.test(app));
-check('idempotent clearWatch',/clearWatch\(id\)/.test(app)&&/delete\(context\)/.test(app));
+check('single watcher guard',/const existing=watches\.get\(context\)/.test(app)&&/existing&&existing\.sessionId===sessionId/.test(app));
+check('idempotent clearWatch',/clearWatch\(existing\.id\)/.test(app)&&/delete\(context\)/.test(app));
 check('presence remains membership based',/coaching_members/.test(app));
 check('no GPS diagnostic/touch additions',!html.includes('gpsDiagnostics')&&!css.includes('gps-touch-ui'));
 for(const marker of ['signInWithPassword','onAuthStateChange','createClient','function boot']){
