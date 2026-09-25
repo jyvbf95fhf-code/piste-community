@@ -1225,3 +1225,7 @@ body.guided-debrief-active .bottom-nav{display:none!important}
 .planner-tools-import{display:grid;gap:6px;padding-top:4px;border-top:1px solid rgba(255,255,255,.12)}
 .planner-tools-import b{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#b9d66c}
 .planner-tools-import button{width:100%;min-height:36px}
+
+/* V10.51.2 mobile anti-zoom: application controls only; Leaflet keeps native gestures. */
+:where(button, a, input, select, textarea, summary, [role="button"], [role="tab"], [role="switch"]){touch-action:manipulation;}
+:where(.leaflet-container, .leaflet-container *){touch-action:auto;}
