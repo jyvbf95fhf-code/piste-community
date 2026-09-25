@@ -52,6 +52,7 @@ check('planner tools keep GPX and base choices',app.includes("plannerToolsGpxBtn
 check('planner primary routing modes remain',html.includes('id="routingStreetBtn"')&&html.includes('id="routingTrailBtn"')&&html.includes('id="routingFreeBtn"')&&html.includes('id="plannerDirectBtn"'));
 check('role-aware observation step',app.includes('function canCurrentUserContributeToDebriefObservations')&&app.includes("hasCoachingCapability('coach',s)")&&app.includes("hasCoachingCapability('drive',s)")&&app.includes("mapNext.dataset.debriefNext=canContribute?'observations':'complete'")&&html.includes('id="coachingDebriefMapNext"'));
 check('non-contributors reach completion',app.includes("step==='observations'?'complete'")&&app.includes("completeStep?.classList.toggle('hidden',canContribute)"));
+check('mobile invitation scenario stays contained',html.includes('id="coachingScenarioEnabled"')&&css.includes('.coaching-scenario-preparation{box-sizing:border-box;max-width:100%')&&css.includes('.coaching-scenario-preparation input[type=file]{display:block;width:100%;max-width:100%'));
 check('no SQL files changed',execFileSync('git',['diff','--name-only','29d937ff5d794ba54eecc5ec693fa5048957b5e5','HEAD'],{encoding:'utf8'}).split('\n').filter(Boolean).every(file=>!/(^|\/)(supabase|.*\.sql)(\/|$)/.test(file)));
 try{
  const base=execFileSync('git',['show','29d937ff5d794ba54eecc5ec693fa5048957b5e5:app.js'],{encoding:'utf8'});
