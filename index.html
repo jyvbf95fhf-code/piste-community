@@ -326,12 +326,14 @@
       <button id="missionTabAnalysis" data-mission-tab="analysis" role="tab" aria-controls="missionAnalysis">Analyse</button>
       <button id="missionTabDebrief" data-mission-tab="debrief" role="tab" aria-controls="missionDebrief">Débrief</button>
       <button id="missionTabReport" data-mission-tab="report" role="tab" aria-controls="missionReport">Rapport</button>
+      <button id="missionTabReplay" data-mission-tab="replay" role="tab" aria-controls="missionReplay">Replay</button>
     </nav>
     <p id="missionState" role="status" aria-live="polite"></p>
     <section id="missionSummary" class="card" data-mission-panel="summary" role="tabpanel" aria-labelledby="missionTabSummary"></section>
     <section id="missionMapPanel" class="card hidden" data-mission-panel="map" role="tabpanel" aria-labelledby="missionTabMap"><button id="missionMapExpand" class="secondary" type="button" aria-pressed="false">Agrandir la carte</button><div id="missionMap" aria-label="Carte de la mission"></div><div id="missionMapKpis"></div></section>
     <section id="missionTimeline" class="card hidden" data-mission-panel="timeline" role="tabpanel" aria-labelledby="missionTabTimeline"></section>
     <section id="missionAnalysis" class="card hidden" data-mission-panel="analysis" role="tabpanel" aria-labelledby="missionTabAnalysis"></section>
+    <section id="missionReplay" class="card hidden" data-mission-panel="replay" role="tabpanel" aria-labelledby="missionTabReplay"></section>
     <section id="missionDebrief" class="card hidden" data-mission-panel="debrief" role="tabpanel" aria-labelledby="missionTabDebrief"></section>
     <section id="missionReport" class="card hidden" data-mission-panel="report" role="tabpanel" aria-labelledby="missionTabReport"></section>
   </section>
@@ -708,7 +710,7 @@
           <div id="coachingDebriefMapCanvas" class="coaching-debrief-map-canvas"></div>
           <section class="coaching-debrief-overlay" aria-labelledby="coachingDebriefOverlayTitle"><div class="card-title-row"><div><small class="section-kicker">LÉGENDE</small><h3 id="coachingDebriefOverlayTitle">Traces et repères autorisés</h3></div></div><div id="coachingDebriefOverlayLegend" class="coaching-debrief-overlay-legend" aria-label="Légende de la carte"><span><i class="legend-dot planned"></i> Prévu</span><span><i class="legend-dot traceur"></i> Traceur</span><span><i class="legend-dot driver"></i> Conducteur</span><span><i class="legend-dot external"></i> GPX</span><span><i class="legend-dot markers"></i> Repères</span><span><i class="legend-dot odor"></i> Couloir estimé</span></div><p id="coachingDebriefOverlayState" class="small muted" role="status">Chargement des données autorisées…</p><p id="coachingDebriefMarkerDetail" class="coaching-debrief-marker-detail" aria-live="polite">Touchez un repère sur la carte pour afficher son détail.</p></section>
           <section id="coachingDebriefSpatialAnalysis" class="guided-debrief-analysis" aria-label="Analyse spatiale"><strong>Analyse spatiale</strong><div><span>Concordance <b data-debrief-analysis="concordance">—</b></span><span>Écart moyen <b data-debrief-analysis="average">—</b></span><span>Écart maximal <b data-debrief-analysis="maximum">—</b></span></div></section>
-          <div class="coaching-debrief-step-actions"><button type="button" class="secondary" data-debrief-prev="summary">‹ Synthèse</button><button id="coachingDebriefMapNext" type="button" class="primary" data-debrief-next="observations">Suivant · Observations</button></div>
+          <div class="coaching-debrief-step-actions"><button type="button" class="secondary" data-debrief-prev="summary">‹ Synthèse</button><button id="coachingDebriefReplay" type="button" class="secondary">▶ Voir le Replay</button><button id="coachingDebriefMapNext" type="button" class="primary" data-debrief-next="observations">Suivant · Observations</button></div>
         </section>
         <section id="coachingDebriefStepObservations" class="coaching-debrief-step hidden" data-debrief-step="observations" aria-labelledby="coachingDebriefObservationsStepTitle">
           <div class="guided-debrief-heading"><div><small class="section-kicker">ÉTAPE 3</small><h3 id="coachingDebriefObservationsStepTitle">Observations de l’exercice</h3></div></div>
