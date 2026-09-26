@@ -56,6 +56,9 @@ const route = [
   assert(noWeather.geometry && noWeather.confidence.level === 'low', 'missing weather confidence failed');
   const reconstructed = computeScentCorridor({ ...input, weather: { ...input.weather, provenance: 'reconstructed', source: 'historical-open-meteo' } });
   assert(reconstructed.provenance.weather.wind_speed_kmh === 'reconstructed', 'historical provenance failed');
+  const longRoute = Array.from({ length: 180 }, (_, index) => point(48.1 + index * 0.00001, 7.1 + index * 0.00001, new Date(Date.parse(route[0].recorded_at) + index * 60000).toISOString()));
+  const longResult = computeScentCorridor({ ...input, track: longRoute, currentTime: new Date(Date.parse(route[0].recorded_at) + 3 * 3600000).toISOString() });
+  assert(longResult.centerline.length === 180 && longResult.outerBoundary.every(p => Number.isFinite(p.lat) && Number.isFinite(p.lon)), 'long trace calculation failed');
   assert(getScentCorridorConfidence(input, result).level === result.confidence.level, 'confidence helper mismatch');
   console.log('check-v10-53-scent-corridor: PASS');
 })().catch(error => {
