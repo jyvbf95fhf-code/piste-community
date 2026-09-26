@@ -5,6 +5,10 @@ import { createAdminCentre } from './admin.js?v=1044-1';
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const APP_VERSION='10.49';
+const APP_RELEASE_VERSION='10.51.2';
+const APP_BUILD_FALLBACK='source';
+const APP_BUILD_KEY='piste-app-build-v1';
+let versionUpdate={current:{version:APP_RELEASE_VERSION,build:APP_BUILD_FALLBACK},available:null,deferred:false,loading:false};
 // Fixed presentation palette. Never derived from a stored/user-selected color.
 const TRACE_PALETTE=Object.freeze({planned:'#00D9FF',traceur:'#39FF14',conducteur:'#FF7A00',external:'#E600FF',markers:'#FFE600'});
 const TRACE_LABELS=Object.freeze({planned:'Tracé prévu',traceur:'Traceur',conducteur:'Conducteur',external:'GPX / Externe',markers:'Repères'});
@@ -28,6 +32,12 @@ const RELEASE_SEEN_KEY='piste-last-seen-release-v1';
 const $=id=>document.getElementById(id);
 const setUiText=(id,value)=>{const el=$(id);if(el)el.textContent=value;return el};
 const bindClick=(id,handler)=>{const el=$(id);if(el)el.addEventListener('click',handler);return el};
+function versionUpdateSessionActive(){const coaching=!!activeCoachingSession&&activeCoachingSession.status==='live'&&coachingGlobalPhase(activeCoachingSession)==='active',terrain=typeof hasActiveTerrainSession==='function'&&hasActiveTerrainSession();return coaching||terrain}
+function renderVersionState(){const current=versionUpdate.current||{version:APP_RELEASE_VERSION,build:APP_BUILD_FALLBACK},remote=versionUpdate.available,banner=$('versionUpdateBanner'),message=$('versionUpdateMessage'),now=$('versionUpdateNow'),later=$('versionUpdateLater'),state=$('appVersionState');setUiText('appVersion',`Version ${current.version}`);setUiText('appBuild',`Build ${current.build}`);if(state)state.textContent=remote?'Mise à jour disponible':'Application à jour';if(!banner)return;const active=!!remote&&versionUpdateSessionActive();banner.classList.toggle('hidden',!remote);if(message)message.textContent=active?'Nouvelle version disponible — elle sera appliquée après la session.':'Une mise à jour de PISTE Community est disponible.';if(now){now.disabled=active;now.textContent=active?'Après la session':'Actualiser maintenant';now.setAttribute('aria-label',active?'Actualiser après la session':'Actualiser maintenant')}if(later)later.classList.toggle('hidden',!active)}
+function dismissVersionUpdate(){versionUpdate.deferred=true;$('versionUpdateBanner')?.classList.add('hidden')}
+async function applyVersionUpdate(){if(!versionUpdate.available)return false;if(versionUpdateSessionActive()){versionUpdate.deferred=true;renderVersionState();return false}try{localStorage.setItem(APP_BUILD_KEY,versionUpdate.available.build)}catch{}try{const registration=await navigator.serviceWorker?.getRegistration();await registration?.update();if(registration?.waiting)registration.waiting.postMessage({type:'SKIP_WAITING'});if(window.caches){const keys=await caches.keys();await Promise.all(keys.map(key=>caches.delete(key)))}}catch{}location.reload();return true}
+async function checkAppVersion(){if(versionUpdate.loading)return false;versionUpdate.loading=true;renderVersionState();try{const response=await fetch(`./version.json?ts=${Date.now()}`,{cache:'no-store',headers:{Accept:'application/json'}});if(!response.ok)throw new Error(`HTTP ${response.status}`);const remote=await response.json();if(!remote?.version||!remote?.build)throw new Error('version source invalide');let seen=null;try{seen=localStorage.getItem(APP_BUILD_KEY)}catch{}const currentBuild=seen||remote.build;versionUpdate.current={version:APP_RELEASE_VERSION,build:currentBuild};const newer=remote.version!==APP_RELEASE_VERSION||(!!seen&&seen!==remote.build);versionUpdate.available=newer?remote:null;if(!seen)try{localStorage.setItem(APP_BUILD_KEY,remote.build)}catch{}renderVersionState();return true}catch{renderVersionState();return false}finally{versionUpdate.loading=false}}
+
 /* V10.50 — one registry for app-level synchronization. Terrain channels remain owned by Coaching. */
 const globalLiveSync={
  channels:new Map(),timers:new Map(),listeners:new Map(),inFlight:new Map(),dirtyScopes:new Set(),
@@ -2077,7 +2087,7 @@ async function boot(){
  const bootTasks=[['profil',ensureProfile],['pistes',refreshMine],['entraînements',refreshTrainings],['chiens',loadDogs],['objectifs',loadGoals],['tracés préparés',loadTrainingRoutes],['Coaching',loadCoachingHub],['Admin',()=>adminCentre.refreshAccess()]];
  const results=await Promise.all(bootTasks.map(([label,task])=>Promise.resolve().then(task).then(()=>({ok:true,label}),error=>({ok:false,label,error}))));
  results.forEach(result=>{if(!result.ok)console.error(`Initialisation ${result.label} indisponible`,result.error)});
- updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');if(location.hash==='#admin'||new URLSearchParams(location.search).get('page')==='admin')void adminCentre.open();refreshSocialBadge();renderReleaseNotesHistory();setTimeout(()=>{openTutorial(false);showReleaseNotesIfNeeded()},350);
+ updateNetworkStatus();updateSyncBanner();updateResumeBanner();syncQueue();updateV8Home();installActivityNavigation();showPage('homePage');void checkAppVersion();if(location.hash==='#admin'||new URLSearchParams(location.search).get('page')==='admin')void adminCentre.open();refreshSocialBadge();renderReleaseNotesHistory();setTimeout(()=>{openTutorial(false);showReleaseNotesIfNeeded()},350);
 }
 $('logoutBtn').onclick=async()=>{globalLiveSync.stop();clearVerifiedActiveCoaching();activeCoachingSession=null;await supabase.auth.signOut();location.reload()};
 
@@ -3614,6 +3624,7 @@ function localAiDebriefText(metrics){const m=metrics||coachingAutoMetrics||{};re
 function generateCoachingAiDebrief(){const wrap=$('coachingAiDebriefWrap'),text=$('coachingAiDebriefText');if(!wrap||!text)return;text.value=localAiDebriefText(coachingAutoMetrics);wrap.classList.remove('hidden');setUiText('coachingAiDebriefStatus','Suggestion locale modifiable avant publication.')}
 function setupV1040Coaching(){setupCoachingDriverTrackFinish();setupCoachingFinishHold();bindClick('coachingSearchImmediate',()=>chooseCoachingSearchV1045('immediate'));bindClick('coachingSearchDeferred',()=>chooseCoachingSearchV1045('deferred'));bindClick('traceurInPlaceBtn',markTraceurInPlaceV1045);bindClick('coachingPrimaryActions',event=>{if(event.target.closest?.('#startLayingBtn'))handleCoachingStartLaying()});bindClick('trackReadyBtn',markCoachingTrackReady);bindClick('coachReadyBtn',markCoachReady);bindClick('driverStartBtn',startDriverRun);bindClick('refreshCoachingSessionBtn',refreshActiveCoachingSessionData);bindClick('refreshCoachingWeather',fetchCoachingLiveWeather);bindClick('generateCoachingAi',generateCoachingAiDebrief);const layerPanel=$('coachingLayerPanel');if(layerPanel&&window.matchMedia?.('(max-width:700px)').matches)layerPanel.classList.add('hidden');bindClick('coachingLayerToggle',()=>{const panel=$('coachingLayerPanel'),button=$('coachingLayerToggle');if(!panel||!button)return;const open=!panel.classList.toggle('hidden');button.setAttribute('aria-expanded',String(open))});const toggle=$('observerTrackToggle');if(toggle)toggle.addEventListener('change',()=>{if(activeCoachingSession)localStorage.setItem(`piste-observer-track-${activeCoachingSession.id}`,String(toggle.checked));if(coachingMap)renderCoachingMap()});if(activeCoachingSession)applyV1040RoleSurface()}
 window.PisteTerrainEngine=PisteTerrainEngine;window.PisteTerrainEngineMode=PISTE_TERRAIN_ENGINE_MODE;window.coachingPhase=coachingPhase;window.coachingDbVisibility=coachingDbVisibility;window.refreshActiveCoachingSessionData=refreshActiveCoachingSessionData;
+bindClick('versionUpdateNow',applyVersionUpdate);bindClick('versionUpdateLater',dismissVersionUpdate);
 setupV1040Coaching();
 installTerrainDebug();
 boot();
