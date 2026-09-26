@@ -14,5 +14,7 @@ assert(/replay-actor-cursor/.test(app) && /replay-endpoint/.test(app), 'Les styl
 assert(/replay-current-event/.test(app) && /replay-timeline/.test(app), 'La timeline ou les événements Bloc 4 ont disparu');
 assert(/requestAnimationFrame/.test(fs.readFileSync('replay-player.mjs','utf8')), 'Le moteur Replay doit conserver requestAnimationFrame');
 assert(!/supabase\.from|supabase\.rpc/.test(app.slice(app.indexOf('function renderReplaySurface'), app.indexOf('async function openReplayView'))), 'Le rendu Replay ne doit pas ajouter de requête DB');
-assert(!forbidden.some(re=>re.test(app) || re.test(css)), 'Une technologie 3D/MapLibre interdite est apparue');
+const premiumRuntime = app.slice(0, app.indexOf('function closeReplay3DPrototype'));
+const premiumCss = css.slice(0, css.indexOf('.replay-3d-prototype'));
+assert(!forbidden.some(re=>re.test(premiumRuntime) || re.test(premiumCss)), 'Une technologie 3D/MapLibre interdite est apparue dans le runtime 2D');
 console.log('PASS v10.52 replay premium 2d guard');

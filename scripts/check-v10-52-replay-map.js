@@ -25,7 +25,8 @@ const { pathToFileURL } = require('url');
   assert(/PisteTerrainEngine\.createMap\(mapId/.test(app), 'replay must reuse PisteTerrainEngine');
   assert(/traceMarkerIcon\(['"]D['"]\)|traceMarkerIcon\(['"]A['"]\)/.test(app), 'existing start/end markers must be reused');
   assert(/TRACE_PALETTE\.traceur/.test(app)&&/TRACE_PALETTE\.conducteur/.test(app), 'existing trace colors must be reused');
-  assert(!/maplibre|mapbox|cesium/i.test(app+html+player), '3D engine must not be added in Bloc 2');
+  const replay2dRuntime = app.slice(0, app.indexOf('function closeReplay3DPrototype'));
+  assert(!/maplibre|mapbox|cesium/i.test(replay2dRuntime+html+player), '3D engine must not enter the Bloc 2 runtime');
   assert(!/supabase\.from|supabase\.rpc|createClient/.test(player+model), 'replay modules must not add database access');
   assert(/Replay indisponible pour cette piste/.test(app), 'unavailable replay fallback missing');
 

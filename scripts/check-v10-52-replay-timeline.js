@@ -21,7 +21,8 @@ const { pathToFileURL } = require('url');
   assert(/renderReplaySurface\(dataset,'missionReplay'/.test(app), 'mission Replay must use the shared timeline surface');
   assert(/renderReplaySurface\(dataset\)/.test(app), 'blackbox Replay must retain the shared timeline surface');
   assert(/replay-surface[^\n]*padding-bottom|\.replay-surface[\s\S]*safe-area|replay.*padding-bottom/i.test(css), 'Replay bottom safe-area spacing missing');
-  assert(!/maplibre|mapbox|cesium/i.test(app + playerSource), '3D engine must not enter Bloc 3');
+  const replay2dRuntime = app.slice(0, app.indexOf('function closeReplay3DPrototype'));
+  assert(!/maplibre|mapbox|cesium/i.test(replay2dRuntime + playerSource), '3D engine must not enter the Bloc 3 runtime');
   assert(!/observations|messages|pertes|reprises/i.test(app.slice(app.indexOf('function renderReplaySurface'), app.indexOf('async function openReplayView'))), 'Bloc 4 events must not enter timeline surface');
 
   const { createReplayPlayer } = await import(pathToFileURL(playerPath).href);

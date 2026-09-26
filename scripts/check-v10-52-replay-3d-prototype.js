@@ -1,0 +1,22 @@
+'use strict';
+const fs = require('fs');
+const assert = require('assert');
+const app = fs.readFileSync('app.js','utf8');
+assert(fs.existsSync('replay-3d-prototype.mjs'),'Le module isolé du prototype manque');
+const prototypeSource = fs.readFileSync('replay-3d-prototype.mjs','utf8');
+function ok(value,message){assert(value,message)}
+ok(/replay-3d-prototype\.mjs/.test(app),'Le prototype doit être chargé dans un module isolé');
+ok(/import\(['"]\.\/replay-3d-prototype\.mjs/.test(app),'MapLibre doit être chargé lazy');
+ok(/Prototype 3D/.test(app),'Le point d’entrée Prototype 3D manque');
+ok(/replayPlayer\.subscribe/.test(app),'Le prototype doit partager replayPlayer');
+ok(/WebGL|webgl/i.test(prototypeSource),'Le fallback WebGL manque');
+ok(/destroy|remove/.test(prototypeSource),'Le cycle de destruction MapLibre manque');
+ok(/terrain|raster-dem/.test(prototypeSource),'Le prototype doit configurer un terrain DEM');
+ok(/demotiles\.maplibre\.org/.test(prototypeSource),'Le fournisseur DEM de test manque');
+ok(/replay3d-endpoints/.test(prototypeSource),'Les marqueurs Départ/Arrivée 3D manquent');
+ok(/replayDataset|dataset/.test(app.slice(app.indexOf('function renderReplaySurface'), app.indexOf('async function openReplayView'))),'Le prototype doit recevoir le dataset normalisé');
+ok(!/supabase\.from|supabase\.rpc/.test(prototypeSource),'Le prototype ne doit pas interroger la DB');
+ok(!/setInterval|requestAnimationFrame/.test(prototypeSource),'Le prototype ne doit pas créer une seconde horloge');
+ok(/2D|Replay 2D|replay-surface/.test(app),'La surface 2D doit rester présente');
+ok(!/setBlackBoxTab\(['"]3d/.test(app),'Aucune bascule globale 2D/3D ne doit être ajoutée');
+console.log('check-v10-52-replay-3d-prototype: PASS');
