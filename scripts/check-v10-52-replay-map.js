@@ -22,7 +22,7 @@ const { pathToFileURL } = require('url');
   assert(/sampleReplayTrackAt/.test(player), 'replay player interpolation helper missing');
   assert(/id="blackBoxReplay"/.test(html)&&/data-blackbox-tab="replay"/.test(html), 'Replay entry point missing');
   assert(/replay-surface|replay-map/.test(css), 'replay surface CSS missing');
-  assert(/PisteTerrainEngine\.createMap\(['"]activityReplayMap/.test(app), 'replay must reuse PisteTerrainEngine');
+  assert(/PisteTerrainEngine\.createMap\(mapId/.test(app), 'replay must reuse PisteTerrainEngine');
   assert(/traceMarkerIcon\(['"]D['"]\)|traceMarkerIcon\(['"]A['"]\)/.test(app), 'existing start/end markers must be reused');
   assert(/TRACE_PALETTE\.traceur/.test(app)&&/TRACE_PALETTE\.conducteur/.test(app), 'existing trace colors must be reused');
   assert(!/maplibre|mapbox|cesium/i.test(app+html+player), '3D engine must not be added in Bloc 2');
