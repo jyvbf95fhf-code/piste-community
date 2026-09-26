@@ -8,9 +8,9 @@
 
 | Bloc | Sujet | État |
 |---|---|---|
-| 1 | Normaliseur / modèle replay | **ACTIF — livré dans cette itération** |
-| 2 | Replay 2D carte | Planifié |
-| 3 | Timeline | Planifié |
+| 1 | Normaliseur / modèle replay | **DONE** |
+| 2 | Replay 2D carte | **DONE — livré dans cette itération** |
+| 3 | Timeline | **NEXT** |
 | 4 | Événements synchronisés | Planifié |
 | 5 | Archives / Guided Debrief | Planifié |
 | 6 | Prototype MapLibre 3D | Planifié |
@@ -42,9 +42,20 @@ Les données sont fournies par les lecteurs existants et filtrées avant normali
 - Les entrées source ne sont jamais mutées et aucune altitude/vitesse n’est fabriquée.
 - Fixtures et guard : `scripts/fixtures/v10-52-replay-fixtures.mjs`, `scripts/check-v10-52-replay-model.js`.
 
+## Bloc 2 livré
+
+- Le point d’entrée réutilise l’onglet `Replay` existant de la fiche d’une activité terminée.
+- `reportActivitySource()` reste la source autorisée ; aucune requête de données parallèle n’a été ajoutée.
+- `replay-player.mjs` fournit une horloge commune, `play`, `pause`, `reset`, abonnement d’état et interpolation visuelle.
+- La carte est créée par `PisteTerrainEngine` dans `activityReplayMap`.
+- Les traces complète/jouée, curseurs Traceur/Conducteur et un seul couple Départ/Arrivée de la trace de référence sont affichés.
+- Les sessions non terminées ou incomplètes reçoivent un fallback utilisateur explicite.
+- Le panneau reste sans seek, vitesse, événements timeline, 3D ou MapLibre.
+- Guard : `scripts/check-v10-52-replay-map.js`.
+
 ## Gates suivants
 
 - Ne pas commencer le Bloc 2 avant validation utilisateur du contrat de données.
 - Ne pas ajouter une requête Supabase pour compléter une source manquante.
 - Ne pas exposer le modèle dans une UI avant d’avoir validé les règles de visibilité double aveugle.
-- Le prochain bloc exact est **Bloc 2 — Replay 2D carte**.
+- Le prochain bloc exact est **Bloc 3 — Timeline**.

@@ -1,6 +1,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 import { createAdminCentre } from './admin.js?v=1044-1';
+import { buildReplayDataset } from './replay-model.mjs';
+import { createReplayPlayer } from './replay-player.mjs';
 
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
@@ -341,6 +343,7 @@ let operationalCalls=[],activeOperationalCallId=null,currentOperationalCall=null
 let activeOperationalGpxTracks=[],operationalLiveGpxLayers=[]; // V10.29_OPERATIONAL_GPX
 let plannerRoutingMode='street',plannerRoutingBusy=false,liveMapFollow=true,liveMapProgrammatic=false,plannerSearchTimer=null,plannerSearchController=null,plannerSearchRequestCount=0,plannerSearchSelected=false,plannerWeatherFetchInFlight=null,plannerWeatherAvailable=false,plannerOdorState='off',plannerBaseLayers=null,plannerBaseLayerName='osm',plannerTopoTileErrors=0,plannerFallbackToOsmCount=0,plannerBaseSwitchCount=0;
 let missionSource=null,missionMap=null,missionResizeObserver=null,missionLoadSequence=0;
+let replayMap=null,replayPlayer=null,replayDataset=null,replayUnsubscribe=null,replayLayers=null;
 let fieldMarkers=[],pendingFieldMarker=null,operationalLiveWeather=null,operationalWeatherHistory=[],operationalWeatherTimer=null,operationalWeatherLoading=false,operationalWeatherOdorLayers=[],operationalCorridorVisible=false,operationalCorridorState='off',operationalAgeTimer=null,terrainDisappearanceAt=null,activityLibraryView='list',activityLibraryFilters={type:'all',status:'active',favorite:false,query:''},activityLibrarySelection=[],activityLibrarySelectionMode=false,currentActivityDetail=null,reportCurrentModel=null,reportPhotoUrls=[];
 const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{icon:'📦',label:'Objet déposé'},clue:{icon:'🔎',label:'Indice'},direction:{icon:'↪️',label:'Changement de direction'},crossing:{icon:'🔀',label:'Croisement'},contamination:{icon:'👥',label:'Contamination'},danger:{icon:'⚠️',label:'Danger'},subject:{icon:'👤',label:'Personne recherchée'},note:{icon:'📍',label:'Note'}};
 const LIVE_MARKERS={object:{icon:'📦',label:'Objet'},loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},behavior:{icon:'🐕',label:'Comportement'},direction:{icon:'↗️',label:'Direction'},clue:{icon:'🔎',label:'Indice'},danger:{icon:'⚠️',label:'Danger'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
@@ -1809,8 +1812,64 @@ const TerrainBlackBox={
   summary(metrics){const facts=this.facts(metrics);return facts.length?facts:['Données insuffisantes pour produire une synthèse fiable.']}
 };
 function blackBoxActivity(type,id){const row=libraryRow(type,id);if(!row)return null;const raw=type==='coaching'?[]:TerrainBlackBox.points(row.track||[]),planned=type==='coaching'?TerrainBlackBox.points(row.planned_route||[]):TerrainBlackBox.points(row.route||[]);const metrics=TerrainBlackBox.analyse({raw,planned,source:type,created_at:row.created_at,started_at:row.depart_at||row.started_at,track_finished_at:row.track_finished_at});metrics.facts=TerrainBlackBox.facts(metrics);return{row,raw,planned,metrics}}
-function setBlackBoxTab(tab){document.querySelectorAll('[data-blackbox-tab]').forEach(button=>button.classList.toggle('active',button.dataset.blackboxTab===tab));document.querySelectorAll('[data-blackbox-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.blackboxPanel!==tab));if(tab==='report'&&currentActivityDetail)renderProfessionalReport(currentActivityDetail.type,currentActivityDetail.id)}
-function renderBlackBox(id,type){const data=blackBoxActivity(type,id),summary=$('blackBoxSummary');if(!data||!summary)return;const m=data.metrics,hasGps=m.raw_points>1,age=m.age_ms===null?'Non renseigné':formatExactDuration(m.age_ms),duration=hasGps?formatExactDuration(m.duration_ms):'Non renseigné',active=hasGps?formatExactDuration(m.active_duration_ms):'Non renseigné',distance=hasGps?`${fmt(m.distance_km,2)} km`:'Non renseigné';summary.innerHTML=`<div class="black-box-facts"><span><b>${distance}</b><small>Distance GPS</small></span><span><b>${duration}</b><small>Temps total</small></span><span><b>${active}</b><small>Temps actif</small></span><span><b>${age}</b><small>Âge de piste</small></span></div><div class="black-box-note"><b>Boîte noire factuelle · v${esc(BLACK_BOX_VERSION)}</b><ul>${m.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><small>Les calculs sont reproductibles et ne modifient jamais la trace GPS brute.</small></div>`;const replay=$('blackBoxReplay'),analysis=$('blackBoxAnalysis'),debrief=$('blackBoxDebrief');if(replay)replay.innerHTML=data.raw.length>1?`<div class="black-box-replay"><b>Replay disponible</b><p>${data.raw.length} positions GPS, source <strong>${esc(type)}</strong>. La trace brute est affichée séparément du tracé préparé.</p><button type="button" class="secondary" data-blackbox-replay="${id}">Lire le replay</button></div>`:'<p class="muted">Replay indisponible : trace GPS insuffisante.</p>';if(analysis)analysis.innerHTML=`<div class="black-box-analysis"><p><b>Qualité :</b> ${esc(m.quality.label)}${m.quality.accuracy_m===null?'':` · précision moyenne ${fmt(m.quality.accuracy_m,1)} m`}</p><p><b>Écart au tracé de référence :</b> ${m.deviation.average_m===null?'non calculable':`${fmt(m.deviation.average_m,1)} m en moyenne, ${fmt(m.deviation.max_m,1)} m maximum`}</p><p><b>Événements proposés :</b> ${m.pauses.length?'pauses à confirmer':'aucune hypothèse automatique'}. Toute proposition reste modifiable et soumise à validation humaine.</p></div>`;if(debrief)debrief.innerHTML=type==='coaching'?'<p class="muted">Le débrief Coaching conserve ses droits de rôle et son double aveugle. Ouvrez la session pour le modifier.</p>':'<p class="muted">Aucun débrief intelligent externe : la synthèse factuelle locale est disponible dans Résumé et Analyse.</p>';setBlackBoxTab('summary')}
+function replayTimeLabel(milliseconds){
+ const total=Math.max(0,Math.round(Number(milliseconds)||0)/1000),minutes=Math.floor(total/60),seconds=Math.floor(total%60);
+ return `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+}
+function destroyReplaySurface(){
+ replayUnsubscribe?.();replayUnsubscribe=null;replayPlayer?.destroy();replayPlayer=null;replayDataset=null;
+ if(replayMap){try{PisteTerrainEngine.destroyMap('activityReplayMap')}catch{}replayMap=null}
+}
+function replaySourceDataset(source){
+ return buildReplayDataset({traceur:source.trace,driver:source.actual,planned:source.planned,markers:source.markers,observations:source.observations,messages:source.messages});
+}
+function replayPointsAtOrBefore(points,time){return (Array.isArray(points)?points:[]).filter(point=>Number.isFinite(point.timestamp)&&point.timestamp<=time)}
+function updateReplayVisual(state){
+ const map=PisteTerrainEngine.map('activityReplayMap');if(!map||!replayDataset)return;
+ for(const actor of ['traceur','driver']){
+  const position=state.positions?.[actor],cursor=replayLayers?.cursors?.[actor],played=replayLayers?.played?.[actor];
+  if(cursor){if(position)cursor.setLatLng([position.lat,position.lon]);cursor.setOpacity?.(position?1:0)}
+  if(played)played.setLatLngs(replayPointsAtOrBefore(replayDataset.tracks[actor],state.currentTime).map(point=>[point.lat,point.lon]));
+ }
+ setUiText('replayElapsed',replayTimeLabel(state.currentTime-(replayDataset.capabilities.startTimestamp||state.currentTime)));
+ setUiText('replayDuration',replayTimeLabel(replayDataset.capabilities.durationMs));
+ const button=$('replayPlayPause');if(button){button.textContent=state.playing?'❚❚':'▶';button.setAttribute('aria-label',state.playing?'Mettre le replay en pause':'Lire le replay')}
+ setUiText('replayState',state.playing?'Lecture en cours':state.currentTime>=replayDataset.capabilities.endTimestamp?'Replay terminé':'Prêt à lire');
+}
+function renderReplaySurface(dataset){
+ const panel=$('blackBoxReplay');if(!panel)return;
+ destroyReplaySurface();replayDataset=dataset;
+ panel.innerHTML=`<div class="replay-surface"><div class="replay-surface-header"><div><small class="section-kicker">REPLAY 2D</small><h3>Replay de la piste</h3><p id="replayState" class="small muted" role="status">Prêt à lire</p></div><button id="replayBackToSummary" type="button" class="secondary">‹ Résumé</button></div><div id="activityReplayMap" class="replay-map" aria-label="Carte du replay"></div><div class="replay-controls" role="group" aria-label="Contrôles du replay"><output><span id="replayElapsed">00:00</span> / <span id="replayDuration">00:00</span></output><button id="replayReset" type="button" class="secondary" aria-label="Revenir au début du replay">⏮</button><button id="replayPlayPause" type="button" class="primary" aria-label="Lire le replay">▶</button></div><div class="replay-legend" aria-label="Acteurs visibles">${dataset.capabilities.hasTraceur?'<span><i class="replay-dot traceur"></i>Traceur</span>':''}${dataset.capabilities.hasDriver?'<span><i class="replay-dot driver"></i>Conducteur</span>':''}</div></div>`;
+ replayMap=PisteTerrainEngine.createMap('activityReplayMap',{zoomControl:true});
+ const all=[...dataset.tracks.traceur,...dataset.tracks.driver,...dataset.tracks.planned];
+ replayLayers={full:{},played:{},cursors:{},endpoints:[]};
+ for(const [actor,color,label] of [['traceur',TRACE_PALETTE.traceur,'T'],['driver',TRACE_PALETTE.conducteur,'C']]){
+  const points=dataset.tracks[actor];if(!points?.length)continue;
+  replayLayers.full[actor]=PisteTerrainEngine.setTrace('activityReplayMap',`replay-${actor}-full`,points,{weight:3,color,opacity:.42,lineCap:'round',lineJoin:'round',dashArray:'6 8'});
+  replayLayers.played[actor]=PisteTerrainEngine.setTrace('activityReplayMap',`replay-${actor}-played`,[],{weight:6,color,opacity:1,lineCap:'round',lineJoin:'round'});
+  replayLayers.cursors[actor]=PisteTerrainEngine.createMarker('activityReplayMap',`replay-${actor}-cursor`,[points[0].lat,points[0].lon],{icon:traceMarkerIcon(label),zIndexOffset:1200});
+ }
+ const referenceActor=dataset.tracks.driver?.length?'driver':'traceur',reference=dataset.tracks[referenceActor]||[];
+ if(reference.length){const first=reference[0],last=reference.at(-1);replayLayers.endpoints.push(PisteTerrainEngine.createMarker('activityReplayMap','replay-endpoints',[first.lat,first.lon],{icon:traceMarkerIcon('D'),zIndexOffset:1000}),PisteTerrainEngine.createMarker('activityReplayMap','replay-endpoints',[last.lat,last.lon],{icon:traceMarkerIcon('A'),zIndexOffset:1000}));}
+ if(all.length)PisteTerrainEngine.fitTrack('activityReplayMap',all,{padding:[28,28],maxZoom:16});
+ replayPlayer=createReplayPlayer(dataset);replayUnsubscribe=replayPlayer.subscribe(updateReplayVisual);
+ $('replayPlayPause').onclick=()=>replayPlayer?.isPlaying?replayPlayer.pause():replayPlayer?.play();
+ $('replayReset').onclick=()=>replayPlayer?.reset();
+ $('replayBackToSummary').onclick=()=>setBlackBoxTab('summary');
+ setTimeout(()=>PisteTerrainEngine.invalidateSize('activityReplayMap'),80);
+}
+async function openReplayView(type,id){
+ const panel=$('blackBoxReplay');if(!panel)return false;setBlackBoxTab('replay');panel.innerHTML='<p class="muted">Préparation du replay…</p>';
+ try{
+  const source=await reportActivitySource(type,id);if(currentActivityDetail?.id!==id)return false;
+  const dataset=replaySourceDataset(source);
+  if(!dataset.capabilities.replayAvailable){panel.innerHTML='<div class="black-box-replay"><b>Replay indisponible pour cette piste</b><p>Données temporelles incomplètes pour cette session.</p></div>';return false}
+  renderReplaySurface(dataset);return true;
+ }catch(error){destroyReplaySurface();panel.innerHTML=`<div class="black-box-replay"><b>Replay indisponible pour cette piste</b><p>Les données autorisées ne peuvent pas être chargées.</p></div>`;return false}
+}
+function setBlackBoxTab(tab){if(tab!=='replay')destroyReplaySurface();document.querySelectorAll('[data-blackbox-tab]').forEach(button=>button.classList.toggle('active',button.dataset.blackboxTab===tab));document.querySelectorAll('[data-blackbox-panel]').forEach(panel=>panel.classList.toggle('hidden',panel.dataset.blackboxPanel!==tab));if(tab==='report'&&currentActivityDetail)renderProfessionalReport(currentActivityDetail.type,currentActivityDetail.id)}
+function renderBlackBox(id,type){const data=blackBoxActivity(type,id),summary=$('blackBoxSummary');if(!data||!summary)return;const replayEligible=type==='coaching'?data.row?.status==='ended':!['active','live','in_progress','ongoing'].includes(data.row?.status)&&!!(data.raw.length>1||data.row?.track_finished_at||data.row?.ended_at||data.row?.finished_at||['finished','ended','completed','closed'].includes(data.row?.status));document.querySelector('[data-blackbox-tab="replay"]')?.classList.toggle('hidden',!replayEligible);const m=data.metrics,hasGps=m.raw_points>1,age=m.age_ms===null?'Non renseigné':formatExactDuration(m.age_ms),duration=hasGps?formatExactDuration(m.duration_ms):'Non renseigné',active=hasGps?formatExactDuration(m.active_duration_ms):'Non renseigné';summary.innerHTML=`<div class="black-box-facts"><span><b>${hasGps?`${fmt(m.distance_km,2)} km`:'Non renseigné'}</b><small>Distance GPS</small></span><span><b>${esc(duration)}</b><small>Temps total</small></span><span><b>${esc(active)}</b><small>Temps actif</small></span><span><b>${esc(age)}</b><small>Âge de piste</small></span></div><div class="black-box-note"><b>Boîte noire factuelle · v${esc(BLACK_BOX_VERSION)}</b><ul>${m.facts.map(f=>`<li>${esc(f)}</li>`).join('')}</ul><small>Les calculs sont reproductibles et ne modifient jamais la trace GPS brute.</small></div>`;const replay=$('blackBoxReplay'),analysis=$('blackBoxAnalysis'),debrief=$('blackBoxDebrief');if(replay){replay.innerHTML=replayEligible?`<div class="black-box-replay"><b>Replay disponible</b><p>Parcourez la trace enregistrée sur la carte 2D.</p><button type="button" class="primary" data-blackbox-replay="${id}" data-blackbox-replay-type="${type}">▶ Replay de la piste</button></div>`:'<div class="black-box-replay"><b>Replay indisponible pour cette piste</b><p>La piste terminée ne contient pas assez de données temporelles.</p></div>'}if(analysis)analysis.innerHTML=`<div class="black-box-analysis"><p><b>Qualité :</b> ${esc(m.quality.label)}${m.quality.accuracy_m===null?'':` · précision moyenne ${fmt(m.quality.accuracy_m,1)} m`}</p><p><b>Écart au tracé de référence :</b> ${m.deviation.average_m===null?'non calculable':`${fmt(m.deviation.average_m,1)} m en moyenne, ${fmt(m.deviation.max_m,1)} m maximum`}</p><p><b>Événements proposés :</b> ${m.pauses.length?'pauses à confirmer':'aucune hypothèse automatique'}. Toute proposition reste modifiable et soumise à validation humaine.</p></div>`;if(debrief)debrief.innerHTML=type==='coaching'?'<p class="muted">Le débrief Coaching conserve ses droits de rôle et son double aveugle. Ouvrez la session pour le modifier.</p>':'<p class="muted">Aucun débrief intelligent externe : la synthèse factuelle locale est disponible dans Résumé et Analyse.</p>';setBlackBoxTab('summary')}
+
 
 const REPORT_SECTION_ORDER=['context','team','measured','weather','events','timeline','calculations','observations','interpretation','strengths','difficulties','improvements','conclusion'];
 function reportDraftKey(type,id){return `piste-report-draft-v10_38-${session?.user?.id||'local'}-${type}-${id}`}
@@ -3440,7 +3499,7 @@ bindClick('libraryNewCoaching',()=>{showPage('coachingPage');setCoachingStage('p
 bindClick('libraryNewRoute',()=>openTerrainPlanner('library'));
 document.addEventListener('click',e=>{const target=e.target.closest('[data-library-filter]');if(!target)return;activityLibraryFilters.type=target.dataset.libraryFilter;$('libraryType').value=activityLibraryFilters.type;showPage('libraryPage')});
 document.querySelectorAll('[data-blackbox-tab]').forEach(button=>button.addEventListener('click',()=>setBlackBoxTab(button.dataset.blackboxTab)));
-document.addEventListener('click',event=>{const replay=event.target.closest('[data-blackbox-replay]');if(replay){event.preventDefault();setUiText('blackBoxReplay','Replay local prêt : utilisez la chronologie de la session pour parcourir les événements.')}});
+document.addEventListener('click',event=>{const replay=event.target.closest('[data-blackbox-replay]');if(replay){event.preventDefault();openReplayView(replay.dataset.blackboxReplayType||currentActivityDetail?.type,replay.dataset.blackboxReplay)}});
 bindClick('resumeActiveSessionBtn',resumeActiveSession);bindClick('activeSessionDock',resumeActiveSession);
 document.querySelectorAll('[data-planner-mode]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-planner-mode]').forEach(x=>x.classList.toggle('active',x===b));if(b.dataset.plannerMode==='follow')togglePlannerFollow();else if(b.dataset.plannerMode==='gpx'){$('chooseGpxBtn').click();setPlannerSection('assistant')}else if(b.dataset.plannerMode==='draft'){const draft=readPlannerDraft();if(draft)initPlanner(draft);else $('plannerMsg').textContent='Aucun brouillon enregistré.'}else setPlannerSection('map')});
 
