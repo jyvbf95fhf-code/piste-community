@@ -6,6 +6,7 @@ const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const APP_VERSION='10.49';
 /* V10.51.2 update-detection validation build */
+/* V10.51.2 update-detection validation build B */
 const APP_RELEASE_VERSION='10.51.2';
 const APP_BUILD_FALLBACK='source';
 const APP_PREVIEW_LATEST_ORIGIN='https://stats-piste-community-v10-51-1-test.vercel.app';
