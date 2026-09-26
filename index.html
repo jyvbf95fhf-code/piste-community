@@ -70,6 +70,7 @@
 </div>
 
 <section id="appScreen" class="hidden">
+  <div id="versionUpdateBanner" class="version-update-banner hidden" role="status" aria-live="polite"><div><b id="versionUpdateTitle">NOUVELLE VERSION DISPONIBLE</b><span id="versionUpdateMessage">Une mise à jour de PISTE Community est disponible.</span></div><div class="version-update-actions"><button id="versionUpdateNow" class="primary" type="button">Actualiser maintenant</button><button id="versionUpdateLater" class="secondary hidden" type="button">Plus tard</button></div></div>
   <section id="homePage" class="page active">
     <div class="v8-hero">
       <div class="hero-brand"><span id="heroDogPhoto" class="hero-dog hero-dog-photo">🐕</span><div><small>PISTE COMMUNITY</small><b id="helloUser">Bonjour</b><span id="heroDogLine">Prêt pour le terrain.</span></div></div>
@@ -663,10 +664,10 @@
       <button id="coachingDriverTrackFinish" class="primary hidden" type="button">Terminer la piste<small>Maintenir 2 secondes pour accéder au débrief</small></button>
       <div id="coachingPrimaryActions" class="coaching-primary-actions" aria-label="Commandes principales de la session">
         <div><button id="startCoachingLive" class="primary" type="button">Démarrer la session</button><small id="startCoachingReason" aria-live="polite"></small></div>
-        <div><button id="startLayingBtn" class="primary hidden" type="button">Je pars tracer</button><small id="layingStartReason" aria-live="polite"></small></div>
+        <div><button id="startLayingBtn" class="primary hidden" type="button">Démarrer le tracé</button><small id="layingStartReason" aria-live="polite"></small></div>
         <div><button id="finishLayingBtn" class="danger-button hidden" type="button">Maintenir 2 s · Fin de pose</button><small id="layingFinishReason" aria-live="polite"></small></div>
         <div><button id="coachReadyBtn" class="primary hidden" type="button">Je suis en place</button><small id="coachReadyReason" aria-live="polite"></small></div>
-        <div><button id="trackReadyBtn" class="primary hidden" type="button">Piste tracée</button><small id="trackReadyReason" aria-live="polite"></small></div>
+        <div><button id="trackReadyBtn" class="primary hidden" type="button">Terminer le tracé</button><small id="trackReadyReason" aria-live="polite"></small></div>
         <div><button id="traceurInPlaceBtn" class="primary hidden" type="button">Traceur en place</button></div>
         <div><button id="driverStartBtn" class="primary hidden" type="button">Démarrer</button><small id="driverStartReason" aria-live="polite"></small></div>
         <div><button id="toggleCoachingGps" class="secondary" type="button">Démarrer le suivi GPS</button><small id="coachingGpsReason" aria-live="polite"></small></div>
@@ -767,6 +768,7 @@
       <div class="card profile-card">
         <div class="profile-avatar">🐕</div>
         <div><small>MON PROFIL</small><h2 id="profilePseudo">Pisteur</h2><p class="muted small">Profil anonyme PISTE Community</p></div>
+        <div class="app-version-card" aria-live="polite"><b>PISTE Community</b><span id="appVersion">Version 10.51.2</span><span id="appBuild">Build source</span><small id="appVersionState">Vérification de la version…</small></div>
       </div>
       <div class="card">
         <div class="card-title-row"><h3>Mes chiens</h3><button id="showDogFormBtn" class="secondary" type="button">+ Ajouter un chien</button></div>

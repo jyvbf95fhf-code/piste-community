@@ -1,0 +1,22 @@
+'use strict';
+const fs=require('fs');
+const assert=require('assert');
+const app=fs.readFileSync('app.js','utf8');
+const html=fs.readFileSync('index.html','utf8');
+function fn(name){const m=app.match(new RegExp(`function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`));assert(m,`missing ${name}`);let i=m.index+m[0].length,d=1;while(i<app.length&&d){if(app[i]==='{')d++;else if(app[i]==='}')d--;i++}return app.slice(m.index,i)}
+const surface=fn('applyV1040RoleSurface');
+const transition=fn('coachingTransitionV1040');
+const start=fn('startCoachingLaying');
+const finish=fn('markCoachingTrackReady');
+const recenter=fn('locateCoachingUser');
+assert(surface.includes('Démarrer le tracé')&&surface.includes('Terminer le tracé'),'Traceur command labels must use tracé');
+assert(html.includes('>Démarrer le tracé</button>')&&html.includes('>Terminer le tracé</button>'),'initial Traceur labels must use tracé');
+assert(!surface.includes('Démarrer la piste')&&!surface.includes('Terminer la piste'),'old Traceur command labels remain');
+assert(/Number\.isFinite\(lat\)/.test(recenter)&&/Number\.isFinite\(lon\)/.test(recenter),'Recenter must validate coordinates');
+assert(/Position GPS indisponible/.test(recenter),'Recenter must provide unavailable-position feedback');
+assert(/invalidateSize/.test(recenter)&&/setView/.test(recenter),'Recenter must size and move the active map');
+assert(app.includes("bindClick('recenterCoachingMap',locateCoachingUser)"),'Recenter handler must remain bound');
+assert(transition.includes('updateCoachingPrimaryActions()')&&transition.includes('applyV1040RoleSurface()'),'workflow transition must refresh UI immediately');
+assert(start.includes('startTraceurTracking()')&&finish.includes('stopTraceurTracking()'),'Traceur start/finish handlers must preserve GPS lifecycle');
+assert(app.includes('coachingOwnPosition')&&app.includes('coachingPreviewPosition'),'Recenter must use existing GPS state');
+console.log('check-v10-51-2-finishes: PASS');
