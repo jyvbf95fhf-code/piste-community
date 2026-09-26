@@ -9,7 +9,7 @@ const actor=fn('isCurrentUserLayingActor');
 const map=fn('renderMissionMap');
 assert(/role=myCoachingRole\(s\)/.test(surface),'role surface must use resolved coaching role');
 assert(/role==='traceur'/.test(actor)&&/accepted.*active/.test(actor),'traceur actor must be accepted/active');
-assert(surface.includes('Démarrer la piste')&&surface.includes('Terminer la piste'),'traceur labels missing');
+assert(surface.includes('Démarrer le tracé')&&surface.includes('Terminer le tracé'),'traceur labels missing');
 assert(surface.includes('startCoachingLaying')||app.includes('function startCoachingLaying'),'existing start handler missing');
 assert(app.includes('function startTraceurTracking')&&app.includes('function markCoachingTrackReady'),'existing trace workflow missing');
 assert(map.includes("traceMarkerIcon('D')")&&map.includes("traceMarkerIcon('A')"),'archive must reuse live D/A markers');
