@@ -12,6 +12,7 @@ assert(catalog.includes("provider:'esri-world-imagery'"), 'Esri provider missing
 assert(catalog.includes('server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/'), 'Esri tile URL missing from central catalog');
 assert(catalog.includes('previewOnly:true') && catalog.includes('productionAllowed:false'), 'Satellite must be Preview-only');
 assert(app.includes('const PISTE_SATELLITE_PREVIEW_ENABLED=TERRAIN_ENGINE_PREVIEW_OR_DEV'), 'Satellite Preview gate missing');
+assert(app.includes("location.hostname!=='stats-piste-community.vercel.app'"), 'Production hostname must remain outside Satellite Preview gate');
 assert(app.includes('const satelliteEnabled=PISTE_SATELLITE_PREVIEW_ENABLED'), 'Satellite layer is not gated by environment');
 assert(app.includes('satelliteEnabled?L.tileLayer'), 'Satellite layer construction is not controlled');
 assert(html.includes('id="plannerBaseSatellite"'), 'Planner Satellite control missing');
