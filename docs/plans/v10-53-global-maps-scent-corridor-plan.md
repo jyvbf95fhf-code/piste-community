@@ -45,7 +45,7 @@
 
 ### Bloc 2 — Satellite global contrôlé
 
-**État : EN VALIDATION PREVIEW.** Esri World Imagery est déclaré dans le catalogue central, activé seulement sur les environnements Preview/dev, avec attribution centralisée, fallback après trois erreurs de tuiles et sélecteurs cohérents Planner/Coaching/OPS/Replay. La Production ne crée pas la couche Satellite et reste sur Classique/Topo. Aucun secret, compte ou suivi de quota réel n'est ajouté.
+**État : DONE en Preview uniquement.** Esri World Imagery est déclaré dans le catalogue central, activé seulement sur les environnements Preview/dev, avec attribution centralisée, fallback après trois erreurs de tuiles et sélecteurs cohérents Planner/Coaching/OPS/Replay. La Production ne crée pas la couche Satellite et reste sur Classique/Topo. Aucun secret, compte ou suivi de quota réel n'est ajouté.
 
 **Fichiers livrés :** `map-base-layers.mjs`, `app.js`, `index.html`, `scripts/check-v10-53-satellite-preview.js`.
 

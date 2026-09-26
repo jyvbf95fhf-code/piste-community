@@ -25,7 +25,7 @@
 | Bloc | Sujet | État |
 |---|---|---|
 | 1 | Contrat moteur global de fonds | DONE |
-| 2 | Satellite global Preview contrôlé | EN VALIDATION PREVIEW — Esri Preview-only, fallback, guard |
+| 2 | Satellite global Preview contrôlé | DONE — Esri Preview-only, fallback, guard |
 | 3 | Moteur CouloirOlfactif natif | planifié |
 | 4 | Coaching live | planifié |
 | 5 | OPS / Entraînement live | planifié |
@@ -38,7 +38,7 @@
 ## Règles de non-développement
 
 - Bloc 1 : contrat cartographique et guard livrés.
-- Bloc 2 : implémentation prête, validation Preview restante ; Esri World Imagery uniquement en Preview/dev, jamais en Production.
+- Bloc 2 : Esri World Imagery validé sur Preview, uniquement en Preview/dev, jamais en Production.
 - Satellite 3D reste en développement.
 - Aucun changement Supabase, SQL, RLS, Auth, boot ou GPS.
 - Aucun changement main ou Production.
@@ -46,4 +46,4 @@
 
 ## Prochaine étape
 
-Prochaine étape après validation : ouvrir uniquement le Bloc 3 — moteur CouloirOlfactif natif.
+Prochaine étape : ouvrir uniquement le Bloc 3 — moteur CouloirOlfactif natif.
