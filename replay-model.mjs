@@ -53,7 +53,7 @@ function firstValue(row, keys) {
 }
 
 function timestampValue(row, timestampKey) {
-  if (timestampKey && row?.[timestampKey] !== undefined) return row[timestampKey];
+  if (timestampKey) return row?.[timestampKey] ?? null;
   return firstValue(row, TIMESTAMP_KEYS);
 }
 
@@ -127,6 +127,7 @@ export function normalizeReplayEvent(row, options = {}) {
     type: row.type ?? row.event_type ?? row.marker_type ?? options.type ?? 'event',
     actor: row.actor ?? options.actor ?? null,
     source: row.source ?? options.source ?? null,
+    timestampSource: options.timestampKey || TIMESTAMP_KEYS.find(key => row[key] !== undefined && row[key] !== null && row[key] !== '') || null,
     raw: row
   };
   const lat = coordinateFrom(row, 'lat', 'latitude');
@@ -150,9 +151,9 @@ function normalizeTrack(value, actor, source) {
   return normalizeReplayPoints(rowsFor(value), { actor, source });
 }
 
-function normalizeEventRows(rows, source, type) {
+function normalizeEventRows(rows, source, type, timestampKey = null) {
   return (Array.isArray(rows) ? rows : [])
-    .map(row => normalizeReplayEvent(row, { source, type }))
+    .map(row => normalizeReplayEvent(row, { source, type, timestampKey }))
     .filter(Boolean);
 }
 
@@ -181,10 +182,16 @@ export function buildReplayDataset(sources = {}) {
   const eventRows = [
     ...normalizeEventRows(sources.events, 'events'),
     ...normalizeEventRows(sources.markers, 'coaching_markers'),
-    ...normalizeEventRows(sources.observations, 'coaching_debrief_observations', 'observation'),
+    // Debrief observations are post-session records unless they carry an explicit
+    // recorded_at field. Never turn created_at into a fake terrain timestamp.
+    ...normalizeEventRows(sources.observations, 'coaching_debrief_observations', 'observation', 'recorded_at'),
     ...normalizeEventRows(sources.messages, 'coaching_messages', 'message')
   ];
-  eventRows.sort((a, b) => a.timestamp - b.timestamp);
+  const uniqueEvents = [...new Map(eventRows.map(event => [
+    `${event.source || ''}:${event.id || ''}:${event.timestamp}:${event.type}:${event.lat ?? ''}:${event.lon ?? ''}`,
+    event
+  ])).values()];
+  uniqueEvents.sort((a, b) => a.timestamp - b.timestamp);
   const capabilities = {
     hasTraceur: trackHasPoints(traceur),
     hasDriver: trackHasPoints(driver),
@@ -199,7 +206,7 @@ export function buildReplayDataset(sources = {}) {
   };
   return {
     tracks: { traceur: traceur.points, driver: driver.points, planned: planned.points, external: external.points },
-    events: eventRows,
+    events: uniqueEvents,
     capabilities
   };
 }

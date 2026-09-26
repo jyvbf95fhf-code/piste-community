@@ -63,6 +63,20 @@ const { pathToFileURL } = require('url');
   assert.equal(partial.capabilities.replayUnavailableReason, 'incomplete_timestamps');
   assert.equal(partial.events.length, 1, 'timestamped historical events should remain available');
 
+  const postDebriefOnly = buildReplayDataset({
+    driver: fixtures.traceurOnly,
+    observations: [{ id: 'after', body: 'post-session note', created_at: '2026-01-01T10:00:06Z' }]
+  });
+  assert.equal(postDebriefOnly.events.length, 0, 'created_at-only observations must not become terrain events');
+  const duplicateEvents = buildReplayDataset({
+    driver: fixtures.traceurOnly,
+    markers: [
+      { id: 'same', marker_type: 'loss', recorded_at: '2026-01-01T10:00:02Z' },
+      { id: 'same', marker_type: 'loss', recorded_at: '2026-01-01T10:00:02Z' }
+    ]
+  });
+  assert.equal(duplicateEvents.events.length, 1, 'duplicate events should be collapsed');
+
   console.log('check-v10-52-replay-model: PASS');
 })().catch(error => {
   console.error(`check-v10-52-replay-model: FAIL — ${error.message}`);

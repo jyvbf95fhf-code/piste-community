@@ -43,7 +43,7 @@ export const events = {
     { id: 'm-recovery', lat: 48.1, lon: 7.1, marker_type: 'recovery', created_at: '2026-01-01T10:00:08Z' }
   ],
   observations: [
-    { id: 'o-1', text: 'observation', created_at: '2026-01-01T10:00:06Z' }
+    { id: 'o-1', text: 'observation', recorded_at: '2026-01-01T10:00:06Z' }
   ],
   messages: [
     { id: 'msg-1', body: 'message', created_at: '2026-01-01T10:00:07Z' }
