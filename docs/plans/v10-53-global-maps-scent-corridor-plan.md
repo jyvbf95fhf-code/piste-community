@@ -35,11 +35,13 @@
 
 **Interface cible :** `MapBaseLayerRegistry.describe()`, `createForMap(mapId)`, `set(mapId, name)`, `fallback(mapId, reason)`, `snapshotUsage()`.
 
-- [ ] Écrire les tests rouges sur trois fonds logiques, attribution obligatoire, exclusivité, conservation viewport et absence de requête DB.
-- [ ] Recenser les cartes Engine/Legacy et brancher un catalogue sans déplacer les couches métier.
-- [ ] Ajouter état de santé, erreurs et hook de consommation sans télémétrie utilisateur identifiable.
-- [ ] Vérifier Classique/Topo sur Planner, Coaching, OPS, mission, historique, global et Replay.
-- [ ] Garder le prototype 3D hors catalogue global.
+- [x] Écrire les tests rouges sur trois fonds logiques, attribution obligatoire, exclusivité, conservation viewport et absence de requête DB.
+- [x] Recenser les cartes Engine/Legacy et brancher un catalogue sans déplacer les couches métier.
+- [x] Ajouter état de disponibilité, fallback et hook de changement sans télémétrie utilisateur identifiable.
+- [x] Vérifier Classique/Topo sur Planner, Coaching, OPS, mission, historique, global et Replay.
+- [x] Garder le prototype 3D hors catalogue global.
+
+**État : DONE.** Le catalogue est dans `map-base-layers.mjs`, les méthodes de contrat sont exposées par `PisteTerrainEngine`, les URLs/attributions sont centralisées et le guard `scripts/check-v10-53-global-map-layers.js` couvre les alias, le fallback, l'exclusivité et la non-régression Replay. Satellite reste déclaré mais opt-in par carte.
 
 ### Bloc 2 — Satellite global contrôlé
 
@@ -95,7 +97,16 @@
 - [ ] Séparer brut, dérivé et interprétation ; versionner les formules.
 - [ ] Rédiger toute évolution Supabase comme proposition non appliquée et attendre validation.
 
-### Bloc 8 — Permissions et hardening
+### Bloc 8 — Profil / comprendre le couloir olfactif avancé
+
+**Fichiers futurs :** surface Profil/À propos du corridor, aide contextuelle, guard de contenu explicatif.
+
+- [ ] Expliquer mesures, météo, calculs et estimation sans présenter le corridor comme une position exacte.
+- [ ] Afficher sources, âge de la donnée, niveau de confiance et limites connues.
+- [ ] Conserver l'indépendance vis-à-vis de JumOlf et de toute IA.
+- [ ] Tester mobile, accessibilité, absence de jargon et cohérence avec les rôles autorisés.
+
+### Bloc 9 — Permissions et hardening
 
 **Fichiers futurs :** guards de visibilité, tests d'export et fixtures de rôles.
 
@@ -103,7 +114,7 @@
 - [ ] Vérifier les règles `coachingDataVisibility`, `coachingCanSeeLiveOwner`, `reportActivitySource` et RPC sans les contourner.
 - [ ] Tester un dataset vide, partiel, stale et révoqué.
 
-### Bloc 9 — Mobile/performance
+### Bloc 10 — Mobile/performance
 
 **Fichiers futurs :** optimisations de couches, instrumentation Preview, guard budget.
 

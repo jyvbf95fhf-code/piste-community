@@ -172,3 +172,12 @@ Sur iPhone, le corridor doit viser une géométrie bornée : simplifier la route
 - le contrat de confidentialité interdit toute dérivation d'une trace masquée ;
 - chaque bloc possède un guard et un test mobile prévus ;
 - aucun code métier, Supabase, SQL, RLS, Auth, GPS, main ou Production n'est modifié pendant cette phase.
+
+## Contrat Bloc 1 livré
+
+Le catalogue provider-neutral est maintenant porté par `map-base-layers.mjs`.
+Ses identifiants canoniques sont `classic`, `topo` et `satellite`; les alias historiques `osm` et `outdoor` restent acceptés par l'adaptateur Leaflet. Les métadonnées de fournisseur, attribution, URL, zoom, disponibilité, fallback et statut Preview/Production ne sont plus répétées dans les écrans.
+
+`PisteTerrainEngine` expose désormais `getAvailableBaseLayers`, `getBaseLayer`, `setBaseLayer`, `fallbackBaseLayer` et `onBaseLayerChange`. Le changement est idempotent, retire l'ancien layer avant d'activer le nouveau, conserve la carte et notifie l'UI avec l'identifiant canonique. Une couche absente ou indisponible retombe déterministiquement sur `classic`.
+
+Le catalogue déclare Satellite mais `addCleanBaseLayers` ne l'instancie que pour les cartes qui demandaient déjà `includeSatellite`. Aucun bouton Satellite global n'a été ajouté et aucune activation Production n'a été faite. Le prototype MapLibre 3D n'est pas concerné.

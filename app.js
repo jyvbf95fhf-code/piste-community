@@ -4,6 +4,7 @@ import { createAdminCentre } from './admin.js?v=1044-1';
 import { buildReplayDataset } from './replay-model.mjs';
 import { createReplayPlayer } from './replay-player.mjs';
 import { replayEntryState } from './replay-entry.mjs';
+import { BASE_LAYER_CATALOG, canonicalBaseLayerId, getBaseLayerDefinition, normalizeBaseLayerId } from './map-base-layers.mjs';
 
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
@@ -564,7 +565,7 @@ const PLANNER_INTERMEDIATE_POINTS_VISIBLE=TERRAIN_ENGINE_PREVIEW_OR_DEV&&new URL
 const PisteTerrainEngine={
  maps:new Map(),
  mapOptions:{rotate:true,touchRotate:true,dragRotate:true,rotateControl:{position:'topright',behavior:'reset',closeOnZeroBearing:true}},
- createMap(id,options={}){if(this.maps.has(id))this.destroyMap(id);const {includeSatellite=false,showLayerControl=id!=='plannerMap',...mapOptions}=options;const map=L.map(id,{...this.mapOptions,...mapOptions}),root=$(id);if(root&&!root.nextElementSibling?.classList.contains('trace-palette-legend'))root.insertAdjacentHTML('afterend',traceLegendHtml());const baseLayers=addCleanBaseLayers(map,{mapId:id,showLayerControl,includeSatellite});this.maps.set(id,{map,layers:new Map(),baseLayer:'osm',baseLayers});if(id==='plannerMap')plannerBaseLayers=baseLayers;terrainDebugRefresh();return map},
+ createMap(id,options={}){if(this.maps.has(id))this.destroyMap(id);const {includeSatellite=false,showLayerControl=id!=='plannerMap',...mapOptions}=options;const map=L.map(id,{...this.mapOptions,...mapOptions}),root=$(id);if(root&&!root.nextElementSibling?.classList.contains('trace-palette-legend'))root.insertAdjacentHTML('afterend',traceLegendHtml());const baseLayers=addCleanBaseLayers(map,{mapId:id,showLayerControl,includeSatellite});this.maps.set(id,{map,layers:new Map(),baseLayer:'osm',baseLayers,baseLayerListeners:new Set,includeSatellite});if(id==='plannerMap')plannerBaseLayers=baseLayers;terrainDebugRefresh();return map},
  destroyMap(idOrMap){const id=typeof idOrMap==='string'?idOrMap:[...this.maps.entries()].find(([,entry])=>entry.map===idOrMap)?.[0];if(!id)return false;const entry=this.maps.get(id);for(const layers of entry.layers.values())for(const layer of Array.isArray(layers)?layers:[layers]){try{layer.remove()}catch{}}try{entry.map.remove()}catch{}this.maps.delete(id);terrainDebugRefresh();return true},
  entry(id){return this.maps.get(id)},
  map(id){return this.maps.get(id)?.map||null},
@@ -575,18 +576,23 @@ const PisteTerrainEngine={
  setMarkers(id,key,markers,optionsFactory=()=>({})){const entry=this.maps.get(id);if(!entry)return[];this.clearLayer(id,key);const layers=[];for(const item of Array.isArray(markers)?markers:[]){const marker=L.marker([Number(item.lat),Number(item.lon)],optionsFactory(item)).addTo(entry.map);layers.push(marker)}entry.layers.set(key,layers);terrainDebugRefresh();return layers},
  registerLayers(id,key,layers=[]){const entry=this.maps.get(id);if(!entry)return[];this.clearLayer(id,key);const clean=(Array.isArray(layers)?layers:[]).filter(Boolean);entry.layers.set(key,clean);terrainDebugRefresh();return clean},
  fitTrack(id,points,options={}){const map=this.map(id),clean=(Array.isArray(points)?points:[]).filter(p=>Number.isFinite(Number(p?.lat))&&Number.isFinite(Number(p?.lon)));if(!map||!clean.length)return false;if(clean.length>1)map.fitBounds(L.latLngBounds(clean.map(p=>[Number(p.lat),Number(p.lon)])),options);else map.setView([Number(clean[0].lat),Number(clean[0].lon)],options.maxZoom||16);terrainDebugRefresh();return true},
- setBaseLayer(id,name){const entry=this.maps.get(id);if(!entry)return false;const map=entry.map,tile=entry.baseLayers?.[name];if(!tile)return false;if(!map.hasLayer(tile))tile.addTo(map);const current=entry.baseLayers?.[entry.baseLayer];if(current&&current!==tile&&map.hasLayer(current))map.removeLayer(current);entry.baseLayer=name;terrainDebugRefresh();return true},
+ getAvailableBaseLayers(id){const entry=this.maps.get(id);if(!entry)return Object.values(BASE_LAYER_CATALOG).map(def=>({...def,enabled:def.id!=='satellite'}));return Object.values(BASE_LAYER_CATALOG).map(def=>({...def,enabled:!!entry.baseLayers?.[def.legacyId]}))},
+ getBaseLayer(id){const entry=this.maps.get(id);return entry?canonicalBaseLayerId(entry.baseLayer):null},
+ setBaseLayer(id,name){const entry=this.maps.get(id);if(!entry)return false;const normalized=normalizeBaseLayerId(name),map=entry.map,tile=entry.baseLayers?.[normalized];if(!tile)return this.fallbackBaseLayer(id,`unavailable:${String(name)}`);if(entry.baseLayer===normalized)return true;if(!map.hasLayer(tile))tile.addTo(map);const current=entry.baseLayers?.[entry.baseLayer];if(current&&current!==tile&&map.hasLayer(current))map.removeLayer(current);entry.baseLayer=normalized;for(const listener of entry.baseLayerListeners||[])try{listener(canonicalBaseLayerId(normalized))}catch{}terrainDebugRefresh();return true},
+ fallbackBaseLayer(id,reason='unavailable'){const entry=this.maps.get(id),from=entry?.baseLayer||'osm',fallback=getBaseLayerDefinition(from)?.fallbackId||'classic';const changed=this.setBaseLayer(id,fallback);if(changed&&entry)entry.lastBaseLayerFallback={from:canonicalBaseLayerId(from),to:canonicalBaseLayerId(fallback),reason};return changed},
+ onBaseLayerChange(id,callback){const entry=this.maps.get(id);if(!entry||typeof callback!=='function')return()=>{};entry.baseLayerListeners.add(callback);return()=>entry.baseLayerListeners.delete(callback)},
  invalidateSize(id){this.map(id)?.invalidateSize();terrainDebugRefresh()},
  snapshot(){return{mode:PISTE_TERRAIN_ENGINE_MODE,maps:this.maps.size,instances:[...this.maps.entries()].map(([id,entry])=>({id,layers:[...entry.layers.entries()].map(([key,layers])=>({key,count:Array.isArray(layers)?layers.length:1})),baseLayer:entry.baseLayer,zoom:entry.map.getZoom?.()??null,center:entry.map.getCenter?.()||null}))}},
 };
 function terrainDebugRefresh(){if(typeof renderTerrainDebug==='function')renderTerrainDebug()}
 function addCleanBaseLayers(map,{mapId='unknown',showLayerControl=true,includeSatellite=false}={}){
- const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
- const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap contributors, SRTM | OpenTopoMap'});
-  const satellite=includeSatellite?L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'}):null;
+ const classic=BASE_LAYER_CATALOG.classic,topoDefinition=BASE_LAYER_CATALOG.topo,satelliteDefinition=BASE_LAYER_CATALOG.satellite;
+ const osm=L.tileLayer(classic.tileUrl,{maxZoom:classic.maxZoom,attribution:classic.attribution});
+ const topo=L.tileLayer(topoDefinition.tileUrl,{maxZoom:topoDefinition.maxZoom,attribution:topoDefinition.attribution});
+  const satellite=includeSatellite?L.tileLayer(satelliteDefinition.tileUrl,{maxZoom:satelliteDefinition.maxZoom,attribution:satelliteDefinition.attribution}):null;
  map._pisteBaseLayers={osm,topo,...(satellite?{satellite}:{})};
  osm.addTo(map);
- if(satellite){satellite._pisteTileErrors=0;satellite.on('tileerror',()=>{satellite._pisteTileErrors++;if(satellite._pisteTileErrors>=3&&map.hasLayer(satellite)){satellite._pisteTileErrors=0;const engine=PisteTerrainEngine.maps.get(mapId);if(engine){PisteTerrainEngine.setBaseLayer(mapId,'osm');document.querySelectorAll(`[data-replay-base-layer="${mapId}"]`).forEach(button=>{const active=button.dataset.base==='osm';button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))})}}});satellite.on('tileload',()=>{satellite._pisteTileErrors=0})}
+ if(satellite){satellite._pisteTileErrors=0;satellite.on('tileerror',()=>{satellite._pisteTileErrors++;if(satellite._pisteTileErrors>=3&&map.hasLayer(satellite)){satellite._pisteTileErrors=0;const engine=PisteTerrainEngine.maps.get(mapId);if(engine){PisteTerrainEngine.fallbackBaseLayer(mapId,'tileerror');document.querySelectorAll(`[data-replay-base-layer="${mapId}"]`).forEach(button=>{const active=button.dataset.base==='osm';button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))})}}});satellite.on('tileload',()=>{satellite._pisteTileErrors=0})}
  if(mapId==='plannerMap'){
   topo.on('tileerror',()=>{if(plannerBaseLayerName!=='topo')return;plannerTopoTileErrors++;if(plannerTopoTileErrors>=3)setPlannerBaseLayer('classic',{fallback:true})});
   topo.on('tileload',()=>{plannerTopoTileErrors=0});

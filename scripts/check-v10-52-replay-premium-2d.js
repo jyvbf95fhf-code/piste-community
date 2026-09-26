@@ -1,10 +1,11 @@
 const fs = require('fs');
 const app = fs.readFileSync('app.js','utf8');
+const baseLayers = fs.readFileSync('map-base-layers.mjs','utf8');
 const css = fs.readFileSync('v2.css','utf8');
 const forbidden = [/maplibre/i, /cesium/i, /webgl/i, /replay-player\.mjs[\s\S]{0,200}premium/i];
 function assert(condition, message){if(!condition) throw new Error(message)}
 assert(/includeSatellite/.test(app), 'Replay doit demander une couche Satellite dédiée');
-assert(/satellite/.test(app) && /World_Imagery/.test(app), 'Le fournisseur Satellite et sa configuration sont absents');
+assert(/satellite/.test(baseLayers) && /World_Imagery/.test(baseLayers), 'Le fournisseur Satellite et sa configuration sont absents');
 assert(/tileerror/.test(app) && /fallback/.test(app), 'Le fallback Satellite doit être géré');
 assert(/Classique/.test(app) && /Topo/.test(app) && /Satellite/.test(app), 'Les trois fonds doivent être proposés');
 assert(/replay-layer-switcher/.test(app) && /replay-base-layer/.test(app), 'Le sélecteur compact des fonds Replay manque');

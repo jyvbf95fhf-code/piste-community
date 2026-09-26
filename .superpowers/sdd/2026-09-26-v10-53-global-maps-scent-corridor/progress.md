@@ -18,25 +18,26 @@
 - [x] Stratégie permissions/double aveugle documentée.
 - [x] Stratégie mobile/performance et tests définie.
 - [x] Spec et plan écrits.
-- [ ] Validation utilisateur de la spec et du plan.
+- [x] Validation utilisateur de la spec et du plan.
 
 ## Blocs
 
 | Bloc | Sujet | État |
 |---|---|---|
-| 1 | Contrat moteur global de fonds | planifié |
+| 1 | Contrat moteur global de fonds | DONE |
 | 2 | Satellite global Preview contrôlé | planifié, gate licence/quota |
 | 3 | Moteur CouloirOlfactif natif | planifié |
 | 4 | Coaching live | planifié |
 | 5 | OPS / Entraînement live | planifié |
 | 6 | Archives / Guided Debrief / Replay | planifié |
 | 7 | Statistiques & données scientifiques | planifié |
-| 8 | Permissions / double aveugle / hardening | planifié |
-| 9 | Mobile / performance / hardening | planifié |
+| 8 | Profil / comprendre le couloir olfactif avancé | planifié |
+| 9 | Permissions / double aveugle / hardening | planifié |
+| 10 | Mobile / performance / hardening | planifié |
 
 ## Règles de non-développement
 
-- Aucun code fonctionnel V10.53 commencé.
+- Bloc 1 uniquement : contrat cartographique et guard livrés ; aucun Satellite global activé.
 - Aucun fournisseur Satellite global activé.
 - Satellite 3D reste en développement.
 - Aucun changement Supabase, SQL, RLS, Auth, boot ou GPS.
@@ -45,4 +46,4 @@
 
 ## Prochaine étape
 
-Attendre validation explicite de la spec et du plan, puis ouvrir uniquement le Bloc 1.
+Ouvrir uniquement le Bloc 2 — Satellite global Preview contrôlé, après validation fournisseur/licence/quota.
