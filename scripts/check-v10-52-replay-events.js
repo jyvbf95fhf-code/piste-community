@@ -18,7 +18,8 @@ const { pathToFileURL } = require('url');
   assert(/setTrace|createMap/.test(app), 'existing map engine should remain in use');
   assert(!/requestAnimationFrame/.test(app.slice(app.indexOf('function updateReplayVisual'), app.indexOf('async function openReplayView'))), 'events must not add a second RAF loop');
   assert(!/supabase\.from|supabase\.rpc/.test(app.slice(app.indexOf('function replaySourceDataset'), app.indexOf('const REPORT_SECTION_ORDER'))), 'events must not add database access');
-  assert(!/maplibre|mapbox|cesium|satellite|relief/i.test(app.slice(app.indexOf('function replaySourceDataset'), app.indexOf('const REPORT_SECTION_ORDER'))), 'Bloc 5/3D must not enter event replay');
+  const eventRuntime = app.slice(app.indexOf('function replayEventLabel'), app.indexOf('function renderReplaySurface'));
+  assert(!/maplibre|mapbox|cesium|satellite|relief/i.test(eventRuntime), 'Bloc 5/3D must not enter event replay');
   const { buildReplayDataset } = await import(pathToFileURL(modelPath).href);
   const dataset = buildReplayDataset({
     driver: [{ lat: 48, lon: 7, recorded_at: '2026-01-01T10:00:00Z' }, { lat: 48.001, lon: 7.001, recorded_at: '2026-01-01T10:00:10Z' }],

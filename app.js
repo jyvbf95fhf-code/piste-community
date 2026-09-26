@@ -344,7 +344,7 @@ let operationalCalls=[],activeOperationalCallId=null,currentOperationalCall=null
 let activeOperationalGpxTracks=[],operationalLiveGpxLayers=[]; // V10.29_OPERATIONAL_GPX
 let plannerRoutingMode='street',plannerRoutingBusy=false,liveMapFollow=true,liveMapProgrammatic=false,plannerSearchTimer=null,plannerSearchController=null,plannerSearchRequestCount=0,plannerSearchSelected=false,plannerWeatherFetchInFlight=null,plannerWeatherAvailable=false,plannerOdorState='off',plannerBaseLayers=null,plannerBaseLayerName='osm',plannerTopoTileErrors=0,plannerFallbackToOsmCount=0,plannerBaseSwitchCount=0;
 let missionSource=null,missionMap=null,missionResizeObserver=null,missionLoadSequence=0;
-let replayMap=null,replayPlayer=null,replayDataset=null,replayUnsubscribe=null,replayLayers=null,replaySurface={panelId:'blackBoxReplay',mapId:'activityReplayMap',back:()=>setBlackBoxTab('summary')};
+let replayMap=null,replayPlayer=null,replayDataset=null,replayUnsubscribe=null,replayLayers=null,replayFollowMode='free',replaySurface={panelId:'blackBoxReplay',mapId:'activityReplayMap',back:()=>setBlackBoxTab('summary')};
 let fieldMarkers=[],pendingFieldMarker=null,operationalLiveWeather=null,operationalWeatherHistory=[],operationalWeatherTimer=null,operationalWeatherLoading=false,operationalWeatherOdorLayers=[],operationalCorridorVisible=false,operationalCorridorState='off',operationalAgeTimer=null,terrainDisappearanceAt=null,activityLibraryView='list',activityLibraryFilters={type:'all',status:'active',favorite:false,query:''},activityLibrarySelection=[],activityLibrarySelectionMode=false,currentActivityDetail=null,reportCurrentModel=null,reportPhotoUrls=[];
 const SCENARIO_MARKERS={pause:{icon:'⏳',label:'Temps d’attente'},object:{icon:'📦',label:'Objet déposé'},clue:{icon:'🔎',label:'Indice'},direction:{icon:'↪️',label:'Changement de direction'},crossing:{icon:'🔀',label:'Croisement'},contamination:{icon:'👥',label:'Contamination'},danger:{icon:'⚠️',label:'Danger'},subject:{icon:'👤',label:'Personne recherchée'},note:{icon:'📍',label:'Note'}};
 const LIVE_MARKERS={object:{icon:'📦',label:'Objet'},loss:{icon:'❌',label:'Perte'},recovery:{icon:'↩️',label:'Reprise'},behavior:{icon:'🐕',label:'Comportement'},direction:{icon:'↗️',label:'Direction'},clue:{icon:'🔎',label:'Indice'},danger:{icon:'⚠️',label:'Danger'},decision:{icon:'↪️',label:'Décision'},success:{icon:'✓',label:'Réussite'},note:{icon:'📍',label:'Note'}};
@@ -555,6 +555,8 @@ async function syncQueue(){if(!navigator.onLine||!session)return;let q=getQueue(
 function queueRecord(mode,payload){const q=getQueue();q.push({id:crypto.randomUUID?crypto.randomUUID():String(Date.now()),mode,payload,queuedAt:Date.now()});setQueue(q)}
 
 function traceMarkerIcon(label='•'){return L.divIcon({className:'live-map-icon',html:`<span>${esc(label)}</span>`,iconSize:[32,32],iconAnchor:[16,16]})}
+function replayActorIcon(actor){const label=actor==='traceur'?'T':'C';return L.divIcon({className:`replay-actor-cursor replay-actor-${actor}`,html:`<span>${label}</span>`,iconSize:[38,38],iconAnchor:[19,19]})}
+function replayEndpointIcon(label){return L.divIcon({className:`replay-endpoint replay-endpoint-${label.toLowerCase()}`,html:`<span>${esc(label)}</span>`,iconSize:[36,36],iconAnchor:[18,18]})}
 function traceLegendHtml(){return `<div class="trace-palette-legend" aria-label="Couleurs des couches">${Object.entries(TRACE_LABELS).map(([key,label])=>`<span><i style="background:${TRACE_PALETTE[key]}" aria-hidden="true"></i>${label}</span>`).join('')}</div>`}
 const TERRAIN_ENGINE_PREVIEW_OR_DEV=location.hostname==='localhost'||location.hostname==='127.0.0.1'||(location.hostname.endsWith('.vercel.app')&&location.hostname!=='stats-piste-community.vercel.app');
 const PISTE_TERRAIN_ENGINE_MODE=TERRAIN_ENGINE_PREVIEW_OR_DEV&&new URLSearchParams(location.search).get('terrainEngine')==='legacy'?'legacy':'engine';
@@ -562,7 +564,7 @@ const PLANNER_INTERMEDIATE_POINTS_VISIBLE=TERRAIN_ENGINE_PREVIEW_OR_DEV&&new URL
 const PisteTerrainEngine={
  maps:new Map(),
  mapOptions:{rotate:true,touchRotate:true,dragRotate:true,rotateControl:{position:'topright',behavior:'reset',closeOnZeroBearing:true}},
- createMap(id,options={}){if(this.maps.has(id))this.destroyMap(id);const map=L.map(id,{...this.mapOptions,...options}),root=$(id);if(root&&!root.nextElementSibling?.classList.contains('trace-palette-legend'))root.insertAdjacentHTML('afterend',traceLegendHtml());const baseLayers=addCleanBaseLayers(map,{mapId:id,showLayerControl:id!=='plannerMap'});this.maps.set(id,{map,layers:new Map(),baseLayer:'osm',baseLayers});if(id==='plannerMap')plannerBaseLayers=baseLayers;terrainDebugRefresh();return map},
+ createMap(id,options={}){if(this.maps.has(id))this.destroyMap(id);const {includeSatellite=false,showLayerControl=id!=='plannerMap',...mapOptions}=options;const map=L.map(id,{...this.mapOptions,...mapOptions}),root=$(id);if(root&&!root.nextElementSibling?.classList.contains('trace-palette-legend'))root.insertAdjacentHTML('afterend',traceLegendHtml());const baseLayers=addCleanBaseLayers(map,{mapId:id,showLayerControl,includeSatellite});this.maps.set(id,{map,layers:new Map(),baseLayer:'osm',baseLayers});if(id==='plannerMap')plannerBaseLayers=baseLayers;terrainDebugRefresh();return map},
  destroyMap(idOrMap){const id=typeof idOrMap==='string'?idOrMap:[...this.maps.entries()].find(([,entry])=>entry.map===idOrMap)?.[0];if(!id)return false;const entry=this.maps.get(id);for(const layers of entry.layers.values())for(const layer of Array.isArray(layers)?layers:[layers]){try{layer.remove()}catch{}}try{entry.map.remove()}catch{}this.maps.delete(id);terrainDebugRefresh();return true},
  entry(id){return this.maps.get(id)},
  map(id){return this.maps.get(id)?.map||null},
@@ -578,17 +580,19 @@ const PisteTerrainEngine={
  snapshot(){return{mode:PISTE_TERRAIN_ENGINE_MODE,maps:this.maps.size,instances:[...this.maps.entries()].map(([id,entry])=>({id,layers:[...entry.layers.entries()].map(([key,layers])=>({key,count:Array.isArray(layers)?layers.length:1})),baseLayer:entry.baseLayer,zoom:entry.map.getZoom?.()??null,center:entry.map.getCenter?.()||null}))}},
 };
 function terrainDebugRefresh(){if(typeof renderTerrainDebug==='function')renderTerrainDebug()}
-function addCleanBaseLayers(map,{mapId='unknown',showLayerControl=true}={}){
+function addCleanBaseLayers(map,{mapId='unknown',showLayerControl=true,includeSatellite=false}={}){
  const osm=L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});
  const topo=L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',{maxZoom:17,attribution:'© OpenStreetMap contributors, SRTM | OpenTopoMap'});
- map._pisteBaseLayers={osm,topo};
+  const satellite=includeSatellite?L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community'}):null;
+ map._pisteBaseLayers={osm,topo,...(satellite?{satellite}:{})};
  osm.addTo(map);
+ if(satellite){satellite._pisteTileErrors=0;satellite.on('tileerror',()=>{satellite._pisteTileErrors++;if(satellite._pisteTileErrors>=3&&map.hasLayer(satellite)){satellite._pisteTileErrors=0;const engine=PisteTerrainEngine.maps.get(mapId);if(engine){PisteTerrainEngine.setBaseLayer(mapId,'osm');document.querySelectorAll(`[data-replay-base-layer="${mapId}"]`).forEach(button=>{const active=button.dataset.base==='osm';button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))})}}});satellite.on('tileload',()=>{satellite._pisteTileErrors=0})}
  if(mapId==='plannerMap'){
   topo.on('tileerror',()=>{if(plannerBaseLayerName!=='topo')return;plannerTopoTileErrors++;if(plannerTopoTileErrors>=3)setPlannerBaseLayer('classic',{fallback:true})});
   topo.on('tileload',()=>{plannerTopoTileErrors=0});
  }
- if(showLayerControl)L.control.layers({'OpenStreetMap':osm,'Carte terrain':topo},null,{position:'topright',collapsed:true}).addTo(map);
- return {osm,topo};
+ if(showLayerControl)L.control.layers({'OpenStreetMap':osm,'Carte terrain':topo,...(satellite?{'Satellite':satellite}:{})},null,{position:'topright',collapsed:true}).addTo(map);
+ return {osm,topo,...(satellite?{satellite}:{})};
 }
 function createPisteMap(id,options={}){const map=L.map(id,{rotate:true,touchRotate:true,dragRotate:true,rotateControl:{position:'topright',behavior:'reset',closeOnZeroBearing:true},...options});const root=$(id);if(root&&['plannerMap','liveMap','coachingMap','activityDetailMap','activityLibraryMap','publicShareMap','historyMap','globalMap','operationalCallMap'].includes(id)&&!root.nextElementSibling?.classList.contains('trace-palette-legend'))root.insertAdjacentHTML('afterend',traceLegendHtml());return map}
 function createTerrainMap(id,options={}){const map=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap(id,options):PisteTerrainEngine.createMap(id,options);if(PISTE_TERRAIN_ENGINE_MODE==='legacy')addCleanBaseLayers(map);return map}
@@ -1844,6 +1848,8 @@ function replaySourceDataset(source){
  return buildReplayDataset({traceur:source.trace,driver:source.actual,planned:source.planned,markers:source.markers,observations:source.observations,messages:source.messages});
 }
 function replayPointsAtOrBefore(points,time){return (Array.isArray(points)?points:[]).filter(point=>Number.isFinite(point.timestamp)&&point.timestamp<=time)}
+function replaySetFollowMode(mode){replayFollowMode=['free','traceur','driver'].includes(mode)?mode:'free';document.querySelectorAll(`[data-replay-follow="${replaySurface.mapId}"]`).forEach(button=>{const active=button.dataset.follow===replayFollowMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active))})}
+function replayApplyFollow(map,state){if(replayFollowMode==='free')return;const position=state.positions?.[replayFollowMode];if(!position)return;const point=L.latLng(Number(position.lat),Number(position.lon));if(!Number.isFinite(point.lat)||!Number.isFinite(point.lng))return;const bounds=map.getBounds?.();if(!bounds)return;const inner=bounds.pad(-0.2);if(!inner.contains(point))map.panTo(point,{animate:true,duration:.25})}
 function updateReplayVisual(state){
  const map=PisteTerrainEngine.map(replaySurface.mapId);if(!map||!replayDataset)return;
  for(const actor of ['traceur','driver']){
@@ -1851,6 +1857,7 @@ function updateReplayVisual(state){
   if(cursor){if(position)cursor.setLatLng([position.lat,position.lon]);cursor.setOpacity?.(position?1:0)}
   if(played)played.setLatLngs(replayPointsAtOrBefore(replayDataset.tracks[actor],state.currentTime).map(point=>[point.lat,point.lon]));
  }
+ replayApplyFollow(map,state);
  setUiText(`${replaySurface.prefix}Elapsed`,replayTimeLabel(state.currentTime-(replayDataset.capabilities.startTimestamp||state.currentTime)));
  setUiText(`${replaySurface.prefix}Duration`,replayTimeLabel(replayDataset.capabilities.durationMs));
  const button=$(replaySurface.prefix+'PlayPause');if(button){button.textContent=state.playing?'❚❚':'▶';button.setAttribute('aria-label',state.playing?'Mettre le replay en pause':'Lire le replay')}
@@ -1868,17 +1875,23 @@ function renderReplaySurface(dataset,panelId='blackBoxReplay',back=()=>setBlackB
  destroyReplaySurface();replayDataset=dataset;replaySurface={panelId,mapId,prefix:`${mapId}-`,back};
  const events=(dataset.events||[]).map((event,index)=>({...event,index})).filter(event=>event.timestamp>=dataset.capabilities.startTimestamp&&event.timestamp<=dataset.capabilities.endTimestamp);
  panel.innerHTML=`<div class="replay-surface"><div class="replay-surface-header"><div><small class="section-kicker">REPLAY 2D</small><h3>Replay de la piste</h3><p id="${mapId}-State" class="small muted" role="status">Prêt à lire</p></div><button id="${mapId}-Back" type="button" class="secondary">‹ Retour</button></div><div id="${mapId}" class="replay-map" aria-label="Carte du replay"></div><div class="replay-timeline" aria-label="Chronologie du replay"><output id="${mapId}-Elapsed">00:00</output><div class="replay-timeline-track"><input id="${mapId}-Timeline" type="range" min="0" max="${Math.max(0,dataset.capabilities.durationMs||0)}" step="1" value="0" aria-label="Position dans le replay" aria-valuetext="00:00"><div class="replay-event-markers" aria-label="Événements synchronisés">${events.map(event=>`<button type="button" class="replay-event-marker" style="left:${dataset.capabilities.durationMs?((event.timestamp-dataset.capabilities.startTimestamp)/dataset.capabilities.durationMs*100):0}%" data-replay-surface="${mapId}" data-replay-event-index="${event.index}" aria-current="false" aria-label="Aller à ${esc(replayEventLabel(event))}">${esc((LIVE_MARKERS[event.type]||{icon:'•'}).icon)}</button>`).join('')}</div></div><output id="${mapId}-Duration">00:00</output></div><div class="replay-controls" role="group" aria-label="Contrôles du replay"><button id="${mapId}-Reset" type="button" class="secondary" aria-label="Revenir au début du replay">⏮</button><button id="${mapId}-PlayPause" type="button" class="primary" aria-label="Lire le replay">▶</button><div class="replay-rates" role="group" aria-label="Vitesse de lecture"><button type="button" class="secondary active" data-replay-rate="${mapId}" data-rate="1" aria-pressed="true" aria-label="Vitesse 1x">1x</button><button type="button" class="secondary" data-replay-rate="${mapId}" data-rate="2" aria-pressed="false" aria-label="Vitesse 2x">2x</button></div></div><div id="${mapId}-Event" class="replay-current-event" role="status" aria-live="polite"><span class="muted">Aucun événement à cet instant.</span></div><div class="replay-legend" aria-label="Acteurs visibles">${dataset.capabilities.hasTraceur?'<span><i class="replay-dot traceur"></i>Traceur</span>':''}${dataset.capabilities.hasDriver?'<span><i class="replay-dot driver"></i>Conducteur</span>':''}</div></div>`;
- replayMap=PisteTerrainEngine.createMap(mapId,{zoomControl:true});
+ replayFollowMode='free';
+ replayMap=PisteTerrainEngine.createMap(mapId,{zoomControl:true,includeSatellite:true,showLayerControl:false});
+ const mapHost=$(mapId);
+ if(mapHost){
+  const toolbar=document.createElement('div');toolbar.className='replay-map-toolbar';toolbar.innerHTML=`<div class="replay-layer-switcher" role="group" aria-label="Fond cartographique"><button type="button" class="active" data-replay-base-layer="${mapId}" data-base="osm" aria-pressed="true">Classique</button><button type="button" data-replay-base-layer="${mapId}" data-base="topo" aria-pressed="false">Topo</button><button type="button" data-replay-base-layer="${mapId}" data-base="satellite" aria-pressed="false">Satellite</button></div><div class="replay-map-actions"><button type="button" class="replay-fit" data-replay-fit="${mapId}" aria-label="Voir toute la piste">Voir toute la piste</button><div class="replay-follow-switcher" role="group" aria-label="Suivi de la carte"><button type="button" class="active" data-replay-follow="${mapId}" data-follow="free" aria-pressed="true">Libre</button>${dataset.capabilities.hasTraceur?`<button type="button" data-replay-follow="${mapId}" data-follow="traceur" aria-pressed="false">Suivre Traceur</button>`:''}${dataset.capabilities.hasDriver?`<button type="button" data-replay-follow="${mapId}" data-follow="driver" aria-pressed="false">Suivre Conducteur</button>`:''}</div></div>`;
+  mapHost.parentElement?.insertBefore(toolbar,mapHost);
+ }
  const all=[...dataset.tracks.traceur,...dataset.tracks.driver,...dataset.tracks.planned];
  replayLayers={full:{},played:{},cursors:{},endpoints:[],events:[]};
  for(const [actor,color,label] of [['traceur',TRACE_PALETTE.traceur,'T'],['driver',TRACE_PALETTE.conducteur,'C']]){
   const points=dataset.tracks[actor];if(!points?.length)continue;
-  replayLayers.full[actor]=PisteTerrainEngine.setTrace(mapId,`replay-${actor}-full`,points,{weight:3,color,opacity:.42,lineCap:'round',lineJoin:'round',dashArray:'6 8'});
-  replayLayers.played[actor]=PisteTerrainEngine.setTrace(mapId,`replay-${actor}-played`,[],{weight:6,color,opacity:1,lineCap:'round',lineJoin:'round'});
-  replayLayers.cursors[actor]=PisteTerrainEngine.createMarker(mapId,`replay-${actor}-cursor`,[points[0].lat,points[0].lon],{icon:traceMarkerIcon(label),zIndexOffset:1200});
+  replayLayers.full[actor]=PisteTerrainEngine.setTrace(mapId,`replay-${actor}-full`,points,{weight:4,color,opacity:.3,lineCap:'round',lineJoin:'round',dashArray:'7 9',className:`replay-track replay-track-${actor}`});
+  replayLayers.played[actor]=PisteTerrainEngine.setTrace(mapId,`replay-${actor}-played`,[],{weight:7,color,opacity:.98,lineCap:'round',lineJoin:'round',className:`replay-track-played replay-track-${actor}`});
+  replayLayers.cursors[actor]=PisteTerrainEngine.createMarker(mapId,`replay-${actor}-cursor`,[points[0].lat,points[0].lon],{icon:replayActorIcon(actor),zIndexOffset:1200});
  }
  const referenceActor=dataset.tracks.driver?.length?'driver':'traceur',reference=dataset.tracks[referenceActor]||[];
- if(reference.length){const first=reference[0],last=reference.at(-1);replayLayers.endpoints.push(PisteTerrainEngine.createMarker(mapId,'replay-endpoints',[first.lat,first.lon],{icon:traceMarkerIcon('D'),zIndexOffset:1000}),PisteTerrainEngine.createMarker(mapId,'replay-endpoints',[last.lat,last.lon],{icon:traceMarkerIcon('A'),zIndexOffset:1000}));}
+ if(reference.length){const first=reference[0],last=reference.at(-1);replayLayers.endpoints.push(PisteTerrainEngine.createMarker(mapId,'replay-endpoints',[first.lat,first.lon],{icon:replayEndpointIcon('D'),zIndexOffset:1000}),PisteTerrainEngine.createMarker(mapId,'replay-endpoints',[last.lat,last.lon],{icon:replayEndpointIcon('A'),zIndexOffset:1000}));}
  events.forEach((event,index)=>{if(!Number.isFinite(event.lat)||!Number.isFinite(event.lon))return;const def=LIVE_MARKERS[event.type]||{icon:'•'};replayLayers.events[event.index]=PisteTerrainEngine.createMarker(mapId,`replay-event-${event.index}`,[event.lat,event.lon],{icon:traceMarkerIcon(def.icon),zIndexOffset:1100});replayLayers.events[event.index].setOpacity?.(.45)});
  if(all.length)PisteTerrainEngine.fitTrack(mapId,all,{padding:[28,28],maxZoom:16});
  replayPlayer=createReplayPlayer(dataset);replayUnsubscribe=replayPlayer.subscribe(updateReplayVisual);
@@ -1890,6 +1903,10 @@ function renderReplaySurface(dataset,panelId='blackBoxReplay',back=()=>setBlackB
  timeline.onchange=()=>{if(resumeAfterSeek){resumeAfterSeek=false;replayPlayer?.play()}};
  document.querySelectorAll(`[data-replay-event-index][data-replay-surface="${mapId}"]`).forEach(button=>button.onclick=()=>{const event=dataset.events[Number(button.dataset.replayEventIndex)],wasPlaying=replayPlayer?.isPlaying;replayPlayer?.seek(event.timestamp);if(wasPlaying&&!replayPlayer.isPlaying)replayPlayer.play()});
  document.querySelectorAll(`[data-replay-rate="${mapId}"]`).forEach(rate=>rate.onclick=()=>replayPlayer?.setPlaybackRate(Number(rate.dataset.rate)));
+ document.querySelectorAll(`[data-replay-base-layer="${mapId}"]`).forEach(button=>button.onclick=()=>{const layer=button.dataset.base;if(PisteTerrainEngine.setBaseLayer(mapId,layer)){document.querySelectorAll(`[data-replay-base-layer="${mapId}"]`).forEach(item=>{const active=item.dataset.base===layer;item.classList.toggle('active',active);item.setAttribute('aria-pressed',String(active))});PisteTerrainEngine.invalidateSize(mapId)}});
+ document.querySelectorAll(`[data-replay-follow="${mapId}"]`).forEach(button=>button.onclick=()=>replaySetFollowMode(button.dataset.follow));
+ $(mapId)?.addEventListener('dragstart',()=>replaySetFollowMode('free'));
+ document.querySelector(`[data-replay-fit="${mapId}"]`)?.addEventListener('click',()=>{replaySetFollowMode('free');if(all.length)PisteTerrainEngine.fitTrack(mapId,all,{padding:[28,28],maxZoom:16})});
  setTimeout(()=>PisteTerrainEngine.invalidateSize(mapId),80);
 }
 async function openReplayView(type,id){

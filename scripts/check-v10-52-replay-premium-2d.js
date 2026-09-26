@@ -1,0 +1,18 @@
+const fs = require('fs');
+const app = fs.readFileSync('app.js','utf8');
+const css = fs.readFileSync('v2.css','utf8');
+const forbidden = [/maplibre/i, /cesium/i, /webgl/i, /replay-player\.mjs[\s\S]{0,200}premium/i];
+function assert(condition, message){if(!condition) throw new Error(message)}
+assert(/includeSatellite/.test(app), 'Replay doit demander une couche Satellite dédiée');
+assert(/satellite/.test(app) && /World_Imagery/.test(app), 'Le fournisseur Satellite et sa configuration sont absents');
+assert(/tileerror/.test(app) && /fallback/.test(app), 'Le fallback Satellite doit être géré');
+assert(/Classique/.test(app) && /Topo/.test(app) && /Satellite/.test(app), 'Les trois fonds doivent être proposés');
+assert(/replay-layer-switcher/.test(app) && /replay-base-layer/.test(app), 'Le sélecteur compact des fonds Replay manque');
+assert(/replay-follow/.test(app) && /Suivre Traceur/.test(app) && /Suivre Conducteur/.test(app), 'Le suivi des acteurs manque');
+assert(/replay-fit/.test(app) && /Voir toute la piste/.test(app), 'Le recentrage global manque');
+assert(/replay-actor-cursor/.test(app) && /replay-endpoint/.test(app), 'Les styles de curseurs et D/A premium manquent');
+assert(/replay-current-event/.test(app) && /replay-timeline/.test(app), 'La timeline ou les événements Bloc 4 ont disparu');
+assert(/requestAnimationFrame/.test(fs.readFileSync('replay-player.mjs','utf8')), 'Le moteur Replay doit conserver requestAnimationFrame');
+assert(!/supabase\.from|supabase\.rpc/.test(app.slice(app.indexOf('function renderReplaySurface'), app.indexOf('async function openReplayView'))), 'Le rendu Replay ne doit pas ajouter de requête DB');
+assert(!forbidden.some(re=>re.test(app) || re.test(css)), 'Une technologie 3D/MapLibre interdite est apparue');
+console.log('PASS v10.52 replay premium 2d guard');
