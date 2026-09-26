@@ -5,6 +5,7 @@ import { createAdminCentre } from './admin.js?v=1044-1';
 const cfg=window.APP_CONFIG||{};
 const supabase=createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
 const APP_VERSION='10.49';
+/* V10.51.2 update-detection validation build */
 const APP_RELEASE_VERSION='10.51.2';
 const APP_BUILD_FALLBACK='source';
 const APP_BUILD_KEY='piste-app-build-v1';
