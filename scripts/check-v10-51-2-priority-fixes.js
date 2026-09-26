@@ -1,0 +1,21 @@
+'use strict';
+const fs=require('fs');
+const assert=require('assert');
+const app=fs.readFileSync('app.js','utf8');
+const css=fs.readFileSync('v2.css','utf8');
+function fn(name){const m=app.match(new RegExp(`function\\s+${name}\\s*\\([^)]*\\)\\s*\\{`));assert(m,`missing ${name}`);let i=m.index+m[0].length,d=1;while(i<app.length&&d){if(app[i]==='{')d++;else if(app[i]==='}')d--;i++}return app.slice(m.index,i)}
+const surface=fn('applyV1040RoleSurface');
+const actor=fn('isCurrentUserLayingActor');
+const map=fn('renderMissionMap');
+assert(/role=myCoachingRole\(s\)/.test(surface),'role surface must use resolved coaching role');
+assert(/role==='traceur'/.test(actor)&&/accepted.*active/.test(actor),'traceur actor must be accepted/active');
+assert(surface.includes('Démarrer la piste')&&surface.includes('Terminer la piste'),'traceur labels missing');
+assert(surface.includes('startCoachingLaying')||app.includes('function startCoachingLaying'),'existing start handler missing');
+assert(app.includes('function startTraceurTracking')&&app.includes('function markCoachingTrackReady'),'existing trace workflow missing');
+assert(map.includes("traceMarkerIcon('D')")&&map.includes("traceMarkerIcon('A')"),'archive must reuse live D/A markers');
+assert(/referenceCandidates=\[\['actual',source\.actual\],\['trace',source\.trace\],\['planned',source\.planned\]\]/.test(map),'archive reference trace selection missing');
+assert(!/L\.circleMarker\(\[p\.lat,p\.lon\]/.test(map),'yellow endpoint circles remain in archive renderer');
+assert(/touch-action:\s*manipulation/.test(css),'anti-zoom CSS must remain');
+assert(/\.leaflet-container[^{]*\{[^}]*touch-action:\s*auto/s.test(css),'Leaflet touch-action override must remain');
+assert(!/gpsWatchRegistry|gpsPermission|LEAFLET_B2_DEBUG/.test(app),'GPS experimental code reintroduced');
+console.log('check-v10-51-2-priority-fixes: PASS');
