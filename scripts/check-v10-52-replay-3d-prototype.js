@@ -7,10 +7,15 @@ const prototypeSource = fs.readFileSync('replay-3d-prototype.mjs','utf8');
 function ok(value,message){assert(value,message)}
 ok(/replay-3d-prototype\.mjs/.test(app),'Le prototype doit être chargé dans un module isolé');
 ok(/import\(['"]\.\/replay-3d-prototype\.mjs/.test(app),'MapLibre doit être chargé lazy');
-ok(/Prototype 3D/.test(app),'Le point d’entrée Prototype 3D manque');
+ok(/Prototype 3D/i.test(app),'Le point d’entrée Prototype 3D manque');
 ok(/replayPlayer\.subscribe/.test(app),'Le prototype doit partager replayPlayer');
 ok(/WebGL|webgl/i.test(prototypeSource),'Le fallback WebGL manque');
 ok(/destroy|remove/.test(prototypeSource),'Le cycle de destruction MapLibre manque');
+ok(/classifyMapError|mapErrorKind/.test(prototypeSource),'Les erreurs MapLibre doivent être classifiées');
+ok(/relief temporairement indisponible|Relief temporairement indisponible/.test(prototypeSource),'Le fallback DEM visible manque');
+ok(/setTerrain\(null\)/.test(prototypeSource),'Le relief doit pouvoir être désactivé sans fermer la carte');
+ok(/onDiagnostic/.test(prototypeSource),'Le diagnostic des erreurs 3D doit être exposé');
+ok(/fatal/.test(prototypeSource),'Les erreurs fatales doivent être distinguées des erreurs de tuiles');
 ok(/terrain|raster-dem/.test(prototypeSource),'Le prototype doit configurer un terrain DEM');
 ok(/demotiles\.maplibre\.org/.test(prototypeSource),'Le fournisseur DEM de test manque');
 ok(/replay3d-endpoints/.test(prototypeSource),'Les marqueurs Départ/Arrivée 3D manquent');
@@ -19,4 +24,6 @@ ok(!/supabase\.from|supabase\.rpc/.test(prototypeSource),'Le prototype ne doit p
 ok(!/setInterval|requestAnimationFrame/.test(prototypeSource),'Le prototype ne doit pas créer une seconde horloge');
 ok(/2D|Replay 2D|replay-surface/.test(app),'La surface 2D doit rester présente');
 ok(!/setBlackBoxTab\(['"]3d/.test(app),'Aucune bascule globale 2D/3D ne doit être ajoutée');
+ok(/closeReplay3DPrototype\('fatal:/.test(app),'Seules les erreurs fatales doivent fermer le prototype');
+ok(/onDiagnostic/.test(app),'La surface 3D doit afficher le diagnostic non fatal');
 console.log('check-v10-52-replay-3d-prototype: PASS');

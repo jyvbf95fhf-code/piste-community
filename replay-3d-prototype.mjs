@@ -22,7 +22,21 @@ function lineFeature(points,properties={}){const coordinates=(Array.isArray(poin
 function featureCollection(features){return{type:'FeatureCollection',features:features.filter(Boolean)}}
 function styleForPrototype(){return{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors',maxzoom:19},terrainSource:{type:'raster-dem',url:DEM_TILES,tileSize:256,attribution:DEM_ATTRIBUTION}},layers:[{id:'osm',type:'raster',source:'osm'}],terrain:{source:'terrainSource',exaggeration:1.15},sky:{}}}
 
-export async function createReplay3DPrototype({container,dataset,onStatus=()=>{},onReady=()=>{},onError=()=>{}}={}){
+function mapErrorKind(event,{loaded=false}={}){
+  const error=event?.error||event||{};
+  const message=String(error?.message||error||'MapLibre error');
+  const lower=message.toLowerCase();
+  const sourceId=String(event?.sourceId||event?.source?.id||'');
+  const source=sourceId.toLowerCase();
+  const dem=source.includes('terrain')||source.includes('dem')||lower.includes('terrain')||lower.includes('raster-dem')||lower.includes('elevation')||lower.includes('demotiles');
+  const tile=Boolean(event?.tile||event?.coord)||lower.includes('tile')||lower.includes('network')||lower.includes('cors')||/\b(4\d\d|5\d\d)\b/.test(lower);
+  const webgl=lower.includes('webgl')||lower.includes('context lost')||lower.includes('gpu')||lower.includes('failed to initialize');
+  const style=lower.includes('style')&&(!loaded||lower.includes('failed')||lower.includes('parse'));
+  const fatal=webgl||(!loaded&&style)||(!loaded&&lower.includes('cannot create'));
+  return {kind:fatal?'fatal':dem?'dem':tile?'tile':'nonfatal',fatal,sourceId,message,type:error?.name||event?.type||'MapLibreError',phase:loaded?'runtime':'load'};
+}
+
+export async function createReplay3DPrototype({container,dataset,onStatus=()=>{},onReady=()=>{},onError=()=>{},onDiagnostic=()=>{}}={}){
   if(!container)throw new Error('Conteneur 3D absent');
   if(!supportsWebGL()){onStatus('3D indisponible sur cet appareil');return null}
   loadStyle();
@@ -31,7 +45,9 @@ export async function createReplay3DPrototype({container,dataset,onStatus=()=>{}
   const center=all[0]?[Number(all[0].lon),Number(all[0].lat)]:[7.45,48.3];
   const map=new maplibregl.Map({container,style:styleForPrototype(),center,zoom:13,pitch:62,bearing:0,maxPitch:80,attributionControl:{compact:true},touchZoomRotate:true,dragRotate:true,cooperativeGestures:false});
   map.addControl(new maplibregl.NavigationControl({visualizePitch:true}), 'top-right');
-  let loaded=false,lastState=null,followMode='free',destroyed=false;
+  let loaded=false,lastState=null,followMode='free',destroyed=false,terrainDisabled=false,fatalReported=false;
+  const diagnostic=info=>{if(destroyed)return;console.warn('[Replay3D]',info);onDiagnostic(info)};
+  const disableTerrain=info=>{if(terrainDisabled)return;terrainDisabled=true;try{if(loaded&&typeof map.setTerrain==='function')map.setTerrain(null)}catch(error){diagnostic({kind:'nonfatal',phase:'terrain-disable',message:error.message,type:error.name||'Error',fatal:false})}onStatus('Relief temporairement indisponible');diagnostic({...info,kind:'dem',phase:'terrain',fatal:false})};
   const setData=(id,data)=>{const source=map.getSource(id);if(source)source.setData(data)};
   const applyState=state=>{
     if(destroyed||!state)return;lastState=state;if(!loaded)return;
@@ -43,13 +59,13 @@ export async function createReplay3DPrototype({container,dataset,onStatus=()=>{}
     const events=(dataset?.events||[]).filter(e=>Number.isFinite(Number(e.lat))&&Number.isFinite(Number(e.lon))).map(e=>pointFeature(e,{type:e.type||'event',active:Number.isFinite(e.timestamp)&&state.currentTime>=e.timestamp&&state.currentTime<=e.timestamp+5000?1:0}));setData('replay3d-events',featureCollection(events));
   };
   const fitAll=()=>{if(all.length>1)map.fitBounds([[Math.min(...all.map(p=>Number(p.lon))),Math.min(...all.map(p=>Number(p.lat)))],[Math.max(...all.map(p=>Number(p.lon))),Math.max(...all.map(p=>Number(p.lat)))]],{padding:45,duration:500})};
-  const onMapError=event=>{if(!destroyed){onError(event?.error||new Error('Erreur MapLibre'))}};
+  const onMapError=event=>{if(destroyed)return;const info=mapErrorKind(event,{loaded});diagnostic(info);if(info.kind==='dem'){disableTerrain(info);return}if(info.kind==='tile'){onStatus(info.sourceId==='osm'?'Fond raster temporairement indisponible':'Relief temporairement indisponible');return}if(info.fatal&&!fatalReported){fatalReported=true;onError(Object.assign(new Error(info.message),info))}};
   map.on('error',onMapError);
-  map.once('load',()=>{if(destroyed)return;loaded=true;
+  map.once('load',()=>{if(destroyed)return;loaded=true;if(terrainDisabled)try{map.setTerrain(null)}catch{};onStatus(terrainDisabled?'Carte prête · relief indisponible':'Carte prête · relief prêt');
     for(const actor of ['traceur','driver']){const points=dataset?.tracks?.[actor]||[];map.addSource(`replay3d-${actor}-full`,{type:'geojson',data:lineFeature(points,{actor})});map.addSource(`replay3d-${actor}-played`,{type:'geojson',data:lineFeature([],{actor})});map.addSource(`replay3d-${actor}-cursor`,{type:'geojson',data:featureCollection([])});map.addLayer({id:`replay3d-${actor}-full-line`,type:'line',source:`replay3d-${actor}-full`,paint:{'line-color':actor==='traceur'?'#58d6a4':'#ff9e54','line-width':4,'line-opacity':.42,'line-blur':.5}});map.addLayer({id:`replay3d-${actor}-played-line`,type:'line',source:`replay3d-${actor}-played`,paint:{'line-color':actor==='traceur'?'#58d6a4':'#ff9e54','line-width':6,'line-opacity':.98}});map.addLayer({id:`replay3d-${actor}-cursor-circle`,type:'circle',source:`replay3d-${actor}-cursor`,paint:{'circle-color':actor==='traceur'?'#58d6a4':'#ff9e54','circle-radius':8,'circle-stroke-color':'#ffffff','circle-stroke-width':2}})}
     map.addSource('replay3d-events',{type:'geojson',data:featureCollection([])});map.addLayer({id:'replay3d-events-circle',type:'circle',source:'replay3d-events',paint:{'circle-color':'#f0c969','circle-radius':6,'circle-opacity':['case',['==',['get','active'],1],1,.45],'circle-stroke-color':'#10242d','circle-stroke-width':2}});
     const reference=dataset?.tracks?.driver?.length?dataset.tracks.driver:dataset?.tracks?.traceur||[];const endpoints=reference.length?[pointFeature(reference[0],{label:'D'}),pointFeature(reference.at(-1),{label:'A'})]:[];map.addSource('replay3d-endpoints',{type:'geojson',data:featureCollection(endpoints)});map.addLayer({id:'replay3d-endpoints-circle',type:'circle',source:'replay3d-endpoints',paint:{'circle-color':'#10242d','circle-radius':9,'circle-stroke-color':['match',['get','label'],'D','#58d6a4','#ff9e54'],'circle-stroke-width':3}});map.addLayer({id:'replay3d-endpoints-label',type:'symbol',source:'replay3d-endpoints',layout:{'text-field':['get','label'],'text-size':11,'text-font':['Open Sans Bold'],'text-allow-overlap':true},paint:{'text-color':'#ffffff'}});fitAll();applyState(lastState);onReady({map,fitAll,setFollowMode:mode=>{followMode=['free','traceur','driver'].includes(mode)?mode:'free'},getFollowMode:()=>followMode})
   });
   return {map,update:applyState,fitAll,setFollowMode:mode=>{followMode=['free','traceur','driver'].includes(mode)?mode:'free'},getFollowMode:()=>followMode,destroy(){destroyed=true;map.off('error',onMapError);map.remove()}};
 }
-export {MAPLIBRE_VERSION,MAPLIBRE_SCRIPT,DEM_TILES,DEM_ATTRIBUTION,supportsWebGL};
+export {MAPLIBRE_VERSION,MAPLIBRE_SCRIPT,DEM_TILES,DEM_ATTRIBUTION,supportsWebGL,mapErrorKind};
