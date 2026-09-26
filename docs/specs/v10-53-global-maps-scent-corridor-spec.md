@@ -181,3 +181,11 @@ Ses identifiants canoniques sont `classic`, `topo` et `satellite`; les alias his
 `PisteTerrainEngine` expose désormais `getAvailableBaseLayers`, `getBaseLayer`, `setBaseLayer`, `fallbackBaseLayer` et `onBaseLayerChange`. Le changement est idempotent, retire l'ancien layer avant d'activer le nouveau, conserve la carte et notifie l'UI avec l'identifiant canonique. Une couche absente ou indisponible retombe déterministiquement sur `classic`.
 
 Le catalogue déclare Satellite mais `addCleanBaseLayers` ne l'instancie que pour les cartes qui demandaient déjà `includeSatellite`. Aucun bouton Satellite global n'a été ajouté et aucune activation Production n'a été faite. Le prototype MapLibre 3D n'est pas concerné.
+
+## Bloc 2 livré — Satellite global Preview contrôlé
+
+Le provider Preview retenu pour cette validation est Esri World Imagery, via l'URL de tuiles centralisée dans `map-base-layers.mjs` : `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}`. L'attribution Esri est portée par le catalogue et affichée par Leaflet. Aucun compte, secret, clé API ou compteur de quota n'est ajouté ; cette utilisation reste temporaire et limitée à la validation Preview.
+
+`PISTE_SATELLITE_PREVIEW_ENABLED` est dérivé de l'environnement Preview/dev. Les cartes 2D créées par le moteur commun exposent alors Classique, Topo et Satellite, avec un seul fond actif. En production canonique, la couche Esri n'est pas instanciée, les contrôles Satellite sont désactivés/masqués et toute demande retombe déterministiquement sur Classique sans requête provider.
+
+Les sélecteurs Planner, Coaching, OPS et Replay utilisent le même contrat moteur et synchronisent classe active et `aria-pressed`. Trois erreurs de tuiles Satellite déclenchent un fallback vers Classique sans détruire la carte ni réinitialiser l'état métier. Le Replay, la timeline, les événements, le GPS et le prototype MapLibre 3D ne sont pas modifiés.

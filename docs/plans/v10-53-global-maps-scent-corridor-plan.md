@@ -45,7 +45,9 @@
 
 ### Bloc 2 — Satellite global contrôlé
 
-**Fichiers futurs :** adaptateur fournisseur, configuration non secrète, guard Satellite, documentation licence.
+**État : EN VALIDATION PREVIEW.** Esri World Imagery est déclaré dans le catalogue central, activé seulement sur les environnements Preview/dev, avec attribution centralisée, fallback après trois erreurs de tuiles et sélecteurs cohérents Planner/Coaching/OPS/Replay. La Production ne crée pas la couche Satellite et reste sur Classique/Topo. Aucun secret, compte ou suivi de quota réel n'est ajouté.
+
+**Fichiers livrés :** `map-base-layers.mjs`, `app.js`, `index.html`, `scripts/check-v10-53-satellite-preview.js`.
 
 - [ ] Comparer Esri, MapTiler et Mapbox avec leurs contrats réels avant activation.
 - [ ] N'ajouter aucune clé au dépôt ; utiliser un environnement Preview explicitement configuré seulement après accord.
