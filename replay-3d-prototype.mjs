@@ -43,7 +43,7 @@ export async function createReplay3DPrototype({container,dataset,onStatus=()=>{}
   if(!supportsWebGL()){onStatus('3D indisponible sur cet appareil');return null}
   loadStyle();
   const maplibregl=await loadScript();
-  const all=[...(dataset?.tracks?.traceur||[]),...(dataset?.tracks?.driver||[]),...(dataset?.tracks?.planned||[])].filter(p=>Number.isFinite(Number(p?.lat))&&Number.isFinite(Number(p?.lon)));
+  const all=[...(dataset?.tracks?.traceur||[]),...(dataset?.tracks?.driver||[]),...(dataset?.tracks?.planned||[]),...(dataset?.events||[])].filter(p=>Number.isFinite(Number(p?.lat))&&Number.isFinite(Number(p?.lon)));
   const center=all[0]?[Number(all[0].lon),Number(all[0].lat)]:[7.45,48.3];
   const map=new maplibregl.Map({container,style:styleForPrototype(),center,zoom:13,pitch:62,bearing:0,maxPitch:80,attributionControl:{compact:true},touchZoomRotate:true,dragRotate:true,cooperativeGestures:false});
   map.addControl(new maplibregl.NavigationControl({visualizePitch:true}), 'top-right');
