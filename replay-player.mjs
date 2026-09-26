@@ -62,6 +62,7 @@ export function createReplayPlayer(dataset, options = {}) {
   let playing = false;
   let frameId = null;
   let previousFrame = null;
+  let playbackRate = 1;
 
   const snapshot = () => {
     const positions = {};
@@ -94,7 +95,7 @@ export function createReplayPlayer(dataset, options = {}) {
     const currentFrame = Number.isFinite(timestamp) ? timestamp : nowMs();
     const delta = previousFrame === null ? 0 : Math.max(0, currentFrame - previousFrame);
     previousFrame = currentFrame;
-    currentTime = Math.min(endTimestamp ?? currentTime, currentTime + delta);
+    currentTime = Math.min(endTimestamp ?? currentTime, currentTime + delta * playbackRate);
     emit();
     if (endTimestamp !== null && currentTime >= endTimestamp) finish();
     else frameId = requestFrame(frame);
@@ -114,6 +115,23 @@ export function createReplayPlayer(dataset, options = {}) {
       playing = false;
       previousFrame = null;
       stopFrame();
+      emit();
+      return true;
+    },
+    seek(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) return false;
+      const target = numeric >= (startTimestamp ?? 0) ? numeric : (startTimestamp ?? 0) + numeric;
+      currentTime = Math.max(startTimestamp ?? 0, Math.min(endTimestamp ?? target, target));
+      previousFrame = null;
+      emit();
+      return true;
+    },
+    setPlaybackRate(rate) {
+      const numeric = Number(rate);
+      if (!Number.isFinite(numeric) || numeric <= 0) return false;
+      playbackRate = numeric;
+      previousFrame = null;
       emit();
       return true;
     },
@@ -140,6 +158,7 @@ export function createReplayPlayer(dataset, options = {}) {
     get currentTime() { return currentTime; },
     get duration() { return duration; },
     get isPlaying() { return playing; },
+    get playbackRate() { return playbackRate; },
     snapshot
   };
 }

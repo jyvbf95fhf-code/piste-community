@@ -1851,12 +1851,15 @@ function updateReplayVisual(state){
  setUiText(`${replaySurface.prefix}Elapsed`,replayTimeLabel(state.currentTime-(replayDataset.capabilities.startTimestamp||state.currentTime)));
  setUiText(`${replaySurface.prefix}Duration`,replayTimeLabel(replayDataset.capabilities.durationMs));
  const button=$(replaySurface.prefix+'PlayPause');if(button){button.textContent=state.playing?'❚❚':'▶';button.setAttribute('aria-label',state.playing?'Mettre le replay en pause':'Lire le replay')}
- setUiText(replaySurface.prefix+'State',state.playing?'Lecture en cours':state.currentTime>=replayDataset.capabilities.endTimestamp?'Replay terminé':'Prêt à lire');
+ const atEnd=Number.isFinite(replayDataset.capabilities.endTimestamp)&&state.currentTime>=replayDataset.capabilities.endTimestamp;
+ setUiText(replaySurface.prefix+'State',state.playing?'Lecture en cours':atEnd?'Replay terminé':state.currentTime>(replayDataset.capabilities.startTimestamp||0)?'En pause':'Prêt à lire');
+ const timeline=$(replaySurface.prefix+'Timeline');if(timeline){timeline.value=String(Math.max(0,state.currentTime-(replayDataset.capabilities.startTimestamp||0)));timeline.setAttribute('aria-valuetext',replayTimeLabel(state.currentTime-(replayDataset.capabilities.startTimestamp||0)))}
+ document.querySelectorAll(`[data-replay-rate="${replaySurface.mapId}"]`).forEach(rate=>{const active=Number(rate.dataset.rate)===Number(replayPlayer?.playbackRate||1);rate.classList.toggle('active',active);rate.setAttribute('aria-pressed',String(active))});
 }
 function renderReplaySurface(dataset,panelId='blackBoxReplay',back=()=>setBlackBoxTab('summary'),mapId='activityReplayMap'){
  const panel=$(panelId);if(!panel)return;
  destroyReplaySurface();replayDataset=dataset;replaySurface={panelId,mapId,prefix:`${mapId}-`,back};
- panel.innerHTML=`<div class="replay-surface"><div class="replay-surface-header"><div><small class="section-kicker">REPLAY 2D</small><h3>Replay de la piste</h3><p id="${mapId}-State" class="small muted" role="status">Prêt à lire</p></div><button id="${mapId}-Back" type="button" class="secondary">‹ Retour</button></div><div id="${mapId}" class="replay-map" aria-label="Carte du replay"></div><div class="replay-controls" role="group" aria-label="Contrôles du replay"><output><span id="${mapId}-Elapsed">00:00</span> / <span id="${mapId}-Duration">00:00</span></output><button id="${mapId}-Reset" type="button" class="secondary" aria-label="Revenir au début du replay">⏮</button><button id="${mapId}-PlayPause" type="button" class="primary" aria-label="Lire le replay">▶</button></div><div class="replay-legend" aria-label="Acteurs visibles">${dataset.capabilities.hasTraceur?'<span><i class="replay-dot traceur"></i>Traceur</span>':''}${dataset.capabilities.hasDriver?'<span><i class="replay-dot driver"></i>Conducteur</span>':''}</div></div>`;
+ panel.innerHTML=`<div class="replay-surface"><div class="replay-surface-header"><div><small class="section-kicker">REPLAY 2D</small><h3>Replay de la piste</h3><p id="${mapId}-State" class="small muted" role="status">Prêt à lire</p></div><button id="${mapId}-Back" type="button" class="secondary">‹ Retour</button></div><div id="${mapId}" class="replay-map" aria-label="Carte du replay"></div><div class="replay-timeline" aria-label="Chronologie du replay"><output id="${mapId}-Elapsed">00:00</output><input id="${mapId}-Timeline" type="range" min="0" max="${Math.max(0,dataset.capabilities.durationMs||0)}" step="1" value="0" aria-label="Position dans le replay" aria-valuetext="00:00"><output id="${mapId}-Duration">00:00</output></div><div class="replay-controls" role="group" aria-label="Contrôles du replay"><button id="${mapId}-Reset" type="button" class="secondary" aria-label="Revenir au début du replay">⏮</button><button id="${mapId}-PlayPause" type="button" class="primary" aria-label="Lire le replay">▶</button><div class="replay-rates" role="group" aria-label="Vitesse de lecture"><button type="button" class="secondary active" data-replay-rate="${mapId}" data-rate="1" aria-pressed="true" aria-label="Vitesse 1x">1x</button><button type="button" class="secondary" data-replay-rate="${mapId}" data-rate="2" aria-pressed="false" aria-label="Vitesse 2x">2x</button></div></div><div class="replay-legend" aria-label="Acteurs visibles">${dataset.capabilities.hasTraceur?'<span><i class="replay-dot traceur"></i>Traceur</span>':''}${dataset.capabilities.hasDriver?'<span><i class="replay-dot driver"></i>Conducteur</span>':''}</div></div>`;
  replayMap=PisteTerrainEngine.createMap(mapId,{zoomControl:true});
  const all=[...dataset.tracks.traceur,...dataset.tracks.driver,...dataset.tracks.planned];
  replayLayers={full:{},played:{},cursors:{},endpoints:[]};
@@ -1873,6 +1876,10 @@ function renderReplaySurface(dataset,panelId='blackBoxReplay',back=()=>setBlackB
  $(mapId+'-PlayPause').onclick=()=>replayPlayer?.isPlaying?replayPlayer.pause():replayPlayer?.play();
  $(mapId+'-Reset').onclick=()=>replayPlayer?.reset();
  $(mapId+'-Back').onclick=back;
+ const timeline=$(mapId+'-Timeline');let resumeAfterSeek=false;
+ timeline.oninput=()=>{if(!resumeAfterSeek){resumeAfterSeek=replayPlayer?.isPlaying||false;if(resumeAfterSeek)replayPlayer.pause()}replayPlayer?.seek(Number(timeline.value))};
+ timeline.onchange=()=>{if(resumeAfterSeek){resumeAfterSeek=false;replayPlayer?.play()}};
+ document.querySelectorAll(`[data-replay-rate="${mapId}"]`).forEach(rate=>rate.onclick=()=>replayPlayer?.setPlaybackRate(Number(rate.dataset.rate)));
  setTimeout(()=>PisteTerrainEngine.invalidateSize(mapId),80);
 }
 async function openReplayView(type,id){
