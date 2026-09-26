@@ -70,7 +70,9 @@
 
 ### Bloc 4 — Coaching live
 
-**Fichiers futurs :** intégration ciblée Coaching, guard permissions/corridor.
+**État : EN VALIDATION PREVIEW.** Coaching utilise le moteur central via `sharedOlfactionEngine()`, conserve les permissions existantes, active le couloir par défaut lorsqu'il est autorisé, conserve le toggle par session, garde la météo compacte et nettoie les layers/timers au changement de session. `scripts/check-v10-53-coaching-live-scent.js` couvre le rôle, la visibilité, le toggle, le cache météo et l'absence de second calcul/RAF.
+
+**Fichiers livrés :** `app.js`, `scripts/check-v10-53-coaching-live-scent.js`, spec et ledger.
 
 - [ ] Tester Coach, Traceur, Conducteur, Observateur, Solo, simple aveugle et double aveugle avec sources filtrées.
 - [ ] Activer le corridor par défaut lorsque le modèle autorisé est calculable ; conserver le masquage ponctuel.

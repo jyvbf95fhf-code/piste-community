@@ -207,3 +207,17 @@ Le résultat contient `centerline`, `innerBoundary`, `outerBoundary`, des largeu
 Les coordonnées GPS et horodatages sont qualifiés `measured` lorsqu'ils existent ; l'âge est `calculated`, la géométrie `estimated`, et une météo historique/archives est `reconstructed`. Une donnée absente reste `unavailable`. Vent, rafales, âge, température, humidité, pluie et terrain connu modulent prudemment le déport et la largeur, avec bornes explicites ; l'absence de vent ou de météo réduit la confiance et ajoute des warnings. Le modèle ne localise jamais une odeur avec certitude et ne prétend pas valider scientifiquement une dispersion réelle.
 
 Les pauses manuelles et les immobilités détectées automatiquement sont réservées à la couche statistique du Bloc 7 ; le schéma du résultat ne les confond pas et ne les calcule pas dans ce bloc.
+
+## Bloc 4 — Coaching live
+
+### Audit du flux existant
+
+Le Coaching rend la carte dans `renderCoachingMap()`, nettoie `coachingLayers` à chaque rendu et reconstruit les couches autorisées à partir de `coachingActiveSurfaceModel()`/`coachingDataVisibility()`. Le couloir était déclenché par `addLiveOdorCorridor()`, avec `coachingLayerVisibility.odor`, la préférence de session `coachingOdorPreferenceMemory` et le garde `coachingCanSeeOdor()`. La météo compacte provenait déjà d'Open-Meteo, avec cache local par session, identifiant de requête, bouton `refreshCoachingWeather` et rafraîchissement borné à 420 secondes.
+
+### Intégration et confidentialité
+
+`liveOdorModel()` passe par `sharedOlfactionEngine()`, lui-même alimenté par `computeScentCorridor()`. Le moteur ne reçoit que `trace`, `planned_route` et météo déjà autorisés. En double aveugle, `visibility.trace` reste faux pour le Conducteur avant révélation ; le couloir reste donc absent, même si une route ou une position live existe. Aucun fetch supplémentaire n'est ajouté et aucune donnée cachée n'est reconstruite.
+
+Le couloir est activé par défaut (`coachingLayerVisibility.odor=true`) lorsqu'il est autorisé. Le masquage reste local à la session via la préférence existante et est remis à l'état par défaut lors d'une nouvelle session. La météo reste compacte, actualisable et protégée contre les requêtes concurrentes. Le niveau de confiance, les warnings et la provenance sont conservés dans `coachingCorridorState` pour les futurs blocs sans surcharge terrain.
+
+La reconstruction de carte retire les anciennes couches, et `clearCoachingRealtime()` annule timer météo, données météo et état de corridor lors d'un changement de session. Les statistiques de temps dans/hors corridor et la détection d'immobilité restent explicitement hors de ce bloc.

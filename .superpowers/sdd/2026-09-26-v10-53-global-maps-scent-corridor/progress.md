@@ -27,7 +27,7 @@
 | 1 | Contrat moteur global de fonds | DONE |
 | 2 | Satellite global Preview contrôlé | DONE — Esri Preview-only, fallback, guard |
 | 3 | Moteur CouloirOlfactif natif | DONE — moteur déterministe, provenance, confiance, warnings |
-| 4 | Coaching live | planifié |
+| 4 | Coaching live | EN VALIDATION PREVIEW — moteur central, permissions, météo compacte |
 | 5 | OPS / Entraînement live | planifié |
 | 6 | Archives / Guided Debrief / Replay | planifié |
 | 7 | Statistiques & données scientifiques | planifié |
@@ -40,6 +40,7 @@
 - Bloc 1 : contrat cartographique et guard livrés.
 - Bloc 2 : Esri World Imagery validé sur Preview, uniquement en Preview/dev, jamais en Production.
 - Bloc 3 : moteur central livré et branché sur le wrapper olfactif existant, sans UI nouvelle ni persistance.
+- Bloc 4 : intégration Coaching prête ; validation Preview mobile restante.
 - Satellite 3D reste en développement.
 - Aucun changement Supabase, SQL, RLS, Auth, boot ou GPS.
 - Aucun changement main ou Production.
