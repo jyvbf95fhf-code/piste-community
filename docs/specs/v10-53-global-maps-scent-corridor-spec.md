@@ -189,3 +189,21 @@ Le provider Preview retenu pour cette validation est Esri World Imagery, via l'U
 `PISTE_SATELLITE_PREVIEW_ENABLED` est dérivé de l'environnement Preview/dev. Les cartes 2D créées par le moteur commun exposent alors Classique, Topo et Satellite, avec un seul fond actif. En production canonique, la couche Esri n'est pas instanciée, les contrôles Satellite sont désactivés/masqués et toute demande retombe déterministiquement sur Classique sans requête provider.
 
 Les sélecteurs Planner, Coaching, OPS et Replay utilisent le même contrat moteur et synchronisent classe active et `aria-pressed`. Trois erreurs de tuiles Satellite déclenchent un fallback vers Classique sans détruire la carte ni réinitialiser l'état métier. Le Replay, la timeline, les événements, le GPS et le prototype MapLibre 3D ne sont pas modifiés.
+
+## Modèle Couloir olfactif estimé — Bloc 3
+
+### Audit de l'ancien calcul
+
+Avant ce bloc, `odorGeometry()` produisait un ruban déterministe autour d'une route : dérive sous le vent, largeur interne/externe globale et facteurs heuristiques par environnement. `sharedOlfactionEngine()` ajoutait l'âge depuis une date de référence, résumait la météo live/historique et exposait une confiance binaire (`medium` si route et référence présentes, sinon `low`). `addOdorLayers()` restait le renderer Leaflet. Ces briques de rendu, les sources Open-Meteo existantes et les règles d'autorisation ont été conservées ; le calcul et la qualité des données sont désormais fournis par le module central.
+
+### Contrat du moteur
+
+`scent-corridor-engine.mjs` expose `validateScentCorridorInput`, `normalizeTrackForScentCorridor`, `normalizeWeatherForScentCorridor`, `computeScentCorridor` et `getScentCorridorConfidence`. Le module n'importe ni Leaflet, ni DOM, ni réseau. Il reçoit uniquement la trace et la météo déjà autorisées par l'écran appelant.
+
+Le résultat contient `centerline`, `innerBoundary`, `outerBoundary`, des largeurs par point, le déport sous le vent, l'âge, `confidence { score, level }`, `provenance`, `warnings`, les limites et la géométrie sérialisable. Le calcul est déterministe et ne modifie jamais les points source.
+
+### Provenance, hypothèses et limites
+
+Les coordonnées GPS et horodatages sont qualifiés `measured` lorsqu'ils existent ; l'âge est `calculated`, la géométrie `estimated`, et une météo historique/archives est `reconstructed`. Une donnée absente reste `unavailable`. Vent, rafales, âge, température, humidité, pluie et terrain connu modulent prudemment le déport et la largeur, avec bornes explicites ; l'absence de vent ou de météo réduit la confiance et ajoute des warnings. Le modèle ne localise jamais une odeur avec certitude et ne prétend pas valider scientifiquement une dispersion réelle.
+
+Les pauses manuelles et les immobilités détectées automatiquement sont réservées à la couche statistique du Bloc 7 ; le schéma du résultat ne les confond pas et ne les calcule pas dans ce bloc.

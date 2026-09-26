@@ -57,12 +57,15 @@
 
 ### Bloc 3 — Moteur `OlfactiveCorridorEngine`
 
-**Fichiers futurs :** module corridor, fixtures météo/route, `scripts/check-v10-53-scent-corridor-model.js`.
+**État : DONE.** Le module `scent-corridor-engine.mjs` est indépendant de l'UI, déterministe, borné et consommé par `sharedOlfactionEngine()`. Le guard `scripts/check-v10-53-scent-corridor.js` couvre les traces valides/incomplètes, météo absente ou reconstruite, vent/rafales, confiance, provenance, warnings, géométrie et absence de dépendance Leaflet/réseau.
+
+**Livré :** normalisation piste/météo, centre estimé, limites interne/externe à largeur variable, déport sous le vent, âge calculé, score de confiance, provenance et limites explicites. Aucun appel réseau, aucune persistance et aucune UI nouvelle.
 
 - [ ] Écrire les fixtures séparant mesures brutes, météo reconstruite, calcul et estimation.
 - [ ] Normaliser les bornes de pose, âge, vecteur vent, rafales, température, humidité, pluie et environnement.
 - [ ] Produire une géométrie bornée avec largeur variable, déport, dispersion, confiance, provenance et warnings.
 - [ ] Tester données manquantes sans inventer timestamp, vent, altitude ou précision.
+- [ ] Réserver la distinction pause manuelle / immobilité détectée au Bloc 7 statistiques.
 - [ ] Vérifier que la sortie porte le libellé d'estimation et aucune certitude scientifique.
 
 ### Bloc 4 — Coaching live
