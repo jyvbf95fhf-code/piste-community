@@ -26,4 +26,10 @@ ok(/2D|Replay 2D|replay-surface/.test(app),'La surface 2D doit rester présente'
 ok(!/setBlackBoxTab\(['"]3d/.test(app),'Aucune bascule globale 2D/3D ne doit être ajoutée');
 ok(/closeReplay3DPrototype\('fatal:/.test(app),'Seules les erreurs fatales doivent fermer le prototype');
 ok(/onDiagnostic/.test(app),'La surface 3D doit afficher le diagnostic non fatal');
+ok(/data-replay-3d-base/.test(app),'Les contrôles de fond 3D manquent');
+ok(/data-replay-3d-map/.test(app)&&/replay-map.*hidden/.test(app),'La 3D doit remplacer uniquement la zone cartographique');
+ok(/SATELLITE_TILES|World_Imagery/.test(prototypeSource),'Le fond Satellite 3D manque');
+ok(/setBaseLayer/.test(prototypeSource)&&/setBaseLayer/.test(app),'Le changement de fond doit conserver le même player');
+ok(/satellite.*classic|Satellite indisponible/.test(prototypeSource+app),'Le fallback Satellite vers Classique manque');
+ok(/replay-timeline|Replay 2D/.test(app),'Les contrôles Replay doivent rester dans la surface visible');
 console.log('check-v10-52-replay-3d-prototype: PASS');
