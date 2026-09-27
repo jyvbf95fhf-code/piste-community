@@ -142,5 +142,5 @@ Chaque bloc doit fournir un guard Node ciblé, `node --check` des fichiers conce
 - [x] Préparer une migration dédiée `PISTE_V10.53_SOLO_EXTERNAL_TRACEUR.sql` avec `traceur_mode`, RPC de création Solo/externe, RPC « traceur en place », validations owner/membership et rollback.
 - [x] Adapter le wizard Solo pour conserver `route_id` et proposer le mode Traceur externe.
 - [x] Stabiliser la surface du bouton Solo à partir du rôle membre réel.
-- [ ] Appliquer la migration uniquement après confirmation du projet Supabase autorisé et exécuter les dry-runs backend.
-- [ ] Déployer une Preview dédiée et valider les workflows ; Bloc 6 reste fermé.
+- [x] Migration appliquée au projet Supabase autorisé et dry-runs backend structurels PASS.
+- [x] Preview dédiée READY ; validation fonctionnelle terrain restante ; Bloc 6 reste fermé.
