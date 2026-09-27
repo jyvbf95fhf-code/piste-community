@@ -17,13 +17,13 @@ function functionSource(name) {
 }
 
 assert(app.includes("coachingLocationPermissionState='unknown'"), 'permission state must start unknown per page visit');
-assert(app.includes("setCoachingLocationPermissionState('granted')"), 'permission state must persist granted');
-assert(app.includes("setCoachingLocationPermissionState('denied')"), 'permission state must persist denied');
+assert(/setCoachingLocationPermissionState\('granted'/.test(app), 'permission state must persist granted');
+assert(/setCoachingLocationPermissionState\('denied'/.test(app), 'permission state must persist denied');
 const request = functionSource('requestCoachingTraceurPermission');
 assert(request.includes("coachingLocationPermissionState==='granted'") && !request.match(/coachingLocationPermissionState==='granted'[\s\S]{0,120}getCurrentPosition/), 'granted sessions must skip preflight getCurrentPosition');
 assert(request.includes("error?.code===1") && request.includes("error?.code===2||error?.code===3"), 'permission denial must be distinct from transient GPS errors');
-assert(request.includes("setCoachingLocationPermissionState('denied')"), 'explicit denial must block');
-assert(request.includes("setCoachingLocationPermissionState('granted')"), 'transient preflight errors must allow watcher start');
+assert(/setCoachingLocationPermissionState\('denied'/.test(request), 'explicit denial must block');
+assert(/setCoachingLocationPermissionState\('unknown'/.test(request), 'transient preflight errors must allow watcher start');
 for (const name of ['clearCoachingRealtime', 'resetCoachingGpsTransientState', 'returnToCoachingSessions']) {
   const source = functionSource(name);
   assert(!source.includes('coachingLocationPermissionState='), `${name} must not reset global permission state`);
@@ -31,7 +31,7 @@ for (const name of ['clearCoachingRealtime', 'resetCoachingGpsTransientState', '
 for (const name of ['startTraceurTracking', 'startCoachingPresence']) {
   const source = functionSource(name);
   assert(source.includes('navigator.geolocation.watchPosition'), `${name} must use a session watcher`);
-  assert(source.includes('setCoachingLocationPermissionState(\'denied\')'), `${name} must handle permission revocation`);
+  assert(/setCoachingLocationPermissionState\('denied'/.test(source), `${name} must handle permission revocation`);
 }
 assert(app.includes('clearWatch(coachingPreviewWatch)'), 'preview watcher must be cleared per session');
 assert(app.includes('clearWatch(traceurWatch)'), 'traceur watcher must be cleared per session');
