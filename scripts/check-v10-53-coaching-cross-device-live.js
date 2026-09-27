@@ -27,6 +27,8 @@ assert(presence.includes("from('coaching_live_points')"), 'driver live points mu
 assert(traceur.includes("from('coaching_trace_points')"), 'traceur points must remain persisted');
 assert(presence.includes('shareCoachingCurrentPosition'), 'driver live tracking must share current position for cross-device rendering');
 assert(traceur.includes('shareCoachingCurrentPosition'), 'traceur tracking must share current position for cross-device rendering');
+assert(app.includes('coachingLiveWriteState'), 'live write result must be recorded for Preview diagnostics');
+assert(app.includes('coaching_current_positions'), 'current position writes must be observable');
 assert(presence.indexOf('shareCoachingCurrentPosition') < presence.indexOf('p.accuracy_m)>55'), 'driver preview sharing must happen before the business-point accuracy filter');
 assert(traceur.indexOf('shareCoachingCurrentPosition') < traceur.indexOf('accuracy_m)>45'), 'traceur preview sharing must happen before the business-point accuracy filter');
 assert(renderer.includes("from('coaching_current_positions')"), 'map rendering must read current participant positions');
