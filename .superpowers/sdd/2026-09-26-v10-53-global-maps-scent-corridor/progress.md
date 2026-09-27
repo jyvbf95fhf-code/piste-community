@@ -27,8 +27,8 @@
 | 1 | Contrat moteur global de fonds | DONE |
 | 2 | Satellite global Preview contrôlé | DONE — Esri Preview-only, fallback, guard |
 | 3 | Moteur CouloirOlfactif natif | DONE — moteur déterministe, provenance, confiance, warnings |
-| 4 | Coaching live | EN VALIDATION PREVIEW — moteur central, permissions, météo compacte |
-| 5 | OPS / Entraînement live | planifié |
+| 4 | Coaching live | EN VALIDATION PREVIEW — moteur central, permissions, météo compacte ; dette multi-session/Mac GPS conservée |
+| 5 | OPS / Entraînement live | DONE — moteur natif direct, default ON, météo cache, toggle compact, guard |
 | 6 | Archives / Guided Debrief / Replay | planifié |
 | 7 | Statistiques & données scientifiques | planifié |
 | 8 | Profil / comprendre le couloir olfactif avancé | planifié |
@@ -47,6 +47,12 @@
 - Aucun travail JumOlf, ADMIN, Live public ou créateur assisté.
 - La distinction pause manuelle / immobilité détectée reste réservée au Bloc 7.
 
+## Dette conservée
+
+- Coaching : seconde session sans reload potentiellement encore fragile.
+- Coaching : géolocalisation Mac parfois indisponible selon le navigateur.
+- Diagnostics Coaching Preview conservés.
+
 ## Prochaine étape
 
-Prochaine étape : ouvrir uniquement le Bloc 4 — Coaching live.
+Prochaine étape : ouvrir uniquement le Bloc 6 — Archives / Guided Debrief / Replay.

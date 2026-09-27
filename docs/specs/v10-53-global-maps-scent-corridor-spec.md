@@ -221,3 +221,21 @@ Le Coaching rend la carte dans `renderCoachingMap()`, nettoie `coachingLayers` �
 Le couloir est activé par défaut (`coachingLayerVisibility.odor=true`) lorsqu'il est autorisé. Le masquage reste local à la session via la préférence existante et est remis à l'état par défaut lors d'une nouvelle session. La météo reste compacte, actualisable et protégée contre les requêtes concurrentes. Le niveau de confiance, les warnings et la provenance sont conservés dans `coachingCorridorState` pour les futurs blocs sans surcharge terrain.
 
 La reconstruction de carte retire les anciennes couches, et `clearCoachingRealtime()` annule timer météo, données météo et état de corridor lors d'un changement de session. Les statistiques de temps dans/hors corridor et la détection d'immobilité restent explicitement hors de ce bloc.
+
+## Bloc 5 — OPS / Entraînement live
+
+### Audit et point d'intégration
+
+La surface OPS/Entraînement est `liveMap`, initialisée par `beginNewPiste()` et alimentée par `gps.points`. La météo existante repose sur `operationalLiveWeather`, `operationalWeatherHistory`, un cache local et un rafraîchissement borné à 420 secondes ; elle n'est jamais demandée par position GPS. `renderOperationalOdorCorridor()` est le point unique de calcul/rendu du corridor et `operationalWeatherOdorLayers` porte les couches Leaflet temporaires.
+
+Avant ce bloc, OPS appelait `sharedOlfactionEngine()` puis recalculait une géométrie via `addOdorLayers()`. Le Bloc 5 appelle directement `computeScentCorridor()` avec la route autorisée (`selectedTrainingRoute.route` ou `gps.points`) et la météo disponible, puis rend le résultat sérialisable avec les primitives Leaflet existantes. Aucun calcul olfactif OPS parallèle n'est conservé.
+
+### Comportement
+
+`operationalCorridorVisible` est vrai par défaut pour les nouvelles surfaces OPS et Entraînement. Le couloir n'est dessiné qu'avec au moins deux points valides et reste libellé **« Couloir olfactif estimé »**. Le bouton compact permet de masquer ou restaurer les couches sans toucher à la session, au GPS, aux points bruts, au zoom ou aux markers. Le mode Entraînement partage le même cycle météo/corridor, sans créer un moteur distinct.
+
+Lorsque la météo est absente, le moteur peut produire une géométrie prudente avec confiance réduite et warnings `wind_unavailable`/données manquantes ; aucune valeur météo fictive n'est ajoutée. La météo live reste mise en cache et rafraîchie à intervalle fixe. La géométrie est recalculée au démarrage, lors des rafraîchissements météo, des changements d'âge et toutes les 12 positions GPS pendant l'enregistrement ; aucune boucle RAF ni requête météo par point n'est introduite.
+
+### Provenance et diagnostic
+
+Le résultat conserve `confidence`, `warnings`, `provenance` et la géométrie `estimated` du moteur natif. En Preview/dev, `window.__pisteDebug.ops()` expose uniquement un état compact : session hashée, présence des entrées, état météo, confiance, warnings, provenance, dernière recomputation et visibilité de couche. Les coordonnées, secrets, emails et identifiants bruts ne sont jamais journalisés. Aucune persistance ou modification Supabase n'est ajoutée.

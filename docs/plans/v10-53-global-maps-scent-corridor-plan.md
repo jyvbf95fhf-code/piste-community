@@ -81,11 +81,15 @@
 
 ### Bloc 5 — OPS / Entraînement live
 
-**Fichiers futurs :** intégration `liveMap`, météo/corridor OPS, guard de cache.
+**État : DONE techniquement en Preview.** Le corridor OPS/Entraînement utilise directement `computeScentCorridor()` et le renderer Leaflet partagé, avec un défaut ON lorsque la géométrie est calculable, météo mise en cache et instrumentation Preview/dev.
 
-- [ ] Réutiliser `operationalLiveWeather`, `operationalWeatherHistory` et le cache stale existants.
-- [ ] Rendre l'état default visible lorsqu'il est calculable, avec fallback clair hors réseau.
-- [ ] Préserver pause, reprise, tracé, markers, GPS et sauvegarde locale.
+**Fichiers livrés :** `app.js`, `scripts/check-v10-53-ops-scent-corridor.js`, spec et ledger.
+
+- [x] Réutiliser `operationalLiveWeather`, `operationalWeatherHistory` et le cache stale existants.
+- [x] Rendre l'état default visible lorsqu'il est calculable, avec fallback clair hors réseau.
+- [x] Préserver pause, reprise, tracé, markers, GPS et sauvegarde locale.
+- [x] Vérifier qu'aucun calcul olfactif parallèle, fetch météo par point ou stockage DB n'est ajouté.
+- [x] Conserver la dette Coaching multi-session/Mac GPS dans le ledger sans la traiter ici.
 
 ### Bloc 6 — Archives / Guided Debrief / Replay
 

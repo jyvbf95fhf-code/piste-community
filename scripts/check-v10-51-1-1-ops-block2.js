@@ -5,7 +5,7 @@ const html=fs.readFileSync('index.html','utf8');
 const css=fs.readFileSync('v2.css','utf8');
 const checks=[
  ['OPS direct corridor control',html.includes('id="toggleOpsLiveCorridor"')&&app.includes('toggleOperationalCorridorDirect')],
- ['OFF/loading/active/unavailable states',app.includes("off:'🌬️ Couloir olfactif · OFF'")&&app.includes("loading:'🌬️ Chargement météo…'")&&app.includes("active:'🌬️ Couloir actif · estimation'")&&app.includes("unavailable:'🌬️ Météo indisponible'")],
+ ['OFF/loading/active/unavailable states',app.includes("off:'🌬️ Couloir olfactif estimé · OFF'")&&app.includes("loading:'🌬️ Chargement météo…'")&&app.includes("active:'🌬️ Couloir olfactif estimé · ON'")&&app.includes("unavailable:'🌬️ Couloir indisponible'") ],
  ['Fresh weather reused',app.includes('operationalWeatherIsFresh()')&&app.includes('restoreOperationalWeatherCache()')&&app.includes('if(restoreOperationalWeatherCache())')],
  ['15 minute freshness',app.includes('15*60*1000')],
  ['Existing OPS weather fetch reused',app.includes('fetchOperationalLiveWeather()')&&app.includes('renderOperationalOdorCorridor()')],
