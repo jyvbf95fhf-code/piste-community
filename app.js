@@ -62,13 +62,14 @@ const globalLiveSync={
   if(!this.userId||!supabase?.channel)return;
   const channel=this.addChannel('global-app',supabase.channel(`global-live-sync-${this.userId}`)
    .on('postgres_changes',{event:'*',schema:'public',table:'coaching_sessions'},()=>this.invalidate('coaching','coaching_sessions'))
+   .on('postgres_changes',{event:'*',schema:'public',table:'coaching_members'},()=>this.invalidate('coaching','coaching_members'))
    .on('postgres_changes',{event:'*',schema:'public',table:'coaching_session_scenarios'},()=>this.invalidate('coaching','coaching_session_scenarios'))
    .on('postgres_changes',{event:'*',schema:'public',table:'coaching_scenario_reads'},()=>this.invalidate('scenario','coaching_scenario_reads'))
    .on('postgres_changes',{event:'*',schema:'public',table:'coaching_debrief_observations'},()=>this.invalidate('debrief','coaching_debrief_observations')));
   channel?.subscribe(status=>{if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){this.invalidate('coaching','realtime-fallback');this.retrySubscriptions()}});
  },
  retrySubscriptions(){if(!this.started||!this.online||!this.visible||this.timers.has('resubscribe'))return;const timer=setTimeout(()=>{this.timers.delete('resubscribe');this.removeChannels();this.subscribeGlobalChannels()},1000);this.timers.set('resubscribe',timer)},
- scheduleFallback(){if(this.timers.has('fallback'))return;const timer=setInterval(()=>{if(this.started&&this.visible&&this.online)this.resyncAppData(['history','dogs','goals','social'])},this.fallbackIntervalMs);this.timers.set('fallback',timer)},
+ scheduleFallback(){if(this.timers.has('fallback'))return;const timer=setInterval(()=>{if(this.started&&this.visible&&this.online)this.resyncAppData(['history','dogs','goals','social','coaching'])},this.fallbackIntervalMs);this.timers.set('fallback',timer)},
  clearTimer(key){const timer=this.timers.get(key);if(timer){clearTimeout(timer);clearInterval(timer);this.timers.delete(key)}},
  invalidate(scope,reason='event'){if(!this.started||!scope)return;this.counters.events++;this.dirtyScopes.add(scope);if(scope==='gps')return;if(!this.visible||!this.online)return;this.clearTimer('resync');this.timers.set('resync',setTimeout(()=>{this.timers.delete('resync');this.resyncAppData()},120))},
  async resyncAppData(scopes){
@@ -77,7 +78,7 @@ const globalLiveSync={
   const requested=new Set(scopes||[]);this.dirtyScopes.forEach(scope=>requested.add(scope));if(!requested.size)return true;
   this.dirtyScopes.clear();this.counters.resyncs++;
   this.resyncPromise=(async()=>{const jobs=[];const add=(scope,fn)=>{if(!requested.has(scope))return;jobs.push(Promise.resolve().then(()=>{this.counters.fetches++;return fn()}).catch(error=>{this.dirtyScopes.add(scope);if(GLOBAL_LIVE_SYNC_DEV)console.warn('[globalLiveSync]',scope,error)}))};
-    add('coaching',async()=>{if(this.inFlight.has('coaching'))return this.inFlight.get('coaching');const p=loadCoachingHub().finally(()=>this.inFlight.delete('coaching'));this.inFlight.set('coaching',p);return p});
+    add('coaching',async()=>{if(this.inFlight.has('coaching'))return this.inFlight.get('coaching');const id=activeCoachingSession?.id,generation=coachingRuntimeGeneration;const p=loadCoachingHub().then(async()=>{if(id&&coachingRuntimeIsCurrent(id,generation)){await refreshActiveCoachingSession(id,generation);if(coachingRuntimeIsCurrent(id,generation)){updateCoachingPhase();updateCoachingPreparationDetails();updateCoachingPrimaryActions();applyV1040RoleSurface();await renderCoachingMap({runtimeGeneration:generation})}}}).finally(()=>this.inFlight.delete('coaching'));this.inFlight.set('coaching',p);return p});
     add('scenario',async()=>activeCoachingSession?.id&&typeof loadCoachingScenario==='function'?loadCoachingScenario(activeCoachingSession.id):null);
     add('debrief',async()=>missionSource?.type==='coaching'?openMissionDossier('coaching',missionSource.row.id):loadCoachingHub());
     add('history',async()=>{await refreshMine();await refreshTrainings();renderActivityLibrary()});
