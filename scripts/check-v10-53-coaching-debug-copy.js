@@ -1,0 +1,23 @@
+'use strict';
+const fs = require('fs');
+const assert = require('assert/strict');
+
+const app = fs.readFileSync('app.js', 'utf8');
+const css = fs.readFileSync('v2.css', 'utf8');
+assert(app.includes('coachingDebugPanelEnabled'), 'debug panel must be environment gated');
+assert(app.includes("v10-51-1-test"), 'Preview hostname gate must remain explicit');
+assert(app.includes('ensureCoachingDebugPanel'), 'debug panel must be created lazily');
+assert(app.includes("id='coachingDebugPanel'"), 'debug panel id must be stable');
+assert(app.includes('copyCoachingDiagnostic'), 'copy action must exist');
+assert(app.includes('clearCoachingDiagnostic'), 'clear action must exist');
+assert(app.includes('window.__pisteDebug.coachingSnapshot()'), 'copy must capture the snapshot');
+assert(app.includes('window.__pisteDebug.coachingEvents()'), 'copy must capture the event ring');
+assert(app.includes('window.__pisteDebug.clearCoachingEvents()'), 'clear must clear only diagnostics');
+assert(app.includes('captureType:\'manual\''), 'copy must identify manual captures');
+assert(app.includes('navigator.clipboard?.writeText'), 'copy must use the Clipboard API when available');
+assert(app.includes("document.execCommand('copy')"), 'copy must have a fallback');
+assert(app.includes('coachingDebugPanelMessage'), 'copy/clear feedback must be visible');
+assert(css.includes('.coaching-debug-panel'), 'debug panel must have compact styling');
+assert(css.includes('.coaching-debug-actions'), 'debug actions must be mobile-friendly');
+assert(!app.includes('navigator.geolocation') || app.includes('coachingDebugPanel'), 'diagnostic panel must not replace GPS logic');
+console.log('check-v10-53-coaching-debug-copy: PASS');
