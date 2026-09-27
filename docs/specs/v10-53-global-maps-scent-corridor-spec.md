@@ -239,3 +239,9 @@ Lorsque la météo est absente, le moteur peut produire une géométrie prudente
 ### Provenance et diagnostic
 
 Le résultat conserve `confidence`, `warnings`, `provenance` et la géométrie `estimated` du moteur natif. En Preview/dev, `window.__pisteDebug.ops()` expose uniquement un état compact : session hashée, présence des entrées, état météo, confiance, warnings, provenance, dernière recomputation et visibilité de couche. Les coordonnées, secrets, emails et identifiants bruts ne sont jamais journalisés. Aucune persistance ou modification Supabase n'est ajoutée.
+
+## Correctif post-Bloc 5 — Solo avec tracé enregistré et Traceur externe
+
+Ce correctif est placé après le Bloc 5 et avant le Bloc 6. `coaching_sessions.route_id` est réutilisé pour une route appartenant à l'utilisateur courant ; la RPC V10.53 valide côté serveur le propriétaire, la géométrie et l'indépendance de la nouvelle session. Le mode `traceur_mode` vaut `connected` par défaut ou `external`. Le mode externe ne crée aucun membre, utilisateur ou point GPS fictif. Le pilote authentifié déclenche `mark_external_traceur_ready_v1053`, qui renseigne les timestamps serveur existants et laisse le conducteur poursuivre le workflow.
+
+Le bouton Solo était masqué parce que `myCoachingRole()` normalise le membre `solo` en `driver`, alors que la surface testait `role === 'solo'`. La surface utilise désormais le rôle membre pour cette décision et conserve les gardes de refresh. Le moteur olfactif reçoit seulement la route autorisée ; aucune règle de double aveugle n'est élargie.

@@ -1,0 +1,18 @@
+'use strict';
+const fs=require('fs');const assert=require('assert/strict');
+const app=fs.readFileSync('app.js','utf8');const html=fs.readFileSync('index.html','utf8');const sql=fs.readFileSync('PISTE_V10.53_SOLO_EXTERNAL_TRACEUR.sql','utf8');
+assert(sql.includes('traceur_mode')&&sql.includes("check (traceur_mode in ('connected','external'))"),'traceur_mode contract missing');
+assert(sql.includes('create_coaching_people_session_v1053')&&sql.includes('mark_external_traceur_ready_v1053'),'dedicated RPCs missing');
+assert(sql.includes('owner_id=uid')&&sql.includes('jsonb_array_length(route.route)<2'),'server-side route ownership/shape checks missing');
+assert(sql.includes("m->>'role'='traceur")&&sql.includes("traceur_mode<>'external'"),'external mode must reject connected traceur members');
+assert(!sql.includes("insert into public.coaching_members(session_id,uid,'traceur'"),'no fake traceur member');
+assert(sql.includes('grant execute on function public.mark_external_traceur_ready_v1053')&&!sql.includes('grant execute on function public.mark_external_traceur_ready_v1053(uuid,text) to public'),'strict RPC grant expected');
+assert(app.includes("traceurMode:'connected'")&&app.includes('p_traceur_mode'),'frontend must carry explicit traceur mode');
+assert(app.includes('create_coaching_people_session_v1053')&&app.includes('create_coaching_people_session_v105392'),'frontend must use v10.53 creation RPCs');
+assert(app.includes("withoutRoute?null:preparation.routeId"),'Solo route id must be preserved');
+assert(app.includes('mark_external_traceur_ready_v1053')&&app.includes('Le traceur est en place'),'external ready action missing');
+assert(app.includes('memberRole===\'solo\'&&phase===\'preparation\''),'Solo button must use actual member role');
+assert(app.includes('solo-surface:computed')&&app.includes('solo-start-button:shown'),'Solo diagnostic events missing');
+assert(html.includes('coachingWizardTraceurMode')&&html.includes('Traceur externe / sans application'),'external mode UI missing');
+assert(!/display\s*:\s*block/.test(app.slice(app.indexOf('function applyV1040RoleSurface'),app.indexOf('function refreshActiveCoachingSessionData'))),'no visual force workaround');
+console.log('check-v10-53-solo-external-traceur: PASS');
