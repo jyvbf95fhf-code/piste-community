@@ -67,3 +67,12 @@ Bloc 6 livré sur la branche feature ; Preview et validation visuelle restent à
 - Application Supabase effectuée sur `cobekrttsojzwoetyaad` ; Preview dédiée READY.
 - Dettes conservées : multi-session Coaching sans reload potentiellement fragile et GPS Mac dépendant de l'environnement navigateur.
 - Bloc 6 non commencé.
+
+### Bloc 7 — Statistiques & données scientifiques
+
+- Moteur pur `scientific-metrics-engine.mjs`, version `1.0`, sans DOM/réseau/DB.
+- RAW → CALCULATED structuré : timing, distance, GPS, pauses, immobilités, écarts autorisés, couloir, vent et segments neutres.
+- Immobilités automatiques distinctes des pauses manuelles : 20 s minimum, 120 s gap maximum, 12 m déplacement maximum, seuil GPS faible 30 m avec facteur 1,5.
+- Permissions vérifiées avant les métriques dérivées de la trace de référence ; aucune nouvelle règle double aveugle.
+- UI scientifique minimale ajoutée aux Archives et Guided Debrief ; diagnostic `__pisteDebug.science()` sans données brutes.
+- Bloc 8, JumOlf et toute évolution Supabase restent fermés.

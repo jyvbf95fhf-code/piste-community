@@ -153,3 +153,14 @@ Chaque bloc doit fournir un guard Node ciblé, `node --check` des fichiers conce
 - [x] Migration appliquée au projet Supabase autorisé et dry-runs backend structurels PASS.
 - [x] Preview dédiée READY ; validation fonctionnelle terrain restante ; Bloc 6 reste fermé.
 - [x] Sous-correctif : session classique normale + Traceur externe conserve la préparation/import de carte pour Conducteur/Coach, sans SQL supplémentaire.
+
+### Bloc 7 — Statistiques & données scientifiques
+
+- [x] Audit des données existantes et réutilisation des timestamps, GPS, météo et moteur de couloir.
+- [x] Création du moteur pur `scientific-metrics-engine.mjs`, version `1.0`.
+- [x] Métriques temporelles, distances et qualité GPS structurées.
+- [x] Immobilités calculées séparément des pauses manuelles, avec seuils documentés.
+- [x] Métriques Couloir et vent conditionnées par les permissions.
+- [x] Segments scientifiques neutres et diagnostic Preview/dev.
+- [x] UI minimale dans Archives et Guided Debrief.
+- [ ] Validation visuelle Preview et enrichissements scientifiques ultérieurs.

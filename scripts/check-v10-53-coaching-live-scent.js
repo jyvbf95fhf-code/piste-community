@@ -19,5 +19,6 @@ assert(app.includes('coachingLayers=[]'), 'Coaching layer cleanup state missing'
 assert(app.includes('if(coachingLayerVisibility.odor)addLiveOdorCorridor'), 'live corridor render gate missing');
 const liveCorridorBlock = app.match(/function addLiveOdorCorridor[\s\S]*?\nfunction /)?.[0] || '';
 assert(!liveCorridorBlock.includes('requestAnimationFrame'), 'second RAF-like corridor loop detected');
-assert(!/immobil|stoppage.?auto|temps.?hors.?couloir|distance.?centre/i.test(app), 'Bloc 7 statistics/immobility leaked into Bloc 4');
+const coachingLiveSurface = app.slice(app.indexOf('function addLiveOdorCorridor'), app.indexOf('function syncCoachingOdorPreference'));
+assert(!/immobil|stoppage.?auto|temps.?hors.?couloir|distance.?centre/i.test(coachingLiveSurface), 'Bloc 7 statistics/immobility leaked into live Coaching corridor');
 console.log('check-v10-53-coaching-live-scent: PASS');

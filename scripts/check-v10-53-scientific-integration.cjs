@@ -1,0 +1,15 @@
+'use strict';
+const fs=require('node:fs');const assert=require('node:assert/strict');
+const app=fs.readFileSync('app.js','utf8'), engineSource=fs.readFileSync('scientific-metrics-engine.mjs','utf8');
+assert.match(app,/scientific-metrics-engine\.mjs/,'app must import the scientific engine');
+assert.match(app,/computeScientificMetrics\(\{actual/,'debrief/archive integration missing');
+assert.match(app,/scientificMetricsHtml\(/,'minimal scientific UI missing');
+assert.match(app,/window\.__pisteDebug=\{[\s\S]*science:scientificDebugSnapshot/,'science diagnostics missing');
+assert.match(engineSource,/IMMOBILITY_CONFIG/,'immobility thresholds must be centralized');
+assert.match(engineSource,/scientificSegments/,'scientific segments missing');
+assert.match(engineSource,/provenance/,'provenance structure missing');
+assert.match(engineSource,/confidence/,'confidence structure missing');
+assert.doesNotMatch(engineSource,/supabase|document|fetch\(/i,'scientific engine must be pure');
+assert.doesNotMatch(engineSource,/localAiDebriefText|generateCoachingAiDebrief|JumOlf|AI/i,'scientific engine must not add AI interpretation');
+assert.doesNotMatch(app.slice(app.indexOf('function reportActivitySource'),app.indexOf('function reportWeatherText')),/supabase\.from\([^)]*scientific/,'no scientific persistence query');
+console.log('PASS v10.53 scientific integration guard');
