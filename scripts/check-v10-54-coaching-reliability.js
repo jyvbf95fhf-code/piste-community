@@ -3,6 +3,8 @@ const fs=require('fs');
 const assert=require('assert');
 const app=fs.readFileSync('app.js','utf8');
 const source=name=>{const re=new RegExp(`function ${name}\\([^]*?\\n\\}`);const m=app.match(re);assert(m,`missing ${name}`);return m[0]};
+assert(/function normalizeCoachingCreationContract\(/.test(app),'normalised creation contract missing');
+assert(source('markCoachingTrackReady').includes('coachingSessionTrackState'),'Bug A transition must record route/pose state separately');
 
 // Bug B: external Traceur is a business role. A classic normal Conducteur
 // can create a session with no second application participant and no route.
@@ -12,6 +14,7 @@ const wizardHarness=`(function(){
  const $=id=>fields[id]||null; const coachingWizardCanPrepareTrack=()=>true;
  const validateCoachingScenarioWizard=()=>({ok:true});
  const validateCoachingMembers=()=>({ok:false,message:'un second membre est requis'});
+ function coachingWizardWithoutPreparedRoute(){return coachingWizard.sessionType==='solo'||coachingWizard.traceurMode==='external'||coachingWizard.mode==='full_blind'&&['coach','driver'].includes(coachingWizard.creatorRole)}
  const coachingWizardMembers=${source('coachingWizardMembers').replace(/^function coachingWizardMembers/, 'function coachingWizardMembers')};
  ${source('validCoachingWizard')}
  return validCoachingWizard();
