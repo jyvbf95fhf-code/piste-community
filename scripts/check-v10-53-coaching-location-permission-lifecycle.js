@@ -30,7 +30,7 @@ for (const name of ['clearCoachingRealtime', 'resetCoachingGpsTransientState', '
 }
 for (const name of ['startTraceurTracking', 'startCoachingPresence']) {
   const source = functionSource(name);
-  assert(source.includes('navigator.geolocation.watchPosition'), `${name} must use a session watcher`);
+  assert(source.includes('coachingWatchPosition') || source.includes('navigator.geolocation.watchPosition'), `${name} must use a session watcher`);
   assert(/setCoachingLocationPermissionState\('denied'/.test(source), `${name} must handle permission revocation`);
 }
 assert(app.includes('clearWatch(coachingPreviewWatch)'), 'preview watcher must be cleared per session');

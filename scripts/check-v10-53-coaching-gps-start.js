@@ -28,7 +28,7 @@ assert(permission.includes('GPS met trop de temps'), 'GPS timeout must be explic
 assert(laying.indexOf('requestCoachingTraceurPermission') < laying.indexOf("coachingTransitionV1040('start_coaching_laying')"), 'preflight must run from the click before the async transition');
 assert(laying.includes("coachingPhase(current)!=='laying'"), 'laying start must verify the server-confirmed phase');
 assert(laying.includes('isCurrentUserLayingActor(current)'), 'laying start must revalidate the authorized actor');
-assert(tracking.includes('navigator.geolocation.watchPosition'), 'traceur tracking must reach watchPosition');
+assert(tracking.includes('coachingWatchPosition') || tracking.includes('navigator.geolocation.watchPosition'), 'traceur tracking must reach watchPosition');
 assert(tracking.includes('coachingGpsError'), 'watcher failures must be surfaced');
 assert(app.includes("role==='traceur'&&s.laying_mode==='traceur'"), 'traceur authorization remains explicit');
 assert(app.includes("role==='coach'&&s.laying_mode==='coach'"), 'coach laying authorization remains explicit');

@@ -26,7 +26,7 @@ assert(/error\?\.code===1[\s\S]*resolve\(false\)/.test(permission), 'permission 
 assert(/error\?\.code===2\|\|error\?\.code===3[\s\S]*resolve\(true\)/.test(permission), 'transient GPS errors (codes 2/3) must allow laying to continue');
 assert(permission.includes('Pose démarrée — recherche de la position GPS…'), 'transient preflight errors must show a non-blocking acquisition message');
 assert(laying.indexOf('requestCoachingTraceurPermission') < laying.indexOf("coachingTransitionV1040('start_coaching_laying')"), 'preflight must run before the server transition');
-assert(tracking.includes('navigator.geolocation.watchPosition'), 'watchPosition must remain responsible for acquisition');
+assert(tracking.includes('coachingWatchPosition') || tracking.includes('navigator.geolocation.watchPosition'), 'watchPosition must remain responsible for acquisition');
 assert(/err\?\.code===1[\s\S]*stopTraceurTracking\(\)/.test(tracking), 'explicit permission denial must stop the watcher');
 assert(!/err\?\.code===1\?[^;]+:[^;]+;if\(\$\('traceurStatus'\)\)[^;]+;stopTraceurTracking\(\)/.test(tracking), 'transient watcher errors must not unconditionally stop the watcher');
 assert(app.includes("role==='traceur'&&s.laying_mode==='traceur'"), 'traceur authorization must remain explicit');
