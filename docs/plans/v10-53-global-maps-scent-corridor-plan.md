@@ -93,6 +93,14 @@
 
 ### Bloc 6 — Archives / Guided Debrief / Replay
 
+- [x] Audit des sources historiques, du débrief et du player Replay partagé.
+- [x] Adaptateur historique unique vers `computeScentCorridor()` avec contrôle des permissions.
+- [x] Couloir et toggle compact dans la carte des dossiers.
+- [x] Couloir natif dans Guided Debrief sans seconde carte.
+- [x] Couloir synchronisé avec `replayPlayer.currentTime`, cache par intervalle et sans nouvelle horloge.
+- [x] Diagnostics Replay/Maps sans données GPS brutes.
+- [ ] Validation visuelle Preview et durcissement ultérieur des cas historiques rares.
+
 **Fichiers futurs :** loaders historiques, mission/debrief/replay adapters, fixtures anciennes.
 
 - [ ] Prioriser les observations météo enregistrées ; marquer les reconstructions Open-Meteo comme telles.

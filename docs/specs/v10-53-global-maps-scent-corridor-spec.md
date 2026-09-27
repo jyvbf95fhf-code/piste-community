@@ -247,3 +247,9 @@ Ce correctif est placé après le Bloc 5 et avant le Bloc 6. `coaching_sessions.
 Le bouton Solo était masqué parce que `myCoachingRole()` normalise le membre `solo` en `driver`, alors que la surface testait `role === 'solo'`. La surface utilise désormais le rôle membre pour cette décision et conserve les gardes de refresh. Le moteur olfactif reçoit seulement la route autorisée ; aucune règle de double aveugle n'est élargie.
 
 Pour une session classique en mode normal, le choix `traceur_mode=external` ne masque pas la préparation de route lorsque le créateur est Conducteur ou Coach. Cette décision reste une règle d'affichage du wizard ; la RPC V10.53 accepte déjà une route propriétaire avec le mode externe et continue de refuser toute route étrangère côté serveur.
+
+## Bloc 6 — Archives, Guided Debrief et Replay
+
+Les surfaces historiques réutilisent exclusivement `computeScentCorridor()` et les helpers de normalisation du moteur natif. La carte dossier et le Guided Debrief ajoutent une couche Leaflet dérivée des données autorisées, avec un contrôle compact activé par défaut lorsque le calcul est possible. La météo historique provient des snapshots persistés ou du modèle daté disponible ; lorsqu'elle est reconstruite, sa provenance est marquée `reconstructed` et la confiance est abaissée par le moteur.
+
+Le Replay reçoit la même source filtrée et recalcule le résultat par intervalles bornés à partir de son `replayPlayer.currentTime`. Aucun second player, timer ou `requestAnimationFrame` n'est créé. Les permissions historiques sont évaluées avant tout calcul ; une piste masquée ne peut donc pas produire un couloir visible. Les diagnostics Replay/Maps exposent uniquement provenance, confiance, avertissements, temps courant et compteurs, jamais de coordonnées brutes.

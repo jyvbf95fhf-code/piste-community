@@ -29,7 +29,7 @@
 | 3 | Moteur CouloirOlfactif natif | DONE — moteur déterministe, provenance, confiance, warnings |
 | 4 | Coaching live | EN VALIDATION PREVIEW — moteur central, permissions, météo compacte ; dette multi-session/Mac GPS conservée |
 | 5 | OPS / Entraînement live | DONE — moteur natif direct, default ON, météo cache, toggle compact, guard |
-| 6 | Archives / Guided Debrief / Replay | planifié |
+| 6 | Archives / Guided Debrief / Replay | DONE — moteur natif, permissions, météo historique disponible, Replay synchronisé au currentTime |
 | 7 | Statistiques & données scientifiques | planifié |
 | 8 | Profil / comprendre le couloir olfactif avancé | planifié |
 | 9 | Permissions / double aveugle / hardening | planifié |
@@ -55,7 +55,7 @@
 
 ## Prochaine étape
 
-Prochaine étape : ouvrir uniquement le Bloc 6 — Archives / Guided Debrief / Replay.
+Bloc 6 livré sur la branche feature ; Preview et validation visuelle restent à effectuer avant clôture humaine.
 
 ### Correctif Solo & Traceur externe — après Bloc 5, avant Bloc 6
 
