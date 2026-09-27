@@ -23,3 +23,42 @@ Current runtime states observed in code are preparation, laying, waiting_ready, 
 ## Diagnostics and debt
 
 Preview/dev diagnostics expose only hashed identifiers and structural values. Satellite production activation is a separate V10.54 roadmap item. Known debts remain: second Coaching session without reload, legacy RPC/form convergence, external Traceur blind-mode rules, scientific persistence/export, and environment-dependent Mac GPS.
+
+## Bloc 2 — non-destructive creation convergence
+
+The Wizard and legacy form remain active. Both are mapped to the same pure
+frontend contract before creation decisions are compared:
+
+```text
+organization · creatorRole · traceurMode · visibility
+route { mode, id, hasReferenceRoute, required }
+participants { role, invitation }
+scenario { enabled }
+```
+
+`draw`, `live`, `gpx`, `saved`, and `none` are preparation modes. A reusable
+route is reference geometry only; it never marks the current session's laying
+phase as complete. External Traceurs are represented only by `traceurMode` and
+never by an application member or GPS source.
+
+`validateCoachingCreationContract()` and `coachingContractCapabilities()` are
+used in shadow mode. Historical validation and RPC behaviour remain the source
+of truth until parity is validated. External Traceur with simple or double
+blind visibility emits `external_blind_mode_unresolved` and does not introduce
+a new business rule.
+
+The current state model remains documented rather than migrated:
+
+| État observé | Action | Acteur | Donnée métier |
+| --- | --- | --- | --- |
+| preparation | démarrer la pose | Traceur/solo | `laying_started_at` |
+| laying | terminer la pose | Traceur/solo | `track_finished_at` |
+| waiting_ready | signaler prêt | pilote ou Traceur externe | `traceur_ready_at` |
+| coach_ready | choisir le mode | pilote autorisé | `search_mode` |
+| driver_running | démarrer/terminer le relevé | Conducteur | `driver_started_at` / `driver_finished_at` |
+| completed/debrief | ouvrir le débrief | membre autorisé | timestamps de session |
+
+The 75/101 historical suite report is not reproducible from the repository:
+there is no checked-in runner or per-case output. Its 26 failures are therefore
+classified as **C — test impossible localement**, pending the original suite
+artifact; no guard is weakened or removed.

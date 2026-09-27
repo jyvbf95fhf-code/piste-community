@@ -15,3 +15,15 @@
 | C11 | Classique | Conducteur/Coach | externe | Simple ou double aveugle | selon validation | à confirmer | non | externe | à confirmer | à confirmer | UNRESOLVED |
 
 Cette matrice décrit les chemins présents dans le code et ne crée aucune nouvelle permission métier.
+
+## Contrat Bloc 2
+
+Les deux surfaces de création produisent désormais la même représentation
+structurelle avant décision historique :
+
+`organization`, `creatorRole`, `traceurMode`, `visibility`,
+`route.mode` (`none`, `draw`, `live`, `gpx`, `saved`),
+`route.hasReferenceRoute`, `participants[].role`, `scenario.enabled`.
+
+Le Traceur externe reste un mode métier sans membre applicatif. Les variantes
+externe + simple/double aveugle restent `UNRESOLVED` et ne sont pas élargies.
