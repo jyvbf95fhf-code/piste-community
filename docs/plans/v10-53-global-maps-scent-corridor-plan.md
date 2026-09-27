@@ -164,3 +164,11 @@ Chaque bloc doit fournir un guard Node ciblé, `node --check` des fichiers conce
 - [x] Segments scientifiques neutres et diagnostic Preview/dev.
 - [x] UI minimale dans Archives et Guided Debrief.
 - [ ] Validation visuelle Preview et enrichissements scientifiques ultérieurs.
+
+### Bloc 8 — Profil et compréhension du Couloir olfactif estimé
+
+- [x] Page pédagogique statique accessible depuis Profil.
+- [x] Liens contextuels depuis Coaching et OPS vers la documentation centrale.
+- [x] Provenance, confiance, limites, usages et lien Bloc 7 documentés.
+- [x] JumOlf présenté comme futur, sans logique active.
+- [ ] Validation visuelle Preview mobile.

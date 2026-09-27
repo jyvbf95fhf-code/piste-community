@@ -76,3 +76,10 @@ Bloc 6 livré sur la branche feature ; Preview et validation visuelle restent à
 - Permissions vérifiées avant les métriques dérivées de la trace de référence ; aucune nouvelle règle double aveugle.
 - UI scientifique minimale ajoutée aux Archives et Guided Debrief ; diagnostic `__pisteDebug.science()` sans données brutes.
 - Bloc 8, JumOlf et toute évolution Supabase restent fermés.
+
+### Bloc 8 — Éducation Couloir olfactif estimé
+
+- Page statique `scentEducationPage` ajoutée au Profil avec navigation retour.
+- Liens contextuels ajoutés à l'aide Coaching et au contrôle cartographique OPS.
+- Provenances, confiance, limites, usages, métriques Bloc 7 et JumOlf futur documentés sans nouveau calcul ni réseau.
+- Accessibilité mobile assurée par titres structurés, boutons textuels et informations non dépendantes de la couleur.

@@ -261,3 +261,9 @@ Le moteur `scientific-metrics-engine.mjs` est pur, déterministe et sans accès 
 Les métriques couvrent les durées métier, distances, qualité GPS, pauses manuelles, immobilités automatiques distinctes, écarts géométriques autorisés, temps dedans/dehors du Couloir olfactif estimé, sorties/réintégrations, variables relatives au vent et segments descriptifs. Les seuils d’immobilité sont centralisés : durée minimale 20 s, intervalle maximal 120 s, déplacement maximal 12 m, seuil de précision faible 30 m avec facteur 1,5. Un mauvais GPS ou des timestamps absents rendent la métrique indisponible ou abaissent sa confiance.
 
 Aucune métrique d’écart ou de couloir n’est calculée lorsque la permission de référence est absente. Aucune interprétation comportementale, causalité, IA, persistance ou modification DB n’est introduite. `__pisteDebug.science()` expose uniquement la version, les compteurs, disponibilités, qualité et avertissements sans coordonnées ni identifiants bruts.
+
+## Bloc 8 — Comprendre le Couloir olfactif estimé
+
+Une page pédagogique dédiée est accessible depuis Profil, avec des liens contextuels depuis Coaching et OPS. Elle explique la définition du couloir, les données réellement utilisées par `computeScentCorridor()`, les provenances `measured`, `reconstructed`, `calculated`, `estimated` et `unavailable`, la confiance, les limites, les usages Coaching/OPS et les métriques scientifiques du Bloc 7.
+
+La terminologie rappelle explicitement que le Couloir olfactif estimé n'est pas la position exacte de l'odeur. La page ne réalise aucun calcul, appel réseau ou accès aux données : elle réutilise une documentation statique centrale, adaptée au mobile et accessible au clavier. JumOlf est présenté uniquement comme un futur module, sans IA ni fonctionnalité active.

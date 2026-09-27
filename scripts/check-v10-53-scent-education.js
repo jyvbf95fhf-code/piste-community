@@ -1,0 +1,11 @@
+'use strict';
+const fs=require('node:fs');const assert=require('node:assert/strict');
+const html=fs.readFileSync('index.html','utf8'), css=fs.readFileSync('v2.css','utf8'), app=fs.readFileSync('app.js','utf8');
+assert.match(html,/id="scentEducationPage"/,'education page missing');
+assert.match(html,/data-page="scentEducationPage"[^>]*>[^<]*(?:Comprendre|Couloir olfactif estimé)|>[^<]*(?:Comprendre|Couloir olfactif estimé)[^<]*<\/button>/,'profile entry missing');
+for(const term of ['Couloir olfactif estimé','position exacte de l’odeur','Mesuré','Reconstruit','Calculé','Estimé','Indisponible','confiance','Limites','Coaching','OPS / Entraînement','Données scientifiques','JumOlf'])assert(html.toLocaleLowerCase('fr-FR').includes(term.toLocaleLowerCase('fr-FR')),`education content missing: ${term}`);
+assert.match(html,/data-scent-education-link/,'context link missing');
+assert.match(css,/scent-education/,'education styles missing');
+assert.doesNotMatch(app,/computeScentCorridor\([^)]*scentEducation/i,'education must not add a second corridor calculation');
+assert.doesNotMatch(html,/fetch\(|supabase\./i,'education page must not add network/data access');
+console.log('PASS v10.53 scent education guard');
