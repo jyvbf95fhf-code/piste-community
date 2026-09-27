@@ -63,6 +63,7 @@ Prochaine étape : ouvrir uniquement le Bloc 6 — Archives / Guided Debrief / R
 - Contrat : `coaching_sessions.traceur_mode` (`connected`/`external`), route Solo validée par owner côté serveur, RPC `mark_external_traceur_ready_v1053`.
 - Frontend : sélection d'une piste enregistrée en Solo, option Traceur externe sans faux membre/GPS, action « Le traceur est en place ».
 - Correctif bouton Solo : la surface s'appuie sur le rôle membre `solo`, sans workaround CSS.
+- Sous-correctif : session classique normale avec Traceur externe — préparation/import de carte rétabli pour Conducteur/Coach avant création ; backend V10.53 déjà compatible, aucun SQL supplémentaire.
 - Application Supabase effectuée sur `cobekrttsojzwoetyaad` ; Preview dédiée READY.
 - Dettes conservées : multi-session Coaching sans reload potentiellement fragile et GPS Mac dépendant de l'environnement navigateur.
 - Bloc 6 non commencé.

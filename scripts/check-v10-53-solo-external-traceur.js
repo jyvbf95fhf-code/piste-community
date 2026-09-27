@@ -11,6 +11,7 @@ assert(app.includes("traceurMode:'connected'")&&app.includes('p_traceur_mode'),'
 assert(app.includes('create_coaching_people_session_v1053')&&app.includes('create_coaching_people_session_v105392'),'frontend must use v10.53 creation RPCs');
 assert(app.includes("withoutRoute?null:preparation.routeId"),'Solo route id must be preserved');
 assert(app.includes('mark_external_traceur_ready_v1053')&&app.includes('Le traceur est en place'),'external ready action missing');
+assert(app.includes("traceurMode==='external'&&coachingWizard.mode==='normal'&&['coach','driver'].includes(coachingWizard.creatorRole)"),'classic normal external creators must retain route preparation');
 assert(app.includes('memberRole===\'solo\'&&phase===\'preparation\''),'Solo button must use actual member role');
 assert(app.includes('solo-surface:computed')&&app.includes('solo-start-button:shown'),'Solo diagnostic events missing');
 assert(html.includes('coachingWizardTraceurMode')&&html.includes('Traceur externe / sans application'),'external mode UI missing');

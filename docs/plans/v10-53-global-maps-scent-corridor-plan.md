@@ -144,3 +144,4 @@ Chaque bloc doit fournir un guard Node ciblé, `node --check` des fichiers conce
 - [x] Stabiliser la surface du bouton Solo à partir du rôle membre réel.
 - [x] Migration appliquée au projet Supabase autorisé et dry-runs backend structurels PASS.
 - [x] Preview dédiée READY ; validation fonctionnelle terrain restante ; Bloc 6 reste fermé.
+- [x] Sous-correctif : session classique normale + Traceur externe conserve la préparation/import de carte pour Conducteur/Coach, sans SQL supplémentaire.
