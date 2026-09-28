@@ -114,7 +114,7 @@ let coachingOrientation={permission:'unknown',listening:false,deviceHeading:null
 let coachingLiveWeather=null,coachingWeatherTimer=null,coachingWeatherLoading=false,coachingWeatherRequestId=0,coachingCorridorState={available:false,confidence:null,warnings:[],provenance:null},coachingTerrainPaused=false,coachingPauseIntervals=[],coachingPauseIntervalsSessionId=null,coachingPauseRequest=null,coachingFinishTimer=null,coachingFinishArmed=false,coachingFinishSessionId=null,coachingFinishTargetId=null,coachingFinishStartedAt=null,coachingFinishSubmittingSessionId=null,coachingFinishSubmittedSessionId=null,coachingActiveBannerState={activeKm:null};
 let coachingFriendInvites=[],coachingAcceptedFriends=[],coachingLongPressTimer=null,coachingLongPressOrigin=null;
 let coachingReplay={trace:[],driver:[],annotations:[],startedAt:null,endedAt:null,currentAt:null,playing:false,timer:null};
-function newCoachingWizard(){const state={active:false,currentStep:1,sessionType:'classic',mode:null,traceurMode:'connected',creatorRole:null,participants:[],trackPreparation:{method:null,draft:null,routeId:null,origin:null},invitations:[],scenario:{enabled:false,text:'',photos:[]},busy:false,createdSessionId:null,error:null};Object.defineProperties(state,{reset:{value:()=>resetCoachingWizard(),enumerable:false},change:{value:changes=>changeCoachingWizard(changes),enumerable:false},valid:{value:()=>validCoachingWizard(),enumerable:false},next:{value:()=>nextCoachingWizard(),enumerable:false},back:{value:()=>backCoachingWizard(),enumerable:false},leave:{value:()=>leaveCoachingWizard(),enumerable:false}});return state}
+function newCoachingWizard(){const state={active:false,currentStep:1,sessionType:'classic',mode:null,traceurMode:'connected',creatorRole:null,participants:[],mapVisibilityByRole:null,trackPreparation:{method:null,draft:null,routeId:null,origin:null},invitations:[],scenario:{enabled:false,text:'',photos:[]},busy:false,createdSessionId:null,error:null};Object.defineProperties(state,{reset:{value:()=>resetCoachingWizard(),enumerable:false},change:{value:changes=>changeCoachingWizard(changes),enumerable:false},valid:{value:()=>validCoachingWizard(),enumerable:false},next:{value:()=>nextCoachingWizard(),enumerable:false},back:{value:()=>backCoachingWizard(),enumerable:false},leave:{value:()=>leaveCoachingWizard(),enumerable:false}});return state}
 let coachingWizard=newCoachingWizard();
 let coachingScenarioState={status:'absent',sessionId:null,scenario:null,reads:[],error:null};
 let coachingScenarioChannel=null;
@@ -200,6 +200,7 @@ function changeCoachingWizard(changes={}){
   if(!Object.prototype.hasOwnProperty.call(previous,key))return;
   const allowed=key==='mode'?modes:key==='creatorRole'?roles:key==='sessionType'?sessionTypes:key==='traceurMode'?traceurModes:null;
   if(allowed){if(allowed.includes(changes[key]))previous[key]=changes[key];return}
+  if(key==='mapVisibilityByRole'&&changes[key]&&typeof changes[key]==='object'){previous[key]={...previous[key],...Object.fromEntries(COACHING_MAP_ROLES.filter(role=>typeof changes[key][role]==='boolean').map(role=>[role,changes[key][role]]))};return}
   previous[key]=changes[key]
  });
  if(previous.sessionType==='solo'){
@@ -258,6 +259,12 @@ function validCoachingWizardStep(step=coachingWizard.currentStep){
  if(step===4||step===5||step===6)return validCoachingWizard();
  return {ok:true}
 }
+function renderCoachingWizardMapVisibility(){
+ const box=$('coachingWizardMapVisibility');if(!box)return;
+ const mode=coachingWizard.mode||'normal',state={visibility:mode,layingMode:null,mapVisibilityByRole:coachingWizard.mapVisibilityByRole};
+ const labels={coach:'Coach',traceur:'Traceur',driver:'Conducteur',observer:'Observateur'};
+ box.querySelectorAll('[data-map-visibility-role]').forEach(input=>{const role=input.dataset.mapVisibilityRole,decision=resolveCoachingMapVisibility(state,role);input.checked=decision.visible;input.disabled=!decision.editable;input.setAttribute('aria-disabled',String(!decision.editable));const reason=box.querySelector(`[data-map-visibility-reason="${role}"]`);if(reason)reason.textContent=decision.reason?` (${decision.reason==='simple_blind'?'mode simple aveugle':decision.reason==='full_blind'?'mode double aveugle':decision.reason==='coach_laying_actor'?'vous êtes le poseur':'choix de la session'})`:''});
+}
 function renderCoachingWizard(){
  const panel=$('coachingWizardPanel');if(!panel)return;
  if(coachingWizard.active===false){panel.classList.add('hidden');return}
@@ -282,6 +289,7 @@ function renderCoachingWizard(){
  $('coachingWizardTraceurModeWrap')?.classList.toggle('hidden',coachingWizard.sessionType==='solo');
  renderCoachingWizardParticipants();
  renderCoachingWizardInvitations();
+ renderCoachingWizardMapVisibility();
  if(typeof renderCoachingWizardTrackPreparation==='function')renderCoachingWizardTrackPreparation();
  if(typeof renderCoachingScenarioPreparation==='function')renderCoachingScenarioPreparation();
  setUiText('coachingWizardSummary',`Session : ${coachingWizard.sessionType==='solo'?'Solo':'Classique'} · Mode : ${coachingWizard.mode||'—'} · Rôle : ${coachingWizard.sessionType==='solo'?'Solo':coachingWizard.creatorRole||'—'} · Participants : ${coachingWizard.sessionType==='solo'?1:coachingWizard.participants.length} · Préparation : ${coachingWizard.trackPreparation.method||'—'} · Invitations : ${coachingWizard.invitations.length}`);
@@ -310,19 +318,40 @@ function coachingRoutePreparationMode(input={}){
  if(preparation.draft||input.routeDraft||input.hasRoute){if(['gpx','import'].includes(raw))return 'gpx';if(raw==='live')return 'live';return 'draw'}
  return 'none'
 }
+const COACHING_MAP_ROLES=['coach','traceur','driver','observer'];
+function coachingMapVisibilityRoleValue(input,role){const map=input?.mapVisibilityByRole;if(!map||typeof map!=='object')return null;const value=map[role];if(typeof value==='boolean')return value;if(value&&typeof value==='object'&&typeof value.visible==='boolean')return value.visible;return null}
+function resolveCoachingMapVisibility(input={},role){
+ const mode=input.visibility||input.mode||input.blind_mode||input.visibility_mode||'normal',layingMode=input.layingMode||input.laying_mode||null,explicit=coachingMapVisibilityRoleValue(input,role),completed=input.status==='ended'||input.phase==='completed';
+ if(completed)return{visible:true,editable:false,locked:true,reason:'completed'};
+ if(mode==='normal')return{visible:explicit===null?true:explicit,editable:true,locked:false,reason:explicit===null?null:'creator_choice'};
+ if(mode==='simple_blind'){
+  if(role==='coach'||role==='traceur')return{visible:true,editable:false,locked:true,reason:'simple_blind'};
+  if(role==='driver')return{visible:false,editable:false,locked:true,reason:'simple_blind'};
+  return{visible:explicit===null?true:explicit,editable:true,locked:false,reason:explicit===null?null:'creator_choice'};
+ }
+ if(mode==='full_blind'){
+  if(role==='traceur')return{visible:true,editable:false,locked:true,reason:'full_blind'};
+  if(role==='coach'&&layingMode==='coach')return{visible:true,editable:false,locked:true,reason:'coach_laying_actor'};
+  return{visible:false,editable:false,locked:true,reason:'full_blind'};
+ }
+ if(input.legacy||input.visibility_version!==3)return{visible:explicit===null?role!=='driver':explicit,editable:false,locked:true,reason:'legacy_fallback'};
+ return{visible:false,editable:false,locked:true,reason:'unknown_mode'};
+}
+function resolveCoachingMapVisibilityByRole(input={}){return COACHING_MAP_ROLES.reduce((result,role)=>{result[role]=resolveCoachingMapVisibility(input,role);return result},{} )}
 function normalizeCoachingCreationContract(input={}){
  const organization=input.organization||(input.sessionType==='solo'?'solo':'classic'),creatorId=input.creatorId||(typeof session!=='undefined'?session?.user?.id:null),rawMembers=Array.isArray(input.participants)?input.participants:[],creatorRole=input.creatorRole||rawMembers.find(member=>(member.user_id||member.userId)===creatorId)?.role||(organization==='solo'?'solo':null),members=rawMembers.map(member=>({userId:member.user_id||member.userId||null,role:member.role||null,invitation:member.invitation_status||member.invitation||null}));
  if(organization==='solo'&&!members.some(member=>member.role==='solo'))members.unshift({userId:creatorId,role:'solo',invitation:null});
  if(organization==='classic'&&creatorRole&&!members.some(member=>member.userId===creatorId))members.unshift({userId:creatorId,role:creatorRole,invitation:null});
- const routeMode=coachingRoutePreparationMode(input),routeId=input.routeId||input.trackPreparation?.routeId||null,hasReferenceRoute=!!(routeId||input.hasReferenceRoute),scenario=input.scenario&&typeof input.scenario==='object'?input.scenario:{enabled:!!input.scenario};
- return{organization,creatorRole,traceurMode:input.traceurMode||'connected',visibility:input.visibility||input.mode||'normal',route:{id:routeId,mode:routeMode,prepared:routeMode!=='none',hasReferenceRoute,preparationMode:routeMode,required:!!input.routeRequired},participants:members,scenario:{enabled:!!scenario.enabled}}
+ const visibility=input.visibility||input.mode||'normal',routeMode=coachingRoutePreparationMode(input),routeId=input.routeId||input.trackPreparation?.routeId||null,hasReferenceRoute=!!(routeId||input.hasReferenceRoute),scenario=input.scenario&&typeof input.scenario==='object'?input.scenario:{enabled:!!input.scenario};
+ const mapVisibilityByRole=Object.fromEntries(COACHING_MAP_ROLES.map(role=>[role,resolveCoachingMapVisibility({...input,visibility},role).visible]));
+ return{organization,creatorRole,traceurMode:input.traceurMode||'connected',visibility,mapVisibilityByRole,route:{id:routeId,mode:routeMode,prepared:routeMode!=='none',hasReferenceRoute,preparationMode:routeMode,required:!!input.routeRequired},participants:members,scenario:{enabled:!!scenario.enabled}}
 }
-function normalizeCoachingWizardState(state=coachingWizard){const preparation=state.trackPreparation||{};return normalizeCoachingCreationContract({organization:state.sessionType==='solo'?'solo':'classic',sessionType:state.sessionType,creatorRole:state.sessionType==='solo'?'solo':state.creatorRole,traceurMode:state.sessionType==='solo'?'connected':state.traceurMode,visibility:state.mode,participants:state.sessionType==='solo'?[{user_id:typeof session!=='undefined'?session?.user?.id:null,role:'solo'}]:state.participants,trackPreparation:preparation,routeId:preparation.routeId,routeDraft:preparation.draft,scenario:state.scenario})}
-function normalizeCoachingLegacyState(state={}){return normalizeCoachingCreationContract({organization:state.organization||(state.sessionType==='solo'?'solo':'classic'),sessionType:state.sessionType,creatorRole:state.creatorRole,creatorId:state.creatorId,traceurMode:state.traceurMode||'connected',visibility:state.visibility||state.mode,participants:state.participants||[],routeId:state.routeId||state.trackPreparation?.routeId,trackPreparation:state.trackPreparation,routeDraft:state.routeDraft,preparationMode:state.preparationMode,scenario:state.scenario})}
-function coachingContractCapabilities(contract){const externalNormal=contract.organization==='classic'&&contract.traceurMode==='external'&&contract.visibility==='normal'&&['driver','coach'].includes(contract.creatorRole);const canPrepareRoute=contract.organization==='solo'||externalNormal;return{canPrepareRoute,canUseSavedRoute:canPrepareRoute,canInviteParticipant:contract.organization==='classic',canCreateSession:true,canStartTrack:contract.organization==='solo'||contract.creatorRole==='traceur',canFinishTrack:contract.organization==='solo'||contract.creatorRole==='traceur',canMarkTraceurReady:contract.traceurMode==='external'&&['driver','coach'].includes(contract.creatorRole),canViewReferenceRoute:!!contract.route?.hasReferenceRoute}}
+function normalizeCoachingWizardState(state=coachingWizard){const preparation=state.trackPreparation||{};return normalizeCoachingCreationContract({organization:state.sessionType==='solo'?'solo':'classic',sessionType:state.sessionType,creatorRole:state.sessionType==='solo'?'solo':state.creatorRole,traceurMode:state.sessionType==='solo'?'connected':state.traceurMode,visibility:state.mode,mapVisibilityByRole:state.mapVisibilityByRole,participants:state.sessionType==='solo'?[{user_id:typeof session!=='undefined'?session?.user?.id:null,role:'solo'}]:state.participants,trackPreparation:preparation,routeId:preparation.routeId,routeDraft:preparation.draft,scenario:state.scenario})}
+function normalizeCoachingLegacyState(state={}){return normalizeCoachingCreationContract({organization:state.organization||(state.sessionType==='solo'?'solo':'classic'),sessionType:state.sessionType,creatorRole:state.creatorRole,creatorId:state.creatorId,traceurMode:state.traceurMode||'connected',visibility:state.visibility||state.mode,mapVisibilityByRole:state.mapVisibilityByRole,participants:state.participants||[],routeId:state.routeId||state.trackPreparation?.routeId,trackPreparation:state.trackPreparation,routeDraft:state.routeDraft,preparationMode:state.preparationMode,scenario:state.scenario})}
+function coachingContractCapabilities(contract){const externalNormal=contract.organization==='classic'&&contract.traceurMode==='external'&&contract.visibility==='normal'&&['driver','coach'].includes(contract.creatorRole);const canPrepareRoute=contract.organization==='solo'||externalNormal;return{canPrepareRoute,canUseSavedRoute:canPrepareRoute,canInviteParticipant:contract.organization==='classic',canCreateSession:true,canStartTrack:contract.organization==='solo'||contract.creatorRole==='traceur',canFinishTrack:contract.organization==='solo'||contract.creatorRole==='traceur',canMarkTraceurReady:contract.traceurMode==='external'&&['driver','coach'].includes(contract.creatorRole),canViewReferenceRoute:!!contract.route?.hasReferenceRoute,canConfigureMapVisibility:contract.organization==='classic'&&contract.visibility==='normal'}}
 function validateCoachingCreationContract(contract){const errors=[],warnings=[],roles=contract?.participants||[];if(!contract||!['solo','classic'].includes(contract.organization))errors.push('organization_invalid');if(!['normal','simple_blind','full_blind'].includes(contract?.visibility))errors.push('visibility_invalid');if(!['connected','external'].includes(contract?.traceurMode))errors.push('traceur_mode_invalid');if(contract?.organization==='solo'){if(contract.creatorRole!=='solo')errors.push('solo_creator_invalid');if(roles.length!==1||roles[0].role!=='solo')errors.push('solo_members_invalid');if(contract.traceurMode!=='connected')errors.push('solo_traceur_mode_invalid')}else{if(!['coach','driver','traceur'].includes(contract?.creatorRole))errors.push('creator_role_invalid');const drivers=roles.filter(member=>member.role==='driver').length,traceurs=roles.filter(member=>member.role==='traceur').length,coaches=roles.filter(member=>member.role==='coach').length;if(contract.traceurMode==='external'){if(traceurs>0||drivers!==1||coaches>1)errors.push('external_participants_invalid')}else if(drivers!==1||traceurs!==1||coaches>1)errors.push('connected_participants_invalid')}if(new Set(roles.map(member=>member.userId).filter(Boolean)).size!==roles.filter(member=>member.userId).length)errors.push('duplicate_participants');if(contract?.visibility!=='normal'&&contract?.traceurMode==='external')warnings.push('external_blind_mode_unresolved');if(contract?.route?.required&&!contract.route.hasReferenceRoute)errors.push('route_required');return{valid:errors.length===0,errors,warnings,capabilities:coachingContractCapabilities(contract)}}
 function coachingCreationRpcName({scenarioEnabled=false,validated=false}={}){return validated?(scenarioEnabled?'create_coaching_people_session_v105392':'create_coaching_people_session_v1053'):(scenarioEnabled?'create_coaching_people_session_v10492':'create_coaching_people_session_v1045')}
-function coachingContractDiagnostic(contract,validation,path='unknown',rpc=null){if(!coachingDebugEnabled)return;coachingLastCreationContract={organization:contract?.organization||null,creatorRole:contract?.creatorRole||null,traceurMode:contract?.traceurMode||null,visibility:contract?.visibility||null,route:{mode:contract?.route?.mode||'none',hasReferenceRoute:!!contract?.route?.hasReferenceRoute,prepared:!!contract?.route?.prepared},participantRoles:(contract?.participants||[]).map(member=>member.role),scenarioEnabled:!!contract?.scenario?.enabled};coachingLastCreationValidation={valid:!!validation?.valid,errors:validation?.errors||[],warnings:validation?.warnings||[],capabilities:validation?.capabilities||null};coachingDebugRecord('coaching-contract-shadow',{flowVersion:path,...coachingLastCreationContract,validationResult:coachingLastCreationValidation.valid?'valid':'invalid',validationErrors:coachingLastCreationValidation.errors,validationWarnings:coachingLastCreationValidation.warnings,capabilities:coachingLastCreationValidation.capabilities,rpc:rpc||null})}
+function coachingContractDiagnostic(contract,validation,path='unknown',rpc=null){if(!coachingDebugEnabled)return;coachingLastCreationContract={organization:contract?.organization||null,creatorRole:contract?.creatorRole||null,traceurMode:contract?.traceurMode||null,visibility:contract?.visibility||null,mapVisibilityByRole:contract?.mapVisibilityByRole||null,mapVisibilityPersistence:'legacy/fallback',route:{mode:contract?.route?.mode||'none',hasReferenceRoute:!!contract?.route?.hasReferenceRoute,prepared:!!contract?.route?.prepared},participantRoles:(contract?.participants||[]).map(member=>member.role),scenarioEnabled:!!contract?.scenario?.enabled};coachingLastCreationValidation={valid:!!validation?.valid,errors:validation?.errors||[],warnings:validation?.warnings||[],capabilities:validation?.capabilities||null};coachingDebugRecord('coaching-contract-shadow',{flowVersion:path,...coachingLastCreationContract,validationResult:coachingLastCreationValidation.valid?'valid':'invalid',validationErrors:coachingLastCreationValidation.errors,validationWarnings:coachingLastCreationValidation.warnings,capabilities:coachingLastCreationValidation.capabilities,rpc:rpc||null})}
 function guardCoachingWizardNavigation(id){
  if(!coachingWizard.active||id==='coachingPage'||(id==='plannerPage'&&plannerReturnTarget==='coaching'))return true;
  if(coachingWizard.busy)return false;
@@ -3692,6 +3721,7 @@ $('coachingWizardFlow').onchange=e=>{changeCoachingWizard({sessionType:e.target.
 $('coachingWizardMode').onchange=e=>{changeCoachingWizard({mode:e.target.value});renderCoachingWizard()};
 $('coachingWizardTraceurMode').onchange=e=>{changeCoachingWizard({traceurMode:e.target.value});renderCoachingWizard()};
 $('coachingWizardCreatorRole').onchange=e=>{changeCoachingWizard({creatorRole:e.target.value});renderCoachingWizard()};
+$('coachingWizardMapVisibility')?.querySelectorAll('[data-map-visibility-role]').forEach(input=>input.onchange=()=>{changeCoachingWizard({mapVisibilityByRole:{[input.dataset.mapVisibilityRole]:!!input.checked}});renderCoachingWizard()});
 $('coachingScenarioEnabled').onchange=()=>changeCoachingScenarioFromInput();$('coachingScenarioText').oninput=e=>{coachingWizard.scenario.text=e.target.value;renderCoachingWizard()};$('coachingScenarioPhotos').onchange=e=>{const files=[...(e.target.files||[])];if(files.length>5){setUiText('coachingWizardError','Ajoutez au maximum 5 photos.');e.target.value='';return}if(files.some(file=>!file.type.startsWith('image/'))){setUiText('coachingWizardError','Seules les images sont acceptées.');e.target.value='';return}coachingWizard.scenario.photos=files;renderCoachingScenarioPreparation();renderCoachingWizard()};
 $('coachingWizardParticipantFriend').onchange=updateCoachingWizardParticipantHint;$('coachingWizardParticipantRole').onchange=updateCoachingWizardParticipantHint;
 $('addCoachingWizardParticipant').onclick=()=>addCoachingWizardParticipant($('coachingWizardParticipantFriend').value,$('coachingWizardParticipantRole').value);
@@ -3769,11 +3799,10 @@ function coachingSessionTrackState(s){
 }
 function coachingPhaseLabelV1040(s){const labels={preparation:'Piste en préparation',laying:'Pose en cours',laid:'Piste prête',waiting_ready:'Piste prête',coach_ready:'Piste prête',driver_running:'Conducteur en piste',completed:'Terminée'};return labels[coachingPhase(s)]||'Préparation'}
 function coachingDataVisibility(s,role=myCoachingRole(s)){
-  if(s?.visibility_version===3){
-   const mode=coachingBlindMode(s),revealed=s.status==='ended'||coachingPhase(s)==='completed';
-   const truth=revealed||mode==='normal'||role==='traceur'||(mode==='simple_blind'&&['coach','observer'].includes(role));
+ if(s?.visibility_version===3){
+   const mapRole=role==='solo'?(coachingPhase(s)==='driver_running'?'driver':'traceur'):role,decision=resolveCoachingMapVisibility({...s,visibility:coachingBlindMode(s),mapVisibilityByRole:s.map_visibility_by_role||s.mapVisibilityByRole},mapRole),truth=decision.visible;
    return {planned:truth,trace:truth,live:true,markers:truth,participants:true};
-  }
+ }
   const mode=coachingBlindMode(s),completed=s?.status==='ended'||coachingPhase(s)==='completed',ownLaying=role==='traceur'||(role==='coach'&&s?.laying_mode==='coach');
   if(completed)return {planned:true,trace:true,live:true,markers:true,participants:true};
   if(mode==='normal'||Number(s?.workflow_version)<2)return {planned:true,trace:true,live:true,markers:true,participants:true};

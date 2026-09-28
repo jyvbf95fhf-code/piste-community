@@ -1071,6 +1071,10 @@ body.coaching-session-active #coachingPage>.record-head{display:none!important}
 #coachingWizardPanel .coaching-wizard-track-options.hidden{display:none}
 #coachingWizardPanel .coaching-wizard-track-options button{min-height:48px;text-align:left}
 #coachingWizardPanel .coaching-wizard-track-options label{margin:2px 0 0}
+#coachingWizardPanel .coaching-map-visibility{display:grid;gap:8px;margin:16px 0 0;padding:12px;border:1px solid rgba(159,189,101,.25);border-radius:12px}
+#coachingWizardPanel .coaching-map-visibility legend{padding:0 4px;font-weight:800}
+#coachingWizardPanel .coaching-map-visibility label{display:flex;align-items:center;gap:8px;margin:0}
+#coachingWizardPanel .coaching-map-visibility small{color:#b8c8c8}
 #coachingWizardTrackInfo{min-height:42px;margin:12px 0 0;padding:10px 12px;border-radius:12px;background:rgba(185,214,108,.08)}
 .planner-actions #useCoachingWizardPreparation{grid-column:1/-1;background:linear-gradient(135deg,#58d6a4,#b9d66c);color:#092018}
 @media(max-width:340px){#coachingWizardPanel{padding-right:12px;padding-left:12px;border-radius:14px}#coachingWizardPanel .coaching-wizard-actions{grid-template-columns:1fr}}
