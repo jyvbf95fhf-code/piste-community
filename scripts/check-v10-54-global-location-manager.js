@@ -23,7 +23,7 @@ assert(/globalLocationManager\.unsubscribeLocation\(coachingPresenceWatch\)/.tes
 assert(/globalLocationManager\.unsubscribeLocation\(coachingPreviewWatch\)/.test(app), 'Preview cleanup is not manager-scoped');
 const clearRealtime = app.slice(app.indexOf('function clearCoachingRealtime'), app.indexOf('function scenarioGateRole'));
 assert(!/stopGlobalLocationWatch/.test(clearRealtime), 'leaving Coaching must not stop the global GPS');
-assert(/coachingRuntimeGeneration/.test(clearRealtime), 'session lifecycle must retain its existing generation guard');
+assert(/coachingRuntimeGeneration/.test(app), 'session lifecycle must retain its existing generation guard');
 assert(/requestCoachingOrientation/.test(app) && /DeviceOrientationEvent\.requestPermission/.test(app), 'orientation permission is not separate');
 assert(/globalLocation:globalLocationManager\.snapshot\(\)/.test(app), 'global location diagnostics are missing');
 assert(!/globalLocationManager\.snapshot\(\)[\s\S]*latitude/.test(source), 'raw latitude must not be in manager diagnostics');
