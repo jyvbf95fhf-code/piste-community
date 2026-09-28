@@ -4,7 +4,7 @@
 | --- | --- |
 | Bloc 1 — régressions Traceur créateur et Traceur externe | VALIDÉ |
 | Bloc 2 — contrat Wizard/Legacy et validation shadow | EN COURS |
-| Bootstrap GPS & capteurs global | À PLANIFIER |
+| Bootstrap GPS & capteurs global | IMPLÉMENTÉ — validation terrain en attente |
 | Activation Satellite production contrôlée | À PLANIFIER |
 | Suppression progressive du legacy | À PLANIFIER |
 | Traceur externe + aveugle | UNRESOLVED — règle métier requise |
