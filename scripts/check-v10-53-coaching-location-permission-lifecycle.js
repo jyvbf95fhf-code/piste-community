@@ -33,8 +33,8 @@ for (const name of ['startTraceurTracking', 'startCoachingPresence']) {
   assert(source.includes('coachingWatchPosition') || source.includes('navigator.geolocation.watchPosition'), `${name} must use a session watcher`);
   assert(/setCoachingLocationPermissionState\('denied'/.test(source), `${name} must handle permission revocation`);
 }
-assert(app.includes('clearWatch(coachingPreviewWatch)'), 'preview watcher must be cleared per session');
-assert(app.includes('clearWatch(traceurWatch)'), 'traceur watcher must be cleared per session');
-assert(app.includes('clearWatch(coachingPresenceWatch)'), 'presence watcher must be cleared per session');
+assert(app.includes('unsubscribeLocation(coachingPreviewWatch)'), 'preview watcher must be cleared per session');
+assert(app.includes('unsubscribeLocation(traceurWatch)'), 'traceur watcher must be cleared per session');
+assert(app.includes('unsubscribeLocation(coachingPresenceWatch)'), 'presence watcher must be cleared per session');
 
 console.log('check-v10-53-coaching-location-permission-lifecycle: PASS');
