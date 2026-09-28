@@ -20,6 +20,10 @@ for (const name of [
 ]) source(name);
 
 const names = [
+  'coachingRoutePreparationMode',
+  'coachingMapVisibilityRoleValue',
+  'resolveCoachingMapVisibility',
+  'resolveCoachingMapVisibilityByRole',
   'normalizeCoachingCreationContract',
   'coachingRoutePreparationMode',
   'normalizeCoachingWizardState',
@@ -27,7 +31,7 @@ const names = [
   'validateCoachingCreationContract',
   'coachingContractCapabilities'
 ];
-const context = { session: { user: { id: 'driver-1' } } };
+const context = { session: { user: { id: 'driver-1' } }, COACHING_MAP_ROLES: ['coach','traceur','driver','observer'] };
 vm.createContext(context);
 vm.runInContext(names.map(source).join('\n'), context);
 
