@@ -1,178 +1,85 @@
-# V10.54 Bloc 4A — visibilité du tracé de référence par rôle
+# V10.54 Bloc 4 — tracé de référence facultatif
 
-Statut : **audit et spécification uniquement**. Aucun `mapVisibilityByRole` n’est implémenté dans ce bloc.
+Statut : **modèle simplifié spécifié et préparé côté frontend**. Aucune migration
+de visibilité par rôle n'est appliquée.
 
-## Périmètre et vocabulaire
+## Décision métier
 
-Cette spécification concerne uniquement le **tracé de référence** : `planned_route`, les repères `planned_markers`, une route préparée/importée ou une route enregistrée recopiée dans la session. Elle ne change pas les règles des traces réelles (`coaching_trace_points`, `coaching_live_points`), des positions courantes (`coaching_current_positions`) ni des marqueurs terrain.
+La création d'une session demande seulement si une référence doit être fournie.
+La référence est facultative :
 
-Les règles observées viennent principalement de `coachingDataVisibility()`, `coachingBlindMode()`, `coachingDbVisibility()`, `coachingActiveSurfaceModel()`, `renderCoachingMap()`, `addGuidedDebriefPlannedLayers()` et de la projection serveur `get_my_coaching_sessions()` issue de V10.42.3/V10.45/V10.53. La projection serveur est la barrière de sécurité ; un masque UI seul ne suffit pas.
+- aucun tracé ;
+- tracé dessiné sur la carte ;
+- GPX importé ;
+- piste ou tracé enregistré lorsque cette capacité existe déjà.
 
-## État actuel
+Les utilisateurs ne configurent plus la visibilité rôle par rôle. La création
+ne contient donc aucun choix Coach / Traceur / Conducteur / Observateur pour la
+carte. **Reference route is optional. Users choose whether to provide a
+reference route. Reference-route visibility is derived from session mode and
+participant role. Users do not configure visibility per role.**
 
-Deux générations coexistent :
+## État avant simplification
 
-- `visibility_version = 3`, utilisée par les sessions V10.42+ : la projection serveur renvoie `planned_route`, `planned_markers` et `odor_model` selon `blind_mode` et le rôle membre accepté/actif ;
-- sessions legacy (`visibility_version` différente de 3 ou absente) : la projection et le client conservent les anciennes règles fondées sur `visibility_mode`, `workflow_version` et le rôle.
+Les commits `5ec178e`, `c900958`, `54f6643` et `88bb2dc` avaient préparé un
+modèle `mapVisibilityByRole`, son UI, des guards et un SQL JSONB. Ce modèle est
+abandonné. Le SQL `PISTE_V10.54_MAP_VISIBILITY_BY_ROLE.sql` n'a jamais été
+appliqué et est retiré du périmètre. La migration Solo
+`PISTE_V10.54_SOLO_MODES.sql` reste indépendante et **MIGRATION PREPARED — NOT
+APPLIED**.
 
-Dans le client, en session V3 active, `coachingDataVisibility()` applique les règles suivantes pour la route de référence :
+Le runtime ne dépend d'aucune colonne `map_visibility_by_role` ni d'une RPC
+V10.54 de visibilité. Les RPC V10.53 et les projections existantes restent la
+source serveur historique.
 
-- mode `normal` : tous les rôles connus reçoivent `planned`, `trace`, `markers` et `live` ;
-- mode `simple_blind` : Coach et Observateur sont considérés comme pouvant voir la référence ; le Traceur la voit également ; le Conducteur ne la voit pas ;
-- mode `full_blind` : le Traceur la voit ; le Conducteur et l’Observateur ne la voient pas ; le Coach n’est autorisé par la projection SQL que lorsqu’il est l’acteur de pose (`laying_mode='coach'`), alors que le client ne reproduit pas explicitement cette exception dans sa branche V3.
+## Contrat et lecture centrale
 
-La projection SQL V10.42.3 est plus restrictive pour l’Observateur en `simple_blind` : elle autorise `coach` et `traceur`, pas `observer`. Cette différence est une incohérence de parité et une sous-exposition côté client ; elle ne doit pas être résolue par un élargissement silencieux.
+`normalizeCoachingWizardState()` et `normalizeCoachingLegacyState()` produisent
+le même contrat. Sa route contient `mode: 'none' | 'draw' | 'gpx' | 'saved'`,
+`hasReferenceRoute` et, si applicable, `id`. `none` conserve une création sans
+référence lorsque la validation métier existante l'autorise ; aucun tracé
+factice n'est créé.
 
-## Matrice actuelle — sessions V3
+La lecture frontend `canRoleSeeReferenceRoute(session, role)` dérive l'accès
+de `visibility`, du rôle, de `laying_mode`, de la phase et du statut. Elle ne
+lit aucune préférence utilisateur :
 
-Les colonnes « avant départ », « pose » et « relève » décrivent les phases actives `preparation`, `laying`, `waiting_ready`/`coach_ready` et `driver_running`. Le code ne fait pas varier la référence entre ces phases, sauf lorsque la session est terminée ou que le serveur ne l’a pas projetée.
+- `normal` conserve l'exposition actuelle de la référence ;
+- `simple_blind` conserve Coach, Traceur et Observateur visibles côté client,
+  Conducteur masqué avant la fin ;
+- `full_blind` conserve Traceur visible, Conducteur et Observateur masqués, et
+  l'exception Coach poseur (`laying_mode='coach'`) ;
+- une session terminée conserve la révélation historique ;
+- les sessions legacy conservent leur chemin existant.
 
-| Mode | Rôle | Avant départ | Pose | Relève | Après fin | Règle actuelle | Source code |
-|---|---|---:|---:|---:|---:|---|---|
-| Normal | Coach | Oui | Oui | Oui | Oui | référence projetée à tous les membres acceptés | `coachingDataVisibility`, `get_my_coaching_sessions` |
-| Normal | Traceur | Oui | Oui | Oui | Oui | idem | mêmes fonctions |
-| Normal | Conducteur | Oui | Oui | Oui | Oui | idem | mêmes fonctions |
-| Normal | Observateur | Oui | Oui | Oui | Oui | client le considère visible ; projection normale le permet | mêmes fonctions |
-| Simple aveugle | Coach | Oui | Oui | Oui | Oui | Coach autorisé | `coachingDataVisibility`; projection SQL |
-| Simple aveugle | Traceur | Oui | Oui | Oui | Oui | Traceur autorisé | mêmes fonctions |
-| Simple aveugle | Conducteur | Non | Non | Non | Oui | route masquée avant fin | mêmes fonctions |
-| Simple aveugle | Observateur | **UNRESOLVED** | **UNRESOLVED** | **UNRESOLVED** | Oui | client oui, projection V10.42.3 non | client + `get_my_coaching_sessions` |
-| Double aveugle (`full_blind`) | Coach | Non par défaut | Non par défaut | Non par défaut | Oui | projection SQL : Oui seulement si `laying_mode='coach'`; client V3 ne reflète pas explicitement cette exception | `coachingDataVisibility`, projection SQL |
-| Double aveugle (`full_blind`) | Traceur | Oui | Oui | Oui | Oui | Traceur autorisé à connaître sa référence/pose | mêmes fonctions |
-| Double aveugle (`full_blind`) | Conducteur | Non | Non | Non | Oui | aucune route de référence avant révélation/fin | mêmes fonctions |
-| Double aveugle (`full_blind`) | Observateur | Non | Non | Non | Oui | non autorisé par la projection | mêmes fonctions |
+La projection serveur existante reste la barrière de sécurité. Le frontend ne
+peut pas rendre visible une référence absente de la projection. Le cas
+`Traceur externe + simple/full blind` reste **UNRESOLVED** : aucune nouvelle
+règle n'est introduite ici.
 
-La fin de session (`status='ended'` ou `phase='completed'`) révèle la référence dans les projections existantes pour les membres autorisés. Cela ne signifie pas que les traces tactiques et positions live deviennent interchangeables avec la référence.
+La route de référence, la trace réelle du Traceur, le trajet du Conducteur et
+les positions GPS live restent des couches distinctes. Aucun changement GPS,
+OPS, couloir olfactif ou permissions live n'est inclus.
 
-## Sessions legacy
+## Compatibilité et limites
 
-Pour `visibility_version` absente ou différente de 3, le client conserve :
+Les routes dessinées, importées et enregistrées réutilisent les contrôles et le
+planner existants. Les sessions sans route suivent les règles de validation
+déjà présentes : le choix est offert, mais une combinaison historique qui
+exige une route continue de refuser la création avec son message métier.
 
-- `normal` ou `workflow_version < 2` : référence visible selon la branche legacy ;
-- `simple_blind`/`progressive` : Coach, Traceur et un Coach qui pose peuvent recevoir la référence ; Conducteur et Observateur sont masqués par défaut ;
-- `full_blind`/`coach` : l’acteur de pose (`traceur`, ou Coach lorsque `laying_mode='coach'`) peut recevoir la référence ; les autres rôles ne la reçoivent pas avant la fin.
+Solo reste legacy dans ce bloc ; aucune variante Solo aveugle n'est redéfinie.
+Un Traceur externe n'est jamais transformé en membre applicatif et n'apparaît
+pas dans une permission de carte.
 
-Les sessions historiques doivent conserver ce comportement. Aucune migration de leurs données n’est proposée ici.
+## Validation
 
-## Rôles et cas particuliers
+Le guard `scripts/check-v10-54-reference-route.js` vérifie l'absence de l'ancien
+bloc et des checkboxes, la présence des quatre modes de préparation, la lecture
+centrale de visibilité, le chemin `none`, la parité legacy/wizard et la
+protection mobile. Les guards GPS, Coaching, Solo, Traceur externe, OPS,
+syntaxe et `git diff --check` restent requis.
 
-### Coach
-
-En Normal, la route est actuellement visible si elle est projetée. En Simple aveugle, elle est visible. En Double aveugle, elle est masquée sauf exception serveur `laying_mode='coach'`, exception que le client V3 ne formalise pas complètement. Le Coach peut aussi voir les couches live autorisées par les fonctions séparées ; cela ne vaut pas autorisation automatique de la référence dans un futur modèle explicite.
-
-### Traceur connecté
-
-Le Traceur est le rôle autorisé à connaître la référence dans les modes aveugles actuels. Cette autorisation de référence ne doit pas être confondue avec sa trace GPS réelle : `coaching_trace_points` est une autre donnée.
-
-### Conducteur
-
-En Normal, la référence est actuellement visible. En Simple et Double aveugle, elle est masquée avant la fin/révélation. Le Conducteur peut toutefois recevoir sa propre position live ou les couches live prévues ; ces données ne doivent pas être utilisées pour déduire `planned_route`.
-
-### Observateur
-
-En Normal, la référence est visible côté client/projection. En Simple aveugle, le client indique visible mais la projection SQL V10.42.3 ne l’expose pas : cas incohérent à trancher avant convergence. En Double aveugle, elle est masquée.
-
-### Solo
-
-Le rôle membre `solo` est traité comme `solo` pendant `preparation`/`laying`, puis comme Conducteur après le départ dans `coachingActiveSurfaceModel()`. En Normal, la référence est visible. Les variantes Solo aveugles ne sont pas définies comme un contrat métier distinct dans les versions actuelles : elles restent soumises aux règles de rôle existantes et ne doivent pas être élargies dans le Bloc 4A.
-
-### Traceur externe
-
-Le Traceur externe n’est pas un membre applicatif. Les parcours Normal externes documentés utilisent le pilote/Conducteur applicatif et aucune identité GPS Traceur. Pour `external + simple_blind` ou `external + full_blind`, le contrat et la visibilité ne définissent pas aujourd’hui qui porte la connaissance de la référence : **UNRESOLVED**. Aucun comportement ne doit être inventé.
-
-## Protections anti-fuite observées
-
-1. La projection `get_my_coaching_sessions()` conditionne `planned_route`, `planned_markers` et `odor_model` au rôle, au mode aveugle, au statut et à l’adhésion acceptée/active.
-2. Les anciennes colonnes tactiques font l’objet de restrictions RLS/grants dans les patches V10.40/V10.42.3 ; les anciennes sessions passent par une projection legacy.
-3. `renderCoachingMap()` ne requête les couches de référence que lorsque `visibility.planned`/`visibility.trace` le permettent.
-4. Le couloir olfactif et les métriques réutilisent les données déjà autorisées ; ils ne doivent pas devenir un proxy de `planned_route` masquée.
-5. `coachingDataVisibility()` sépare `planned`, `trace`, `live`, `markers` et `participants`, ce qui empêche de confondre route de référence et positions live.
-
-La protection reste imparfaite tant que client et projection SQL ne partagent pas une matrice unique : l’écart Observateur/Simple et l’exception Coach/Double aveugle doivent être traités explicitement avant toute implémentation.
-
-## Incohérences et cas non résolus
-
-- `simple_blind + observer` : le client autorise la référence, la projection SQL V10.42.3 ne la renvoie pas. **UNRESOLVED**.
-- `full_blind + coach + laying_mode='coach'` : la projection SQL l’autorise, la branche V3 de `coachingDataVisibility()` ne le formalise pas. Décision métier nécessaire avant convergence.
-- `external + simple_blind/full_blind` : absence de porteur applicatif explicite de la connaissance de la route. **UNRESOLVED**.
-- `mapVisibilityByRole` n’existe pas dans le schéma, les RPC ou le contrat frontend actuel.
-
-## Modèle cible proposé pour le Bloc 4B+
-
-Le contrat normalisé devrait porter un objet distinct de `blind_mode` :
-
-```js
-mapVisibilityByRole: {
-  coach:    { visible: true,  editable: false, locked: false, reason: 'mode_default' },
-  traceur:  { visible: true,  editable: false, locked: false, reason: 'mode_default' },
-  driver:   { visible: false, editable: false, locked: true,  reason: 'double_blind' },
-  observer: { visible: false, editable: false, locked: true,  reason: 'double_blind' }
-}
-```
-
-Les noms `visible`, `editable` et `locked` sont conceptuels. La valeur `editable` concerne uniquement la préparation/modification de la référence, jamais la modification d’une route historique sans autorisation. `reason` doit rester explicatif et non sensible (`mode_default`, `creator_choice`, `blind_mode`, `legacy_fallback`, `unresolved_external_mode`).
-
-### Defaults proposés
-
-- Normal : choix explicite du créateur pour chaque rôle présent ; valeur par défaut compatible avec le comportement actuel, donc visible pour les rôles déjà exposés ;
-- Simple aveugle : Coach et Traceur visibles par défaut ; Conducteur verrouillé masqué ; Observateur à décider avant codage, compte tenu de l’incohérence actuelle ;
-- Double aveugle : Conducteur et Observateur verrouillés masqués ; Traceur visible ; Coach verrouillé selon la décision `laying_mode='coach'` existante ;
-- Solo Normal : utilisateur courant visible ; les deux sous-modes Solo ne créent pas de membre Traceur fictif ;
-- Externe aveugle : rester `UNRESOLVED` jusqu’à décision métier.
-
-Une valeur imposée par le mode doit être affichée dans le wizard mais désactivée, avec une raison courte, par exemple `Conducteur — Non (double aveugle)`. Le contrôle ne doit pas permettre de contourner la projection serveur.
-
-## Persistance et besoins backend
-
-Le schéma actuel possède `blind_mode`, `visibility_mode`, `visibility_version`, `workflow_version`, `traceur_mode` et les JSON de route, mais aucune colonne/configuration `mapVisibilityByRole`. Un simple état frontend ne serait pas sûr : la projection `get_my_coaching_sessions()` et les fonctions de lecture doivent appliquer la même décision pour éviter qu’une route masquée soit chargée puis seulement cachée dans le DOM.
-
-Une évolution SQL additive sera donc probablement nécessaire dans un futur bloc : configuration JSONB validée côté RPC, projection serveur, contrôles de lecture et éventuellement adaptation des fonctions de débrief/archives. **Aucun SQL n’est écrit ou exécuté dans le Bloc 4A.** Le statut d’une future migration serait `MIGRATION PREPARED — NOT APPLIED` jusqu’à validation.
-
-## Compatibilité et plan Bloc 4B
-
-1. Figer les décisions `simple_blind + observer`, `full_blind + coach/laying_mode` et externe aveugle.
-2. Ajouter les cas à la matrice de contrat et aux guards anti-fuite.
-3. Introduire la normalisation frontend sans changer les sessions existantes.
-4. Préparer une RPC/projection versionnée qui calcule `mapVisibilityByRole` côté serveur.
-5. Ajouter une migration additive nullable avec fallback legacy pour les anciennes sessions.
-6. Adapter le wizard pour afficher les choix et les valeurs verrouillées.
-7. Vérifier que route de référence, trace réelle, trajet Conducteur et positions live restent des couches distinctes.
-8. Tester création, pose, relève, fin, archives et débrief pour chaque rôle.
-
-## Bloc 4B — implémentation préparée
-
-Le résolveur frontend `resolveCoachingMapVisibility()` et son agrégateur
-`resolveCoachingMapVisibilityByRole()` portent désormais la décision effective
-par rôle. Le contrat normalisé expose `mapVisibilityByRole` sous forme de
-booléens, tandis que `editable`, `locked` et `reason` restent dérivés par le
-résolveur. Le rendu V3 du tracé de référence réutilise ce résolveur ; les
-couches live et les traces réelles restent séparées.
-
-Le wizard affiche une section **Visibilité de la carte** avec Coach, Traceur,
-Conducteur et Observateur. Les rôles imposés par un mode aveugle sont affichés
-mais désactivés. Le choix est conservé dans le contrat shadow ; la création
-réelle continue d’utiliser les RPC V10.53 tant que la migration n’est pas
-appliquée.
-
-La persistance préparée est `coaching_sessions.map_visibility_by_role` en JSONB
-nullable, limitée aux quatre rôles applicatifs. Le fichier
-`PISTE_V10.54_MAP_VISIBILITY_BY_ROLE.sql` prépare :
-
-- la colonne et sa contrainte de forme minimale ;
-- `private.resolve_coaching_map_visibility_v1054()` ;
-- `create_coaching_people_session_v1054()` ;
-- `get_my_coaching_sessions_v1054()` qui retire les champs de route de référence
-  lorsque la décision serveur est négative ;
-- des grants réservés à `authenticated` et un rollback documenté.
-
-Cette migration n’est pas appliquée. Le diagnostic de création indique
-`mapVisibilityPersistence: legacy/fallback` jusqu’à validation et application
-sur un environnement isolé. `PISTE_V10.54_SOLO_MODES.sql` reste inchangé et
-non appliqué.
-
-## Statut
-
-`MAP VISIBILITY MIGRATION PREPARED — NOT APPLIED`
-
-Aucun SQL distant, Supabase, RLS, Auth, GPS, Solo, Satellite, JumOlf ou
-production n’a été modifié.
+`MAP VISIBILITY MIGRATION PREPARED — NOT APPLIED` est remplacé par le modèle
+sans persistance de préférence. Aucune exécution SQL ou modification Supabase
+n'est nécessaire pour ce bloc.
