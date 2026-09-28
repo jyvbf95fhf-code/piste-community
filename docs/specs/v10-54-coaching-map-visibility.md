@@ -139,6 +139,40 @@ Une évolution SQL additive sera donc probablement nécessaire dans un futur blo
 7. Vérifier que route de référence, trace réelle, trajet Conducteur et positions live restent des couches distinctes.
 8. Tester création, pose, relève, fin, archives et débrief pour chaque rôle.
 
+## Bloc 4B — implémentation préparée
+
+Le résolveur frontend `resolveCoachingMapVisibility()` et son agrégateur
+`resolveCoachingMapVisibilityByRole()` portent désormais la décision effective
+par rôle. Le contrat normalisé expose `mapVisibilityByRole` sous forme de
+booléens, tandis que `editable`, `locked` et `reason` restent dérivés par le
+résolveur. Le rendu V3 du tracé de référence réutilise ce résolveur ; les
+couches live et les traces réelles restent séparées.
+
+Le wizard affiche une section **Visibilité de la carte** avec Coach, Traceur,
+Conducteur et Observateur. Les rôles imposés par un mode aveugle sont affichés
+mais désactivés. Le choix est conservé dans le contrat shadow ; la création
+réelle continue d’utiliser les RPC V10.53 tant que la migration n’est pas
+appliquée.
+
+La persistance préparée est `coaching_sessions.map_visibility_by_role` en JSONB
+nullable, limitée aux quatre rôles applicatifs. Le fichier
+`PISTE_V10.54_MAP_VISIBILITY_BY_ROLE.sql` prépare :
+
+- la colonne et sa contrainte de forme minimale ;
+- `private.resolve_coaching_map_visibility_v1054()` ;
+- `create_coaching_people_session_v1054()` ;
+- `get_my_coaching_sessions_v1054()` qui retire les champs de route de référence
+  lorsque la décision serveur est négative ;
+- des grants réservés à `authenticated` et un rollback documenté.
+
+Cette migration n’est pas appliquée. Le diagnostic de création indique
+`mapVisibilityPersistence: legacy/fallback` jusqu’à validation et application
+sur un environnement isolé. `PISTE_V10.54_SOLO_MODES.sql` reste inchangé et
+non appliqué.
+
 ## Statut
 
-Bloc 4A terminé comme audit/specification. Aucun code fonctionnel, SQL, Supabase, RLS, Auth, GPS ou règle métier n’a été modifié.
+`MAP VISIBILITY MIGRATION PREPARED — NOT APPLIED`
+
+Aucun SQL distant, Supabase, RLS, Auth, GPS, Solo, Satellite, JumOlf ou
+production n’a été modifié.
