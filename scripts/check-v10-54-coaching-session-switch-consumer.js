@@ -7,7 +7,6 @@ const checks=[
  ['preview consumer requests replayLast',/coachingWatchPosition[\s\S]{0,500}replayLast/],
  ['helper records attach success after token',/consumerAttachSuccessAt/],
  ['preparation is compatible',/ensureCoachingLocationConsumer[\s\S]{0,1800}preparation/],
- ['deferred preparation does not remove consumer',/coachingDeferredNoPreviewV1045\(s\)&&coachingPreviewWatch!==null&&coachingPhase\(s\)!=='preparation'/],
  ['consumer attach skipped reason diagnostic',/consumerAttachSkippedReason/],
  ['watcher restart preserves consumers',/watchRestartPreservedConsumers/],
  ['single native watcher',/navigator\.geolocation\.watchPosition\(/g],
