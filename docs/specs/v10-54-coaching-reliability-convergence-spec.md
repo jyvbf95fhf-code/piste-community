@@ -24,6 +24,18 @@ Current runtime states observed in code are preparation, laying, waiting_ready, 
 
 Preview/dev diagnostics expose only hashed identifiers and structural values. Satellite production activation is a separate V10.54 roadmap item. Known debts remain: second Coaching session without reload, legacy RPC/form convergence, external Traceur blind-mode rules, scientific persistence/export, and environment-dependent Mac GPS.
 
+## Backend Solo V10.54 — migration préparée
+
+`PISTE_V10.54_SOLO_MODES.sql` prépare, sans exécution distante, la colonne
+nullable `coaching_sessions.solo_mode` (`self_trace` ou `external_traceur`),
+la RPC versionnée `create_coaching_people_session_v1054()` et les transitions
+Solo dédiées. Les RPC V10.53 restent conservées pour les anciennes sessions.
+
+La migration est explicitement **MIGRATION PREPARED — NOT APPLIED**. Le projet
+Supabase configuré est partagé avec la production ; aucune modification SQL,
+RLS ou Auth ne peut donc être appliquée avant la création d'un environnement
+de test isolé et une validation séparée.
+
 ## Bloc 2 — non-destructive creation convergence
 
 The Wizard and legacy form remain active. Both are mapped to the same pure
