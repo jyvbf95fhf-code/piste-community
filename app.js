@@ -1251,7 +1251,7 @@ function coachingReadyNoticeV1045(s){
 function syncCoachingDeferredV1045(s=activeCoachingSession){
  const deferred=s?.search_mode==='deferred',phase=coachingPhase(s),choicePending=coachingSearchPendingV1045(s)&&phase==='waiting_ready'&&s.status==='waiting'&&!!s.track_finished_at,pending=deferred&&phase==='waiting_ready'&&!s.traceur_ready_at&&s.status==='waiting';
  if(deferred||choicePending){
-  if(coachingDeferredNoPreviewV1045(s)&&coachingPreviewWatch!==null){globalLocationManager.unsubscribeLocation(coachingPreviewWatch);coachingDebugRecord('preview-location:stop',{source:'preview',reason:'deferred-mode'});coachingPreviewWatch=null;coachingPreviewPosition=null;}
+  if(coachingDeferredNoPreviewV1045(s)&&coachingPreviewWatch!==null&&coachingPhase(s)!=='preparation'){globalLocationManager.unsubscribeLocation(coachingPreviewWatch);coachingDebugRecord('preview-location:stop',{source:'preview',reason:'deferred-mode'});coachingPreviewWatch=null;coachingPreviewPosition=null;}
   if(phase!=='driver_running'&&coachingPresenceWatch!==null)stopCoachingPresence();
   if(phase!=='laying'&&traceurWatch!==null)stopTraceurTracking();
  }
