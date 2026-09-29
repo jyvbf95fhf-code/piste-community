@@ -102,17 +102,21 @@ returns boolean language sql stable security definer set search_path='' as $$
        and m.invitation_status in ('accepted','active')
        and s.status='live'
        and (
-         (p_trace and ((m.role='traceur' and s.phase='laying')
+         (p_trace and (
+           (m.role='traceur' and s.phase='laying')
            or (m.role='solo' and (
              (s.solo_mode='self_trace' and s.phase='laying')
              or (s.solo_mode is null and s.phase='laying')
-           )))
+           ))
+         ))
          or
-         (not p_trace and ((m.role='driver' and s.phase='driver_running')
+         ((not p_trace) and (
+           (m.role='driver' and s.phase='driver_running')
            or (m.role='solo' and (
              (s.solo_mode in ('self_trace','external_traceur') and s.phase='driver_running')
              or (s.solo_mode is null and s.phase='driver_running')
-           )))
+           ))
+         ))
        ))
    from public.coaching_sessions s
    left join public.coaching_members m
