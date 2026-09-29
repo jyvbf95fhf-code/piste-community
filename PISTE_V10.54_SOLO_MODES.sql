@@ -87,8 +87,13 @@ begin
 end $$;
 
 -- Keep the existing RLS policies and narrow their shared helper instead of
--- adding a permissive policy.  Solo is accepted only for explicit self_trace
--- sessions and only in the matching recording phase/table.
+-- adding a permissive policy. New V10.54 sessions are accepted only for an
+-- explicit self_trace mode and the matching recording phase/table. Production
+-- already contains active V10.53 Solo sessions with no solo_mode column; the
+-- null branch below is a deliberately narrow compatibility fallback for those
+-- legacy sessions. V10.54 creation always writes a non-null mode, so a new
+-- session cannot acquire this fallback accidentally. external_traceur never
+-- receives a laying/trace-points permission.
 create or replace function private.can_record_people_point_v10423(p_session_id uuid,p_owner_id uuid,p_trace boolean)
 returns boolean language sql stable security definer set search_path='' as $$
  select coalesce((select s.visibility_version is distinct from 3
@@ -98,10 +103,16 @@ returns boolean language sql stable security definer set search_path='' as $$
        and s.status='live'
        and (
          (p_trace and ((m.role='traceur' and s.phase='laying')
-           or (m.role='solo' and s.solo_mode='self_trace' and s.phase='laying')))
+           or (m.role='solo' and (
+             (s.solo_mode='self_trace' and s.phase='laying')
+             or (s.solo_mode is null and s.phase='laying')
+           )))
          or
          (not p_trace and ((m.role='driver' and s.phase='driver_running')
-           or (m.role='solo' and s.solo_mode in ('self_trace','external_traceur') and s.phase='driver_running')))
+           or (m.role='solo' and (
+             (s.solo_mode in ('self_trace','external_traceur') and s.phase='driver_running')
+             or (s.solo_mode is null and s.phase='driver_running')
+           )))
        ))
    from public.coaching_sessions s
    left join public.coaching_members m
@@ -387,13 +398,15 @@ grant execute on function public.finish_solo_run_v1054(uuid) to authenticated;
 -- drop index if exists public.coaching_sessions_solo_creation_key_v1054;
 -- alter table public.coaching_sessions drop column if exists solo_creation_key;
 --
--- Restore the V10.53 recording helper before removing solo_mode.  This is the
+-- Restore the production-compatible V10.53 recording helper before removing
+-- solo_mode. Production already includes the V10.49.1C Solo exception, and
+-- rollback must preserve that behavior for active legacy sessions. This is the
 -- complete prior definition, so rollback does not depend on another file:
 -- create or replace function private.can_record_people_point_v10423(p_session_id uuid,p_owner_id uuid,p_trace boolean)
 -- returns boolean language sql stable security definer set search_path='' as $$
 --  select coalesce((select s.visibility_version is distinct from 3 or
 --   (m.user_id=(select auth.uid()) and p_owner_id=m.user_id and m.invitation_status in ('accepted','active') and s.status='live' and
---   ((p_trace and m.role='traceur' and s.phase='laying') or (not p_trace and m.role='driver' and s.phase='driver_running')))
+--   ((p_trace and m.role in ('traceur','solo') and s.phase='laying') or (not p_trace and m.role in ('driver','solo') and s.phase='driver_running')))
 --   from public.coaching_sessions s left join public.coaching_members m on m.session_id=s.id and m.user_id=(select auth.uid()) where s.id=p_session_id),false)
 -- $$;
 -- revoke all on function private.can_record_people_point_v10423(uuid,uuid,boolean) from public,anon;

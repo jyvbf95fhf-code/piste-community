@@ -55,8 +55,8 @@ create or replace function private.can_record_people_point_v10423(p_session_id u
 returns boolean language sql stable security definer set search_path=''
 as $$ select coalesce((select s.visibility_version is distinct from 3 or
   (m.user_id=(select auth.uid()) and p_owner_id=m.user_id and m.invitation_status in ('accepted','active')
-   and s.status='live' and ((p_trace and m.role='traceur' and s.phase='laying')
-     or (not p_trace and m.role='driver' and s.phase='driver_running')))
+   and s.status='live' and ((p_trace and m.role in ('traceur','solo') and s.phase='laying')
+     or (not p_trace and m.role in ('driver','solo') and s.phase='driver_running')))
   from public.coaching_sessions s left join public.coaching_members m
     on m.session_id=s.id and m.user_id=(select auth.uid()) where s.id=p_session_id),false) $$;
 revoke all on function private.can_record_people_point_v10423(uuid,uuid,boolean) from public,anon,authenticated;
