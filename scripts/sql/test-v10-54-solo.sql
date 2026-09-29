@@ -35,6 +35,10 @@ do $$ declare r jsonb; sid uuid; r2 jsonb; begin
     'normal','connected','self_trace','solo-test-001');
   perform private.assert_true('same idempotency key replays',r2->>'id'=sid::text and (r2->>'idempotent_replay')::boolean);
   perform private.assert_true('idempotency count is one',(select count(*)=1 from public.coaching_sessions where solo_creation_key='solo-test-001'));
+  r2:=public.create_coaching_people_session_v1054(null,
+    '[{"user_id":"00000000-0000-0000-0000-000000000001","role":"solo"}]'::jsonb,
+    'normal','connected','self_trace','solo-test-002');
+  perform private.assert_true('different idempotency key creates distinct session',r2->>'id'<>sid::text);
   perform public.start_solo_laying_v1054(sid);
   perform private.assert_true('phase laying',(select phase='laying' and status='live' from public.coaching_sessions where id=sid));
   insert into public.coaching_trace_points(session_id,owner_id,lat,lon) values(sid,auth.uid(),48.1,2.1);
@@ -47,6 +51,9 @@ do $$ declare r jsonb; sid uuid; r2 jsonb; begin
   insert into public.coaching_live_points(session_id,owner_id,lat,lon) values(sid,auth.uid(),48.2,2.2);
   perform private.assert_true('driver point allowed',(select count(*)=1 from public.coaching_live_points where session_id=sid));
   perform private.assert_raises('pose point forbidden in driver_running',format('insert into public.coaching_trace_points(session_id,owner_id,lat,lon) values (%L,%L,48.3,2.3)',sid,auth.uid()));
+  select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+  perform private.assert_raises('non-member cannot write pose',format('insert into public.coaching_trace_points(session_id,owner_id,lat,lon) values (%L,%L,48.6,2.6)',sid,auth.uid()));
+  select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
   perform public.finish_solo_run_v1054(sid);
   perform private.assert_true('session finished',(select status='ended' or debrief_status in ('track_finished','in_progress','closed') from public.coaching_sessions where id=sid));
   perform private.assert_true('pose and driver traces separated',(select count(*)=1 from public.coaching_trace_points where session_id=sid) and (select count(*)=1 from public.coaching_live_points where session_id=sid));
