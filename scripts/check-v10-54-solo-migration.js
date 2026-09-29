@@ -22,15 +22,32 @@ assert(/p_solo_mode='external_traceur' and not external_mode/i.test(sql), 'exter
 assert(/member_role := item->>'role'/i.test(sql), 'member insertion path is missing');
 assert(/external_traceur has one authenticated solo member only[\s\S]*no Traceur/i.test(sql), 'external member rule is not documented');
 
+// Recording authorization must be phase- and mode-specific, not role-only.
+assert(/can_record_people_point_v10423[\s\S]*m\.role='traceur'[\s\S]*s\.phase='laying'/i.test(sql), 'normal Traceur laying authorization disappeared');
+assert(/can_record_people_point_v10423[\s\S]*m\.role='driver'[\s\S]*s\.phase='driver_running'/i.test(sql), 'normal Driver running authorization disappeared');
+assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'[\s\S]*s\.phase='laying'/i.test(sql), 'self_trace laying authorization is missing');
+assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'[\s\S]*s\.phase='driver_running'/i.test(sql), 'self_trace driver authorization is missing');
+assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'/i.test(sql) && /p_trace[\s\S]*driver_running/i.test(sql), 'recording helper does not distinguish tables/phases');
+assert(/external_traceur[\s\S]*must|external_traceur[\s\S]*requires|solo_mode='self_trace'/i.test(sql), 'external_traceur exclusion is not documented');
+
+// Retry safety is optional and backward-compatible for callers that omit it.
+assert(/add column if not exists\s+solo_creation_key/i.test(sql), 'idempotency storage is missing');
+assert(/pg_advisory_xact_lock/i.test(sql), 'idempotency lock is missing');
+assert(/p_idempotency_key\s+text\s+default\s+null/i.test(sql), 'optional idempotency parameter is missing');
+assert(/idempotent_replay/i.test(sql), 'idempotent replay result is undocumented');
+
 // Safety: the prepared migration must not weaken policies or grant public access.
 assert(!/drop\s+table/i.test(lower), 'destructive DROP TABLE is forbidden');
 assert(!/drop\s+policy/i.test(lower), 'RLS policy removal is forbidden');
 assert(!/create\s+policy/i.test(lower), 'new RLS policy is outside this migration');
 assert(!/grant\s+[^;]*\s+to\s+public/i.test(lower), 'PUBLIC grant is forbidden');
 assert(!/grant\s+execute\s+on\s+function[^;]*\s+to\s+anon/i.test(lower), 'anon RPC grant is forbidden');
+assert(!/grant\s+execute\s+on\s+function[^;]*\s+to\s+public/i.test(lower), 'PUBLIC RPC grant is forbidden');
 assert(!/delete\s+from\s+public\.coaching_sessions/i.test(lower), 'session deletion is forbidden');
 assert(!/update\s+public\.coaching_sessions\s+set\s+solo_mode/i.test(lower), 'mass backfill is forbidden');
 assert(/rollback/i.test(lower), 'rollback documentation is missing');
-assert(/prepared, not applied/i.test(lower), 'unapplied status is missing');
+assert(/complete prior definition|complete v10\.53 body/i.test(lower), 'rollback is not autonomous');
+assert(/restore private\.guard_people_session_v10423/i.test(lower), 'trigger rollback is missing');
+assert(/(prepared|hardened), not applied/i.test(lower), 'unapplied status is missing');
 
 console.log('V10.54 solo backend migration static guard: OK');
