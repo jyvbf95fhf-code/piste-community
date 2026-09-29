@@ -46,6 +46,33 @@ Supabase configuré est partagé avec la production ; aucune modification SQL,
 RLS ou Auth ne peut donc être appliquée avant la création d'un environnement
 de test isolé et une validation séparée.
 
+## Réconciliation du helper de recording avec la production
+
+L'audit en lecture seule du projet `cobekrttsojzwoetyaad` a confirmé que la
+production utilise déjà l'exception Solo introduite par le flux V10.49.1C :
+`private.can_record_people_point_v10423()` autorise un membre `solo` en phase
+`laying` pour `coaching_trace_points` et en phase `driver_running` pour
+`coaching_live_points`, sans colonne `solo_mode` (encore absente de la base).
+La provenance Git de cette exception est identifiée dans
+`8c1518b` (`PISTE_V10.49.1C_COACHING_SOLO_TRANSITIONS.sql`), mais le chemin
+exact de déploiement historique n'est pas prouvé par le catalogue des
+migrations distant.
+
+La production contient 51 sessions Solo historiques, dont 4 encore actives,
+réparties entre `waiting/preparation` et les états terminés. La migration
+V10.54 conserve donc une branche de compatibilité explicite pour
+`solo_mode IS NULL`, limitée aux mêmes contrôles d'authentification,
+d'appartenance, session `live`, phase et table. Les nouvelles RPC V10.54
+écrivent toujours `self_trace` ou `external_traceur` ; elles ne peuvent pas
+acquérir cette branche nulle par défaut. `external_traceur` ne reçoit jamais
+de droit de pose.
+
+La baseline CI éphémère reproduit désormais le helper réellement observé en
+production avant l'application locale de la migration. Le rollback restaure
+également cette définition production-compatible afin de ne pas retirer les
+droits des sessions historiques actives. Statut : **PRODUCTION HELPER
+RECONCILIATION PREPARED — NOT APPLIED**.
+
 ## Bloc 2 — non-destructive creation convergence
 
 The Wizard and legacy form remain active. Both are mapped to the same pure
