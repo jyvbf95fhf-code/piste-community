@@ -27,6 +27,7 @@ assert(/can_record_people_point_v10423[\s\S]*m\.role='traceur'[\s\S]*s\.phase='l
 assert(/can_record_people_point_v10423[\s\S]*m\.role='driver'[\s\S]*s\.phase='driver_running'/i.test(sql), 'normal Driver running authorization disappeared');
 assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'[\s\S]*s\.phase='laying'/i.test(sql), 'self_trace laying authorization is missing');
 assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'[\s\S]*s\.phase='driver_running'/i.test(sql), 'self_trace driver authorization is missing');
+assert(/m\.role='solo'[\s\S]*s\.solo_mode in \('self_trace','external_traceur'\)[\s\S]*s\.phase='driver_running'/i.test(sql), 'external_traceur driver authorization is missing');
 assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'/i.test(sql) && /p_trace[\s\S]*driver_running/i.test(sql), 'recording helper does not distinguish tables/phases');
 assert(/external_traceur[\s\S]*must|external_traceur[\s\S]*requires|solo_mode='self_trace'/i.test(sql), 'external_traceur exclusion is not documented');
 

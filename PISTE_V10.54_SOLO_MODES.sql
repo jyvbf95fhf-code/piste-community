@@ -101,7 +101,7 @@ returns boolean language sql stable security definer set search_path='' as $$
            or (m.role='solo' and s.solo_mode='self_trace' and s.phase='laying')))
          or
          (not p_trace and ((m.role='driver' and s.phase='driver_running')
-           or (m.role='solo' and s.solo_mode='self_trace' and s.phase='driver_running')))
+           or (m.role='solo' and s.solo_mode in ('self_trace','external_traceur') and s.phase='driver_running')))
        ))
    from public.coaching_sessions s
    left join public.coaching_members m

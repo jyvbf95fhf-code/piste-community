@@ -33,7 +33,8 @@ Solo dédiées. Le helper d'écriture existant reste central : il autorise
 `solo/self_trace` uniquement dans `coaching_trace_points` en phase `laying` et
 dans `coaching_live_points` en phase `driver_running`. Les flows V10.53
 `traceur`/`driver` restent inchangés ; `external_traceur` n'obtient aucun droit
-GPS de pose.
+GPS de pose, mais le membre Solo peut enregistrer sa relève en
+`driver_running`.
 
 La création accepte une clé d'idempotence optionnelle (`p_idempotency_key`),
 protégée par un verrou transactionnel et une clé unique nullable. Les appels
