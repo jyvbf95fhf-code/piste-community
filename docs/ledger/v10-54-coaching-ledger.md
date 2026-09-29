@@ -11,6 +11,6 @@
 | Satellite production | DETTE | chantier séparé |
 | Suite historique 75/101 | NON REPRODUCTIBLE | 26 cas classés C sans artefact source |
 | JumOlf | FUTUR | aucun code actif |
-| Migration backend Solo V10.54 | PRÉPARÉE — NON APPLIQUÉE | `PISTE_V10.54_SOLO_MODES.sql`, aucun SQL distant |
+| Migration backend Solo V10.54 | DURCIE — NON APPLIQUÉE | `PISTE_V10.54_SOLO_MODES.sql`, helper GPS phase/mode, idempotence optionnelle, rollback autonome, aucun SQL distant |
 | Environnement Supabase isolé | EN ATTENTE | branche estimée à 0,01344 USD/heure ; aucune création sans validation de coût |
 | Global Location Manager | PRÉPARÉ / FRONTEND | un seul `watchPosition()`, consommateurs Coaching/Planner/terrain, aucun SQL |

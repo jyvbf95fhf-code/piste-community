@@ -13,8 +13,8 @@
 | C09 | Classique | Coach | connecté | Double aveugle | selon validation | règles existantes | selon validation | Traceur connecté | workflow existant | Conducteur | SUPPORTED |
 | C10 | Classique | Traceur | connecté | Normal | direct/live | Traceur + Conducteur | selon validation | créateur Traceur | transition immédiate | Conducteur | REGRESSION |
 | C11 | Classique | Conducteur/Coach | externe | Simple ou double aveugle | selon validation | à confirmer | non | externe | à confirmer | à confirmer | UNRESOLVED |
-| S01 | Solo | Solo | self_trace | Normal | nouvelle/enregistrée | utilisateur courant uniquement | non | pose puis relève par le même utilisateur | n/a | utilisateur courant | PREPARED_BACKEND |
-| S02 | Solo | Solo | external_traceur | Normal | préparée ou autorisée | utilisateur courant uniquement | non | aucun GPS Traceur | utilisateur courant « traceur en place » | utilisateur courant | PREPARED_BACKEND |
+| S01 | Solo | Solo | self_trace | Normal | nouvelle/enregistrée | utilisateur courant uniquement | non | pose puis relève par le même utilisateur | n/a | utilisateur courant | HARDENED_BACKEND_NOT_APPLIED |
+| S02 | Solo | Solo | external_traceur | Normal | préparée ou autorisée | utilisateur courant uniquement | non | aucun GPS Traceur | utilisateur courant « traceur en place » | utilisateur courant | HARDENED_BACKEND_NOT_APPLIED |
 
 Cette matrice décrit les chemins présents dans le code et ne crée aucune nouvelle permission métier.
 

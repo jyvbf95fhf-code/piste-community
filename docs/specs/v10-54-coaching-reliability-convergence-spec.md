@@ -24,14 +24,23 @@ Current runtime states observed in code are preparation, laying, waiting_ready, 
 
 Preview/dev diagnostics expose only hashed identifiers and structural values. Satellite production activation is a separate V10.54 roadmap item. Known debts remain: second Coaching session without reload, legacy RPC/form convergence, external Traceur blind-mode rules, scientific persistence/export, and environment-dependent Mac GPS.
 
-## Backend Solo V10.54 — migration préparée
+## Backend Solo V10.54 — migration durcie, non appliquée
 
 `PISTE_V10.54_SOLO_MODES.sql` prépare, sans exécution distante, la colonne
 nullable `coaching_sessions.solo_mode` (`self_trace` ou `external_traceur`),
 la RPC versionnée `create_coaching_people_session_v1054()` et les transitions
-Solo dédiées. Les RPC V10.53 restent conservées pour les anciennes sessions.
+Solo dédiées. Le helper d'écriture existant reste central : il autorise
+`solo/self_trace` uniquement dans `coaching_trace_points` en phase `laying` et
+dans `coaching_live_points` en phase `driver_running`. Les flows V10.53
+`traceur`/`driver` restent inchangés ; `external_traceur` n'obtient aucun droit
+GPS de pose.
 
-La migration est explicitement **MIGRATION PREPARED — NOT APPLIED**. Le projet
+La création accepte une clé d'idempotence optionnelle (`p_idempotency_key`),
+protégée par un verrou transactionnel et une clé unique nullable. Les appels
+existants sans clé restent compatibles ; un retry sûr nécessite que le futur
+client réutilise la même clé.
+
+La migration est explicitement **MIGRATION HARDENED — NOT APPLIED**. Le projet
 Supabase configuré est partagé avec la production ; aucune modification SQL,
 RLS ou Auth ne peut donc être appliquée avant la création d'un environnement
 de test isolé et une validation séparée.
