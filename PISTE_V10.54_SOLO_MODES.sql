@@ -1,7 +1,7 @@
--- V10.54 — Solo self_trace / external_traceur (PREPARED, NOT APPLIED)
+-- V10.54 — Solo self_trace / external_traceur (HARDENED, NOT APPLIED)
 --
 -- This file is intentionally additive and must be reviewed and applied only on
--- an isolated Supabase test environment.  It has not been executed by the
+-- an isolated Supabase test environment. It has not been executed by the
 -- repository tooling.  V10.53 functions remain available for old clients and
 -- old sessions.
 
@@ -25,6 +25,14 @@ end $preflight$;
 
 alter table public.coaching_sessions
   add column if not exists solo_mode text;
+
+-- Optional retry key.  Existing callers remain valid; new callers may provide
+-- a stable key to make a Solo creation retry-safe without a frontend change.
+alter table public.coaching_sessions
+  add column if not exists solo_creation_key text;
+create unique index if not exists coaching_sessions_solo_creation_key_v1054
+  on public.coaching_sessions(owner_id,solo_creation_key)
+  where solo_creation_key is not null;
 
 alter table public.coaching_sessions
   drop constraint if exists coaching_sessions_solo_mode_v1054;
@@ -78,13 +86,39 @@ begin
   return new;
 end $$;
 
+-- Keep the existing RLS policies and narrow their shared helper instead of
+-- adding a permissive policy.  Solo is accepted only for explicit self_trace
+-- sessions and only in the matching recording phase/table.
+create or replace function private.can_record_people_point_v10423(p_session_id uuid,p_owner_id uuid,p_trace boolean)
+returns boolean language sql stable security definer set search_path='' as $$
+ select coalesce((select s.visibility_version is distinct from 3
+   or (m.user_id=(select auth.uid())
+       and p_owner_id=m.user_id
+       and m.invitation_status in ('accepted','active')
+       and s.status='live'
+       and (
+         (p_trace and ((m.role='traceur' and s.phase='laying')
+           or (m.role='solo' and s.solo_mode='self_trace' and s.phase='laying')))
+         or
+         (not p_trace and ((m.role='driver' and s.phase='driver_running')
+           or (m.role='solo' and s.solo_mode='self_trace' and s.phase='driver_running')))
+       ))
+   from public.coaching_sessions s
+   left join public.coaching_members m
+     on m.session_id=s.id and m.user_id=(select auth.uid())
+   where s.id=p_session_id),false)
+$$;
+revoke all on function private.can_record_people_point_v10423(uuid,uuid,boolean) from public,anon;
+grant execute on function private.can_record_people_point_v10423(uuid,uuid,boolean) to authenticated;
+
 -- Versioned creation RPC.  The V10.53 signature is deliberately untouched.
 create or replace function public.create_coaching_people_session_v1054(
   p_route_id uuid,
   p_members jsonb,
   p_blind_mode text,
   p_traceur_mode text default 'connected',
-  p_solo_mode text default null
+  p_solo_mode text default null,
+  p_idempotency_key text default null
 )
 returns jsonb language plpgsql security definer set search_path='' as $$
 declare
@@ -94,6 +128,7 @@ declare
   item jsonb;
   member_id uuid;
   member_role text;
+  existing_session public.coaching_sessions;
   is_solo boolean := false;
   external_mode boolean := false;
 begin
@@ -106,6 +141,9 @@ begin
   end if;
   if p_solo_mode is not null and p_solo_mode not in ('self_trace','external_traceur') then
     raise exception 'Sous-mode Solo invalide';
+  end if;
+  if p_idempotency_key is not null and (p_solo_mode is null or length(trim(p_idempotency_key))=0 or length(p_idempotency_key)>128) then
+    raise exception 'Clé d’idempotence Solo invalide';
   end if;
   external_mode := coalesce(p_traceur_mode,'connected')='external';
   if jsonb_typeof(p_members) is distinct from 'array' then raise exception 'Liste de personnes requise'; end if;
@@ -155,6 +193,22 @@ begin
       raise exception 'Choisissez votre propre rôle';
     end if;
   end if;
+  if p_idempotency_key is not null then
+    perform pg_advisory_xact_lock(hashtextextended(uid::text||':'||p_idempotency_key,0));
+    select * into existing_session
+    from public.coaching_sessions
+    where owner_id=uid and solo_creation_key=p_idempotency_key
+    order by created_at desc
+    limit 1;
+    if existing_session.id is not null then
+      if existing_session.solo_mode is distinct from p_solo_mode then
+        raise exception 'Clé d’idempotence déjà utilisée pour un autre mode Solo';
+      end if;
+      return jsonb_build_object('id',existing_session.id,'session_mode','solo',
+        'solo_mode',existing_session.solo_mode,'traceur_mode',existing_session.traceur_mode,
+        'idempotent_replay',true);
+    end if;
+  end if;
   if (select count(*) from jsonb_array_elements(p_members) m where m->>'role'='coach')>1 then
     raise exception 'Choisissez au maximum un Coach';
   end if;
@@ -186,10 +240,10 @@ begin
 
   perform set_config('piste.people_creation','on',true);
   insert into public.coaching_sessions(
-    owner_id,route_id,name,status,workflow_version,visibility_version,blind_mode,visibility_mode,
+    owner_id,route_id,name,status,workflow_version,visibility_version,blind_mode,visibility_mode,solo_creation_key,
     laying_mode,traceur_mode,solo_mode,planned_route,planned_markers,odor_model,departure_point,invite_code,expires_at
   ) values(
-    uid,route.id,'Coaching · '||to_char(now(),'DD/MM/YYYY'),'waiting',2,3,p_blind_mode,'all',
+    uid,route.id,'Coaching · '||to_char(now(),'DD/MM/YYYY'),'waiting',2,3,p_blind_mode,'all',p_idempotency_key,
     'traceur',coalesce(p_traceur_mode,'connected'),case when is_solo then p_solo_mode else null end,
     coalesce(route.route,'[]'::jsonb),coalesce(route.waypoints,'[]'::jsonb),coalesce(route.odor_model,'{}'::jsonb),
     case when route.id is null then '{}'::jsonb else jsonb_build_object('lat',route.route->0->'lat','lon',route.route->0->'lon') end,
@@ -207,8 +261,8 @@ begin
     'solo_mode',case when is_solo then p_solo_mode else null end,
     'traceur_mode',coalesce(p_traceur_mode,'connected'));
 end $$;
-revoke all on function public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text) from public,anon,authenticated;
-grant execute on function public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text) to authenticated;
+revoke all on function public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text,text) from public,anon,authenticated;
+grant execute on function public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text,text) to authenticated;
 
 -- Additive projection for future clients; the V10.53 projection remains intact.
 create or replace function public.get_my_coaching_sessions_v1054(p_session_id uuid default null)
@@ -328,8 +382,69 @@ grant execute on function public.finish_solo_run_v1054(uuid) to authenticated;
 -- drop function public.finish_solo_laying_v1054(uuid);
 -- drop function public.start_solo_laying_v1054(uuid);
 -- drop function public.get_my_coaching_sessions_v1054(uuid);
--- drop function public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text);
--- restore private.guard_people_session_v10423() from the V10.53 migration;
+-- drop function public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text,text);
+-- alter table public.coaching_sessions drop constraint coaching_sessions_solo_mode_v1054;
+-- drop index if exists public.coaching_sessions_solo_creation_key_v1054;
+-- alter table public.coaching_sessions drop column if exists solo_creation_key;
+--
+-- Restore the V10.53 recording helper before removing solo_mode.  This is the
+-- complete prior definition, so rollback does not depend on another file:
+-- create or replace function private.can_record_people_point_v10423(p_session_id uuid,p_owner_id uuid,p_trace boolean)
+-- returns boolean language sql stable security definer set search_path='' as $$
+--  select coalesce((select s.visibility_version is distinct from 3 or
+--   (m.user_id=(select auth.uid()) and p_owner_id=m.user_id and m.invitation_status in ('accepted','active') and s.status='live' and
+--   ((p_trace and m.role='traceur' and s.phase='laying') or (not p_trace and m.role='driver' and s.phase='driver_running')))
+--   from public.coaching_sessions s left join public.coaching_members m on m.session_id=s.id and m.user_id=(select auth.uid()) where s.id=p_session_id),false)
+-- $$;
+-- revoke all on function private.can_record_people_point_v10423(uuid,uuid,boolean) from public,anon;
+-- grant execute on function private.can_record_people_point_v10423(uuid,uuid,boolean) to authenticated;
+--
+-- Restore private.guard_people_session_v10423() autonomously before dropping
+-- solo_mode.  The complete V10.53 body is included here; no external file or
+-- DROP ... CASCADE is required:
+-- create or replace function private.guard_people_session_v10423()
+-- returns trigger language plpgsql security invoker set search_path=''
+-- as $$
+-- begin
+--   if tg_op='INSERT' then
+--     if coalesce(new.workflow_version,1)>=2 and new.visibility_version is distinct from 3 then
+--       raise exception 'Utilisez la création Coaching par personnes';
+--     end if;
+--     if new.visibility_version is not null
+--        and (new.visibility_version<>3 or coalesce(current_setting('piste.people_creation',true),'off')<>'on') then
+--       raise exception 'Utilisez la création Coaching sécurisée';
+--     end if;
+--   else
+--     if new.visibility_version is distinct from old.visibility_version then
+--       raise exception 'Version de visibilité immuable';
+--     end if;
+--     if old.visibility_version=3 and (
+--       new.owner_id is distinct from old.owner_id
+--       or new.blind_mode is distinct from old.blind_mode
+--       or new.route_id is distinct from old.route_id
+--       or new.planned_route is distinct from old.planned_route
+--       or new.planned_markers is distinct from old.planned_markers
+--       or new.odor_model is distinct from old.odor_model
+--       or new.departure_point is distinct from old.departure_point
+--       or new.laying_mode is distinct from old.laying_mode
+--       or new.traceur_mode is distinct from old.traceur_mode
+--     ) then
+--       raise exception 'Préparation, visibilité et mode Traceur immuables';
+--     end if;
+--     if old.visibility_version=3
+--        and coalesce(current_setting('piste.v1040_transition',true),'off')<>'on'
+--        and (new.phase is distinct from old.phase
+--          or new.laying_started_at is distinct from old.laying_started_at
+--          or new.track_finished_at is distinct from old.track_finished_at
+--          or new.driver_started_at is distinct from old.driver_started_at
+--          or new.driver_finished_at is distinct from old.driver_finished_at
+--          or (new.status is distinct from old.status and new.status<>'cancelled')) then
+--       raise exception 'Utilisez les transitions sécurisées';
+--     end if;
+--   end if;
+--   return new;
+-- end $$;
+--
 -- alter table public.coaching_sessions drop constraint coaching_sessions_solo_mode_v1054;
 -- alter table public.coaching_sessions drop column solo_mode;
 
