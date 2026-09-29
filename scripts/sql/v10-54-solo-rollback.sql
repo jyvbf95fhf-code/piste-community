@@ -8,7 +8,6 @@ drop function if exists public.finish_solo_laying_v1054(uuid);
 drop function if exists public.start_solo_laying_v1054(uuid);
 drop function if exists public.get_my_coaching_sessions_v1054(uuid);
 drop function if exists public.create_coaching_people_session_v1054(uuid,jsonb,text,text,text,text);
-drop function if exists private.can_record_people_point_v10423(uuid,uuid,boolean);
 drop index if exists public.coaching_sessions_solo_creation_key_v1054;
 alter table public.coaching_sessions drop constraint if exists coaching_sessions_solo_mode_v1054;
 alter table public.coaching_sessions drop column if exists solo_creation_key;
