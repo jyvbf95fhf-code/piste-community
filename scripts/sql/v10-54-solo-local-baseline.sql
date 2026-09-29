@@ -114,7 +114,7 @@ as $$ begin
   return found;
 end $$;
 
-create or replace function private.can_record_people_point_v10423(uuid,uuid,boolean)
+create or replace function private.can_record_people_point_v10423(p_session_id uuid,p_owner_id uuid,p_trace boolean)
 returns boolean language sql stable security definer set search_path=''
 as $$
  select coalesce((select s.visibility_version is distinct from 3 or
