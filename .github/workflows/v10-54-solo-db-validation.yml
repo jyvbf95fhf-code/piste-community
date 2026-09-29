@@ -41,6 +41,13 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f PISTE_V10.54_SOLO_MODES.sql
       - name: Run SQL/RLS/RPC integration tests
         run: psql -v ON_ERROR_STOP=1 -f scripts/sql/test-v10-54-solo.sql
+      - name: Run concurrent creation test
+        run: |
+          psql -v ON_ERROR_STOP=1 -f scripts/sql/test-v10-54-concurrency-setup.sql
+          chmod +x scripts/sql/test-v10-54-concurrency.sh
+          scripts/sql/test-v10-54-concurrency.sh
+      - name: Run V10.53 dynamic compatibility test
+        run: psql -v ON_ERROR_STOP=1 -f scripts/sql/test-v10-54-v1053-compat.sql
       - name: Roll back locally
         run: psql -v ON_ERROR_STOP=1 -f scripts/sql/v10-54-solo-rollback.sql
       - name: Reapply migration locally
