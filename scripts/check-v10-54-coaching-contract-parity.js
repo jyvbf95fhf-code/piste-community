@@ -58,11 +58,11 @@ assert(blindExternal.warnings.includes('external_blind_mode_unresolved'));
 assert(!/userId|user_id/.test(app.match(/function coachingContractDiagnostic\([^]*?\n\}/)[0]), 'diagnostic must not expose raw participant identifiers');
 
 const soloWizard = context.normalizeCoachingWizardState({
-  sessionType: 'solo', mode: 'normal', creatorRole: null, traceurMode: 'connected',
+  sessionType: 'solo', mode: 'normal', soloMode: 'self_trace', creatorRole: null, traceurMode: 'connected',
   participants: [], trackPreparation: { method: 'existing', routeId: 'route-1' }, scenario: { enabled: false }
 });
 const soloLegacy = context.normalizeCoachingLegacyState({
-  sessionType: 'solo', mode: 'normal', creatorRole: 'solo', traceurMode: 'connected',
+  sessionType: 'solo', mode: 'normal', soloMode: 'self_trace', creatorRole: 'solo', traceurMode: 'connected',
   participants: [{ user_id: 'driver-1', role: 'solo' }], routeId: 'route-1', scenario: { enabled: false }
 });
 assert.equal(JSON.stringify(soloWizard), JSON.stringify(soloLegacy), 'Solo Wizard and Legacy contracts diverge');
@@ -88,7 +88,7 @@ for (const [name, organization, creatorRole, traceurMode, visibility, participan
   assert.equal(context.validateCoachingCreationContract(wizardPath).valid,true,`${name} should validate`);
 }
 for (const [method, expected] of [['draw', 'draw'], ['import', 'gpx'], ['live', 'live']]) {
-  const route = context.normalizeCoachingWizardState({sessionType:'solo', mode:'normal', trackPreparation:{method, draft:{route:[{lat:1,lon:2},{lat:2,lon:3}]}}});
+  const route = context.normalizeCoachingWizardState({sessionType:'solo', mode:'normal', soloMode:'self_trace', trackPreparation:{method, draft:{route:[{lat:1,lon:2},{lat:2,lon:3}]}}});
   assert.equal(route.route.mode, expected, `${method} route mode must normalize to ${expected}`);
 }
 console.log('V10.54 coaching contract parity guard: OK');
