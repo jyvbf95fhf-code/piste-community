@@ -30,6 +30,9 @@ assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'[\s\S]*s\.phase='driver_ru
 assert(/m\.role='solo'[\s\S]*s\.solo_mode in \('self_trace','external_traceur'\)[\s\S]*s\.phase='driver_running'/i.test(sql), 'external_traceur driver authorization is missing');
 assert(/m\.role='solo'[\s\S]*s\.solo_mode='self_trace'/i.test(sql) && /p_trace[\s\S]*driver_running/i.test(sql), 'recording helper does not distinguish tables/phases');
 assert(/external_traceur[\s\S]*must|external_traceur[\s\S]*requires|solo_mode='self_trace'/i.test(sql), 'external_traceur exclusion is not documented');
+assert(/s\.solo_mode is null and s\.phase='laying'/i.test(sql), 'legacy NULL Solo laying compatibility is not explicit');
+assert(/s\.solo_mode is null and s\.phase='driver_running'/i.test(sql), 'legacy NULL Solo driver compatibility is not explicit');
+assert(/legacy[\s\S]*fallback|compatibility fallback/i.test(sql), 'legacy NULL fallback is not documented');
 
 // Retry safety is optional and backward-compatible for callers that omit it.
 assert(/add column if not exists\s+solo_creation_key/i.test(sql), 'idempotency storage is missing');
