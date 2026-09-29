@@ -2,6 +2,7 @@
 const fs = require('fs');
 const app = fs.readFileSync('app.js','utf8');
 const html = fs.readFileSync('index.html','utf8');
+const css = fs.readFileSync('v2.css','utf8');
 const failures = [];
 const must = (ok, message) => { if (!ok) failures.push(message); };
 
@@ -12,6 +13,8 @@ must(/self_trace/.test(app) && /external_traceur/.test(app), 'F02/F03 solo mode 
 must(/soloMode[^\n]*self_trace|self_trace[^\n]*soloMode/.test(app), 'F04 self_trace is not explicit in normalized contract');
 must(/create_coaching_people_session_v1054/.test(app), 'F05 v1054 creation RPC not wired');
 must(/idempotency/i.test(app), 'F06 stable idempotency key not wired');
+must(/\.coaching-solo-mode-card input\[type="radio"\][^{]*\{[^}]*width:auto/.test(css), 'F06 Solo radio width override missing');
+must(/\.coaching-solo-mode-card span\{[^}]*flex:1 1 auto[^}]*width:100%/.test(css), 'F06 Solo option text width rule missing');
 must(/start_solo_laying_v1054/.test(app), 'F07 self_trace laying RPC missing');
 must(/finish_solo_laying_v1054/.test(app), 'F08 finish laying RPC missing');
 must(/start_solo_driver_run_v1054/.test(app), 'F09 driver RPC missing');
