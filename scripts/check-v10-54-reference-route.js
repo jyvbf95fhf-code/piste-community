@@ -23,9 +23,9 @@ assert(/method:'none'/.test(app) || /method\s*===\s*'none'/.test(app), 'none rou
 assert(/function coachingWizardWithoutPreparedRoute/.test(app), 'optional route creation path is missing');
 assert(/coachingWizardWithoutPreparedRoute\(\)/.test(app), 'submit path does not preserve optional route');
 const prepareTrack = app.match(/function coachingWizardCanPrepareTrack\(\)\{[^}]*\}/)?.[0] || '';
-assert(/creatorRole==='driver'/.test(prepareTrack), 'driver creator preparation capability is missing');
-assert(/normal.*simple_blind|simple_blind.*normal/.test(prepareTrack), 'driver normal/simple-blind preparation cases are missing');
-assert(/traceurMode/.test(prepareTrack), 'driver preparation must distinguish Traceur modes');
+assert(/creatorRole==='driver'/.test(prepareTrack)||/coachingDriverCanPrepareReferenceRoute/.test(prepareTrack), 'driver creator preparation capability is missing');
+assert(/normal.*simple_blind|simple_blind.*normal/.test(prepareTrack)||/coachingDriverCanPrepareReferenceRoute/.test(prepareTrack), 'driver normal/simple-blind preparation cases are missing');
+assert(/traceurMode/.test(prepareTrack)||/coachingDriverCanPrepareReferenceRoute/.test(prepareTrack), 'driver preparation must distinguish Traceur modes');
 assert(/simple_blind/.test(app.slice(app.indexOf('function canRoleSeeReferenceRoute'), app.indexOf('function canRoleSeeReferenceRoute') + 600)), 'simple-blind visibility protection disappeared');
 assert(/full_blind/.test(app.slice(app.indexOf('function canRoleSeeReferenceRoute'), app.indexOf('function canRoleSeeReferenceRoute') + 600)), 'double-blind visibility protection disappeared');
 assert(/min-width:\s*0/.test(css) || /overflow-x:\s*hidden/.test(css), 'mobile overflow protection is missing');
