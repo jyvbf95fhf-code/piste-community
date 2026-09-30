@@ -25,8 +25,8 @@ Les commits `5ec178e`, `c900958`, `54f6643` et `88bb2dc` avaient préparé un
 modèle `mapVisibilityByRole`, son UI, des guards et un SQL JSONB. Ce modèle est
 abandonné. Le SQL `PISTE_V10.54_MAP_VISIBILITY_BY_ROLE.sql` n'a jamais été
 appliqué et est retiré du périmètre. La migration Solo
-`PISTE_V10.54_SOLO_MODES.sql` reste indépendante et **MIGRATION PREPARED — NOT
-APPLIED**.
+`PISTE_V10.54_SOLO_MODES.sql` reste indépendante et son application distante
+est **STATUT DISTANT NON PROUVÉ**.
 
 Le runtime ne dépend d'aucune colonne `map_visibility_by_role` ni d'une RPC
 V10.54 de visibilité. Les RPC V10.53 et les projections existantes restent la

@@ -41,10 +41,10 @@ protégée par un verrou transactionnel et une clé unique nullable. Les appels
 existants sans clé restent compatibles ; un retry sûr nécessite que le futur
 client réutilise la même clé.
 
-La migration est explicitement **MIGRATION HARDENED — NOT APPLIED**. Le projet
-Supabase configuré est partagé avec la production ; aucune modification SQL,
-RLS ou Auth ne peut donc être appliquée avant la création d'un environnement
-de test isolé et une validation séparée.
+Le statut documentaire de la migration est **STATUT DISTANT NON PROUVÉ** : le
+SQL est préparé et audité dans Git, mais les preuves disponibles dans ce
+checkout ne démontrent pas son application distante. Aucune modification SQL,
+RLS ou Auth n'est exécutée dans cette clôture.
 
 ## Réconciliation du helper de recording avec la production
 
@@ -90,11 +90,16 @@ route is reference geometry only; it never marks the current session's laying
 phase as complete. External Traceurs are represented only by `traceurMode` and
 never by an application member or GPS source.
 
-`validateCoachingCreationContract()` and `coachingContractCapabilities()` are
-used in shadow mode. Historical validation and RPC behaviour remain the source
-of truth until parity is validated. External Traceur with simple or double
-blind visibility emits `external_blind_mode_unresolved` and does not introduce
-a new business rule.
+`coachingContractRouteDecision()` and `buildCoachingCreationRequest()` are now
+the common pure gateway. `validateCoachingCreationContract()` and
+`coachingContractCapabilities()` are checked against it by runtime guards.
+Historical RPC signatures and UI adapters remain the execution boundary.
+External Traceur with simple or double blind visibility emits
+`external_blind_mode_unresolved` and does not introduce a new business rule.
+
+Wizard and Legacy therefore produce the same route decision, participants and
+relevant payload fields for an equivalent contract. The gateway never sets
+`track_finished_at`; that value remains a later transition result.
 
 The current state model remains documented rather than migrated:
 

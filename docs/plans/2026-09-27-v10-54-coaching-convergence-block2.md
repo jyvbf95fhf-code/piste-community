@@ -11,13 +11,15 @@
 6. Record only structural, non-sensitive Preview diagnostics.
 7. Keep external Traceur plus blind visibility unresolved.
 
-## Gateway and rollout
+## Gateway and rollout — delivered
 
-RPC selection is centralized by `coachingCreationRpcName()` while existing RPC
-signatures remain unchanged. A full `createCoachingFromContract()` gateway is
-deferred because switching both creation surfaces in one block would change
-legacy behaviour; the normalized contract is currently compared beside the
-historical path.
+RPC selection remains centralized by `coachingCreationRpcName()` while existing
+RPC signatures remain unchanged. The minimal pure gateway is now delivered by
+`coachingContractRouteDecision()` and `buildCoachingCreationRequest()`. Wizard
+and Legacy wrappers keep their historical adapters but no longer independently
+rebuild route, participant, blind-mode, Solo, or scenario payload decisions.
+The gateway does not set `track_finished_at` and does not change visibility
+rules.
 
 ## Verification
 
@@ -35,5 +37,6 @@ Le contrat backend est préparé dans `PISTE_V10.54_SOLO_MODES.sql` :
 - projection `get_my_coaching_sessions_v1054()` ;
 - grants authentifiés uniquement, sans nouvelle policy RLS.
 
-Statut : **MIGRATION PREPARED — NOT APPLIED**. Aucun SQL n'a été exécuté,
-car `cobekrttsojzwoetyaad` est le projet Supabase utilisé par la production.
+Statut : **STATUT DISTANT NON PROUVÉ**. Le SQL reste préparé et aucun SQL n'a
+été exécuté dans cette clôture ; aucune conclusion distante supplémentaire n'est
+tirée.

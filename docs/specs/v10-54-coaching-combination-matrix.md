@@ -11,10 +11,10 @@
 | C07 | Classique | Coach | externe | Normal | préparée ou autorisée | Coach + Conducteur selon validation | non | aucun GPS Traceur | pilote autorisé | Conducteur | SUPPORTED |
 | C08 | Classique | Conducteur | connecté | Simple aveugle | selon validation | règles existantes | selon validation | Traceur connecté | workflow existant | Conducteur | SUPPORTED |
 | C09 | Classique | Coach | connecté | Double aveugle | selon validation | règles existantes | selon validation | Traceur connecté | workflow existant | Conducteur | SUPPORTED |
-| C10 | Classique | Traceur | connecté | Normal | direct/live | Traceur + Conducteur | selon validation | créateur Traceur | transition immédiate | Conducteur | REGRESSION |
+| C10 | Classique | Traceur | connecté | Normal | direct/live | Traceur + Conducteur | selon validation | créateur Traceur | transition immédiate | Conducteur | SUPPORTED |
 | C11 | Classique | Conducteur/Coach | externe | Simple ou double aveugle | selon validation | à confirmer | non | externe | à confirmer | à confirmer | UNRESOLVED |
-| S01 | Solo | Solo | self_trace | Normal | nouvelle/enregistrée | utilisateur courant uniquement | non | pose puis relève par le même utilisateur | n/a | utilisateur courant | HARDENED_BACKEND_NOT_APPLIED |
-| S02 | Solo | Solo | external_traceur | Normal | préparée ou autorisée | utilisateur courant uniquement | non | aucun GPS Traceur | utilisateur courant « traceur en place » | utilisateur courant | HARDENED_BACKEND_NOT_APPLIED |
+| S01 | Solo | Solo | self_trace | Normal | nouvelle/enregistrée | utilisateur courant uniquement | non | pose puis relève par le même utilisateur | n/a | utilisateur courant | STATUT DISTANT NON PROUVÉ |
+| S02 | Solo | Solo | external_traceur | Normal | préparée ou autorisée | utilisateur courant uniquement | non | aucun GPS Traceur | utilisateur courant « traceur en place » | utilisateur courant | STATUT DISTANT NON PROUVÉ |
 
 Cette matrice décrit les chemins présents dans le code et ne crée aucune nouvelle permission métier.
 
@@ -32,6 +32,6 @@ externe + simple/double aveugle restent `UNRESOLVED` et ne sont pas élargies.
 
 La préparation backend V10.54 ajoute `soloMode` côté serveur, nullable pour
 les anciennes sessions, avec les valeurs `self_trace` et `external_traceur`.
-Elle est préparée dans `PISTE_V10.54_SOLO_MODES.sql` mais reste **MIGRATION
-PREPARED — NOT APPLIED**. Une ancienne Solo sans valeur conserve le parcours
-historique V10.53.
+Elle est préparée dans `PISTE_V10.54_SOLO_MODES.sql`, mais son application
+distante reste **STATUT DISTANT NON PROUVÉ**. Une ancienne Solo sans valeur
+conserve le parcours historique V10.53.
