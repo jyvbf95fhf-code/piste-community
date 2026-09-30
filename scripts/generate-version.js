@@ -6,5 +6,5 @@ const envSha=process.env.VERCEL_GIT_COMMIT_SHA||process.env.GIT_COMMIT_SHA||'';
 let sha=shaPattern.test(envSha)?envSha:'';
 if(!sha){try{sha=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8',stdio:['ignore','pipe','ignore']}).trim()}catch{sha=''}}
 const build=shaPattern.test(sha)?sha.slice(0,7):'unknown';
-fs.writeFileSync('version.json',JSON.stringify({version:'10.53',build,generatedAt:new Date().toISOString()},null,2)+'\n');
-console.log(`version.json generated: 10.53 / ${build}`);
+fs.writeFileSync('version.json',JSON.stringify({version:'10.54',build,generatedAt:new Date().toISOString()},null,2)+'\n');
+console.log(`version.json generated: 10.54 / ${build}`);

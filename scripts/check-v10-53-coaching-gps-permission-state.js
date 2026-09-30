@@ -18,7 +18,7 @@ assert(/function setCoachingLocationPermissionState\(state,reason/.test(app), 'p
 const preview = app.slice(app.indexOf('async function requestCoachingPreviewLocation'), app.indexOf('async function requestCoachingTraceurPermission'));
 assert(preview.includes("source:'preview'"), 'automatic preview must identify its source');
 assert(!/if\(err\?\.code===1\)setCoachingLocationPermissionState\('denied'\)/.test(preview), 'automatic preview must not poison global denied state');
-assert(/clearWatch\(coachingPreviewWatch\)/.test(preview), 'preview watcher must be cleared after real denial');
+assert(/(?:clearWatch\(coachingPreviewWatch\)|unsubscribeLocation\(coachingPreviewWatch\))/.test(preview), 'preview watcher must be cleared after real denial');
 const preflight = app.slice(app.indexOf('async function requestCoachingTraceurPermission'), app.indexOf('async function resumeSoloCoachingPhaseGps'));
 assert(preflight.includes("source:'traceur-preflight'"), 'explicit traceur preflight must identify its source');
 assert(preflight.includes('code===1'), 'permission denied must remain a blocking explicit error');

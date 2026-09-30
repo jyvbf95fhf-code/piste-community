@@ -25,6 +25,13 @@ const context = vm.createContext({
   $: id => fields[id] || null
 });
 for (const name of [
+  extractFunction('coachingRoutePreparationMode'),
+  extractFunction('normalizeCoachingCreationContract'),
+  extractFunction('normalizeCoachingLegacyState'),
+  extractFunction('coachingContractRouteDecision'),
+  extractFunction('coachingLegacyRouteDecision'),
+  extractFunction('coachingWizardRouteDecision'),
+  extractFunction('normalizeCoachingWizardState'),
   extractFunction('coachingCreationMembers'),
   extractFunction('coachingHasDistinctTraceur'),
   extractFunction('coachingWithoutPreparedRouteV1045'),
@@ -51,10 +58,10 @@ function setLegacy(role, mode, invited) {
 }
 
 for (const mode of ['normal', 'simple_blind']) {
-  assert.deepEqual(setLegacy('driver', mode, [{ user_id: 'traceur', role: 'traceur' }]), { withoutRoute: true, canPrepare: false });
-  assert.deepEqual(setLegacy('coach', mode, [{ user_id: 'traceur', role: 'traceur' }, { user_id: 'driver', role: 'driver' }]), { withoutRoute: true, canPrepare: false });
+  assert.deepEqual(setLegacy('driver', mode, [{ user_id: 'traceur', role: 'traceur' }]), { withoutRoute: true, canPrepare: true });
+  assert.deepEqual(setLegacy('coach', mode, [{ user_id: 'traceur', role: 'traceur' }, { user_id: 'driver', role: 'driver' }]), { withoutRoute: true, canPrepare: true });
 }
-assert.deepEqual(setLegacy('traceur', 'normal', [{ user_id: 'driver', role: 'driver' }]), { withoutRoute: false, canPrepare: true });
+assert.deepEqual(setLegacy('traceur', 'normal', [{ user_id: 'driver', role: 'driver' }]), { withoutRoute: true, canPrepare: true });
 assert.deepEqual(setLegacy('coach', 'full_blind', [{ user_id: 'driver', role: 'driver' }]), { withoutRoute: true, canPrepare: false });
 
 function wizard(changes) {
@@ -65,8 +72,9 @@ assert.deepEqual(wizard({ sessionType: 'classic', mode: 'normal', creatorRole: '
 assert.deepEqual(wizard({ sessionType: 'classic', mode: 'simple_blind', creatorRole: 'coach', participants: [{ user_id: 'traceur', role: 'traceur' }, { user_id: 'driver', role: 'driver' }] }).withoutRoute, true);
 assert.equal(wizard({ sessionType: 'classic', mode: 'normal', creatorRole: 'traceur', participants: [{ user_id: 'driver', role: 'driver' }] }).canPrepare, true);
 const cleaned = wizard({ creatorRole: 'driver', participants: [{ user_id: 'traceur', role: 'traceur' }], trackPreparation: { method: 'existing', routeId: 'old-route', draft: { route: [[1, 2], [3, 4]] }, origin: 'existing' } });
-assert.equal(JSON.stringify(cleaned.track), JSON.stringify({ method: 'none', draft: null, routeId: null, origin: null }), 'route interdite non nettoyée');
-assert.equal(wizard({ sessionType: 'solo', mode: 'normal', creatorRole: null, participants: [] }).withoutRoute, true);
+assert.equal(cleaned.track.method, 'existing', 'route preparation should remain available');
+assert.equal(cleaned.track.draft.route.length, 2, 'prepared route draft must remain available');
+assert.equal(wizard({ sessionType: 'solo', mode: 'normal', creatorRole: null, participants: [], trackPreparation: { method: 'none', routeId: null, draft: null, origin: null } }).withoutRoute, true);
 assert.equal(wizard({ sessionType: 'classic', mode: 'full_blind', creatorRole: 'coach', participants: [{ user_id: 'driver', role: 'driver' }] }).withoutRoute, true);
 
 assert(!/preReleaseCoachingDebug|preReleaseDebug|coachingMapDebug/.test(source), 'instrumentation Debug temporaire encore présente');
