@@ -28,7 +28,8 @@ ok(!/role==='solo'\?'Fin de pose'/.test(app)&&!/setUiText\('driverStartBtn','Dé
 ok(/stopCoachingPresence\(\);stopTraceurTracking\(\)/.test(app),'solo finish stops GPS watches before debrief');
 ok(/function resumeSoloCoachingPhaseGps/.test(app)&&/await resumeSoloCoachingPhaseGps\(s\)/.test(app),'reload restores Solo GPS only for an already active phase');
 ok(/supabase\.rpc\('start_solo_run'/.test(app),'Solo start uses the direct backend RPC');
-ok(/isSoloCoaching\(s\)[\s\S]{0,160}supabase\.rpc\('finish_solo_run'/.test(app),'Solo finish uses the direct backend RPC');
+ok(/isSoloCoaching\(s\)[\s\S]{0,220}supabase\.rpc\(s\?\.solo_mode\?'finish_solo_run_v1054':'finish_solo_run'/.test(app),'Solo finish dispatches V10.54 and legacy backend RPCs');
+ok(/supabase\.rpc\(s\?\.solo_mode\?'finish_solo_run_v1054':'finish_solo_run',\{p_session_id:sessionId\}\)/.test(app),'Legacy Solo finish RPC remains available through the explicit dispatch');
 ok(/startSoloRun/.test(app)&&/handleCoachingStartLaying/.test(app),'Solo preparation button uses the direct start handler');
 ok(/function bindCoachingStartLayingButton\(\)[\s\S]*button\.onclick[\s\S]*handleCoachingStartLaying/.test(app),'start action uses an idempotent direct button binding');
 ok((html.match(/id="startLayingBtn"/g)||[]).length===1&&/id="coachingPrimaryActions"[\s\S]*id="startLayingBtn"/.test(html),'Solo action targets one stable DOM button');
