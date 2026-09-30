@@ -6,7 +6,7 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 
 | Bloc | État | Preuve / prochaine action | Supabase |
 | --- | --- | --- | --- |
-| 0 Contrats/provenance | PLANIFIÉ | définir `scientificSnapshot`, fixtures et guard | AUCUN CHANGEMENT NÉCESSAIRE |
+| 0 Contrats/provenance | TERMINÉ | `scientific-snapshot.mjs`, cinq fixtures synthétiques et `check-v10-55-scientific-snapshot.js` ; tests PASS | AUCUN CHANGEMENT NÉCESSAIRE |
 | 1 Couloir post-session | AUDITÉ / PARTIEL | moteur et débrief présents ; unifier résumé/provenance archives | AUCUN CHANGEMENT NÉCESSAIRE |
 | 2 Replay synchronisé | AUDITÉ / PARTIEL | player et recalcul temporel présents ; valider toutes les surfaces | AUCUN CHANGEMENT NÉCESSAIRE |
 | 3 Débrief scientifique/météo | AUDITÉ / PARTIEL | métriques et météo présentes ; distinguer mesuré/reconstruit/inconnu | PROPOSITION SI PERSISTANCE |
@@ -25,4 +25,4 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 
 ## Point de reprise
 
-Première tâche après validation : Bloc 0, uniquement fixtures synthétiques et guard de provenance. Ne pas commencer par une migration ou une intégration Admin/Infrastructure.
+Bloc 0 est terminé. La prochaine tâche est le Bloc 1 : unifier le couloir olfactif post-session dans débrief et archives, sans migration ni nouvelle persistance.

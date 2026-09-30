@@ -13,6 +13,33 @@ Les niveaux de provenance sont obligatoires :
 
 Une estimation ne doit jamais être présentée comme une mesure terrain.
 
+La structure locale minimale est :
+
+```js
+{
+  schema: "scientificSnapshot",
+  version: "1.0",
+  sessionId: "…",
+  period: { start: "…", end: "…" },
+  fields: {
+    distance: {
+      value: 420,
+      unit: "m",
+      category: "calculated",
+      provenance: { kind: "derived", source: "scientific-metrics-engine@1.0" },
+      confidence: "medium",
+      timestamp: null,
+      validFrom: null,
+      validTo: null
+    }
+  },
+  raw: {},
+  metadata: {}
+}
+```
+
+`scientific-snapshot.mjs` fournit `scientificValue()`, `unknownScientificValue()`, `createScientificSnapshot()` et `projectScientificSnapshot()`. Le dernier remplace les champs non autorisés par une valeur `unknown` marquée `permission-denied`; il ne remplace pas les contrôles métier existants.
+
 ## Audit de l’existant
 
 ### Couloir olfactif post-session
