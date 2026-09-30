@@ -9,9 +9,9 @@ assert(!sql.includes("insert into public.coaching_members(session_id,uid,'traceu
 assert(sql.includes('grant execute on function public.mark_external_traceur_ready_v1053')&&!sql.includes('grant execute on function public.mark_external_traceur_ready_v1053(uuid,text) to public'),'strict RPC grant expected');
 assert(app.includes("traceurMode:'connected'")&&app.includes('p_traceur_mode'),'frontend must carry explicit traceur mode');
 assert(app.includes('create_coaching_people_session_v1053')&&app.includes('create_coaching_people_session_v105392'),'frontend must use v10.53 creation RPCs');
-assert(app.includes("withoutRoute?null:preparation.routeId"),'Solo route id must be preserved');
+assert(/p_route_id:route\.withoutRoute\?null:route\.routeId/.test(app),'Solo route id must be preserved by the shared creation request');
 assert(app.includes('mark_external_traceur_ready_v1053')&&app.includes('Le traceur est en place'),'external ready action missing');
-assert(app.includes("traceurMode==='external'&&coachingWizard.mode==='normal'&&['coach','driver'].includes(coachingWizard.creatorRole)"),'classic normal external creators must retain route preparation');
+assert(/traceurMode==='external'&&\['coach','driver','traceur'\]\.includes\(role\)&&mode==='normal'/.test(app),'classic normal external creators must retain route preparation');
 assert(app.includes('memberRole===\'solo\'&&phase===\'preparation\''),'Solo button must use actual member role');
 assert(app.includes('solo-surface:computed')&&app.includes('solo-start-button:shown'),'Solo diagnostic events missing');
 assert(html.includes('coachingWizardTraceurMode')&&html.includes('Traceur externe / sans application'),'external mode UI missing');

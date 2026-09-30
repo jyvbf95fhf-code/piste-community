@@ -23,8 +23,8 @@ assert(/method:'none'/.test(app) || /method\s*===\s*'none'/.test(app), 'none rou
 assert(/function coachingWizardWithoutPreparedRoute/.test(app), 'optional route creation path is missing');
 assert(/coachingWizardWithoutPreparedRoute\(\)/.test(app), 'submit path does not preserve optional route');
 const prepareTrack = app.match(/function coachingWizardCanPrepareTrack\(\)\{[^}]*\}/)?.[0] || '';
-assert(/coachingCreatorCanPrepareReferenceRoute/.test(prepareTrack), 'central creator preparation capability is missing');
-assert(/coachingCreatorCanPrepareReferenceRoute/.test(app), 'driver preparation capability is missing');
+assert(/coachingWizardRouteDecision/.test(prepareTrack), 'shared contract route decision is missing');
+assert(/coachingContractRouteDecision/.test(app), 'shared contract route decision is missing');
 assert(/normal.*simple_blind|simple_blind.*normal/.test(app)||/coachingDriverCanPrepareReferenceRoute/.test(app), 'driver normal/simple-blind preparation cases are missing');
 assert(/traceurMode/.test(app)||/coachingDriverCanPrepareReferenceRoute/.test(app), 'driver preparation must distinguish Traceur modes');
 assert(/simple_blind/.test(app.slice(app.indexOf('function canRoleSeeReferenceRoute'), app.indexOf('function canRoleSeeReferenceRoute') + 600)), 'simple-blind visibility protection disappeared');

@@ -4,6 +4,7 @@ const vm = require('vm');
 const assert = require('assert');
 
 const app = fs.readFileSync('app.js', 'utf8');
+function extract(name){const start=app.indexOf(`function ${name}(`);assert(start>=0,`missing ${name}`);const bodyStart=app.indexOf('{',app.indexOf(')',start));let depth=0;for(let i=bodyStart;i<app.length;i++){const ch=app[i];if(ch==='{')depth++;else if(ch==='}'&&! --depth)return app.slice(start,i+1)}throw new Error(`unterminated ${name}`)}
 const driverMatch = app.match(/function coachingDriverCanPrepareReferenceRoute\([\s\S]*?\n\}/);
 const match = app.match(/function coachingCreatorCanPrepareReferenceRoute\([\s\S]*?\n\}/);
 assert(driverMatch && match, 'central creator reference-route capability is missing');
@@ -23,14 +24,17 @@ assert.strictEqual(canPrepare({ creatorRole: 'driver', mode: 'normal', traceurMo
 assert.strictEqual(canPrepare({ creatorRole: 'driver', mode: 'simple_blind', traceurMode: 'external' }), true);
 assert.strictEqual(canPrepare({ creatorRole: 'traceur', mode: 'normal', traceurMode: 'connected' }), false);
 
+const routeFns = ['coachingRoutePreparationMode', 'normalizeCoachingCreationContract', 'normalizeCoachingWizardState', 'coachingContractRouteDecision', 'coachingWizardRouteDecision']
+  .map(extract);
+assert(routeFns.every(Boolean), 'shared contract route decision functions are missing');
 const wizardFns = ['coachingWizardHasDistinctTraceur', 'coachingWizardWithoutPreparedRoute', 'coachingWizardCanPrepareTrack']
-  .map(name => app.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}`))?.[0]);
+  .map(extract);
 assert(wizardFns.every(Boolean), 'wizard preparation functions are missing');
 const wizardContext = {
   session: { user: { id: 'coach' } },
   coachingWizard: { sessionType: 'classic', creatorRole: 'coach', traceurMode: 'connected', participants: [{ user_id: 'traceur', role: 'traceur' }], mode: 'normal', trackPreparation: { routeId: null, draft: null } },
 };
-vm.runInNewContext(`${driverMatch[0]};${match[0]};${wizardFns.join(';')};globalThis.runWizard=()=>coachingWizardCanPrepareTrack();globalThis.omitWizard=()=>coachingWizardWithoutPreparedRoute();`, wizardContext);
+vm.runInNewContext(`${routeFns.join(';')};${driverMatch[0]};${match[0]};${wizardFns.join(';')};globalThis.runWizard=()=>coachingWizardCanPrepareTrack();globalThis.omitWizard=()=>coachingWizardWithoutPreparedRoute();`, wizardContext);
 for (const mode of ['normal', 'simple_blind', 'full_blind']) {
   wizardContext.coachingWizard.mode = mode;
   assert.strictEqual(wizardContext.runWizard(), true, `Wizard Bloc 4 hidden for Coach in ${mode}`);
@@ -38,10 +42,12 @@ for (const mode of ['normal', 'simple_blind', 'full_blind']) {
 }
 
 const legacyFns = ['coachingWithoutPreparedRouteV1045', 'coachingCanPrepareRouteV1045']
-  .map(name => app.match(new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}`))?.[0]);
-assert(legacyFns.every(Boolean), 'legacy preparation functions are missing');
-const legacyContext = { coachingHasDistinctTraceur: () => true, coachingCreationMembers: () => [], $: id => ({ value: id === 'coachingCreatorRole' ? 'coach' : id === 'coachingVisibility' ? legacyContext.mode : '' }), mode: 'normal' };
-vm.runInNewContext(`${driverMatch[0]};${match[0]};${legacyFns.join(';')};globalThis.legacyCan=()=>coachingCanPrepareRouteV1045();globalThis.legacyOmit=()=>coachingWithoutPreparedRouteV1045();`, legacyContext);
+  .map(extract);
+const legacyRouteFns = ['coachingHasDistinctTraceur', 'coachingRoutePreparationMode', 'normalizeCoachingCreationContract', 'normalizeCoachingLegacyState', 'coachingContractRouteDecision', 'coachingLegacyRouteDecision']
+  .map(extract);
+assert(legacyFns.every(Boolean)&&legacyRouteFns.every(Boolean), 'legacy preparation functions are missing');
+const legacyContext = { session: { user: { id: 'coach' } }, coachingHasDistinctTraceur: () => true, coachingCreationMembers: () => [{ user_id: 'traceur', role: 'traceur' }], $: id => ({ value: id === 'coachingCreatorRole' ? 'coach' : id === 'coachingVisibility' ? legacyContext.mode : '' }), mode: 'normal' };
+vm.runInNewContext(`${legacyRouteFns.join(';')};${driverMatch[0]};${match[0]};${legacyFns.join(';')};globalThis.legacyCan=()=>coachingCanPrepareRouteV1045();globalThis.legacyOmit=()=>coachingWithoutPreparedRouteV1045();`, legacyContext);
 for (const mode of ['normal', 'simple_blind', 'full_blind']) {
   legacyContext.mode = mode;
   assert.strictEqual(legacyContext.legacyCan(), true, `legacy Bloc 4 hidden for Coach in ${mode}`);
@@ -55,9 +61,8 @@ vm.runInNewContext(`${visibilityMatch[0]};globalThis.canRoleSeeReferenceRoute=ca
 assert.strictEqual(visibilityContext.canRoleSeeReferenceRoute({ blind_mode: 'simple_blind', phase: 'preparation', status: 'waiting', workflow_version: 2 }, 'driver'), false);
 assert.strictEqual(visibilityContext.canRoleSeeReferenceRoute({ blind_mode: 'full_blind', phase: 'preparation', status: 'waiting', workflow_version: 2 }, 'driver'), false);
 
-assert(/coachingCreatorCanPrepareReferenceRoute\(\{organization:coachingWizard\.sessionType/.test(app), 'wizard does not use the central capability');
-assert(/coachingCreatorCanPrepareReferenceRoute\(\{organization:'classic',creatorRole,mode,traceurMode/.test(app), 'legacy path does not use the central capability');
-assert(/coachingCreatorCanPrepareReferenceRoute\(\{organization:'classic',creatorRole:role,mode,traceurMode/.test(app), 'legacy rendering path does not use the central capability');
+assert(/function coachingWizardRouteDecision\(/.test(app)&&/coachingWizardRouteDecision\(\)\.canPrepareRoute/.test(app), 'wizard does not use the shared contract route decision');
+assert(/function coachingLegacyRouteDecision\(/.test(app)&&/coachingLegacyRouteDecision\(\)\.canPrepareRoute/.test(app), 'legacy path does not use the shared contract route decision');
 assert(/function canRoleSeeReferenceRoute\(/.test(app), 'visibility reader disappeared');
 assert(/simple_blind/.test(app.slice(app.indexOf('function canRoleSeeReferenceRoute'), app.indexOf('function canRoleSeeReferenceRoute') + 600)), 'blind visibility rules disappeared');
 assert(/full_blind/.test(app.slice(app.indexOf('function canRoleSeeReferenceRoute'), app.indexOf('function canRoleSeeReferenceRoute') + 600)), 'double-blind visibility rules disappeared');

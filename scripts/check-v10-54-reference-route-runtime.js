@@ -10,8 +10,8 @@ assert(match, 'runtime reference-route predicate is missing');
 const context = {};
 vm.runInNewContext(`${match[0]}; globalThis.coachingDriverCanPrepareReferenceRoute = coachingDriverCanPrepareReferenceRoute;`, context);
 const canPrepare = context.coachingDriverCanPrepareReferenceRoute;
-assert(/coachingCreatorCanPrepareReferenceRoute\(\{organization:coachingWizard\.sessionType/.test(app), 'wizard does not use the shared creator capability');
-assert(/coachingCreatorCanPrepareReferenceRoute\(\{organization:'classic',creatorRole,mode,traceurMode/.test(app), 'legacy route path does not use the shared creator capability');
+assert(/function coachingWizardRouteDecision\(/.test(app)&&/coachingWizardRouteDecision\(\)\.canPrepareRoute/.test(app), 'wizard does not use the shared contract route decision');
+assert(/function coachingLegacyRouteDecision\(/.test(app)&&/coachingLegacyRouteDecision\(\)\.canPrepareRoute/.test(app), 'legacy route path does not use the shared contract route decision');
 
 const validCases = [
   { creatorRole: 'driver', mode: 'normal', traceurMode: 'connected' },
