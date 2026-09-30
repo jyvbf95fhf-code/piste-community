@@ -7,7 +7,7 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 | Bloc | État | Preuve / prochaine action | Supabase |
 | --- | --- | --- | --- |
 | 0 Contrats/provenance | TERMINÉ | `scientific-snapshot.mjs`, cinq fixtures synthétiques et `check-v10-55-scientific-snapshot.js` ; tests PASS | AUCUN CHANGEMENT NÉCESSAIRE |
-| 1 Couloir post-session | AUDITÉ / PARTIEL | moteur et débrief présents ; unifier résumé/provenance archives | AUCUN CHANGEMENT NÉCESSAIRE |
+| 1 Couloir post-session | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | `scientific-post-session.mjs`, adaptation débrief/archives, état complet/partiel/indisponible, guard runtime PASS | AUCUN CHANGEMENT NÉCESSAIRE |
 | 2 Replay synchronisé | AUDITÉ / PARTIEL | player et recalcul temporel présents ; valider toutes les surfaces | AUCUN CHANGEMENT NÉCESSAIRE |
 | 3 Débrief scientifique/météo | AUDITÉ / PARTIEL | métriques et météo présentes ; distinguer mesuré/reconstruit/inconnu | PROPOSITION SI PERSISTANCE |
 | 4 Satellite | PREVIEW ONLY | catalogue Esri et fallback présents ; décision fournisseur requise | AUCUN CHANGEMENT NÉCESSAIRE |
@@ -25,4 +25,4 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 
 ## Point de reprise
 
-Bloc 0 est terminé. La prochaine tâche est le Bloc 1 : unifier le couloir olfactif post-session dans débrief et archives, sans migration ni nouvelle persistance.
+Bloc 0 et Bloc 1 sont implémentés. Bloc 1 attend la validation de Sébastien. La prochaine tâche prévue est le Bloc 2 : Replay synchronisé du corridor, sans la commencer ici.
