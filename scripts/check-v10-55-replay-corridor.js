@@ -86,9 +86,19 @@ assert.match(replayPlayer, /createReplayPlayer/);
     complete,
     'same replay inputs remain deterministic'
   );
-  assert.match(app, /historicalCorridorAllowed\(source\)/, 'permissions guard remains on replay corridor calculation');
-  assert.match(app, /coachingOdorAuthorized\(row,role\)/, 'odor authorization remains part of corridor access');
-  console.log('PASS v10.55 synchronized replay corridor runtime guard');
+assert.match(app, /historicalCorridorAllowed\(source\)/, 'permissions guard remains on replay corridor calculation');
+assert.match(app, /coachingOdorAuthorized\(row,role\)/, 'odor authorization remains part of corridor access');
+assert.match(app, /replay-corridor-status/, 'Replay must expose a compact corridor calculation status');
+assert.match(app, /En attente/, 'Replay pending corridor state must be explicit');
+assert.match(app, /Estimation affichée/, 'Replay calculated corridor state must be explicit');
+assert.match(app, /Estimation indisponible/, 'Replay unavailable corridor state must be explicit');
+assert.doesNotMatch(app, /fillOpacity:\.085/, 'Replay corridor outer fill must be visually strengthened');
+assert.match(app, /fillOpacity:\.13/, 'Replay corridor outer fill must remain transparent but visible');
+assert.match(app, /fillOpacity:\.26/, 'Replay corridor inner fill must remain transparent but visible');
+const css = fs.readFileSync('v2.css', 'utf8');
+assert.doesNotMatch(css, /\n\+\.leaflet-overlay-pane \.odor-zone/, 'odor-zone selector must not begin with an invalid combinator');
+assert.match(css, /\.leaflet-overlay-pane \.odor-zone\{/, 'odor-zone selector must be valid');
+console.log('PASS v10.55 synchronized replay corridor runtime guard');
 })().catch(error => {
   console.error(error);
   process.exitCode = 1;

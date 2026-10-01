@@ -8,7 +8,7 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 | --- | --- | --- | --- |
 | 0 Contrats/provenance | TERMINÉ | `scientific-snapshot.mjs`, cinq fixtures synthétiques et `check-v10-55-scientific-snapshot.js` ; tests PASS | AUCUN CHANGEMENT NÉCESSAIRE |
 | 1 Couloir post-session | VALIDÉ PAR SÉBASTIEN | `scientific-post-session.mjs`, adaptation débrief/archives, correctif accès `track_finished`, Preview validée | AUCUN CHANGEMENT NÉCESSAIRE |
-| 2 Replay synchronisé | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | projection temporelle sur l’horloge Replay unique, moteur corridor unique, filtre strict sans données futures, toggle et mémoïsation, guard runtime PASS | AUCUN CHANGEMENT NÉCESSAIRE |
+| 2 Replay synchronisé | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | projection temporelle sur l’horloge Replay unique, moteur corridor unique, filtre strict sans données futures, états calculé/en attente/indisponible, contraste mobile renforcé, guard runtime PASS | AUCUN CHANGEMENT NÉCESSAIRE |
 | 3 Débrief scientifique/météo | AUDITÉ / PARTIEL | métriques et météo présentes ; distinguer mesuré/reconstruit/inconnu | PROPOSITION SI PERSISTANCE |
 | 4 Satellite | PREVIEW ONLY | catalogue Esri et fallback présents ; décision fournisseur requise | AUCUN CHANGEMENT NÉCESSAIRE |
 | 5 Admin modulaire | AUDITÉ / PARTIEL | Admin V10.44 réutilisable ; modules diagnostics/science à définir | AUCUN CHANGEMENT NÉCESSAIRE initial |
