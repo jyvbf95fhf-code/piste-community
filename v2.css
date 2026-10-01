@@ -1189,6 +1189,19 @@ body.guided-debrief-active .bottom-nav{display:none!important}
 .guided-debrief-primary-kpis article.driver{border-color:rgba(230,169,87,.38)}
 .guided-debrief-primary-kpis article.driver strong{color:#f0bd7d}
 .guided-debrief-primary-kpis article.age-kpi{border-color:rgba(159,189,101,.34)}
+.scientific-debrief-card{display:grid;gap:10px;margin-top:11px;padding:12px;border:1px solid rgba(112,220,255,.24);border-radius:13px;background:rgba(7,24,31,.68)}
+.scientific-debrief-card h3{margin:3px 0 0;font-size:16px}
+.scientific-debrief-card .card-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.scientific-debrief-state{color:#c9e7d4;font-size:11px;text-align:right}
+.scientific-debrief-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.scientific-debrief-field{display:grid;gap:2px;min-width:0;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.03)}
+.scientific-debrief-field span{color:var(--v2-muted);font-size:10px}
+.scientific-debrief-field strong{font-size:13px;line-height:1.2;overflow-wrap:anywhere}
+.scientific-debrief-field small{font-size:9px;color:#9fd9c0}
+.scientific-debrief-field small[data-scientific-category="estimated"]{color:#f0c57f}
+.scientific-debrief-field small[data-scientific-category="unknown"]{color:#b9c2c0}
+.scientific-debrief-subsection{display:grid;gap:6px;padding-top:2px}
+.scientific-debrief-card>p{margin:0}
 .guided-debrief-all-stats{margin-top:11px;border:1px solid var(--v2-line);border-radius:13px;background:rgba(7,19,25,.55)}
 .guided-debrief-all-stats>summary{cursor:pointer;padding:12px 13px;color:#d8e8bc;font-weight:850;list-style:none}
 .guided-debrief-all-stats>summary::-webkit-details-marker{display:none}

@@ -8,8 +8,8 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 | --- | --- | --- | --- |
 | 0 Contrats/provenance | TERMINÉ | `scientific-snapshot.mjs`, cinq fixtures synthétiques et `check-v10-55-scientific-snapshot.js` ; tests PASS | AUCUN CHANGEMENT NÉCESSAIRE |
 | 1 Couloir post-session | VALIDÉ PAR SÉBASTIEN | `scientific-post-session.mjs`, adaptation débrief/archives, correctif accès `track_finished`, Preview validée | AUCUN CHANGEMENT NÉCESSAIRE |
-| 2 Replay synchronisé | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | projection temporelle sur l’horloge Replay unique, moteur corridor unique, filtre strict sans données futures, états calculé/en attente/indisponible, contraste mobile renforcé, guard runtime PASS | AUCUN CHANGEMENT NÉCESSAIRE |
-| 3 Débrief scientifique/météo | AUDITÉ / PARTIEL | métriques et météo présentes ; distinguer mesuré/reconstruit/inconnu | PROPOSITION SI PERSISTANCE |
+| 2 Replay synchronisé | VALIDÉ PAR SÉBASTIEN | Replay 2D et couloir olfactif synchronisé validés visuellement sur `bc92dc897076dfb67f13b431f5d898e811052ebf` ; horloge Replay unique, moteur corridor unique, états calculé/en attente/indisponible | AUCUN CHANGEMENT NÉCESSAIRE |
+| 3 Débrief scientifique/météo | EN COURS | audit des métriques/météo terminé ; adaptation `scientificDebrief` et lecture mesuré/calculé/estimé/inconnu à implémenter puis Preview à valider | AUCUN CHANGEMENT NÉCESSAIRE |
 | 4 Satellite | PREVIEW ONLY | catalogue Esri et fallback présents ; décision fournisseur requise | AUCUN CHANGEMENT NÉCESSAIRE |
 | 5 Admin modulaire | AUDITÉ / PARTIEL | Admin V10.44 réutilisable ; modules diagnostics/science à définir | AUCUN CHANGEMENT NÉCESSAIRE initial |
 | 6 Infrastructure/recherche | NON COMMENCÉ | spécifier API sécurisée, quotas, redaction et agrégats | VALIDATION REQUISE |
@@ -25,4 +25,4 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 
 ## Point de reprise
 
-Bloc 0 et Bloc 1 sont validés. Bloc 2 est implémenté et attend la validation visuelle de Sébastien. La prochaine tâche prévue est le Bloc 3 : débrief scientifique/météo, sans la commencer ici.
+Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est en cours : les données existantes sont réutilisées sans persistance nouvelle, puis une Preview sera soumise à validation visuelle. Le prochain bloc reste le Bloc 4, après validation explicite du Bloc 3.
