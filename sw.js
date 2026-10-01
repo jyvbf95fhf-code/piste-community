@@ -1,5 +1,5 @@
 // Cache lineage kept explicit for release checks: piste-community-v2085 / app.js?v=1049-1.
-const C='piste-community-v2124';
+const C='piste-community-v2125';
 const A=[
   './',
   './index.html',
@@ -19,6 +19,7 @@ self.addEventListener('fetch',e=>{
  if(e.request.method!=='GET')return;
  const url=new URL(e.request.url);if(url.origin!==self.location.origin)return;
  if(e.request.mode==='navigate'){e.respondWith(Promise.race([fetch(e.request,{cache:'no-store'}),new Promise((_,reject)=>setTimeout(()=>reject(new Error('timeout')),5000))]).then(r=>{const x=r.clone();caches.open(C).then(c=>c.put('./',x));return r}).catch(()=>caches.match('./')));return}
- e.respondWith(caches.match(e.request).then(cached=>{const fresh=fetch(e.request,{cache:'no-store'}).then(r=>{if(r.ok){const x=r.clone();caches.open(C).then(c=>c.put(e.request,x))}return r}).catch(()=>cached);return cached||fresh}))
+ const critical=/\/(?:app\.js|.+\.mjs|styles\.css|v2\.css|version\.json)(?:$|\?)/.test(url.pathname+url.search);
+ e.respondWith((critical?fetch(e.request,{cache:'no-store'}).then(r=>{if(r.ok){const x=r.clone();caches.open(C).then(c=>c.put(e.request,x))}return r}).catch(()=>caches.match(e.request)):caches.match(e.request).then(cached=>{const fresh=fetch(e.request,{cache:'no-store'}).then(r=>{if(r.ok){const x=r.clone();caches.open(C).then(c=>c.put(e.request,x))}return r}).catch(()=>cached);return cached||fresh})))
 });
 self.addEventListener('notificationclick',e=>{e.notification.close();e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs[0];if(c){c.focus();c.postMessage({type:'coaching-notification-click'})}else{return self.clients.openWindow('./')}}))});

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { buildScientificDebrief } from '../scientific-debrief.mjs';
 
 const points = [
@@ -90,4 +91,33 @@ assert.match(reportSource, /scientificDebrief/, 'archive source must return the 
 assert.match(dossierSource, /scientificDebriefHtml\(source\.scientificDebrief\)/, 'archive statistics must render the shared scientific model');
 assert.match(dossierSource, /coachingArchive\?`<h3>STATISTIQUES/, 'archive statistics branch must remain present');
 assert.doesNotMatch(reportSource, /coachingDebriefWeatherSource\(/, 'archive source must not use live coaching weather fallback');
+
+const rendererStart = app.indexOf('function scientificDebriefHtml');
+const rendererEnd = app.indexOf('\nfunction renderAutoDebrief', rendererStart);
+assert(rendererStart >= 0 && rendererEnd > rendererStart, 'scientific renderer must be extractable');
+const rendererSource = app.slice(rendererStart, rendererEnd);
+const rendererContext = {
+  esc: value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char])),
+  scientificDebriefFieldValue: field => field?.value == null ? 'Indisponible' : String(field.value),
+  scientificDebriefFieldLabel: field => field?.category === 'measured' ? 'Mesuré' : field?.category === 'calculated' ? 'Calculé' : field?.category === 'estimated' ? 'Estimé / reconstruit' : 'Indisponible'
+};
+vm.runInNewContext(`${rendererSource};globalThis.render=scientificDebriefHtml;`, rendererContext);
+const renderedComplete = rendererContext.render(complete);
+const renderedUnknown = rendererContext.render(absent);
+assert.match(renderedComplete, /data-scientific-debrief/, 'archive renderer must return the scientific card');
+assert.match(renderedComplete, /Température/, 'canonical weather fields must render');
+assert.match(renderedComplete, /Durée de pose/, 'canonical timing fields must render');
+assert.match(renderedComplete, /Distance tracée/, 'canonical distance fields must render');
+assert.match(renderedUnknown, /data-scientific-debrief/, 'unknown data must keep the card visible');
+assert.match(renderedUnknown, /Données partielles/, 'unknown data must expose its summary state');
+assert.match(app, /model\.weather/);
+assert.match(app, /model\.timing\?\.laying/);
+assert.match(app, /model\.distance\?\.trace/);
+
+const sw = await import('node:fs/promises').then(fs => fs.readFile('sw.js', 'utf8'));
+assert.match(sw, /const C='piste-community-v2125'/, 'service worker cache lineage must advance');
+assert.match(sw, /const critical=/, 'service worker must classify critical assets');
+assert.match(sw, /critical\?fetch\(e\.request,\{cache:'no-store'\}\)/, 'critical assets must use network-first refresh');
+assert.match(sw, /caches\.keys\(\).*filter\(k=>k!==C/, 'old caches must be removed on activation');
+assert.doesNotMatch(sw, /version\.json.*caches\.match\(e\.request\).*return cached/, 'version metadata must not be cache-first');
 console.log('PASS v10.55 scientific debrief contract');
