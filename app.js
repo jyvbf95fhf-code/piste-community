@@ -725,7 +725,7 @@ function addCleanBaseLayers(map,{mapId='unknown',showLayerControl=true,includeSa
  const classic=BASE_LAYER_CATALOG.classic,topoDefinition=BASE_LAYER_CATALOG.topo,satelliteDefinition=BASE_LAYER_CATALOG.satellite;
  const osm=L.tileLayer(classic.tileUrl,{maxZoom:classic.maxZoom,attribution:classic.attribution});
  const topo=L.tileLayer(topoDefinition.tileUrl,{maxZoom:topoDefinition.maxZoom,attribution:topoDefinition.attribution});
-  const satelliteEnabled=PISTE_SATELLITE_PREVIEW_ENABLED;
+  const satelliteEnabled=PISTE_SATELLITE_PREVIEW_ENABLED&&includeSatellite;
   const satellite=satelliteEnabled?L.tileLayer(satelliteDefinition.tileUrl,{maxZoom:satelliteDefinition.maxZoom,attribution:satelliteDefinition.attribution}):null;
  map._pisteBaseLayers={osm,topo,...(satellite?{satellite}:{})};
  osm.addTo(map);
@@ -738,7 +738,7 @@ function addCleanBaseLayers(map,{mapId='unknown',showLayerControl=true,includeSa
  return {osm,topo,...(satellite?{satellite}:{})};
 }
 function createPisteMap(id,options={}){const map=L.map(id,{rotate:true,touchRotate:true,dragRotate:true,rotateControl:{position:'topright',behavior:'reset',closeOnZeroBearing:true},...options});const root=$(id);if(root&&['plannerMap','liveMap','coachingMap','activityDetailMap','activityLibraryMap','publicShareMap','historyMap','globalMap','operationalCallMap'].includes(id)&&!root.nextElementSibling?.classList.contains('trace-palette-legend'))root.insertAdjacentHTML('afterend',traceLegendHtml());return map}
-function createTerrainMap(id,options={}){const map=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap(id,options):PisteTerrainEngine.createMap(id,options);if(PISTE_TERRAIN_ENGINE_MODE==='legacy')addCleanBaseLayers(map);return map}
+function createTerrainMap(id,options={}){const map=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap(id,options):PisteTerrainEngine.createMap(id,options);if(PISTE_TERRAIN_ENGINE_MODE==='legacy')addCleanBaseLayers(map,{mapId:id,...options});return map}
 
 const terrainDebugState={open:false,lastAction:'initialisation'};
 function terrainDebugSnapshot(){const snapshot=PisteTerrainEngine.snapshot();return{engine:'PisteTerrainEngine',mode:PISTE_TERRAIN_ENGINE_MODE,provider:'leaflet',maps:snapshot.maps,instances:snapshot.instances,baseLayer:plannerBaseLayerName,activeBaseLayer:plannerBaseLayerName,tileErrorsTopo:plannerTopoTileErrors,fallbackToOsmCount:plannerFallbackToOsmCount,switchCount:plannerBaseSwitchCount,pdfSnapshot:window.PisteMapSnapshotProvider?.snapshotDebug?.()||null,online:navigator.onLine!==false,viewport:{width:window.innerWidth,height:window.innerHeight},lastAction:terrainDebugState.lastAction}};
@@ -901,8 +901,8 @@ function initPlanner(route=null){
   if(plannerMap){plannerMap.remove();plannerMap=null}plannerUserMarker=null;plannerAccuracyCircle=null;
   if(PISTE_TERRAIN_ENGINE_MODE==='legacy'){
    plannerMap=createPisteMap('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);
-   plannerBaseLayers=addCleanBaseLayers(plannerMap,{mapId:'plannerMap',showLayerControl:false});
-  }else {plannerMap=PisteTerrainEngine.createMap('plannerMap',{zoomControl:true}).setView([48.3,7.45],9);plannerBaseLayers=PisteTerrainEngine.entry('plannerMap')?.baseLayers||null}
+   plannerBaseLayers=addCleanBaseLayers(plannerMap,{mapId:'plannerMap',showLayerControl:false,includeSatellite:true});
+  }else {plannerMap=PisteTerrainEngine.createMap('plannerMap',{zoomControl:true,includeSatellite:true}).setView([48.3,7.45],9);plannerBaseLayers=PisteTerrainEngine.entry('plannerMap')?.baseLayers||null}
   if(plannerBaseLayerName==='topo')setPlannerBaseLayer('outdoor');
   const source=plannerSourceForInit(route),draft=!route&&!plannerWizardContext?source:null;if(source?.routing_mode)setPlannerRoutingMode(source.routing_mode);else if(plannerWizardContext?.method==='draw')setPlannerRoutingMode('free');
   TerrainEngine.configure('planner');updateTerrainCommonStatus();
@@ -1596,7 +1596,7 @@ async function renderCoachingMap(options){
  if(coachingGlobalPhase(activeCoachingSession)!=='active'){
   const data=options.debriefData||coachingDebriefData?.sessionId===id&&coachingDebriefData||await loadCoachingDebriefData(id);if(activeCoachingSession?.id!==id)return;
   coachingDebriefData=data;coachingLayers.forEach(layer=>{try{layer.remove()}catch{}});coachingLayers=[];for(const [key,marker] of coachingParticipantMarkers){marker.remove()}coachingParticipantMarkers.clear();coachingPreviewMarker?.remove();coachingPreviewMarker=null;coachingPreviewAccuracyCircle?.remove();coachingPreviewAccuracyCircle=null;
-  const newMap=!coachingMap;if(newMap){coachingMap=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap('coachingMap').setView([48.3,7.45],9):PisteTerrainEngine.createMap('coachingMap').setView([48.3,7.45],9);coachingBaseLayers=PISTE_TERRAIN_ENGINE_MODE==='legacy'?addCleanBaseLayers(coachingMap,{mapId:'coachingMap',showLayerControl:false}):PisteTerrainEngine.entry('coachingMap')?.baseLayers;setupCoachingBaseLayers();ensureCoachingParticipantPane();coachingMap.on('dragstart zoomstart rotatestart',()=>{coachingKeepViewport=true;cancelCoachingLongPress()})}
+  const newMap=!coachingMap;if(newMap){coachingMap=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap('coachingMap').setView([48.3,7.45],9):PisteTerrainEngine.createMap('coachingMap',{includeSatellite:true}).setView([48.3,7.45],9);coachingBaseLayers=PISTE_TERRAIN_ENGINE_MODE==='legacy'?addCleanBaseLayers(coachingMap,{mapId:'coachingMap',showLayerControl:false,includeSatellite:true}):PisteTerrainEngine.entry('coachingMap')?.baseLayers;setupCoachingBaseLayers();ensureCoachingParticipantPane();coachingMap.on('dragstart zoomstart rotatestart',()=>{coachingKeepViewport=true;cancelCoachingLongPress()})}
   renderDebriefOverlay(data,{fitViewport:newMap&&!options.preserveViewport});if(PISTE_TERRAIN_ENGINE_MODE!=='legacy')PisteTerrainEngine.registerLayers('coachingMap','coaching-layers',coachingLayers);return;
  }
  const member=myCoachingMember(activeCoachingSession),surface=coachingActiveSurfaceModel(activeCoachingSession,coachingPhase(activeCoachingSession),member?.role||null),visibility=surface.mapPriority?surface.visibility:coachingDataVisibility(activeCoachingSession),[liveRes,traceRes,markerRes,memberRes,currentRes]=await Promise.all([visibility.live?supabase.from('coaching_live_points').select('owner_id,lat,lon,accuracy_m,heading_deg,speed_mps,recorded_at').eq('session_id',id).order('recorded_at'):Promise.resolve({data:[]}),visibility.trace?supabase.from('coaching_trace_points').select('owner_id,lat,lon,accuracy_m,recorded_at').eq('session_id',id).order('recorded_at'):Promise.resolve({data:[]}),visibility.markers?supabase.from('coaching_markers').select('*').eq('session_id',id).order('created_at'):Promise.resolve({data:[]}),supabase.from('coaching_members').select('role,user_id,invitation_status').eq('session_id',id),activeCoachingSession.visibility_version===3?supabase.from('coaching_current_positions').select('*').eq('session_id',id):Promise.resolve({data:[]})]);
@@ -1604,7 +1604,7 @@ async function renderCoachingMap(options){
  const allLive=visibility.live?(liveRes.data||[]).filter(p=>{const visibleByPermissions=coachingCanSeeLiveOwner(activeCoachingSession,p.owner_id);coachingGpsPipelineRecord('lastModelApplied','coaching-live-position:model-applied',{sessionId:coachingDebugToken(id),ownerId:coachingDebugToken(p.owner_id),role:coachingMemberRole(p.owner_id),visibleByPermissions,reason:visibleByPermissions?null:'hidden-by-permissions',totalLivePositions:(liveRes.data||[]).length});return visibleByPermissions}):[],trace=visibility.trace?(traceRes.data||[]):[],annotations=visibility.markers?(markerRes.data||[]):[];if(memberRes.data){activeCoachingSession.coaching_members=memberRes.data.map(m=>({...activeCoachingSession.coaching_members?.find(old=>old.user_id===m.user_id),...m}));applyV1040RoleSurface()}
  const liveGroups=new Map();allLive.forEach(p=>{if(!liveGroups.has(p.owner_id))liveGroups.set(p.owner_id,[]);liveGroups.get(p.owner_id).push(p)});const points=coachingDriverTrail(liveGroups);
  setCoachingReplayData(trace,points,annotations);updateCoachingParticipants(liveGroups,trace);updateCoachingLiveMetrics(liveGroups,trace);
- if(PISTE_TERRAIN_ENGINE_MODE!=='legacy')PisteTerrainEngine.clearLayer('coachingMap','coaching-layers');coachingLayers.forEach(layer=>{try{layer.remove()}catch{}});coachingLayers=[];const newMap=!coachingMap;if(newMap){coachingMap=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap('coachingMap').setView([48.3,7.45],9):PisteTerrainEngine.createMap('coachingMap').setView([48.3,7.45],9);coachingBaseLayers=PISTE_TERRAIN_ENGINE_MODE==='legacy'?addCleanBaseLayers(coachingMap,{mapId:'coachingMap',showLayerControl:false}):PisteTerrainEngine.entry('coachingMap')?.baseLayers;setupCoachingBaseLayers();ensureCoachingParticipantPane();coachingMap.on('dragstart zoomstart rotatestart',()=>{coachingKeepViewport=true;cancelCoachingLongPress()});coachingMap.on('rotate rotateend zoomend',updateDriverMarkerOrientations);installCoachingLongPress()}
+ if(PISTE_TERRAIN_ENGINE_MODE!=='legacy')PisteTerrainEngine.clearLayer('coachingMap','coaching-layers');coachingLayers.forEach(layer=>{try{layer.remove()}catch{}});coachingLayers=[];const newMap=!coachingMap;if(newMap){coachingMap=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap('coachingMap').setView([48.3,7.45],9):PisteTerrainEngine.createMap('coachingMap',{includeSatellite:true}).setView([48.3,7.45],9);coachingBaseLayers=PISTE_TERRAIN_ENGINE_MODE==='legacy'?addCleanBaseLayers(coachingMap,{mapId:'coachingMap',showLayerControl:false,includeSatellite:true}):PisteTerrainEngine.entry('coachingMap')?.baseLayers;setupCoachingBaseLayers();ensureCoachingParticipantPane();coachingMap.on('dragstart zoomstart rotatestart',()=>{coachingKeepViewport=true;cancelCoachingLongPress()});coachingMap.on('rotate rotateend zoomend',updateDriverMarkerOrientations);installCoachingLongPress()}
  const role=myCoachingRole(activeCoachingSession),route=visibility.planned?(activeCoachingSession.planned_route||[]):[];
  coachingCorridorState={available:false,confidence:null,warnings:[],provenance:null};
  if(coachingLayerVisibility.odor)addLiveOdorCorridor(trace,points);
@@ -1989,7 +1989,7 @@ function missionPhotoUrl(value){return typeof value==='string'&&/^data:image\/(j
 function renderMissionMap(source){
  if(missionMap){missionMap.invalidateSize();renderMissionCorridor(source);return}
  const valid=p=>p&&p.lat!=null&&(p.lon??p.lng)!=null&&Number.isFinite(Number(p.lat))&&Number.isFinite(Number(p.lon??p.lng));
- const layers={},all=[];missionMap=createTerrainMap('missionMap').setView([48.3,7.45],8);
+ const layers={},all=[];missionMap=createTerrainMap('missionMap',{includeSatellite:true}).setView([48.3,7.45],8);
  const referenceCandidates=[['actual',source.actual],['trace',source.trace],['planned',source.planned]];
  for(const [label,points,color,dash] of [['Tracé prévu',source.planned,TRACE_PALETTE.planned,'8 6'],['Tracé Traceur',source.trace,TRACE_PALETTE.traceur,'4 7'],[source.type==='coaching'?'Parcours Conducteur':'Trace GPS',source.actual,TRACE_PALETTE.conducteur,null]]){
   const clean=points.filter(valid);if(!clean.length)continue;const group=L.featureGroup();if(clean.length>1)L.polyline(clean.map(p=>[p.lat,p.lon]),{color,weight:4,dashArray:dash}).addTo(group);
@@ -2364,7 +2364,7 @@ function renderActivityLibrary(){
  const rows=activityLibraryRows(),list=$('activityLibraryList'),calendar=$('activityLibraryCalendar'),map=$('activityLibraryMap');if(!list)return;updateLibrarySelectionUi(rows);list.classList.toggle('hidden',activityLibraryView!=='list');calendar.classList.toggle('hidden',activityLibraryView!=='calendar');map.classList.toggle('hidden',activityLibraryView!=='map');document.querySelectorAll('[data-library-view]').forEach(b=>b.classList.toggle('active',b.dataset.libraryView===activityLibraryView));
  if(activityLibraryView==='list'){let lastGroup='';list.innerHTML=rows.length?rows.map(row=>{const d=missionDate(row)||new Date(0),now=new Date(),days=Math.floor((new Date(now.getFullYear(),now.getMonth(),now.getDate())-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5),group=!missionDate(row)?'Sans date':days===0?'Aujourd’hui':days<7?'Cette semaine':d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}),heading=group!==lastGroup?`<h3 class="library-date-group">${esc(group)}</h3>`:'';lastGroup=group;return heading+activityLibraryCard(row)}).join(''):'<div class="empty-state">🗂️<b>Aucune piste trouvée</b><span>Modifiez les filtres ou démarrez une activité.</span></div>';bindLibraryCards(list);return}
  if(activityLibraryView==='calendar'){const months={};rows.forEach(x=>{const key=missionDate(x)?.toISOString().slice(0,7)||'unknown';(months[key]??=[]).push(x)});calendar.innerHTML=Object.entries(months).map(([month,items])=>`<section><h3>${month==='unknown'?'Sans date':new Date(month+'-01T12:00:00').toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</h3><div>${items.map(x=>{const m=libraryTypeMeta(x._type);return `<button data-calendar-id="${x.id}" data-calendar-type="${x._type}"><b>${missionDate(x)?.getDate()||'—'}</b><span>${m.icon} ${esc(libraryName(x))}</span><small>${m.label}</small></button>`}).join('')}</div></section>`).join('')||'<p class="muted">Aucune activité.</p>';calendar.querySelectorAll('[data-calendar-id]').forEach(b=>b.onclick=()=>openLibraryItem(b.dataset.calendarType,b.dataset.calendarId));return}
- setTimeout(()=>{if(globalMap){globalMap.remove();globalMap=null}globalMap=createTerrainMap('activityLibraryMap').setView([48.3,7.45],8);const layers=[];rows.forEach(x=>{const track=libraryTrack(x);if(!Array.isArray(track)||track.length<2)return;const line=L.polyline(track.map(p=>[p.lat,p.lon]),{weight:4,color:activityColor(x._type),opacity:1}).addTo(globalMap).bindPopup(`<b>${esc(libraryName(x))}</b><br>${esc(libraryTypeMeta(x._type).label)}`);layers.push(line)});if(layers.length)globalMap.fitBounds(L.featureGroup(layers).getBounds(),{padding:[24,24]})},60);
+ setTimeout(()=>{if(globalMap){globalMap.remove();globalMap=null}globalMap=createTerrainMap('activityLibraryMap',{includeSatellite:true}).setView([48.3,7.45],8);const layers=[];rows.forEach(x=>{const track=libraryTrack(x);if(!Array.isArray(track)||track.length<2)return;const line=L.polyline(track.map(p=>[p.lat,p.lon]),{weight:4,color:activityColor(x._type),opacity:1}).addTo(globalMap).bindPopup(`<b>${esc(libraryName(x))}</b><br>${esc(libraryTypeMeta(x._type).label)}`);layers.push(line)});if(layers.length)globalMap.fitBounds(L.featureGroup(layers).getBounds(),{padding:[24,24]})},60);
 }
 
 const TUTORIAL_STEPS=[
@@ -2412,7 +2412,7 @@ async function loadPublicShareFromUrl(){
  if(error||!data){content.innerHTML='<div class="empty-state">🔒<b>Lien indisponible</b><span>Cette piste n’est plus publique ou le lien a expiré.</span></div>';return true}
  const meta=libraryTypeMeta(data.type||type),track=Array.isArray(data.track)?data.track:[];$('publicShareTitle').textContent=data.name||'Piste partagée';
  content.innerHTML=`<small class="section-kicker">${meta.icon} ${esc(meta.label)}</small><h2>${esc(data.name||'Piste partagée')}</h2><p>${esc(data.commune_depart||'Lieu non communiqué')} • ${data.date?new Date(data.date).toLocaleDateString('fr-FR'):'Date non communiquée'}</p><div class="public-share-kpis"><div><strong>${data.distance_km==null?'—':fmt(data.distance_km,2)+' km'}</strong><small>Distance</small></div><div><strong>${data.duree_h==null?'—':fmt(data.duree_h,2)+' h'}</strong><small>Durée</small></div><div><strong>${esc(data.resultat||'—')}</strong><small>Résultat</small></div></div>`;
- if(track.length>1){$('publicShareMap').classList.remove('hidden');setTimeout(()=>{const map=createTerrainMap('publicShareMap'),line=L.polyline(track.map(p=>[p.lat,p.lon]),{weight:5,color:activityColor(type),opacity:1}).addTo(map);map.fitBounds(line.getBounds(),{padding:[28,28]})},80)}
+ if(track.length>1){$('publicShareMap').classList.remove('hidden');setTimeout(()=>{const map=createTerrainMap('publicShareMap',{includeSatellite:true}),line=L.polyline(track.map(p=>[p.lat,p.lon]),{weight:5,color:activityColor(type),opacity:1}).addTo(map);map.fitBounds(line.getBounds(),{padding:[28,28]})},80)}
  return true;
 }
 async function deleteCurrentAccount(){
@@ -2614,7 +2614,7 @@ function showCoachingActivityDetail(id){
 function renderActivityDetailMap(p){
  const el=$('activityDetailMap');if(activityDetailMap){try{activityDetailMap.remove()}catch{}activityDetailMap=null}
  if(!Array.isArray(p.track)||p.track.length<2){el.classList.add('hidden');return}
- el.classList.remove('hidden');activityDetailMap=createTerrainMap('activityDetailMap').setView([p.track[0].lat,p.track[0].lon],15);
+ el.classList.remove('hidden');activityDetailMap=createTerrainMap('activityDetailMap',{includeSatellite:true}).setView([p.track[0].lat,p.track[0].lon],15);
  const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5,color:TRACE_PALETTE.conducteur}).addTo(activityDetailMap);L.marker([p.track[0].lat,p.track[0].lon],{icon:traceMarkerIcon('D')}).addTo(activityDetailMap).bindPopup('Départ');const last=p.track[p.track.length-1];L.marker([last.lat,last.lon],{icon:traceMarkerIcon('A')}).addTo(activityDetailMap).bindPopup('Arrivée');addSavedFieldMarkers(activityDetailMap,p);activityDetailMap.fitBounds(line.getBounds(),{padding:[25,25]});setTimeout(()=>activityDetailMap.invalidateSize(),80);
 }
 
@@ -2758,7 +2758,7 @@ function initLiveMap(force=false){
  const el=$('liveMap');if(!el)return;
  if(force&&liveMap){if(PISTE_TERRAIN_ENGINE_MODE==='legacy'){try{liveMap.remove()}catch{}}else PisteTerrainEngine.destroyMap('liveMap');liveMap=null;liveLine=null;liveMarker=null;livePositionMarker=null;liveAccuracyCircle=null;plannedLiveLine=null;plannedLiveOdorLayers=[]}
  if(liveMap){setTimeout(()=>liveMap.invalidateSize(),80);return}
- if(PISTE_TERRAIN_ENGINE_MODE==='legacy'){liveMap=createPisteMap('liveMap',{zoomControl:true}).setView([48.3,7.45],8);addCleanBaseLayers(liveMap)}else liveMap=PisteTerrainEngine.createMap('liveMap',{zoomControl:true}).setView([48.3,7.45],8);
+ if(PISTE_TERRAIN_ENGINE_MODE==='legacy'){liveMap=createPisteMap('liveMap',{zoomControl:true}).setView([48.3,7.45],8);addCleanBaseLayers(liveMap,{mapId:'liveMap',includeSatellite:true})}else liveMap=PisteTerrainEngine.createMap('liveMap',{zoomControl:true,includeSatellite:true}).setView([48.3,7.45],8);
  liveLine=L.polyline([],{weight:5,color:TRACE_PALETTE.conducteur,opacity:1}).addTo(liveMap);if(PISTE_TERRAIN_ENGINE_MODE!=='legacy')PisteTerrainEngine.setLayer('liveMap','live-trace',liveLine);
  liveMap.on('contextmenu',event=>openFieldMarkerDialog('note',event.latlng));
  const suspendLiveFollow=()=>{if(liveMapProgrammatic)return;liveMapFollow=false;$('recenterLiveMapBtn')?.classList.remove('hidden')};liveMap.on('dragstart',suspendLiveFollow);liveMap.on('zoomstart',e=>{if(e.originalEvent)suspendLiveFollow()});
@@ -2869,7 +2869,7 @@ function fillOperationalCall(row){resetOperationalCall();currentOperationalCall=
 async function loadOperationalCalls(){if(!session)return;const {data=[],error}=await supabase.from('operational_calls').select('*').eq('owner_id',session.user.id).order('call_at',{ascending:false});operationalCalls=error?[]:data;renderOperationalCallsList();if(error&&$('operationalCallMsg'))$('operationalCallMsg').textContent='Migration V10.27 requise : '+error.message}
 function renderOperationalCallsList(){const el=$('operationalCallsList');if(!el)return;el.innerHTML=operationalCalls.length?operationalCalls.map(row=>`<div class="call-row"><span>📞</span><div><b>${esc(row.subject?.initials||'Personne non renseignée')}</b><small>${new Date(row.call_at).toLocaleString('fr-FR')} • ${esc(row.last_known_label||'Point non positionné')}</small></div><em class="call-status ${esc(row.status)}">${esc(row.status)}</em><div><button class="secondary editOperationalCall" data-id="${row.id}">Ouvrir</button><button class="ghost-dark deleteOperationalCall" data-id="${row.id}">×</button></div></div>`).join(''):'<p class="muted small">Aucun appel enregistré.</p>';el.querySelectorAll('.editOperationalCall').forEach(b=>b.onclick=()=>fillOperationalCall(operationalCalls.find(x=>x.id===b.dataset.id)));el.querySelectorAll('.deleteOperationalCall').forEach(b=>b.onclick=async()=>{if(!confirm('Supprimer définitivement cette fiche d’appel ?'))return;const {error}=await supabase.from('operational_calls').delete().eq('id',b.dataset.id).eq('owner_id',session.user.id);if(error)return alert(error.message);await loadOperationalCalls();resetOperationalCall()})}
 function initOperationalCallPage(){loadOperationalCalls();if(!$('callAt').value)resetOperationalCall();else setOperationalCallStep(operationalCallStep)}
-function initOperationalCallMap(){if(operationalCallMap){renderOperationalCallMap();return}operationalCallMap=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap('operationalCallMap',{zoomControl:true}).setView([48.3,7.45],9):PisteTerrainEngine.createMap('operationalCallMap',{zoomControl:true}).setView([48.3,7.45],9);operationalBaseLayers=PISTE_TERRAIN_ENGINE_MODE==='legacy'?addCleanBaseLayers(operationalCallMap,{mapId:'operationalCallMap',showLayerControl:false}):PisteTerrainEngine.entry('operationalCallMap')?.baseLayers;const topo=operationalBaseLayers?.topo;topo?.on('tileerror',()=>{if(operationalBaseLayerName!=='topo')return;operationalTopoTileErrors++;if(operationalTopoTileErrors>=3)setOperationalBaseLayer('osm',{fallback:true})});topo?.on('tileload',()=>{operationalTopoTileErrors=0});operationalCallMap.on('click',e=>{if(!operationalCallPoint){operationalCallPoint={lat:e.latlng.lat,lon:e.latlng.lng,label:'Dernier point connu'};$('callLocationStatus').textContent='Dernier point connu positionné. Touche encore la carte pour ajouter le repère sélectionné.'}else{const type=$('callMarkerType').value,note=$('callMarkerNote').value.trim(),def=CALL_MARKERS[type]||CALL_MARKERS.note;operationalCallMarkers.push({id:crypto.randomUUID?.()||String(Date.now()),type,lat:e.latlng.lat,lon:e.latlng.lng,note:note||def.label});$('callMarkerNote').value=''}renderOperationalCallMap();renderCallMarkerList();renderOperationalCallSummary()});renderOperationalCallMap()}
+function initOperationalCallMap(){if(operationalCallMap){renderOperationalCallMap();return}operationalCallMap=PISTE_TERRAIN_ENGINE_MODE==='legacy'?createPisteMap('operationalCallMap',{zoomControl:true}).setView([48.3,7.45],9):PisteTerrainEngine.createMap('operationalCallMap',{zoomControl:true,includeSatellite:true}).setView([48.3,7.45],9);operationalBaseLayers=PISTE_TERRAIN_ENGINE_MODE==='legacy'?addCleanBaseLayers(operationalCallMap,{mapId:'operationalCallMap',showLayerControl:false,includeSatellite:true}):PisteTerrainEngine.entry('operationalCallMap')?.baseLayers;const topo=operationalBaseLayers?.topo;topo?.on('tileerror',()=>{if(operationalBaseLayerName!=='topo')return;operationalTopoTileErrors++;if(operationalTopoTileErrors>=3)setOperationalBaseLayer('osm',{fallback:true})});topo?.on('tileload',()=>{operationalTopoTileErrors=0});operationalCallMap.on('click',e=>{if(!operationalCallPoint){operationalCallPoint={lat:e.latlng.lat,lon:e.latlng.lng,label:'Dernier point connu'};$('callLocationStatus').textContent='Dernier point connu positionné. Touche encore la carte pour ajouter le repère sélectionné.'}else{const type=$('callMarkerType').value,note=$('callMarkerNote').value.trim(),def=CALL_MARKERS[type]||CALL_MARKERS.note;operationalCallMarkers.push({id:crypto.randomUUID?.()||String(Date.now()),type,lat:e.latlng.lat,lon:e.latlng.lng,note:note||def.label});$('callMarkerNote').value=''}renderOperationalCallMap();renderCallMarkerList();renderOperationalCallSummary()});renderOperationalCallMap()}
 function setOperationalBaseLayer(name,{fallback=false}={}){const layer=normalizeBaseLayerId(name),entry=PISTE_TERRAIN_ENGINE_MODE!=='legacy'?PisteTerrainEngine.entry('operationalCallMap'):null,map=entry?.map||operationalCallMap,candidates=entry?.baseLayers||operationalBaseLayers;if(!map||!candidates?.[layer])return false;const target=candidates[layer],previous=candidates[operationalBaseLayerName],center=map.getCenter?.(),zoom=map.getZoom?.();if(target===previous&&map.hasLayer(target)){updateOperationalBaseLayerControls();return true}if(entry)PisteTerrainEngine.setBaseLayer('operationalCallMap',layer);else{target.addTo(map);if(previous&&previous!==target&&map.hasLayer(previous))map.removeLayer(previous)}operationalBaseLayerName=layer;operationalTopoTileErrors=layer==='topo'?operationalTopoTileErrors:0;if(fallback)operationalFallbackToOsmCount++;if(entry)entry.baseLayer=layer;if(center&&Number.isFinite(zoom))map.setView(center,zoom,{animate:false});map.invalidateSize();updateOperationalBaseLayerControls();return true}
 function updateOperationalBaseLayerControls(){syncTerrainBaseLayerControls('operationalCallMap',operationalBaseLayerName)}
 function renderOperationalCallMap(){
@@ -3098,7 +3098,7 @@ function showTrainingTrack(id){
  showPage('trackPage');
  setTimeout(()=>{
    if(historyMap){historyMap.remove();historyMap=null}
-   historyMap=createTerrainMap('historyMap').setView([p.track[0].lat,p.track[0].lon],15);
+   historyMap=createTerrainMap('historyMap',{includeSatellite:true}).setView([p.track[0].lat,p.track[0].lon],15);
 
    const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5,color:TRACE_PALETTE.conducteur}).addTo(historyMap);
    L.marker([p.track[0].lat,p.track[0].lon],{icon:traceMarkerIcon('D')}).addTo(historyMap).bindPopup("Départ");
@@ -3227,7 +3227,7 @@ function showFriendTrack(id,type){
  showPage('trackPage');
  setTimeout(()=>{
    if(historyMap){historyMap.remove();historyMap=null}
-   historyMap=createTerrainMap('historyMap').setView([p.track[0].lat,p.track[0].lon],15);
+   historyMap=createTerrainMap('historyMap',{includeSatellite:true}).setView([p.track[0].lat,p.track[0].lon],15);
 
    const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5,color:activityColor(type)}).addTo(historyMap);
    L.marker([p.track[0].lat,p.track[0].lon],{icon:traceMarkerIcon('D')}).addTo(historyMap).bindPopup('Départ');
@@ -3301,7 +3301,7 @@ function renderGlobalMap(filter='all'){
  setTimeout(()=>{
   if(!$('globalMap'))return;
   if(globalMap){globalMap.remove();globalMap=null}
-  globalMap=createTerrainMap('globalMap').setView([48.3,7.45],8);
+  globalMap=createTerrainMap('globalMap',{includeSatellite:true}).setView([48.3,7.45],8);
 
   globalLayers=[];
   const rows=[...mine.map(x=>({...x,_type:'operational'})),...trainings.map(x=>({...x,_type:'training'}))].filter(x=>filter==='all'||x._type===filter).filter(x=>Array.isArray(x.track)&&x.track.length>1);
@@ -3633,7 +3633,7 @@ function showTrack(id){
  showPage('trackPage');
  setTimeout(()=>{
    if(historyMap){historyMap.remove();historyMap=null}
-   historyMap=createTerrainMap('historyMap').setView([p.track[0].lat,p.track[0].lon],15);
+   historyMap=createTerrainMap('historyMap',{includeSatellite:true}).setView([p.track[0].lat,p.track[0].lon],15);
 
    const line=L.polyline(p.track.map(x=>[x.lat,x.lon]),{weight:5,color:TRACE_PALETTE.conducteur}).addTo(historyMap);
    L.marker([p.track[0].lat,p.track[0].lon],{icon:traceMarkerIcon('D')}).addTo(historyMap).bindPopup("Départ");

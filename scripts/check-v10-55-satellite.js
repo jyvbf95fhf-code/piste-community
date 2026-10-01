@@ -1,0 +1,28 @@
+'use strict';
+const fs=require('fs'); const path=require('path'); const root=path.join(__dirname,'..'); const read=name=>fs.readFileSync(path.join(root,name),'utf8');
+const assert=require('assert');
+const app=read('app.js');
+const html=read('index.html');
+const catalog=read('map-base-layers.mjs');
+const sw=read('sw.js');
+const ok=(condition,message)=>assert.ok(condition,message);
+
+ok(/provider:'esri-world-imagery'/.test(catalog),'Esri satellite catalog entry missing');
+ok(/previewOnly:true/.test(catalog)&&/productionAllowed:false/.test(catalog),'Satellite must remain Preview-only');
+ok(/Esri.*Maxar.*Earthstar Geographics/.test(catalog),'Esri attribution missing');
+ok(/const satelliteEnabled=PISTE_SATELLITE_PREVIEW_ENABLED&&includeSatellite/.test(app),'Satellite must require explicit per-map opt-in');
+ok(/fallbackBaseLayer\(mapId,'tileerror'\)/.test(app),'Satellite tile-error fallback missing');
+ok(/satellite\.on\('tileload'/.test(app),'Satellite tile recovery/reset missing');
+ok(/createMap\('plannerMap',\{zoomControl:true,includeSatellite:true\}\)/.test(app),'Planner satellite opt-in missing');
+ok((app.match(/createMap\('coachingMap',\{includeSatellite:true\}\)/g)||[]).length>=2,'Coaching satellite opt-in missing on both map paths');
+ok(/createTerrainMap\('missionMap',\{includeSatellite:true\}\)/.test(app),'Archive/debrief map satellite opt-in missing');
+ok(/createMap\('liveMap',\{zoomControl:true,includeSatellite:true\}\)/.test(app),'Live map satellite opt-in missing');
+ok(/createMap\('operationalCallMap',\{zoomControl:true,includeSatellite:true\}\)/.test(app),'Operations map satellite opt-in missing');
+ok(html.includes('id="plannerBaseSatellite"')&&html.includes('data-coaching-base="satellite"')&&html.includes('data-ops-base="satellite"'),'Satellite controls missing');
+ok(/data-replay-base-layer/.test(app),'Replay base-layer control missing');
+ok(/location\.hostname!=='stats-piste-community\.vercel\.app'/.test(app),'Production gate missing');
+ok(/C='piste-community-v2125'/.test(sw),'Service Worker cache baseline changed unexpectedly');
+ok(!/api[_-]?key|secret|token\s*[:=]/i.test(catalog),'Satellite catalog contains a secret-like value');
+ok(/setBaseLayer\(id,name\)/.test(app)&&/fallbackBaseLayer\(id/.test(app),'Central base-layer API missing');
+ok(!/watchPosition/.test(app.slice(app.indexOf('function addCleanBaseLayers'),app.indexOf('function addCleanBaseLayers')+2500)),'Satellite layer must not add a GPS watcher');
+console.log('v10.55 satellite guard: PASS');

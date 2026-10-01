@@ -9,8 +9,8 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 | 0 Contrats/provenance | TERMINÉ | `scientific-snapshot.mjs`, cinq fixtures synthétiques et `check-v10-55-scientific-snapshot.js` ; tests PASS | AUCUN CHANGEMENT NÉCESSAIRE |
 | 1 Couloir post-session | VALIDÉ PAR SÉBASTIEN | `scientific-post-session.mjs`, adaptation débrief/archives, correctif accès `track_finished`, Preview validée | AUCUN CHANGEMENT NÉCESSAIRE |
 | 2 Replay synchronisé | VALIDÉ PAR SÉBASTIEN | Replay 2D et couloir olfactif synchronisé validés visuellement sur `bc92dc897076dfb67f13b431f5d898e811052ebf` ; horloge Replay unique, moteur corridor unique, états calculé/en attente/indisponible | AUCUN CHANGEMENT NÉCESSAIRE |
-| 3 Débrief scientifique/météo | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | `scientific-debrief.mjs` partagé par débrief guidé et archives Coaching → Statistiques ; renderer aligné sur le modèle imbriqué ; cache Service Worker des assets critiques invalidé/réseau prioritaire ; météo d’archive sans fallback live, champs absents `unknown` ; guards Bloc 3 et cache PASS ; Preview à valider visuellement | AUCUN CHANGEMENT NÉCESSAIRE |
-| 4 Satellite | PREVIEW ONLY | catalogue Esri et fallback présents ; décision fournisseur requise | AUCUN CHANGEMENT NÉCESSAIRE |
+| 3 Débrief scientifique/météo | VALIDÉ PAR SÉBASTIEN | `scientific-debrief.mjs` partagé par débrief guidé et archives Coaching → Statistiques ; renderer aligné sur le modèle imbriqué ; cache Service Worker des assets critiques invalidé/réseau prioritaire ; météo d’archive sans fallback live, champs absents `unknown` ; guards Bloc 3 et cache PASS ; validation visuelle confirmée | AUCUN CHANGEMENT NÉCESSAIRE |
+| 4 Satellite | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | Catalogue Esri Preview-only, opt-in explicite par carte, attribution, fallback sur erreurs de tuiles, contrôles existants et guard Bloc 4 | AUCUN CHANGEMENT NÉCESSAIRE |
 | 5 Admin modulaire | AUDITÉ / PARTIEL | Admin V10.44 réutilisable ; modules diagnostics/science à définir | AUCUN CHANGEMENT NÉCESSAIRE initial |
 | 6 Infrastructure/recherche | NON COMMENCÉ | spécifier API sécurisée, quotas, redaction et agrégats | VALIDATION REQUISE |
 | 7 Hardening/mobile | NON COMMENCÉ | budgets, accessibilité, session switch, permissions | AUCUN CHANGEMENT NÉCESSAIRE |
@@ -25,4 +25,4 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 
 ## Point de reprise
 
-Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est implémenté et en attente de validation visuelle de Sébastien. Le prochain bloc reste le Bloc 4, après cette validation explicite.
+Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est validé par Sébastien. Le Bloc 4 est implémenté et en attente de validation visuelle de Sébastien ; le Bloc 5 reste hors périmètre.
