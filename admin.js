@@ -1,5 +1,5 @@
 // V10.44: presentation only. Every privileged request is authorized again by PostgreSQL.
-export const ADMIN_TABS=Object.freeze({dashboard:'Tableau de bord',users:'Utilisateurs',activity:'Activité',statistics:'Statistiques',feedback:'Retours'});
+export const ADMIN_TABS=Object.freeze({dashboard:'Tableau de bord',users:'Utilisateurs',activity:'Activité',statistics:'Statistiques',feedback:'Retours',operations:'Opérations',research:'Recherche'});
 export const FEEDBACK_STATUSES=Object.freeze({new:'Nouveau',read:'Lu',todo:'À traiter',done:'Traité'});
 const TYPES={ops:'OPS',training:'Entraînement',coaching:'Coaching',account:'Compte',feedback:'Retour'};
 const ACCOUNT={confirmed:'Confirmé',pending:'À confirmer',suspended:'Suspendu'};
@@ -13,6 +13,19 @@ const empty=text=>`<p class="admin-empty">${e(text)}</p>`;
 const profileButton=user=>`<button class="secondary" type="button" data-admin-user="${e(user.user_id)}">Voir le profil admin</button>`;
 const stat=(label,value)=>`<div class="admin-kpi"><strong>${number(value)}</strong><span>${e(label)}</span></div>`;
 const section=(title,body)=>`<section class="admin-card"><h3>${e(title)}</h3>${body}</section>`;
+const health=(label,state,detail='')=>`<article class="admin-health-item"><div><b>${e(label)}</b><span>${e(detail)}</span></div><strong data-health-state="${e(state)}">${e(state)}</strong></article>`;
+export function renderOperations(data={}){
+ const version=data.version||{};
+ return section('Application',`<div class="admin-health">${health('Version publique',version.version||'Non vérifiée',version.build?`Build ${version.build}`:'Build indisponible')}${health('Environnement',data.environment||'Non vérifié','Déduit des informations publiques disponibles')}${health('Réseau navigateur',data.online?'Opérationnel':'Indisponible',data.online?'navigator.onLine':'Hors ligne ou non vérifié')}${health('Service Worker',data.serviceWorker||'Non vérifié',data.serviceWorkerDetail||'État local du navigateur')}</div>`)
+  +section('Capacités accessibles',`<div class="admin-health">${health('Accès Admin',data.adminAccess?'Opérationnel':'Indisponible',data.adminAccess?'RPC protégée validée':'Session ou RPC non disponible')}${health('Cartographie Leaflet',data.leaflet?'Opérationnel':'Non vérifié',data.leaflet?'Moteur chargé dans le navigateur':'Chargement non confirmé')}${health('Fond Satellite',data.satellite||'Non vérifié','Catalogue et quota fournisseur non interrogés')}${health('Moteur scientifique',data.scientific||'Non vérifié','Modules publics vérifiés sans charger de données privées')}${health('Météo historique',data.weather||'Non vérifié','Aucune requête météo déclenchée ici')}</div>`)
+  +section('Limites sûres',`<p class="admin-note">Aucun token GitHub, Vercel ou Supabase n’est exposé. Les quotas et déploiements détaillés restent non connectés faute d’API serveur sécurisée. Cette vue ne charge aucune trace GPS privée.</p>`);
+}
+export function renderResearch(data={}){
+ const k=data.kpis||{};
+ return section('Données observables',`<div class="admin-kpis">${stat('Pistes créées',k.sessions_total)}${stat('Coaching',k.coaching)}${stat('OPS',k.ops)}${stat('Entraînement',k.training)}</div><p class="admin-note">Ces agrégats proviennent de la RPC Admin existante et sont comptés par créateur. Aucune trace GPS ni donnée individuelle n’est chargée.</p>`)
+  +section('Préparation scientifique',`<div class="admin-research">${health('Présence GPS Traceur','Non agrégé','Aucune RPC scientifique agrégée disponible')}${health('Présence GPS Conducteur','Non agrégé','Aucune RPC scientifique agrégée disponible')}${health('Météo mesurée / reconstruite','Non agrégé','La provenance reste portée par les snapshots de session')}${health('Couloir olfactif','Non agrégé','Le moteur reste disponible dans les parcours autorisés')}${health('Qualité des données','Non agrégé','Aucune consolidation globale sans backend dédié')}</div>`)
+  +section('Contrat de provenance',`<div class="admin-badge">measured · donnée enregistrée</div><div class="admin-badge">calculated · dérivée</div><div class="admin-badge">estimated · reconstruction/modèle</div><div class="admin-badge">unknown · absente ou inaccessible</div><p class="admin-note">Les catégories ne sont pas converties entre elles. La recherche détaillée, les cohortes et les exports pseudonymisés nécessiteront une API/RPC agrégée et une autorisation séparée.</p>`);
+}
 export function adminUserCards(items=[]){return items.length?items.map(u=>`<article class="admin-row"><div><h4>${e(name(u))}</h4><p>Inscrit le ${e(date(u.created_at))}</p><p>Activité : ${e(date(u.last_activity))}</p>${badge(ACCOUNT[u.account_status]||'Compte')} ${badge(`${number(u.sessions_count)} pistes`)}</div>${profileButton(u)}</article>`).join(''):empty('Aucun utilisateur pour ces critères.');}
 export function adminEvents(items=[]){return items.length?`<ol class="admin-timeline">${items.map(item=>`<li><time>${e(date(item.occurred_at))}</time><h4>${e(item.title)}</h4><p>${e(item.display_name||'Utilisateur sans pseudo')} · ${e(TYPES[item.kind]||item.kind)}</p>${profileButton(item)}</li>`).join('')}</ol>`:empty('Aucun événement enregistré sur cette période.');}
 export function adminFeedbackCards(items=[],expanded=false){return items.length?items.map(f=>`<article class="admin-row admin-feedback"><div>${badge(FEEDBACK_STATUSES[f.status]||'Statut inconnu',f.status)}<h4>${e(f.subject)}</h4><p>${e(f.display_name||'Utilisateur sans pseudo')} · ${e(date(f.created_at))}</p></div>${expanded?`<details><summary>Ouvrir le retour</summary><p class="admin-message">${e(f.message)}</p>${f.context?`<p>Contexte : ${e(f.context)}</p>`:''}<label>Statut<select data-feedback-status="${e(f.id)}" data-revision="${e(f.revision)}">${Object.entries(FEEDBACK_STATUSES).map(([key,label])=>`<option value="${key}"${key===f.status?' selected':''}>${label}</option>`).join('')}</select></label><button class="primary" type="button" data-feedback-save="${e(f.id)}">Mettre à jour le statut</button>${profileButton(f)}</details>`:''}</article>`).join(''):empty('Aucun retour pour ces critères.');}
@@ -27,6 +40,7 @@ export function renderAdmin(sectionName,data={}){
  if(sectionName==='users')return adminUserCards(data.items);
  if(sectionName==='activity')return adminEvents(data.items);
  if(sectionName==='feedback')return adminFeedbackCards(data.items,true);
+ if(sectionName==='research')return renderResearch(data);
  if(sectionName==='profile'){
   const u=data.user||{};
   return `<button class="secondary" type="button" data-admin-back-users>‹ Utilisateurs</button>`+section(name(u),`${badge(ACCOUNT[u.account_status]||'Compte')}<p>Inscription : ${e(date(u.created_at))}</p><p>Dernière activité : ${e(date(u.last_activity))}</p><p>Dernière piste créée : ${e(date(u.latest_session_at))}</p><div class="admin-kpis">${stat('Pistes créées',u.sessions_count)}${stat('OPS',u.ops_count)}${stat('Entraînement',u.training_count)}${stat('Coaching',u.coaching_count)}${stat('Distance déclarée OPS + entraînement · km',u.distance_km)}${stat('Retours',u.feedback_count)}</div>`)+section('Dernières pistes',data.sessions?.length?data.sessions.map(s=>`<div class="admin-row"><span>${e(TYPES[s.kind]||s.kind)}</span><time>${e(date(s.created_at))}</time>${badge(s.kind==='coaching'?(s.status==='ended'?'Terminé':s.status==='live'?'En cours':s.status):'Enregistrée')}</div>`).join(''):empty('Aucune piste enregistrée.'))+section('Retours de cet utilisateur',adminFeedbackCards((data.feedback||[]).map(f=>({...f,display_name:u.display_name})),true))+section('Activité récente',adminEvents((data.events||[]).map(item=>({...item,display_name:u.display_name}))))+`<p class="admin-note">Les 20 éléments les plus récents de chaque rubrique. Aucune trace GPS ni contribution de débrief privée n’est chargée.</p>`;
@@ -56,12 +70,25 @@ export function createAdminCentre({client,getUserId,navigate,document:doc=global
   if(!opened||!authorized||identity!==getUserId())return;
   const request=++sequence,stamp=generation,uid=getUserId();
   $('adminContent').innerHTML='';$('adminPager').innerHTML='';$('adminContent').setAttribute('aria-busy','true');message('Chargement…');
-  const args={p_section:current,p_search:current==='users'||current==='feedback'?$('adminSearch').value.trim():'',p_filter:FILTERS[current]?$('adminFilter').value:'all',p_period:Number($('adminPeriod').value)||30,p_offset:offset,p_user_id:userId,p_sort:current==='users'?$('adminSort').value:'recent'};
+  if(current==='operations'){
+   try{
+    const versionResponse=await fetch('./version.json',{cache:'no-store'}),version=versionResponse.ok?await versionResponse.json():{};
+    const assetCheck=async path=>{try{const response=await fetch(path,{cache:'no-store'});return response.ok}catch{return false}};
+    const [scientific,weather]=await Promise.all([assetCheck('./scientific-metrics-engine.mjs'),assetCheck('./scientific-post-session.mjs')]);
+    if(request!==sequence||stamp!==generation||uid!==getUserId()||!opened)return;
+    $('adminContent').innerHTML=renderOperations({version,environment:'Preview détectée',online:typeof navigator==='undefined'||navigator.onLine,serviceWorker:typeof navigator!=='undefined'&&navigator.serviceWorker?.controller?'Opérationnel':'Non vérifié',serviceWorkerDetail:typeof navigator!=='undefined'&&navigator.serviceWorker?.controller?'Contrôleur actif':'Contrôleur absent ou première activation',adminAccess:authorized,leaflet:typeof globalThis.L!=='undefined',satellite:doc.querySelector('[data-base="satellite"]')?'Disponible sur une carte':'Non vérifié',scientific:scientific?'Opérationnel':'Indisponible',weather:weather?'Opérationnel':'Indisponible'});
+    message('Diagnostics non destructifs · aucune donnée privée chargée.');
+   }catch{if(request===sequence)message('Diagnostics partiellement indisponibles.');}
+   finally{if(request===sequence)$('adminContent').setAttribute('aria-busy','false');}
+   return;
+  }
+  const querySection=current==='research'?'dashboard':current;
+  const args={p_section:querySection,p_search:current==='users'||current==='feedback'?$('adminSearch').value.trim():'',p_filter:FILTERS[current]?$('adminFilter').value:'all',p_period:Number($('adminPeriod').value)||30,p_offset:offset,p_user_id:userId,p_sort:current==='users'?$('adminSort').value:'recent'};
   try{
    const {data,error}=await client.rpc('piste_admin_query_v1044',args);
    if(request!==sequence||stamp!==generation||uid!==getUserId()||!opened)return;
    if(error)throw error;
-   $('adminContent').innerHTML=renderAdmin(current,data||{});
+   $('adminContent').innerHTML=current==='research'?renderResearch(data||{}):renderAdmin(current,data||{});
    const total=Number(data?.total)||0;
    if(FILTERS[current])$('adminPager').innerHTML=`<span>${number(total)} résultat${total>1?'s':''}</span><button class="secondary" type="button" data-admin-page="-1" ${offset===0?'disabled':''}>Précédent</button><button class="secondary" type="button" data-admin-page="1" ${offset+50>=total?'disabled':''}>Suivant</button>`;
    message(total||!FILTERS[current]?'':'Aucun résultat.');
