@@ -9,6 +9,7 @@ const read = name => fs.readFileSync(path.join(root, name), 'utf8');
 const admin = read('admin.js');
 const html = read('index.html');
 const css = read('admin.css');
+const sw = read('sw.js');
 const ok = (value, message) => assert.ok(value, message);
 
 ok(admin.includes("operations:'Opérations'") && admin.includes("research:'Recherche'"), 'Bloc 6 tabs missing');
@@ -23,5 +24,6 @@ ok(admin.includes('measured') && admin.includes('calculated') && admin.includes(
 ok(!/service_role|VERCEL_TOKEN|github_pat|BEGIN PRIVATE KEY/i.test(admin), 'Privileged secrets must not reach frontend');
 ok(!/supabase\.from\([^)]*(coaching_trace_points|coaching_live_points)/i.test(admin), 'Research must not load raw GPS traces');
 ok(css.includes('.admin-health') && css.includes('.admin-research'), 'Bloc 6 responsive styles missing');
+ok(sw.includes('const critical=') && sw.includes('admin\\.js|admin\\.css'), 'Admin assets must bypass stale cache strategy');
 ok(html.includes('id="adminPage"'), 'Existing Admin shell must remain in use');
 console.log('v10.55 operations/research guard: PASS');
