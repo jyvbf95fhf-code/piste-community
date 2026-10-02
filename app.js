@@ -3347,9 +3347,28 @@ async function saveDogHealth(e){e.preventDefault();const dog=dogHubSelected();if
 async function saveDogDuty(e){e.preventDefault();const dog=dogHubSelected(),f=new FormData(e.target),payload={owner_id:session.user.id,dog_id:dog?.id||null,assigned_user_id:f.get('assigned_user_id'),starts_at:new Date(f.get('starts_at')).toISOString(),ends_at:new Date(f.get('ends_at')).toISOString(),note:dogValue(f.get('note'))};const {error}=await supabase.from('dog_duties').insert(payload);if(error)return alert(error.message);e.target.reset();await loadDogHub()}
 async function shareDogCard(){const dog=dogHubSelected(),friend=$('dogShareFriend').value;if(!dog||!friend)return alert('Sélectionne un chien et un ami.');const snapshot={alias:dog.alias,breed:dog.breed,birth_date:dog.birth_date,weight_kg:dog.weight_kg,height_cm:dog.height_cm,specialty:dog.specialty,level:dog.level};const {error}=await supabase.from('dog_shares').upsert({owner_id:session.user.id,dog_id:dog.id,shared_with:friend,dog_snapshot:snapshot},{onConflict:'dog_id,shared_with'});if(error)return alert(error.message);await loadDogHub()}
 
+async function saveDisplayName(event){
+ event.preventDefault();
+ const input=$('displayNameInput'),button=$('saveDisplayNameBtn'),message=$('displayNameMessage');
+ if(!session||!input||!button||!message)return;
+ const next=String(input.value||'').trim();
+ if(!next){message.textContent='Le nom affiché ne peut pas être vide.';input.focus();return}
+ if(next.length>24){message.textContent='Le nom affiché doit contenir 24 caractères maximum.';input.focus();return}
+ const previous=me?.display_name||'Pisteur';
+ button.disabled=true;message.textContent='Enregistrement…';
+ try{
+  const {error}=await supabase.from('profiles').update({display_name:next}).eq('user_id',session.user.id);
+  if(error)throw error;
+  if(me)me.display_name=next;
+  if($('profilePseudo'))$('profilePseudo').textContent=next;
+  if($('helloUser'))$('helloUser').textContent='Bonjour '+next;
+  input.value=next;message.textContent='Nom affiché enregistré.';
+ }catch(error){input.value=previous;message.textContent='Impossible d’enregistrer le nom affiché. La valeur précédente est conservée.';}
+ finally{button.disabled=false}
+}
 async function loadProfileV8(){
  await Promise.all([loadDogs(),loadGoals()]);
- $('profilePseudo').textContent=me?.display_name||'Pisteur';
+ $('profilePseudo').textContent=me?.display_name||'Pisteur'; if($('displayNameInput'))$('displayNameInput').value=me?.display_name||'';
  const photoUrls=await Promise.all(dogs.map(d=>signedDogPhoto(d.photo_path)));
  $('dogsList').innerHTML=dogs.length?dogs.map((d,i)=>{
    const activities=[...mine,...trainings].filter(x=>x.dog_id===d.id);
@@ -3654,6 +3673,7 @@ $('analysisMineTab').onclick=()=>renderCanineAnalysis('mine');
 $('analysisCommunityTab').onclick=()=>renderCanineAnalysis('community');
 document.querySelectorAll('[data-mapfilter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-mapfilter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderGlobalMap(b.dataset.mapfilter)});
 
+if($('displayNameForm'))$('displayNameForm').addEventListener('submit',saveDisplayName);
 if($('dogHubSelect'))$('dogHubSelect').onchange=renderDogHub;
 if($('dogHealthForm'))$('dogHealthForm').onsubmit=saveDogHealth;
 if($('dogDutyForm'))$('dogDutyForm').onsubmit=saveDogDuty;
