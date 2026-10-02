@@ -10,8 +10,8 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 | 1 Couloir post-session | VALIDÉ PAR SÉBASTIEN | `scientific-post-session.mjs`, adaptation débrief/archives, correctif accès `track_finished`, Preview validée | AUCUN CHANGEMENT NÉCESSAIRE |
 | 2 Replay synchronisé | VALIDÉ PAR SÉBASTIEN | Replay 2D et couloir olfactif synchronisé validés visuellement sur `bc92dc897076dfb67f13b431f5d898e811052ebf` ; horloge Replay unique, moteur corridor unique, états calculé/en attente/indisponible | AUCUN CHANGEMENT NÉCESSAIRE |
 | 3 Débrief scientifique/météo | VALIDÉ PAR SÉBASTIEN | `scientific-debrief.mjs` partagé par débrief guidé et archives Coaching → Statistiques ; renderer aligné sur le modèle imbriqué ; cache Service Worker des assets critiques invalidé/réseau prioritaire ; météo d’archive sans fallback live, champs absents `unknown` ; guards Bloc 3 et cache PASS ; validation visuelle confirmée | AUCUN CHANGEMENT NÉCESSAIRE |
-| 4 Satellite | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | Catalogue Esri Preview-only, opt-in explicite par carte, attribution, fallback sur erreurs de tuiles, contrôles existants et guard Bloc 4 | AUCUN CHANGEMENT NÉCESSAIRE |
-| 5 Admin modulaire | AUDITÉ / PARTIEL | Admin V10.44 réutilisable ; modules diagnostics/science à définir | AUCUN CHANGEMENT NÉCESSAIRE initial |
+| 4 Satellite | VALIDÉ PAR SÉBASTIEN | Catalogue Esri Preview-only, opt-in explicite par carte, attribution, fallback sur erreurs de tuiles, contrôles existants et guard Bloc 4 | AUCUN CHANGEMENT NÉCESSAIRE |
+| 5 Admin modulaire | IMPLÉMENTÉ / EN ATTENTE VALIDATION SÉBASTIEN | Centre Admin V10.44 consolidé, guard Bloc 5, accès par RPC protégées, modules Dashboard/Users/Activity/Statistics/Feedbacks, états vides/erreur et mobile | AUCUN CHANGEMENT NÉCESSAIRE |
 | 6 Infrastructure/recherche | NON COMMENCÉ | spécifier API sécurisée, quotas, redaction et agrégats | VALIDATION REQUISE |
 | 7 Hardening/mobile | NON COMMENCÉ | budgets, accessibilité, session switch, permissions | AUCUN CHANGEMENT NÉCESSAIRE |
 
@@ -25,4 +25,4 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 
 ## Point de reprise
 
-Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est validé par Sébastien. Le Bloc 4 est implémenté et en attente de validation visuelle de Sébastien ; le Bloc 5 reste hors périmètre.
+Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est validé par Sébastien. Le Bloc 4 est validé visuellement par Sébastien. Le Bloc 5 est en cours ; le Bloc 5A et le Bloc 6 restent hors périmètre.
