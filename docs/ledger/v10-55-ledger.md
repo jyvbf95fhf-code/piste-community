@@ -22,10 +22,17 @@ Robot QA/Playwright : EXCLU, branche dédiée après publication V10.55.
 - Météo historique incomplète : afficher `INCONNU` ou `RECONSTRUIT`, jamais une mesure implicite.
 - Production Satellite : bloquée par licence/quota/attribution/coupe-circuit non décidés.
 - Statut distant de la migration Solo V10.54 : conserver la qualification documentaire déjà établie ; aucune vérification distante réalisée dans V10.55.
-- Aucune validation terrain n’est acquise par les guards ; elle devra être explicitement tracée par scénario.
+- Aucune validation terrain n’est acquise par les guards seuls ; les validations utilisateur sont tracées séparément par scénario.
 - C1 Coach créateur / auto-trace : différé vers V2 Premium après audit Coaching exhaustif.
-- C2 Traceur créateur + Conducteur sans route : correctif Supabase ciblé techniquement appliqué aux RPC v1053/v1045, wrappers inchangés ; validation terrain iPhone encore attendue.
+- C2 Traceur créateur + Conducteur sans route : correctif Supabase ciblé appliqué et vérifié aux RPC v1053/v1045, wrappers inchangés ; validé sur iPhone réel.
 
 ## Point de reprise
 
-Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est validé par Sébastien. Le Bloc 4 est validé visuellement par Sébastien. Le Bloc 5 est validé visuellement par Sébastien. Le Bloc 5A est validé visuellement et fonctionnellement par Sébastien. Le Bloc 6 est validé visuellement par Sébastien. Le Bloc 7 est validé sur iPhone. C2 est corrigé techniquement et en attente de validation terrain ; C1 reste différé vers V2 Premium. Aucune fonctionnalité V10.56 ne doit être commencée.
+Bloc 0, Bloc 1 et Bloc 2 sont validés. Le Bloc 3 est validé par Sébastien. Le Bloc 4 est validé visuellement par Sébastien. Le Bloc 5 est validé visuellement par Sébastien. Le Bloc 5A est validé visuellement et fonctionnellement par Sébastien. Le Bloc 6 est validé visuellement par Sébastien. Le Bloc 7 est validé sur iPhone. C2 est corrigé techniquement et validé sur iPhone réel ; C1 reste différé vers V2 Premium. Aucune fonctionnalité V10.56 ne doit être commencée.
+
+## Audit final de release
+
+- Verdict : `READY WITH DOCUMENTED LIMITATIONS`.
+- C2 : corrigé, Supabase vérifié, validation iPhone réelle confirmée.
+- C1 : différé vers V2 Premium.
+- Préparation de release V10.55 : métadonnées et Preview finale à vérifier avant toute publication.
