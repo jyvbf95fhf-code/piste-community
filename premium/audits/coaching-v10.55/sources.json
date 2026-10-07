@@ -1,0 +1,166 @@
+{
+  "sourceSha": "935da63533f577035ad89be8b1c03c8c6e92dd55",
+  "namedRef": "stable-v10.55",
+  "namedRefSha": "cb3843b522f2b53dc5dc2190285c028b2e3efb1f",
+  "v2Branch": "feature/v2-premium-prototype",
+  "v2Head": "10f3f14019e915fe148c46cfd014cb7e1186d09f",
+  "matrixRows": 103,
+  "helperCases": 252,
+  "files": [
+    {
+      "path": "scripts/sql/v10-55-c2-traceur-without-route.sql",
+      "sha256": "c407e885f1d89c61ddc3eb6ed9a7ee909c17a0ec7e507899f5d244eb921f8b26",
+      "lines": 189
+    },
+    {
+      "path": "app.js",
+      "sha256": "682a0b5021846ffbd7ace16c9f8c7d648ed4172e2cd5a78470681e6dfa8d31b5",
+      "lines": 4029
+    },
+    {
+      "path": "v2.js",
+      "sha256": "f67c7e537c2d811bc08d1c82f9fe7457a6eac4fc2e21c43cc6f382c58f419fd8",
+      "lines": 230
+    },
+    {
+      "path": "index.html",
+      "sha256": "97ddfc6e59bfc9b3b7cbd36a5a588cc422b07c21f5bd2064bcfae010f94a7075",
+      "lines": 982
+    },
+    {
+      "path": "v2.css",
+      "sha256": "412d4f40a29b832a42032af318326959061a28a66a9a6ec44c5367ea4ba6adb7",
+      "lines": 1263
+    },
+    {
+      "path": "map-base-layers.mjs",
+      "sha256": "bb8dea41440befe93a579859949a651bd2a3dc1f1b1bdfd33ee43611b80b6fdb",
+      "lines": 38
+    },
+    {
+      "path": "PISTE_V10.42.3_PATCH/PISTE_V10.42.3_VISIBILITY_APPLY.sql",
+      "sha256": "40b0853630e211c37632cf6ee11fe2433f6f2160ac226e8c996c031a033354d6",
+      "lines": 446
+    },
+    {
+      "path": "PISTE_V10.45_PATCH/PISTE_V10.45_CORRECTIF_APPLY.sql",
+      "sha256": "546eaffc51c38edbacde205d6a6541ce1ddf218f0ab74784bfba40c78fa45a33",
+      "lines": 219
+    },
+    {
+      "path": "PISTE_V10.54_SOLO_MODES.sql",
+      "sha256": "728015215f24f9990832537206beb36005742c74804cb4fc6cb0d41797bdac28",
+      "lines": 468
+    },
+    {
+      "path": "PISTE_V10.53_SOLO_EXTERNAL_TRACEUR.sql",
+      "sha256": "a05e05ae1623620be628fa200ea54a3abf4069118755bc1a72eb0b002b8e41fe",
+      "lines": 279
+    },
+    {
+      "path": "PISTE_V10.49_COACHING_ACTIVE_DEBRIEF.sql",
+      "sha256": "6b6f1fb2d63e7237f403f1dadc09327b159258bf3ad8d210fc9421b6565f0356",
+      "lines": 370
+    },
+    {
+      "path": "PISTE_V10.49.1C_COACHING_SOLO_TRANSITIONS.sql",
+      "sha256": "8949232ccf17c9cdb83dadd2b71dc2c2b204160f0c6740c23e2e80006966dd0c",
+      "lines": 181
+    },
+    {
+      "path": "PISTE_V10.49.1D_FIX_SOLO_SEARCH_CHOICE.sql",
+      "sha256": "33d38dd769c846954fc823fa28f31b2f377ec4591040ffac9c349c64a3c75323",
+      "lines": 83
+    },
+    {
+      "path": "PISTE_V10.40_RLS_APPLY.sql",
+      "sha256": "7fc797fafda8f2a3430ce9ec169ace107c49e23db8457eefcda052c0c5589564",
+      "lines": 311
+    },
+    {
+      "path": "PISTE_V10.42.2_AUDIT_SECURITY_APPLY.sql",
+      "sha256": "ff54cb1917888d890a96deb18958eb97bf7ad2428096ec35ad863f28debe0db5",
+      "lines": 442
+    },
+    {
+      "path": "PISTE_V10.49.2_COACHING_SCENARIO.sql",
+      "sha256": "efba8d3cd421635215de5aff472787c79f6688a6edb05eef65860cdf11cc604e",
+      "lines": 245
+    },
+    {
+      "path": "PISTE_V10.49.1D_COACHING_SOLO_DIRECT_RUN.sql",
+      "sha256": "98962f08d369cfdd0d8f79f9718bb4226d3130d58362881e10ae4b8546b348e8",
+      "lines": 92
+    },
+    {
+      "path": "scripts/check-v10-49.js",
+      "sha256": "330f1a4ac6c85a2d5bfaa53e8d9fa80c4d3e59521d3abbc6fc5649d269f6c533",
+      "lines": 1353
+    },
+    {
+      "path": "scripts/check-v10-49-2-scenario-gate.js",
+      "sha256": "3346c9a73699ffd7c764acf33f37fe1cb472ac59d70c3fa6135937c00b68e75b",
+      "lines": 2
+    },
+    {
+      "path": "scripts/check-v10-53-coaching-cross-device-live.js",
+      "sha256": "b6bd0bf730cd68bd0a668f0088b1e0c80dbe5247cd62a2116c0a0f783a35d699",
+      "lines": 39
+    },
+    {
+      "path": "scripts/check-v10-53-coaching-runtime-lifecycle.js",
+      "sha256": "e28e62af4f756575b40c3cb40495bf9c670425de0e2c98d5a1ad17645a2859cf",
+      "lines": 41
+    },
+    {
+      "path": "scripts/check-v10-53-coaching-refresh-race.js",
+      "sha256": "06827599a2ba879ac6f425f682ad36de7aad61ab634c0f4ad91d100aabae51f1",
+      "lines": 34
+    },
+    {
+      "path": "scripts/check-v10-53-coaching-single-gps-watcher.js",
+      "sha256": "7eb4a9094df8ce674cae462e8c4e7b054679bf34f4633222b3df4b6c8d0ac29f",
+      "lines": 21
+    },
+    {
+      "path": "scripts/check-v10-53-coaching-location-permission-lifecycle.js",
+      "sha256": "635935ba13df4e0b0f2310a005485dd0e6cf991a32bb9b2619d6d381dc93e7cb",
+      "lines": 40
+    },
+    {
+      "path": "scripts/check-v10-54-reference-route-runtime.js",
+      "sha256": "12e1df6c8008db5ba7bbfa9f0478b83bbc5ae3e8f95a03c2bb99e6b3b9e88e6c",
+      "lines": 36
+    },
+    {
+      "path": "scripts/check-v10-54-coach-reference-route-runtime.js",
+      "sha256": "491f40f563c4688bdd8172be52c1e040ffce4b4ffd46a1feba54aa9cbe22ea15",
+      "lines": 70
+    },
+    {
+      "path": "scripts/check-v10-54-coaching-contract-parity.js",
+      "sha256": "2d73ae6f8558ece874ecfc92511fe5ab147f5371aee27356c2a870c3fc375b6d",
+      "lines": 94
+    },
+    {
+      "path": "scripts/check-v10-54-coaching-reliability.js",
+      "sha256": "e25170975749c8a6465ca85c9ad5e901970be2d4888ebce3fe751fe725446da8",
+      "lines": 37
+    },
+    {
+      "path": "scripts/check-v10-54-solo-frontend.js",
+      "sha256": "77ab33aea976d773d7d36f8136f99026afbde8716105b32841c2e0c6d24e742c",
+      "lines": 29
+    },
+    {
+      "path": "scripts/check-v10-54-solo-external-ready.js",
+      "sha256": "1e4eb85ec4166661e7b6de63dbb1f608ccdee9aba4fb13316fe81466b4365f5f",
+      "lines": 29
+    },
+    {
+      "path": "scripts/check-v10-55-c2-traceur-without-route.js",
+      "sha256": "888df18de7b45e4b26ce2187faa1e3fc621957d5c7d352ea7c858eddbc3886cb",
+      "lines": 36
+    }
+  ]
+}

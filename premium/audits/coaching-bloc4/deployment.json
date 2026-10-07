@@ -1,0 +1,17 @@
+{
+  "id": "dpl_8Sp5ziwj3Pv5oWeubBormH9UBVkc",
+  "url": "https://piste-community-v2-premium-31tm0gh3v-mw2f59b8p2-4030s-projects.vercel.app",
+  "target": "preview",
+  "status": "READY",
+  "ssoProtection": {
+    "deploymentType": "all"
+  },
+  "anonymousCoachingHTTP": 302,
+  "anonymousRedirect": "https://vercel.com/sso-api",
+  "protectionSettingsChanged": false,
+  "protectionBypassed": false,
+  "productSha256": {
+    "premium/src/styles.css": "d4687c91659132abbb12a7b8a18d082c5f4c4fb51b5d4b7b0bd70828ee1dee56",
+    "premium/src/tokens.css": "eb53e8241553c1d10ea2ef7829820a8a89c835edc0bf96dc94b94bb174e68a79"
+  }
+}

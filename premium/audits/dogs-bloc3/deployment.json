@@ -1,0 +1,10 @@
+{
+  "id": "dpl_8SgS1dquVa3k8C2SuYkDivNhD7XZ",
+  "target": "preview",
+  "status": "READY",
+  "url": "https://piste-community-v2-premium-xg847xoz1-mw2f59b8p2-4030s-projects.vercel.app",
+  "ssoProtection": {
+    "deploymentType": "all"
+  },
+  "anonymousHTTP": 302
+}

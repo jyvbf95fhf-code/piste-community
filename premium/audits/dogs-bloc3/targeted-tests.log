@@ -1,0 +1,26 @@
+✔ dog list shows compact profile cards, status, activity and add action (6.995375ms)
+✔ dog profile reuses mock session history and labels unavailable science data (49.011475ms)
+✔ dog without activity does not receive invented metrics or history (0.731415ms)
+✔ add and edit forms use mock portraits without file upload controls (1.356682ms)
+✔ archived dogs stay clearly identified and unknown profiles get a return state (2.374869ms)
+✔ dog profile fields are escaped before they reach the screen (0.422987ms)
+✔ form exposes personal photo selection, optional identity notes and conditional retirement date (0.67696ms)
+✔ profile renders optional official name, retirement date, notes and session CTA without affecting specialty (1.03551ms)
+✔ personal photo data URI takes precedence over the mock portrait in list and profile (1.630451ms)
+✔ Nox reuses the existing dog fixture and its local demo session history (5.772396ms)
+✔ dog store returns copies and updates only its in-memory records (2.052246ms)
+✔ empty and incomplete history reports unavailable metrics without substituting values (0.504514ms)
+✔ creation requires a name and rejects unknown status values (1.877395ms)
+✔ dog profile accepts optional identity, retirement, note, photo and multiple disciplines in memory (1.140253ms)
+✔ legacy single specialty remains available as a discipline when no list exists (4.60884ms)
+✔ dog photo only accepts local image data and can be cleared back to mock portrait (1.18065ms)
+✔ dog routes distinguish list, create, detail and edit without accepting extra path segments (0.751172ms)
+✔ dog routes keep using the existing mock-auth route gate (0.5421ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 284.861601

@@ -1,0 +1,16 @@
+{
+  "deploymentId": "dpl_A9WyKmaVxZ2CBux9LA91kkcaRZeE",
+  "url": "https://piste-community-v2-premium-d61n3ffz3-mw2f59b8p2-4030s-projects.vercel.app",
+  "target": "preview",
+  "readyState": "READY",
+  "deploymentProtection": ["vercel_authentication"],
+  "paths": {
+    "/": 200,
+    "/sessions": 200,
+    "/tracks": 200,
+    "/sessions/demo%3Arecent/replay": 200,
+    "/tracks/track-clairiere": 200
+  },
+  "httpMethod": "Vercel CLI curl with authenticated protected-deployment access",
+  "browserNote": "Fresh Playwright browser was redirected to Vercel SSO; no share link or bypass URL was created. Local browser QA verified an available completed-session replay and read-only session track detail."
+}

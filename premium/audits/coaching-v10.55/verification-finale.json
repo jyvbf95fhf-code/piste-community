@@ -1,0 +1,24 @@
+{
+  "sourceSha": "935da63533f577035ad89be8b1c03c8c6e92dd55",
+  "sourceBlobsVerified": 31,
+  "matrixRows": 103,
+  "helperEvaluations": 252,
+  "trackedApplicationFilesChangedByAudit": [],
+  "documents": [
+    "README.md",
+    "controles-existants.json",
+    "matrice-complete.csv",
+    "matrice-complete.md",
+    "preuves-helpers.json",
+    "preuves.md",
+    "sources.json",
+    "verification-finale.json"
+  ],
+  "scope": "Documentation uniquement; aucun SQL exécuté, accès backend, GPS, modification applicative, commit ou déploiement.",
+  "diffCheck": "PASS (tracked diff + documents Markdown non suivis)",
+  "existingChecks": {
+    "pass": 12,
+    "fail": 2,
+    "total": 14
+  }
+}

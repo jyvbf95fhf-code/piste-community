@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "base": "http://localhost:4173",
+  "checks": [
+    {
+      "privateRoute": true,
+      "normalNavigationHasNoQaEntry": true
+    },
+    {
+      "visibility": "normal",
+      "role": "coach",
+      "seesTracer": true
+    },
+    {
+      "visibility": "simple_blind",
+      "role": "driver",
+      "seesTracer": false
+    },
+    {
+      "visibility": "simple_blind",
+      "role": "coach",
+      "seesTracer": true
+    },
+    {
+      "visibility": "simple_blind",
+      "role": "observer",
+      "seesTracer": true
+    },
+    {
+      "visibility": "full_blind",
+      "role": "driver",
+      "seesTracer": false
+    },
+    {
+      "visibility": "full_blind",
+      "role": "coach",
+      "seesTracer": false
+    },
+    {
+      "visibility": "full_blind",
+      "role": "observer",
+      "seesTracer": false
+    },
+    {
+      "layingCrossRole": true
+    },
+    {
+      "debriefTabs": true,
+      "archiveReadOnly": true,
+      "eventsValidated": true
+    },
+    {
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "width": 430,
+      "overflow": false
+    }
+  ],
+  "errors": [],
+  "network": [],
+  "gps": 0
+}

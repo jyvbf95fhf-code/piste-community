@@ -1,0 +1,8 @@
+.vercel/
+node_modules/
+tests/
+screenshots/
+README.md
+server.mjs
+src/assets/*.md
+.env*

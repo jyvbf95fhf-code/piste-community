@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "phases": [
+    "before-start",
+    "active",
+    "corridor",
+    "events",
+    "pause",
+    "resume",
+    "to-complete",
+    "evaluation",
+    "complete",
+    "archive",
+    "replay"
+  ],
+  "identical": [
+    "text",
+    "svg geometry",
+    "values",
+    "controls",
+    "actions",
+    "permissions"
+  ],
+  "dockAccessibleAtWidths": [
+    320,
+    375,
+    390,
+    430
+  ],
+  "eventTypes": [
+    "Départ",
+    "Rupture",
+    "Reprise",
+    "Indice",
+    "Objet trouvé",
+    "Zone particulière",
+    "Changement notable",
+    "Fin de piste"
+  ],
+  "endOfTrackDoesNotStopTracking": true,
+  "note": "Synthetic mouse coordinates retain subpixel precision, avoiding native MouseEvent integer rounding when map height changes."
+}

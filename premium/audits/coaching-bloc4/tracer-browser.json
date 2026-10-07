@@ -1,0 +1,198 @@
+{
+  "passed": true,
+  "base": "http://localhost:4173",
+  "checks": [
+    {
+      "capture": "01-before",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "before",
+      "markers": [
+        "self",
+        "camille",
+        "alex",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "02-active",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "alex",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "03-map-hud",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "alex",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "04-unread",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "alex",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "05-messages",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "alex",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "08-gps-unavailable",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "09-resume-gap",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "alex",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "mode": "normal",
+      "actors": 5
+    },
+    {
+      "mode": "simple_blind",
+      "actors": 5
+    },
+    {
+      "mode": "full_blind",
+      "actors": 5
+    },
+    {
+      "capture": "06-acquisition",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "active",
+      "markers": [
+        "self",
+        "camille",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "07-finished",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "finished",
+      "markers": [
+        "self",
+        "camille",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "capture": "10-in-place",
+      "url": "http://localhost:4173/coaching/session",
+      "phase": "in_place",
+      "markers": [
+        "self",
+        "camille",
+        "lea",
+        "hugo"
+      ]
+    },
+    {
+      "width": 320,
+      "height": 568,
+      "clean": false,
+      "mapRatio": 0.5954555457746479
+    },
+    {
+      "width": 320,
+      "height": 568,
+      "clean": true,
+      "mapRatio": 0.6323173415492958
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "clean": false,
+      "mapRatio": 0.6244377811094453
+    },
+    {
+      "width": 375,
+      "height": 667,
+      "clean": true,
+      "mapRatio": 0.6678223388305847
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "clean": false,
+      "mapRatio": 0.7018290876777251
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "clean": true,
+      "mapRatio": 0.7361152251184834
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "clean": false,
+      "mapRatio": 0.7266630901287554
+    },
+    {
+      "width": 430,
+      "height": 932,
+      "clean": true,
+      "mapRatio": 0.7577119098712446
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "clean": false,
+      "mapRatio": 0.48501602564102564
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "clean": true,
+      "mapRatio": 0.48501602564102564
+    }
+  ],
+  "errors": [],
+  "api": [],
+  "external": [],
+  "gps": 0
+}

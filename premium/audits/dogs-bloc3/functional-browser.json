@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "widths": [
+    320,
+    375,
+    390,
+    430
+  ],
+  "captures": [
+    "dogs-list-iphone.png",
+    "dogs-photo-edit-iphone.png",
+    "dogs-edit-iphone.png",
+    "dogs-photo-profile-iphone.png",
+    "dogs-disciplines-notes-iphone.png",
+    "dogs-add-photo-iphone.png"
+  ],
+  "errors": [],
+  "external": [],
+  "apiCalls": [],
+  "gpsCalls": 0
+}

@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "screen": "home-reference",
+      "elements": 211,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "dogs-reference",
+      "elements": 102,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "dog-profile-reference",
+      "elements": 185,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "dog-new-reference",
+      "elements": 126,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "dog-edit-reference",
+      "elements": 124,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "tracks-reference",
+      "elements": 98,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "builder-reference",
+      "elements": 271,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "sessions-reference",
+      "elements": 112,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "coaching-reference",
+      "elements": 241,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "screen": "qa-coaching-reference",
+      "elements": 528,
+      "allComputedStylesIdentical": true
+    }
+  ]
+}

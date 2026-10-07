@@ -1,0 +1,100 @@
+[
+  {
+    "test": "check-v10-49.js",
+    "exitCode": 1,
+    "result": "FAIL",
+    "reason": "Assertion historique attend cache v2124, source actuelle v2125",
+    "stdout": ""
+  },
+  {
+    "test": "check-v10-49-2-scenario-gate.js",
+    "exitCode": 1,
+    "result": "FAIL",
+    "reason": "Regex attend loadCoachingScenario(s.id).catch; source actuelle passe aussi runtimeGeneration",
+    "stdout": ""
+  },
+  {
+    "test": "check-v10-53-coaching-cross-device-live.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "check-v10-53-coaching-cross-device-live: PASS\n"
+  },
+  {
+    "test": "check-v10-53-coaching-runtime-lifecycle.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "check-v10-53-coaching-runtime-lifecycle: PASS\n"
+  },
+  {
+    "test": "check-v10-53-coaching-refresh-race.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "check-v10-53-coaching-refresh-race: PASS\n"
+  },
+  {
+    "test": "check-v10-53-coaching-single-gps-watcher.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "check-v10-53-coaching-single-gps-watcher: PASS\n"
+  },
+  {
+    "test": "check-v10-53-coaching-location-permission-lifecycle.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "check-v10-53-coaching-location-permission-lifecycle: PASS\n"
+  },
+  {
+    "test": "check-v10-54-reference-route-runtime.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "V10.54 reference-route runtime guard: OK\n"
+  },
+  {
+    "test": "check-v10-54-coach-reference-route-runtime.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "V10.54 Coach reference-route runtime guard: OK\n"
+  },
+  {
+    "test": "check-v10-54-coaching-contract-parity.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "V10.54 coaching contract parity guard: OK\n"
+  },
+  {
+    "test": "check-v10-54-coaching-reliability.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "V10.54 Coaching reliability guard: OK\n"
+  },
+  {
+    "test": "check-v10-54-solo-frontend.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "PASS check-v10-54-solo-frontend\n"
+  },
+  {
+    "test": "check-v10-54-solo-external-ready.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "V10.54 Solo external traceur-ready runtime guard: OK\n"
+  },
+  {
+    "test": "check-v10-55-c2-traceur-without-route.js",
+    "exitCode": 0,
+    "result": "PASS",
+    "reason": "",
+    "stdout": "V10.55 C2 Traceur-without-route guard: PASS\n"
+  }
+]

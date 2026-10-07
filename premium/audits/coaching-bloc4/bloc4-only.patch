@@ -1,0 +1,278 @@
+--- a/premium/src/styles.css
++++ b/premium/src/styles.css
+@@ -2711,3 +2711,239 @@
+   .app-shell[data-module-theme="dogs"] .dog-list-trailing .badge { font-size:8px; }
+ }
+ .app-shell[data-module-theme="dogs"] main .prototype-note { color:var(--theme-text-muted); }
++
++/* Bloc 4 — Coaching. Presentation only; map artwork, routes and state attributes unchanged. */
++.app-shell[data-module-theme="coaching"] main {
++  color:var(--theme-text);
++  background:linear-gradient(180deg,var(--theme-canvas-soft),var(--theme-canvas) 70%);
++}
++.app-shell[data-module-theme="coaching"] :is(.coaching-flow,.tracer-terrain,.search-terrain) {
++  --coaching-phase-surface:var(--coaching-surface-preparation);
++  --session-accent:var(--coaching-mode-normal);
++  --session-tint:color-mix(in srgb,var(--session-accent) 9%,transparent);
++  --coaching-panel:linear-gradient(145deg,var(--coaching-phase-surface),var(--theme-surface));
++  --coaching-edge:var(--theme-border);
++  color:var(--theme-text);
++}
++.app-shell[data-module-theme="coaching"] .search-wait[data-search-phase="LAYING"],
++.app-shell[data-module-theme="coaching"] .session-coach[data-session-phase="LAYING"],
++.app-shell[data-module-theme="coaching"] .tracer-terrain[data-tracer-phase="active"] {
++  --coaching-phase-surface:var(--coaching-surface-laying);
++}
++.app-shell[data-module-theme="coaching"] :is(.search-wait[data-search-phase="TRACK_FINISHED"],.search-wait[data-search-phase="LAYING_WAIT"],.search-wait[data-search-phase="SEARCH_READY"],.tracer-terrain[data-tracer-phase="finished"],.tracer-terrain[data-tracer-phase="in_place"],.session-coach[data-session-phase="TRACK_FINISHED"],.session-coach[data-session-phase="LAYING_WAIT"],.session-coach[data-session-phase="SEARCH_READY"]) {
++  --coaching-phase-surface:var(--coaching-surface-waiting);
++}
++.app-shell[data-module-theme="coaching"] :is(.search-terrain,.session-coach[data-session-phase="SEARCH_RUNNING"]) {
++  --coaching-phase-surface:var(--coaching-surface-laying);
++}
++.app-shell[data-module-theme="coaching"] .coaching-flow::before {
++  background:radial-gradient(ellipse at 94% 5%,color-mix(in srgb,var(--theme-accent-secondary) 5%,transparent),transparent 46%);
++}
++.app-shell[data-module-theme="coaching"] .coaching-flow :is(.card,.coaching-summary) {
++  background:var(--coaching-panel);
++  border-color:var(--theme-border);
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] :is(.coaching-heading .eyebrow,.coaching-progress,.coaching-local-note,.coaching-role-note,.coaching-heading p,.coaching-lead,.coaching-choice small,.coaching-role p,.coaching-summary dt,.prep-gps p,.prep-next p,.prep-reference p,.prep-visibility p,.search-status p,.search-identity p,.search-team span) { color:var(--theme-text-muted); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-heading h1,.coaching-intro h2,.coaching-role h2,.coaching-summary dd,.prep-next h2,.prep-function strong,.prep-person strong) { color:var(--theme-text); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-intro .eyebrow,.coaching-value span,.prep-context small,.prep-function small,.search-identity small) { color:var(--theme-accent-secondary); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-flow .button-dark,.search-wait button:not(.search-primary),.tracer-terrain button:not(.tracer-primary),.search-terrain button:not(.search-primary)) {
++  background:var(--theme-surface-raised);
++  border-color:var(--theme-border);
++  color:var(--theme-text);
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] :is(.coaching-flow .button-gold,.search-primary,.tracer-primary) {
++  background:linear-gradient(115deg,var(--premium-goldSoft),var(--theme-accent));
++  border-color:var(--theme-accent);
++  color:var(--background-nightDeep);
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] .coaching-flow[data-wizard-step] .coaching-actions {
++  background:var(--theme-glass);
++  border-color:var(--theme-border);
++}
++.app-shell[data-module-theme="coaching"] :is(.coaching-flow .coaching-wizard-choice,.coaching-flow .coaching-principal button,.observer-pick) { background:var(--theme-surface); border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-flow .coaching-wizard-choice[aria-pressed="true"],.coaching-flow .coaching-principal button[aria-pressed="true"],.observer-pick:has(input:checked)) {
++  background:linear-gradient(110deg,var(--session-tint),var(--theme-surface));
++  border-color:var(--session-accent);
++  box-shadow:inset 3px 0 var(--session-accent);
++}
++.app-shell[data-module-theme="coaching"] :is(.coaching-role select,.session-code-card input,.prep-sim-grid select) { background:var(--theme-canvas-soft); color:var(--theme-text); border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-visibility,.prep-visibility) {
++  background:color-mix(in srgb,var(--session-accent) 5%,var(--theme-canvas-soft));
++  border-color:color-mix(in srgb,var(--session-accent) 35%,var(--theme-border));
++}
++.app-shell[data-module-theme="coaching"] :is(.coaching-visibility .eyebrow,.prep-visibility h2,.coaching-mode-reminder) { color:var(--session-accent); }
++.app-shell[data-module-theme="coaching"] .coaching-flow[data-visual-mode="simple_blind"] { --session-accent:var(--coaching-mode-simple); }
++.app-shell[data-module-theme="coaching"] .coaching-flow[data-visual-mode="full_blind"] { --session-accent:var(--coaching-mode-double); }
++.app-shell[data-module-theme="coaching"] .coaching-choice[data-coaching-choice="mode"] {
++  --mode-accent:var(--coaching-mode-normal);
++  --mode-soft:var(--coaching-mode-normal);
++  background:var(--theme-canvas-soft);
++  border-color:color-mix(in srgb,var(--mode-accent) 38%,var(--theme-border));
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] .coaching-choice[data-coaching-choice="mode"][data-value="simple_blind"] { --mode-accent:var(--coaching-mode-simple); --mode-soft:var(--coaching-mode-simple); }
++.app-shell[data-module-theme="coaching"] .coaching-choice[data-coaching-choice="mode"][data-value="full_blind"] { --mode-accent:var(--coaching-mode-double); --mode-soft:var(--coaching-mode-double); }
++.app-shell[data-module-theme="coaching"] .coaching-choice[data-coaching-choice="mode"]::before {
++  background-image:linear-gradient(100deg,var(--theme-overlay),var(--theme-photo-overlay)),var(--mode-photo);
++}
++.app-shell[data-module-theme="coaching"] .coaching-choice[data-coaching-choice="mode"][aria-pressed="true"] {
++  border-color:var(--mode-soft);
++  box-shadow:inset 3px 0 var(--mode-accent),var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] .coaching-mode-reminder { border-color:var(--session-accent); background:var(--session-tint); box-shadow:none; }
++.app-shell[data-module-theme="coaching"] [data-visual-role="coach"] { --role-accent:var(--coaching-role-coach); }
++.app-shell[data-module-theme="coaching"] [data-visual-role="traceur"] { --role-accent:var(--coaching-role-traceur); }
++.app-shell[data-module-theme="coaching"] [data-visual-role="driver"] { --role-accent:var(--coaching-role-driver); }
++.app-shell[data-module-theme="coaching"] [data-visual-role="observer"] { --role-accent:var(--coaching-role-observer); }
++.app-shell[data-module-theme="coaching"] [data-visual-role] { --role-tint:color-mix(in srgb,var(--role-accent) 9%,transparent); }
++.app-shell[data-module-theme="coaching"] .coaching-role[data-visual-role] {
++  background:linear-gradient(130deg,var(--role-tint),transparent 70%),var(--coaching-panel);
++  border-color:color-mix(in srgb,var(--role-accent) 32%,var(--theme-border));
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] .coaching-role-title>.coaching-emblem { background:var(--theme-canvas-soft); border-color:var(--theme-border); filter:none; }
++.app-shell[data-module-theme="coaching"] .coaching-role-title h2 { color:var(--role-accent); }
++.app-shell[data-module-theme="coaching"] :is(.prep-flow,.session-coach) .prep-function { border-left:3px solid var(--coaching-role-traceur); }
++.app-shell[data-module-theme="coaching"] .session-coach[data-session-role="coach"] .prep-function { border-left-color:var(--coaching-role-coach); }
++.app-shell[data-module-theme="coaching"] .session-coach[data-session-role="observer"] .prep-function { border-left-color:var(--coaching-role-observer); }
++.app-shell[data-module-theme="coaching"] .search-identity { border-left:3px solid var(--coaching-role-driver); }
++.app-shell[data-module-theme="coaching"] .prep-context>span { padding:10px; border:1px solid var(--theme-border); border-radius:14px; background:var(--theme-surface); }
++.app-shell[data-module-theme="coaching"] :is(.prep-map,.prep-person,.session-events li) { border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] .prep-map { box-shadow:var(--shadow-card); }
++.app-shell[data-module-theme="coaching"] :is(.prep-map figcaption,.prep-layer-legend) { background:var(--theme-canvas-soft); color:var(--theme-text-muted); border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] .session-notice { color:var(--theme-text); background:var(--coaching-phase-surface,var(--theme-surface)); border-color:var(--theme-border); border-left:3px solid var(--theme-accent-secondary); }
++.app-shell[data-module-theme="coaching"] .session-coach .session-metric { padding:16px; background:var(--coaching-surface-waiting); }
++.app-shell[data-module-theme="coaching"] .session-coach .session-metric strong { color:var(--theme-text); font-variant-numeric:tabular-nums; }
++.app-shell[data-module-theme="coaching"] .session-coach .session-metric+.session-metric { background:var(--coaching-surface-laying); border-left:3px solid var(--theme-accent-secondary); }
++
++/* Cockpits: existing map geometry, separate distance/chrono tiles and restrained glass. */
++.app-shell[data-module-theme="coaching"] :is(.tracer-terrain,.search-terrain) { background:var(--theme-canvas); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-top,.search-top) { background:var(--theme-canvas-soft); border-bottom:1px solid var(--theme-border); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-top small,.search-top small,.tracer-hud small,.tracer-gps,.search-hud>small) { color:var(--theme-text-muted); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-map-meta span,.tracer-progress,.search-map-meta span,.search-map-state,.search-compass,.search-map-zoom) {
++  color:var(--theme-text);
++  background:var(--theme-glass);
++  border-color:var(--theme-border);
++  backdrop-filter:blur(12px);
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] :is(.tracer-map-meta span:first-child,.search-map-meta span:first-child) { color:var(--theme-accent-secondary); border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-map-controls button,.search-map-control) {
++  background:var(--theme-glass)!important;
++  border-color:var(--theme-border)!important;
++  color:var(--theme-text)!important;
++  box-shadow:var(--shadow-card);
++}
++.app-shell[data-module-theme="coaching"] .search-map-zoom .search-map-control { background:transparent!important; border:0!important; box-shadow:none; }
++.app-shell[data-module-theme="coaching"] :is(.tracer-layer-panel,.search-terrain .search-layers) { background:var(--theme-canvas-soft); border-color:var(--theme-border); box-shadow:var(--shadow-card); }
++.app-shell[data-module-theme="coaching"] .tracer-progress progress { accent-color:var(--theme-accent-secondary); }
++.app-shell[data-module-theme="coaching"] .tracer-hud { background:var(--coaching-panel); border-top-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] .tracer-hud>div { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.9fr); gap:8px; }
++.app-shell[data-module-theme="coaching"] .tracer-hud strong { min-width:0; padding:8px; border:1px solid var(--theme-border); border-radius:11px; background:var(--theme-glass); color:var(--theme-text); font-size:clamp(17px,5vw,22px); overflow-wrap:anywhere; }
++.app-shell[data-module-theme="coaching"] .tracer-hud strong:nth-child(2) { color:var(--theme-accent-secondary); border-bottom:2px solid var(--theme-accent-secondary); }
++.app-shell[data-module-theme="coaching"] .tracer-terrain:is([data-tracer-phase="approaching"],[data-tracer-phase="arrived"]) .tracer-hud strong { font-size:14px; }
++.app-shell[data-module-theme="coaching"] .tracer-gps { max-width:none; font-size:10px; line-height:1.5; }
++.app-shell[data-module-theme="coaching"] .tracer-gps:is(.stale,.acquiring) { color:var(--status-warning); }
++.app-shell[data-module-theme="coaching"] .tracer-gps.unavailable { color:var(--status-danger); }
++.app-shell[data-module-theme="coaching"] .tracer-actions { display:grid; grid-template-columns:minmax(0,1fr) 86px; background:var(--theme-canvas-soft); }
++.app-shell[data-module-theme="coaching"] .tracer-actions .tracer-secondary { grid-column:1/-1; width:100%; min-height:48px; padding:8px 12px; font-size:12px; }
++.app-shell[data-module-theme="coaching"] .tracer-actions :is(.tracer-primary,.tracer-in-place) { width:100%; min-height:58px; font-size:16px; }
++.app-shell[data-module-theme="coaching"] .tracer-in-place { background:var(--coaching-surface-preparation); color:var(--theme-text); border:1px solid var(--theme-border); }
++.app-shell[data-module-theme="coaching"] .search-map-hud { background:var(--theme-glass); border-color:color-mix(in srgb,var(--theme-accent-secondary) 26%,var(--theme-border)); box-shadow:var(--shadow-card); }
++.app-shell[data-module-theme="coaching"] .search-terrain .search-map-hud .search-hud { background:transparent; }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics { align-items:stretch; }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics>div { padding:8px; border:1px solid var(--theme-border); border-radius:10px; background:var(--theme-canvas-soft); }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics small { color:var(--theme-text-muted); }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics strong { color:var(--theme-text); font-size:clamp(14px,4vw,17px); }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics>div:nth-child(2) { background:var(--coaching-surface-laying); border-bottom:2px solid var(--theme-accent-secondary); }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics>div:nth-child(2) strong { color:var(--theme-accent-secondary); }
++.app-shell[data-module-theme="coaching"] .search-cockpit-metrics>div:last-child strong { color:var(--theme-text-muted); font-size:10px; white-space:normal; overflow-wrap:anywhere; }
++.app-shell[data-module-theme="coaching"] :is(.coaching-track-age,.search-track-age) { background:var(--coaching-surface-waiting); border-color:var(--theme-border); border-left:2px solid var(--premium-goldMuted); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-track-age span,.search-track-age span) { color:var(--theme-text-muted); }
++.app-shell[data-module-theme="coaching"] :is(.coaching-track-age strong,.search-track-age strong) { color:var(--theme-text); }
++.app-shell[data-module-theme="coaching"] .search-map-hud .search-actions .search-primary { box-shadow:var(--shadow-card); background:linear-gradient(115deg,var(--premium-goldSoft),var(--theme-accent)); border-color:var(--theme-accent); }
++.app-shell[data-module-theme="coaching"] .search-map-hud .search-secondary { width:100%; min-height:48px; font-size:12px; }
++.app-shell[data-module-theme="coaching"] :is(.tracer-sheet,.tracer-dev,.search-dev,.search-confirm) { background:var(--theme-canvas-soft); color:var(--theme-text); border-color:var(--theme-border); box-shadow:var(--shadow-card); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-sheet h2,.tracer-dev h2,.tracer-message p) { color:var(--theme-text); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-shade,.search-shade) { background:var(--theme-overlay); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-message,.tracer-sheet input,.tracer-dev select,.search-dev select,.prep-simulator) { background:var(--theme-surface); color:var(--theme-text); border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-sheet small,.tracer-dev p,.search-dev p,.search-confirm p,.prep-simulator p,.prep-simulator summary small) { color:var(--theme-text-muted); }
++.app-shell[data-module-theme="coaching"] :is(.tracer-layer-panel input,.search-layers input) { accent-color:var(--theme-accent-secondary); }
++
++/* Analytic Coaching reports, including their consultation routes inside Sessions. */
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-flow {
++  --session-accent:var(--coaching-mode-normal);
++  --session-tint:color-mix(in srgb,var(--session-accent) 8%,transparent);
++  --debrief-accent:var(--session-accent);
++  --debrief-tint:var(--session-tint);
++  --coaching-panel:linear-gradient(145deg,var(--coaching-surface-report),var(--theme-surface));
++  background:none;
++  color:var(--theme-text);
++}
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-flow[data-visual-mode="simple_blind"] { --session-accent:var(--coaching-mode-simple); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-flow[data-visual-mode="full_blind"] { --session-accent:var(--coaching-mode-double); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-flow::before { background:none; }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) :is(.debrief-heading,.debrief-card,.debrief-events) { background:var(--coaching-panel); border-color:var(--theme-border); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) :is(.debrief-card h2,.debrief-card h3,.debrief-events h2,.debrief-event-body strong) { color:var(--theme-text); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) :is(.debrief-heading>p,.debrief-card-heading p,.debrief-row,.debrief-footnote,.debrief-event-body small,.debrief-map-note) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-card-heading .eyebrow { color:var(--theme-accent-secondary); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) :is(.debrief-row,.debrief-science-card .debrief-row,.debrief-observations li,.debrief-empty) { background:var(--theme-canvas-soft); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-row strong { color:var(--theme-text); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-summary-card>.debrief-report-grid>.debrief-row:nth-child(4) { background:var(--coaching-surface-preparation); border-left:3px solid var(--coaching-role-traceur); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-summary-card>.debrief-report-grid>.debrief-row:nth-child(5) { background:var(--coaching-surface-laying); border-left:3px solid var(--coaching-role-driver); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .coaching-temporal-summary { padding:16px 12px; border:1px solid var(--theme-border); border-radius:16px; background:var(--coaching-surface-waiting); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .coaching-temporal-summary .debrief-row:is(:nth-child(3),:nth-child(6)) { border-left:2px solid var(--premium-goldMuted); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-tabs button { color:var(--theme-text-muted); background:var(--theme-surface); border-color:var(--theme-border); box-shadow:none; }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-tabs button[aria-current="page"] { color:var(--theme-text); background:color-mix(in srgb,var(--session-accent) 10%,var(--theme-surface)); border-color:var(--session-accent); box-shadow:inset 0 -2px var(--session-accent); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) :is(.debrief-last-action,.debrief-event-number) { color:var(--theme-text); background:var(--theme-canvas-soft); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) :is(.debrief-subsection,.debrief-event-body) { border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-corridor { color:var(--theme-text); background:var(--coaching-surface-report); border-color:var(--theme-border); box-shadow:none; }
++.app-shell:is([data-module-theme="coaching"],[data-module-theme="sessions"]) .debrief-archive { background:linear-gradient(115deg,var(--premium-goldSoft),var(--theme-accent)); box-shadow:var(--shadow-card); border-color:var(--theme-accent); }
++.app-shell[data-module-theme="sessions"] :is(.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) :is(.card,.session-participant-list li,.session-observation-list li) { background:linear-gradient(145deg,var(--coaching-surface-report),var(--theme-surface)); border-color:var(--theme-border); box-shadow:var(--shadow-card); }
++.app-shell[data-module-theme="sessions"] :is(.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) :is(dl>div,.session-replay-legend>span) { background:var(--theme-canvas-soft); border-color:var(--theme-border); }
++.app-shell[data-module-theme="sessions"] :is(.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) :is(dt,.session-replay-card>p,.session-participant-list span) { color:var(--theme-text-muted); }
++.app-shell[data-module-theme="sessions"] :is(.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) dd { color:var(--theme-text); }
++
++/* QA retains its controls and scenarios; only its surfaces consume Coaching tokens. */
++.app-shell[data-module-theme="coaching"] .qa-coaching { color:var(--theme-text); background:var(--theme-overlay); border-color:var(--theme-border); box-shadow:var(--shadow-card); }
++.app-shell[data-module-theme="coaching"] .qa-coaching :is(select,.qa-status p,[data-qa-collapse]) { color:var(--theme-text); background:var(--theme-surface); border-color:var(--theme-border); }
++.app-shell[data-module-theme="coaching"] .qa-coaching :is(header p,.qa-note,.qa-selectors small,.qa-actions small) { color:var(--theme-text-muted); }
++@media(max-height:620px) {
++  .app-shell[data-module-theme="coaching"] .tracer-hud { padding:8px 12px; }
++  .app-shell[data-module-theme="coaching"] .tracer-hud strong { padding:6px; font-size:17px; }
++  .app-shell[data-module-theme="coaching"] .tracer-actions { padding:8px 10px; gap:6px; }
++  .app-shell[data-module-theme="coaching"] .search-cockpit-metrics>div { padding:5px; }
++  .app-shell[data-module-theme="coaching"] .search-cockpit-metrics strong { font-size:13px; }
++}
++
++/* Keep metadata and tools clear of the HUD at compact iPhone heights. */
++.app-shell[data-module-theme="coaching"] :is(.tracer-map-meta,.search-map-meta) { flex-wrap:nowrap; align-items:flex-start; }
++.app-shell[data-module-theme="coaching"] :is(.tracer-map-meta,.search-map-meta) span:first-child { flex:none; white-space:nowrap; }
++.app-shell[data-module-theme="coaching"] :is(.tracer-map-meta,.search-map-meta) span:last-child { min-width:0; line-height:1.45; }
++.app-shell[data-module-theme="coaching"] .tracer-terrain>.session-notice { position:static; flex:none; margin:0; padding:6px 12px; border-radius:0; font-size:11px; order:1; }
++.app-shell[data-module-theme="coaching"] .tracer-terrain:has(>.session-notice) .tracer-top { order:0; }
++.app-shell[data-module-theme="coaching"] .tracer-terrain:has(>.session-notice) .tracer-map { order:2; }
++.app-shell[data-module-theme="coaching"] .tracer-terrain:has(>.session-notice) .tracer-hud { order:3; }
++.app-shell[data-module-theme="coaching"] .tracer-terrain:has(>.session-notice) .tracer-actions { order:4; }
++.app-shell[data-module-theme="coaching"] .prep-function:has(>[data-coaching-emblem="roleCoach"]) { border-left-color:var(--coaching-role-coach); }
++.app-shell[data-module-theme="coaching"] .prep-function:has(>[data-coaching-emblem="roleDriver"]) { border-left-color:var(--coaching-role-driver); }
++.app-shell[data-module-theme="coaching"] .prep-function:has(>[data-coaching-emblem="roleObserver"]) { border-left-color:var(--coaching-role-observer); }
++.app-shell[data-module-theme="coaching"] .qa-coaching { background:color-mix(in srgb,var(--theme-canvas-soft) 96%,transparent); }
++@media(max-height:740px) {
++  .app-shell[data-module-theme="coaching"] .search-map-controls { display:flex; top:118px; left:7px; right:7px; gap:6px; justify-content:flex-end; }
++  .app-shell[data-module-theme="coaching"] .search-map-controls .search-map-control { width:48px; height:48px; min-width:48px; min-height:48px; }
++  .app-shell[data-module-theme="coaching"] .search-map-zoom { display:flex; gap:6px; padding:0; background:transparent; border:0; backdrop-filter:none; }
++  .app-shell[data-module-theme="coaching"] .search-map-state { left:7px; right:7px; }
++}
++@media(max-height:500px) {
++  .app-shell[data-module-theme="coaching"] .tracer-map-controls { display:flex; gap:8px; }
++  .app-shell[data-module-theme="coaching"] .tracer-map-meta { max-width:calc(100% - 196px); }
++}
++/* Existing simulator metadata also supplies the mode accent in live role views. */
++.app-shell[data-module-theme="coaching"] :is(.prep-flow,.session-coach,.search-wait,.search-terrain):has(select:is([data-prep-sim="mode"],[data-search-sim="mode"]) option[value="simple_blind"][selected]) { --session-accent:var(--coaching-mode-simple); }
++.app-shell[data-module-theme="coaching"] :is(.prep-flow,.session-coach,.search-wait,.search-terrain):has(select:is([data-prep-sim="mode"],[data-search-sim="mode"]) option[value="full_blind"][selected]) { --session-accent:var(--coaching-mode-double); }
++.app-shell[data-module-theme="coaching"] .search-map-meta span:first-child { color:var(--session-accent); }
++.app-shell[data-module-theme="coaching"] :is(.search-wait[data-search-phase="SEARCH_FINISHED"],.session-coach[data-session-phase="SEARCH_FINISHED"]) { --coaching-phase-surface:var(--coaching-surface-report); }
+--- a/premium/src/tokens.css
++++ b/premium/src/tokens.css
+@@ -51,7 +51,9 @@
+   --home-surface-science:#14283b;
+ }
+
+-.app-shell[data-module-theme="coaching"] {
++/* Coaching and its reports reached through Sessions share the same local palette. */
++.app-shell[data-module-theme="coaching"],
++.app-shell[data-module-theme="sessions"] main :is(.debrief-flow,.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) {
+   --theme-canvas:#09151c;
+   --theme-canvas-soft:#10212a;
+   --theme-surface:#14252c;
+@@ -62,6 +64,22 @@
+   --theme-accent-secondary:var(--science-cyan);
+   --theme-overlay:rgba(7,19,25,.76);
+   --theme-photo-overlay:rgba(7,19,25,.58);
++}
++
++
++.app-shell[data-module-theme="coaching"],
++.app-shell[data-module-theme="sessions"] main :is(.debrief-flow,.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) {
++  --coaching-surface-preparation:var(--theme-surface-raised);
++  --coaching-surface-laying:color-mix(in srgb,var(--theme-accent-secondary) 10%,var(--theme-surface));
++  --coaching-surface-waiting:var(--background-surfaceElevated);
++  --coaching-surface-report:color-mix(in srgb,var(--background-surfaceElevated) 80%,var(--theme-surface-raised));
++  --coaching-mode-normal:var(--theme-accent-secondary);
++  --coaching-mode-simple:var(--status-warning);
++  --coaching-mode-double:#c995ac;
++  --coaching-role-coach:var(--text-secondary);
++  --coaching-role-traceur:var(--science-teal);
++  --coaching-role-driver:var(--science-cyan);
++  --coaching-role-observer:var(--science-blue);
+ }
+
+ .app-shell[data-module-theme="operational"] {

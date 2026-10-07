@@ -1,0 +1,134 @@
+--- a/premium/src/styles.css
++++ b/premium/src/styles.css
+@@ -2947,3 +2947,104 @@
+ .app-shell[data-module-theme="coaching"] :is(.prep-flow,.session-coach,.search-wait,.search-terrain):has(select:is([data-prep-sim="mode"],[data-search-sim="mode"]) option[value="full_blind"][selected]) { --session-accent:var(--coaching-mode-double); }
+ .app-shell[data-module-theme="coaching"] .search-map-meta span:first-child { color:var(--session-accent); }
+ .app-shell[data-module-theme="coaching"] :is(.search-wait[data-search-phase="SEARCH_FINISHED"],.session-coach[data-session-phase="SEARCH_FINISHED"]) { --coaching-phase-surface:var(--coaching-surface-report); }
++
++/* Bloc 5 — OPS: petrol glass, moss terrain, restrained amber. Visuals only. */
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-page { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-page { background:var(--theme-canvas); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-heading { border-color:var(--theme-border); background:radial-gradient(ellipse at 96% 0,color-mix(in srgb,var(--ops-terrain) 14%,transparent),transparent 60%),linear-gradient(145deg,var(--ops-petrol),var(--theme-canvas-soft)); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-heading h1,.operational-entry-choice strong,.operational-resume-card strong,.operational-details-panel summary,.operational-cockpit-header strong,.operational-cockpit-secondary>summary) { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-heading .eyebrow,.operational-quick-icon,.operational-active-list h2) { color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-heading p,.operational-entry-choice small,.operational-resume-card small,.operational-form-note,.operational-memory-note,.operational-field-actions p,.operational-readonly-note,.operational-gpx-panel p,.operational-weather-panel p,.operational-replay-details p,.operational-replay-trace-status) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-entry-choice-quick { border-color:color-mix(in srgb,var(--theme-accent) 45%,var(--theme-border)); background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--theme-accent) 12%,transparent),transparent 65%),linear-gradient(135deg,var(--ops-petrol),var(--theme-canvas-soft)); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-entry-choice-prepared { border-color:color-mix(in srgb,var(--ops-terrain) 35%,var(--theme-border)); background:linear-gradient(135deg,var(--ops-surface-terrain),var(--ops-slate)); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-entry-choice-icon { color:var(--theme-accent); background:color-mix(in srgb,var(--theme-accent) 10%,var(--ops-petrol)); border-color:color-mix(in srgb,var(--theme-accent) 40%,var(--theme-border)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-entry-choice-prepared .operational-entry-choice-icon,.operational-resume-mark) { color:var(--ops-terrain); background:color-mix(in srgb,var(--ops-terrain) 10%,var(--ops-slate)); border-color:color-mix(in srgb,var(--ops-terrain) 38%,var(--theme-border)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-entry-choice>span:last-child,.operational-resume-card em) { color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-entry-choice-prepared>span:last-child { color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-start-form,.operational-resume-card,.operational-details-panel,.operational-events-panel,.operational-weather-panel,.operational-gpx-panel,.operational-replay-details,.operational-evaluation-form) { border-color:var(--theme-border); background:linear-gradient(145deg,var(--ops-slate),var(--ops-petrol)); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-intake-form fieldset,.operational-evaluation-form .operational-evaluation-group) { border:1px solid var(--theme-border); border-radius:var(--radius-sm); background:linear-gradient(145deg,var(--ops-surface-terrain),var(--ops-slate)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-intake-form fieldset { min-width:0; margin:6px 0; padding:12px; display:grid; gap:12px; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-intake-form legend,.operational-evaluation-form legend,.operational-details-panel form>h3) { color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-intake-form legend span,.operational-intake-actor,.operational-start-form label span,.operational-details-panel summary span,.operational-details-panel form>p,.operational-evaluation-form>p) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-start-form label,.operational-details-panel label,.operational-evaluation-form label,.operational-event-select,.operational-event-note,.operational-gpx-panel label) { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-start-form input,.operational-start-form select,.operational-start-form textarea,.operational-details-panel input,.operational-details-panel select,.operational-details-panel textarea,.operational-evaluation-form select,.operational-evaluation-form textarea,.operational-gpx-panel select,.operational-event-select select,.operational-event-note input) { border-color:color-mix(in srgb,var(--theme-text-muted) 28%,var(--theme-border)); background:var(--ops-petrol); color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-start-form textarea { width:100%; min-width:0; min-height:80px; padding:10px 12px; border-radius:11px; font:inherit; resize:vertical; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-page :is(input,textarea)::placeholder { color:var(--theme-text-muted); opacity:.8; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-page :is(input,select,textarea):focus-visible) { outline:2px solid var(--ops-terrain); outline-offset:2px; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-evaluation-group select:has(option:checked:not([value=""])) { border-color:var(--ops-terrain); background:var(--ops-surface-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-page .button-gold,.operational-cockpit-action-dock>[data-operational-action="pause"],.operational-cockpit-action-dock>[data-operational-action="resume"]) { background:linear-gradient(120deg,var(--premium-goldSoft),var(--theme-accent)); border-color:var(--theme-accent); color:var(--theme-canvas); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-page .button-dark { background:var(--ops-petrol); border-color:var(--theme-border); color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-page [data-operational-action="stop"] { background:var(--ops-danger-surface); border-color:color-mix(in srgb,var(--status-danger) 40%,var(--theme-border)); color:var(--status-danger); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-panel { border-color:var(--theme-border); background:linear-gradient(145deg,var(--ops-petrol),var(--theme-canvas-soft)); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-mission.operational-cockpit-page .operational-cockpit-panel { background:transparent; box-shadow:none; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-quick-start h2,.operational-map-heading h2,.operational-events-panel h2,.operational-details-panel h2,.operational-gpx-panel h2,.operational-weather-panel h2,.operational-replay-details h2,.operational-evaluation-form h2) { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-map-heading .eyebrow,.operational-cockpit-header small,.operational-cockpit-secondary>summary span) { color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-mock-label,.operational-replay-legend span) { background:var(--ops-slate); color:var(--theme-text-muted); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-navigation summary { background:color-mix(in srgb,var(--theme-accent) 10%,var(--ops-petrol)); border-color:color-mix(in srgb,var(--theme-accent) 35%,var(--theme-border)); color:var(--premium-goldSoft); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-navigation nav a { background:var(--ops-petrol); color:var(--theme-text); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-tracking-hud>span { background:var(--ops-slate); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-tracking-hud small,.operational-cockpit-metrics small) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-tracking-hud strong { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-tracking-hud>span:has([data-operational-chrono]) { background:var(--ops-petrol); border-color:color-mix(in srgb,var(--ops-terrain) 35%,var(--theme-border)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-tracking-hud [data-operational-chrono] { color:var(--ops-terrain); font-variant-numeric:tabular-nums; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-track-age { color:var(--premium-goldSoft); background:color-mix(in srgb,var(--theme-accent) 8%,var(--ops-slate)); border-left:2px solid var(--theme-accent); padding:8px 10px; border-radius:0 8px 8px 0; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-age { margin:0; flex:none; font-size:10px; line-height:1.3; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-header { background:linear-gradient(120deg,var(--ops-petrol),var(--theme-canvas)); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-header em { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-back { background:var(--ops-petrol); color:var(--theme-accent); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-cockpit-map-status,.operational-cockpit-page .operational-corridor-toggle,.operational-cockpit-page .operational-map-actions button,.operational-event-composer,.operational-cockpit-hud) { background:var(--ops-glass); border-color:color-mix(in srgb,var(--ops-terrain) 25%,var(--theme-border)); color:var(--theme-text); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-cockpit-map-status span,.operational-cockpit-page .operational-corridor-toggle small,.operational-cockpit-page .operational-corridor-toggle strong) { color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-page .operational-corridor-toggle span { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-page .operational-corridor-toggle[aria-pressed="true"] { background:color-mix(in srgb,var(--ops-surface-terrain) 88%,transparent); border-color:var(--ops-terrain); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-page .operational-map-actions button .icon { color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-page .operational-map-actions button[aria-pressed="true"] { background:color-mix(in srgb,var(--theme-accent) 18%,var(--ops-glass)); border-color:var(--theme-accent); color:var(--premium-goldSoft); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-page .operational-map-actions button[data-operational-map-mode="event"][aria-pressed="true"] { background:color-mix(in srgb,var(--ops-terrain) 18%,var(--ops-glass)); border-color:var(--ops-terrain); color:var(--theme-text); box-shadow:var(--shadow-card); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-metrics>span { border-left-color:var(--theme-border); border-radius:7px; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-metrics>span:has([data-operational-chrono]) { border:1px solid color-mix(in srgb,var(--ops-terrain) 30%,var(--theme-border)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-metrics strong { font-size:clamp(9px,2.7vw,12px); color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-metrics>span:nth-child(3) strong { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-cockpit-hud>small,.operational-event-composer label) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) [data-operational-tracking-state="paused"] .operational-cockpit-map-status { border-color:color-mix(in srgb,var(--theme-accent) 45%,var(--theme-border)); background:color-mix(in srgb,var(--theme-accent) 10%,var(--ops-glass)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) [data-operational-tracking-state="paused"] [data-operational-tracking-label] { color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-cockpit-action-dock>[data-operational-action="lock-screen"] { background:var(--ops-slate); color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-event-log li { border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-event-log li>span { background:color-mix(in srgb,var(--theme-accent) 8%,var(--ops-slate)); border-color:color-mix(in srgb,var(--theme-accent) 40%,var(--theme-border)); color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-event-log strong { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-event-log small,.operational-events-empty,.operational-events-panel>p) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-journal li:is([data-operational-journal-kind="tracking_started"],[data-operational-journal-kind="tracking_resumed"],[data-operational-journal-kind="progress"])>span) { color:var(--ops-terrain); border-color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-journal li[data-operational-journal-kind="tracking_paused"]>span { color:var(--theme-accent); border-color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-journal li:is([data-operational-journal-kind="tracking_stopped"],[data-operational-journal-kind="mission_completed"])>span) { color:var(--status-danger); border-color:color-mix(in srgb,var(--status-danger) 55%,var(--theme-border)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-progress { stroke:var(--ops-terrain); filter:none; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-progress-points circle { fill:var(--ops-terrain); stroke:var(--ops-petrol); filter:none; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-corridor { stroke:var(--theme-accent-secondary); opacity:.14; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-corridor-halo { fill:color-mix(in srgb,var(--ops-terrain) 12%,transparent); stroke:color-mix(in srgb,var(--ops-terrain) 55%,transparent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-event circle { fill:var(--ops-petrol); stroke:var(--theme-accent); filter:none; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-event text { fill:var(--premium-goldSoft); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-map-corridor-label,.operational-cockpit-stage .operational-map-corridor-label,.operational-corridor-note) { background:var(--ops-glass); color:var(--ops-terrain); border-color:color-mix(in srgb,var(--ops-terrain) 40%,var(--theme-border)); box-shadow:none; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-corridor-note strong { color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-corridor-note span,.operational-replay-legend) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-map-instruction { background:color-mix(in srgb,var(--ops-terrain) 8%,var(--ops-petrol)); color:var(--theme-text); border-color:var(--ops-terrain); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-replay-details dl>div,.operational-details-panel>p) { border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-replay-details dt,.operational-details-panel>p span) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-replay-details dd,.operational-details-panel>p strong) { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-replay-details dl>div:has(dt:first-child) { background:color-mix(in srgb,var(--ops-slate) 35%,transparent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-gpx-attached,.operational-readonly-note) { background:color-mix(in srgb,var(--theme-accent) 7%,var(--ops-slate)); border-color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-replay-details ul { display:grid; gap:8px; padding:0; list-style:none; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-replay-details li { display:grid; gap:6px; padding:10px; border:1px solid var(--theme-border); border-radius:var(--radius-sm); background:var(--ops-petrol); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-replay-details li span { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-terrain-screen { background:var(--ops-lock-canvas); color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) :is(.operational-terrain-screen .eyebrow,.operational-terrain-caption,.operational-terrain-screen dt) { color:var(--theme-text-muted); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-terrain-state { color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-terrain-screen dl div { background:var(--theme-canvas); border-color:var(--theme-border); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-terrain-screen dd { color:var(--theme-text); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-unlock-control { background:var(--ops-petrol); color:var(--premium-goldSoft); border-color:var(--theme-accent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-unlock-progress { background:linear-gradient(90deg,color-mix(in srgb,var(--theme-accent) 25%,transparent),color-mix(in srgb,var(--theme-accent) 45%,transparent)); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-unlock-control[data-hold-active] { border-color:var(--premium-goldSoft); box-shadow:0 0 0 2px color-mix(in srgb,var(--theme-accent) 25%,transparent); }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-unlock-feedback { color:var(--theme-text-muted); }
++/* Keep the existing age row separate without pushing the action dock below the viewport. */
++.app-shell[data-module-theme="operational"] .operational-cockpit-stage { height:calc(100vh - 83px); height:calc(100dvh - 83px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)); min-height:0; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-intake-form legend { padding:0 6px; font-size:12px; font-weight:650; line-height:1.5; }
++.app-shell:is([data-module-theme="operational"],[data-module-theme="sessions"]) .operational-intake-form legend span { font-size:10px; font-weight:400; }
++.app-shell[data-module-theme="operational"] .operational-intake-actor { font-size:11px; line-height:1.5; }
++/* Estimated corridor caption stays between the event composer and the HUD. */
++.app-shell[data-module-theme="operational"] .operational-cockpit-stage .operational-map-corridor-label { bottom:140px; }
+--- a/premium/src/tokens.css
++++ b/premium/src/tokens.css
+@@ -82,7 +82,8 @@
+   --coaching-role-observer:var(--science-blue);
+ }
+
+-.app-shell[data-module-theme="operational"] {
++.app-shell[data-module-theme="operational"],
++.app-shell[data-module-theme="sessions"] :is(.operational-page,.operational-replay-page,.operational-session-detail) {
+   --theme-canvas:#0d1c1b;
+   --theme-canvas-soft:#132824;
+   --theme-surface:#18332f;
+@@ -93,6 +94,14 @@
+   --theme-accent-secondary:var(--science-cyan);
+   --theme-overlay:rgba(7,21,19,.8);
+   --theme-photo-overlay:rgba(7,21,19,.62);
++  /* OPS companions: petrol structure, moss terrain and analytic slate. */
++  --ops-petrol:color-mix(in srgb,var(--science-teal) 12%,var(--background-surface));
++  --ops-slate:color-mix(in srgb,var(--text-secondary) 14%,var(--background-surface));
++  --ops-terrain:color-mix(in srgb,var(--status-success) 70%,var(--premium-goldMuted));
++  --ops-surface-terrain:color-mix(in srgb,var(--theme-surface-raised) 65%,var(--ops-slate));
++  --ops-glass:color-mix(in srgb,var(--ops-petrol) 86%,transparent);
++  --ops-danger-surface:color-mix(in srgb,var(--status-danger) 19%,var(--background-night));
++  --ops-lock-canvas:color-mix(in srgb,var(--background-nightDeep) 22%,black);
+ }
+
+ .app-shell[data-module-theme="dogs"] {

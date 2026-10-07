@@ -1,0 +1,13 @@
+# Le dépôt historique ignore tous les package.json ; le prototype garde le sien.
+!package.json
+.vercel
+.env*
+
+# Captures QA générées localement : elles sont conservées sur la machine,
+# mais ne font pas partie du code source ni du checkpoint versionné.
+/screenshots/
+
+# Sorties visuelles et rapports navigateur reproductibles ; les sources,
+# rapports Markdown, notes texte et patches de diagnostic restent versionnés.
+/diagnostics/**/*.png
+/diagnostics/**/*.json

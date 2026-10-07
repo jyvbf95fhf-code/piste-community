@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "beforeChecks": 90,
+  "afterChecks": 90,
+  "widths": [
+    320,
+    375,
+    390,
+    430
+  ],
+  "horizontalOverflow": false,
+  "finalOverlayCollisions": 0,
+  "textValuesControlsNavigationIdentical": true,
+  "textComparison": "Whitespace normalized: replay pause cards now separate classification and duration into distinct lines.",
+  "consoleErrors": [],
+  "unexpectedExternalRequests": [],
+  "apiRequests": [],
+  "spatialComparison": "See geometry-and-controls-identity.json for strict comparison with precise synthetic mouse coordinates.",
+  "screenshots": 240
+}

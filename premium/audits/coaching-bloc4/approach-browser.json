@@ -1,0 +1,262 @@
+{
+  "passed": true,
+  "base": "http://localhost:4173",
+  "checks": [
+    {
+      "type": "prepared",
+      "creator": "coach",
+      "known": true,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "prepared",
+      "creator": "driver",
+      "known": true,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "prepared",
+      "creator": "traceur",
+      "known": true,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "gpx",
+      "creator": "coach",
+      "known": true,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "gpx",
+      "creator": "driver",
+      "known": true,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "gpx",
+      "creator": "traceur",
+      "known": true,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "direct",
+      "creator": "coach",
+      "known": false,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "direct",
+      "creator": "driver",
+      "known": false,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "direct",
+      "creator": "traceur",
+      "known": false,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "none",
+      "creator": "coach",
+      "known": false,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "none",
+      "creator": "driver",
+      "known": false,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "type": "none",
+      "creator": "traceur",
+      "known": false,
+      "unifiedCockpit": true,
+      "origin": "http://localhost:4173/coaching/session"
+    },
+    {
+      "soloSelfTrace": true,
+      "approachRequired": true
+    },
+    {
+      "type": "prepared",
+      "interaction": "click",
+      "arrivalWithoutDev": true,
+      "gps": "acquiring",
+      "fullUserFlow": true
+    },
+    {
+      "type": "gpx",
+      "interaction": "click",
+      "arrivalWithoutDev": true,
+      "gps": "acquiring",
+      "fullUserFlow": true
+    },
+    {
+      "type": "prepared",
+      "interaction": "tap",
+      "arrivalWithoutDev": true,
+      "gps": "acquiring",
+      "fullUserFlow": true
+    },
+    {
+      "type": "gpx",
+      "interaction": "tap",
+      "arrivalWithoutDev": true,
+      "gps": "acquiring",
+      "fullUserFlow": true
+    },
+    {
+      "phase": "approaching",
+      "width": 320,
+      "height": 568,
+      "overflow": false
+    },
+    {
+      "phase": "approaching",
+      "width": 375,
+      "height": 667,
+      "overflow": false
+    },
+    {
+      "phase": "approaching",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "phase": "approaching",
+      "width": 430,
+      "height": 932,
+      "overflow": false
+    },
+    {
+      "phase": "approaching",
+      "width": 844,
+      "height": 390,
+      "overflow": false
+    },
+    {
+      "phase": "arrived",
+      "width": 320,
+      "height": 568,
+      "overflow": false
+    },
+    {
+      "phase": "arrived",
+      "width": 375,
+      "height": 667,
+      "overflow": false
+    },
+    {
+      "phase": "arrived",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "phase": "arrived",
+      "width": 430,
+      "height": 932,
+      "overflow": false
+    },
+    {
+      "phase": "arrived",
+      "width": 844,
+      "height": 390,
+      "overflow": false
+    },
+    {
+      "phase": "before",
+      "width": 320,
+      "height": 568,
+      "overflow": false
+    },
+    {
+      "phase": "before",
+      "width": 375,
+      "height": 667,
+      "overflow": false
+    },
+    {
+      "phase": "before",
+      "width": 390,
+      "height": 844,
+      "overflow": false
+    },
+    {
+      "phase": "before",
+      "width": 430,
+      "height": 932,
+      "overflow": false
+    },
+    {
+      "phase": "before",
+      "width": 844,
+      "height": 390,
+      "overflow": false
+    }
+  ],
+  "captures": [
+    {
+      "name": "01-preparation-bouton",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "02-grande-carte-approche",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "03-arrive-pret",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "04-pret-demarrer",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "05-pose-active",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "06-messages",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "07-interruption",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "08-reprise",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "09-pose-terminee",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "10-en-place",
+      "url": "http://localhost:4173/coaching/session"
+    },
+    {
+      "name": "11-approche-gps-indisponible",
+      "url": "http://localhost:4173/coaching/session"
+    }
+  ],
+  "errors": [],
+  "api": [],
+  "external": [],
+  "gps": 0
+}

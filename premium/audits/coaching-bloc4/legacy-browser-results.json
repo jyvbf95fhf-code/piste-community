@@ -1,0 +1,50 @@
+{
+  "legacyRunners": [
+    {
+      "runner": "coaching-preparation-browser-check.mjs",
+      "failure": "[data-prep-simulator] absent après bascule Conducteur",
+      "line": 45,
+      "beforeExitCode": 1,
+      "afterExitCode": 1,
+      "sameFailureReproducedWithBeforeCSS": true,
+      "productFixApplied": false
+    },
+    {
+      "runner": "coaching-search-browser-check.mjs",
+      "failure": "Attend les chemins de carte dans la synthèse du débrief, avant ouverture de l’onglet Carte",
+      "line": 17,
+      "beforeExitCode": 1,
+      "afterExitCode": 1,
+      "sameFailureReproducedWithBeforeCSS": true,
+      "productFixApplied": false
+    },
+    {
+      "runner": "coaching-session-browser-check.mjs",
+      "failure": "Attend une SessionNotice SEARCH_FINISHED dans le débrief actuel, qui conserve cet événement dans le journal",
+      "line": 20,
+      "beforeExitCode": 1,
+      "afterExitCode": 1,
+      "sameFailureReproducedWithBeforeCSS": true,
+      "productFixApplied": false
+    },
+    {
+      "runner": "coaching-observer-browser-check.mjs",
+      "failure": "Attend l’ancien bouton Ouvrir le débrief, remplacé par l’entrée automatique du débrief",
+      "line": 25,
+      "beforeExitCode": 1,
+      "afterExitCode": 1,
+      "sameFailureReproducedWithBeforeCSS": true,
+      "productFixApplied": false
+    },
+    {
+      "runner": "coaching-qa-browser-check.mjs",
+      "failure": "Attend .archived-coaching-entry et une entrée catalogue issue du simulateur QA",
+      "line": 67,
+      "beforeExitCode": 1,
+      "afterExitCode": 1,
+      "sameFailureReproducedWithBeforeCSS": true,
+      "productFixApplied": false
+    }
+  ],
+  "currentQaRunner": "Même matrice de modes/rôles, mêmes transitions et mêmes huit événements ; vérification de fin sur ARCHIVED en lecture seule. Ancienne assertion catalogue exclue dans la copie temporaire uniquement. 14 contrôles passent."
+}

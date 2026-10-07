@@ -1,0 +1,35 @@
+{
+  "before": 116,
+  "after": 116,
+  "structuralDifferences": [],
+  "overlayCollisions": [],
+  "otherModules": [
+    {
+      "name": "home-reference",
+      "computedColorsIdentical": true,
+      "screenshotIdentical": true
+    },
+    {
+      "name": "dogs-reference",
+      "computedColorsIdentical": true,
+      "screenshotIdentical": false
+    },
+    {
+      "name": "ops-reference",
+      "computedColorsIdentical": true,
+      "screenshotIdentical": false
+    },
+    {
+      "name": "tracks-reference",
+      "computedColorsIdentical": true,
+      "screenshotIdentical": true
+    },
+    {
+      "name": "sessions-reference",
+      "computedColorsIdentical": true,
+      "screenshotIdentical": true
+    }
+  ],
+  "modeAccentRefinementVerified": true,
+  "otherModulesComputedStyleAudit": "other-modules-isolation.json"
+}

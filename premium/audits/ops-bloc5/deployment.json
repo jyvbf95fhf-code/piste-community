@@ -1,0 +1,31 @@
+{
+  "id": "dpl_6CAxrq91wziBBAycGHDEZehC4K4L",
+  "url": "https://piste-community-v2-premium-amp6oymrp-mw2f59b8p2-4030s-projects.vercel.app",
+  "target": "preview",
+  "status": "READY",
+  "ssoProtection": {
+    "deploymentType": "all"
+  },
+  "protectionSettingsChanged": false,
+  "bypassSettingsChanged": false,
+  "productionTargetChanged": false,
+  "httpChecks": [
+    {
+      "route": "/",
+      "httpStatus": 302,
+      "redirectHost": "vercel.com",
+      "redirectPath": "/sso-api"
+    },
+    {
+      "route": "/operational",
+      "httpStatus": 302,
+      "redirectHost": "vercel.com",
+      "redirectPath": "/sso-api"
+    }
+  ],
+  "productSha256": {
+    "premium/src/styles.css": "ff37ec38e4cf60867f7a83d309a2331847138fe6a5dff672d2f2b4fca7a2d431",
+    "premium/src/tokens.css": "adda39047bcc6845ef0816414bede94fcfb672c0fe2675a51ef3378188539fc4"
+  },
+  "authorization": "Explicit user authorization for Vercel frontend upload and protected Preview in existing project, Bloc 5 only."
+}

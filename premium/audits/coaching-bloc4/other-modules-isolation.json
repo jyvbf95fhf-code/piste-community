@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "route": "/",
+      "elements": 197,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/dogs",
+      "elements": 88,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/dogs/nox",
+      "elements": 171,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/dogs/new",
+      "elements": 112,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/dogs/nox/edit",
+      "elements": 110,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/operational",
+      "elements": 65,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/tracks",
+      "elements": 84,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/track-builder",
+      "elements": 257,
+      "allComputedStylesIdentical": true
+    },
+    {
+      "route": "/sessions",
+      "elements": 98,
+      "allComputedStylesIdentical": true
+    }
+  ]
+}

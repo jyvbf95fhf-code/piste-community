@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "base": "http://localhost:4173",
+  "checks": [
+    {
+      "width": 320,
+      "overflow": false
+    },
+    {
+      "width": 375,
+      "overflow": false
+    },
+    {
+      "width": 390,
+      "overflow": false
+    },
+    {
+      "width": 430,
+      "overflow": false
+    },
+    {
+      "archiveReadOnly": true
+    },
+    {
+      "mode": "simple_blind",
+      "postSessionMap": "complete"
+    },
+    {
+      "mode": "full_blind",
+      "postSessionMap": "complete"
+    }
+  ],
+  "captures": [
+    "debrief-synthese-iphone",
+    "debrief-carte-normal-iphone",
+    "debrief-donnees-science-iphone",
+    "debrief-observations-iphone",
+    "debrief-journal-session-iphone",
+    "debrief-cloture-iphone",
+    "debrief-carte-simple-aveugle-iphone",
+    "debrief-carte-double-aveugle-iphone"
+  ],
+  "errors": [],
+  "network": [],
+  "gps": 0
+}

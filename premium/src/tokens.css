@@ -1,0 +1,189 @@
+:root {
+  color-scheme: dark;
+  --background-nightDeep:#080e17; --background-night:#0c1521; --background-surface:#121f2e; --background-surfaceElevated:#1a2a3b;
+  --premium-gold:#e5c17c; --premium-goldSoft:#f4dbab; --premium-goldMuted:#9c8254;
+  --science-cyan:#77d9e8; --science-blue:#74aaff; --science-teal:#66c8b6;
+  --status-success:#8dddaf; --status-warning:#f0c576; --status-danger:#ff9393;
+  --text-primary:#f3f5f8; --text-secondary:#bac6d3; --text-muted:#98a9bc;
+  --map-traceRed:#ed777f; --map-conductorBlue:#74aaff; --map-scentCyan:#77d9e8; --map-markerGold:#e5c17c;
+  --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:20px; --space-6:24px; --space-7:32px; --space-8:40px;
+  --radius-sm:10px; --radius-md:16px; --radius-lg:22px; --radius-pill:999px;
+  --shadow-card:0 8px 24px #00000026; --shadow-nav:0 -8px 32px #00000038;
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --type-display:600 30px/1.15 var(--font-sans); --type-h1:600 26px/1.2 var(--font-sans); --type-h2:600 21px/1.3 var(--font-sans); --type-h3:600 17px/1.35 var(--font-sans);
+  --type-body:400 16px/1.55 var(--font-sans); --type-bodySmall:400 14px/1.5 var(--font-sans); --type-label:600 14px/1.4 var(--font-sans); --type-metric:500 28px/1.15 var(--font-sans); --type-caption:500 12px/1.4 var(--font-sans);
+  --z-nav:20; --z-feedback:40; --border-subtle:#ffffff12; --border-gold:#e5c17c38; --border-cyan:#77d9e838; --touch-target:48px; --shell-width:500px; --nav-height:76px;
+
+  /* Semantic surface roles: aliases preserve the current Base Premium render. */
+  --theme-canvas:var(--background-nightDeep);
+  --theme-canvas-soft:var(--background-night);
+  --theme-surface:var(--background-surface);
+  --theme-surface-raised:var(--background-surfaceElevated);
+  --theme-glass:rgba(18,31,46,.78);
+  --theme-border:var(--border-subtle);
+  --theme-text:var(--text-primary);
+  --theme-text-muted:var(--text-secondary);
+  --theme-accent:var(--premium-gold);
+  --theme-accent-secondary:var(--science-cyan);
+  --theme-overlay:rgba(8,14,23,.78);
+  --theme-photo-overlay:rgba(8,14,23,.62);
+}
+
+/* Palette definitions are inert until a module's styles consume these roles. */
+.app-shell[data-module-theme="home"] {
+  --theme-canvas:var(--background-nightDeep);
+  --theme-canvas-soft:var(--background-night);
+  --theme-surface:var(--background-surface);
+  --theme-surface-raised:var(--background-surfaceElevated);
+  --home-accent-coaching:119,217,232;
+  --home-accent-operational:136,179,154;
+  --home-accent-dogs:199,185,142;
+  --home-accent-tracks:157,180,200;
+  --home-accent-community:214,216,207;
+  --home-accent-science:119,217,232;
+  --home-accent-science-violet:169,155,231;
+  /* Home-only destination surfaces: intentionally distinct, without changing global theme aliases. */
+  --home-surface-coaching:#173846;
+  --home-surface-operational:#203b33;
+  --home-surface-tracks:#344956;
+  --home-surface-community:#e4e9e2;
+  --home-surface-analytics:#415564;
+  --home-surface-science:#14283b;
+}
+
+/* Coaching and its reports reached through Sessions share the same local palette. */
+.app-shell[data-module-theme="coaching"],
+.app-shell[data-module-theme="sessions"] main :is(.debrief-flow,.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) {
+  --theme-canvas:#09151c;
+  --theme-canvas-soft:#10212a;
+  --theme-surface:#14252c;
+  --theme-surface-raised:#1b3339;
+  --theme-glass:rgba(16,34,42,.78);
+  --theme-border:rgba(191,226,222,.16);
+  --theme-accent:var(--premium-gold);
+  --theme-accent-secondary:var(--science-cyan);
+  --theme-overlay:rgba(7,19,25,.76);
+  --theme-photo-overlay:rgba(7,19,25,.58);
+}
+
+
+.app-shell[data-module-theme="coaching"],
+.app-shell[data-module-theme="sessions"] main :is(.debrief-flow,.session-replay-page[data-session-replay],.session-detail-page:not([data-session-phase="SUMMARY_ONLY"])) {
+  --coaching-surface-preparation:var(--theme-surface-raised);
+  --coaching-surface-laying:color-mix(in srgb,var(--theme-accent-secondary) 10%,var(--theme-surface));
+  --coaching-surface-waiting:var(--background-surfaceElevated);
+  --coaching-surface-report:color-mix(in srgb,var(--background-surfaceElevated) 80%,var(--theme-surface-raised));
+  --coaching-mode-normal:var(--theme-accent-secondary);
+  --coaching-mode-simple:var(--status-warning);
+  --coaching-mode-double:#c995ac;
+  --coaching-role-coach:var(--text-secondary);
+  --coaching-role-traceur:var(--science-teal);
+  --coaching-role-driver:var(--science-cyan);
+  --coaching-role-observer:var(--science-blue);
+}
+
+.app-shell[data-module-theme="operational"],
+.app-shell[data-module-theme="sessions"] :is(.operational-page,.operational-replay-page,.operational-session-detail) {
+  --theme-canvas:#0d1c1b;
+  --theme-canvas-soft:#132824;
+  --theme-surface:#18332f;
+  --theme-surface-raised:#23423a;
+  --theme-glass:rgba(13,34,30,.8);
+  --theme-border:rgba(197,221,201,.18);
+  --theme-accent:#edbd65;
+  --theme-accent-secondary:var(--science-cyan);
+  --theme-overlay:rgba(7,21,19,.8);
+  --theme-photo-overlay:rgba(7,21,19,.62);
+  /* OPS companions: petrol structure, moss terrain and analytic slate. */
+  --ops-petrol:color-mix(in srgb,var(--science-teal) 12%,var(--background-surface));
+  --ops-slate:color-mix(in srgb,var(--text-secondary) 14%,var(--background-surface));
+  --ops-terrain:color-mix(in srgb,var(--status-success) 70%,var(--premium-goldMuted));
+  --ops-surface-terrain:color-mix(in srgb,var(--theme-surface-raised) 65%,var(--ops-slate));
+  --ops-glass:color-mix(in srgb,var(--ops-petrol) 86%,transparent);
+  --ops-danger-surface:color-mix(in srgb,var(--status-danger) 19%,var(--background-night));
+  --ops-lock-canvas:color-mix(in srgb,var(--background-nightDeep) 22%,black);
+}
+
+.app-shell[data-module-theme="dogs"] {
+  --theme-canvas:#d9d7cc;
+  --theme-canvas-soft:#e6e1d3;
+  --theme-surface:#f2efe6;
+  --theme-surface-raised:#faf8f1;
+  --theme-glass:rgba(242,239,230,.88);
+  --theme-border:rgba(36,49,58,.16);
+  --theme-text:#24313a;
+  --theme-text-muted:#56636a;
+  --theme-accent:#84651f;
+  --theme-accent-secondary:#70826a;
+  --theme-overlay:rgba(11,20,32,.58);
+  --theme-photo-overlay:rgba(11,20,32,.28);
+  /* Dogs-only companions for warm stone surfaces and legible state accents. */
+  --dogs-khaki-surface:#e1e5d9;
+  --dogs-khaki-ink:#44553e;
+  --dogs-slate-surface:#e1e6e5;
+  --dogs-error-ink:#9b302a;
+}
+
+.app-shell[data-module-theme="sessions"],
+.app-shell[data-module-theme="tracks"] {
+  --theme-canvas:#121f2c;
+  --theme-canvas-soft:#202b35;
+  --theme-surface:#293741;
+  --theme-surface-raised:#35424b;
+  --theme-glass:rgba(34,52,67,.86);
+  --theme-border:rgba(205,219,228,.22);
+  --theme-text:#f0f4f6;
+  --theme-text-muted:#b5c2cc;
+  --theme-accent:var(--premium-gold);
+  --theme-accent-secondary:color-mix(in srgb,var(--science-cyan) 58%,var(--theme-text-muted));
+  --theme-overlay:rgba(10,20,31,.72);
+  --theme-photo-overlay:rgba(10,20,31,.56);
+  /* Steel surfaces for history, reports and read-only map cards. */
+  --session-surface-library:color-mix(in srgb,var(--theme-surface-raised) 78%,var(--theme-canvas-soft));
+  --session-surface-card:color-mix(in srgb,var(--theme-surface) 68%,var(--theme-canvas-soft));
+  --session-surface-subtle:color-mix(in srgb,var(--theme-canvas-soft) 62%,var(--theme-surface));
+  --session-border-steel:color-mix(in srgb,var(--theme-border) 70%,var(--theme-accent-secondary) 30%);
+}
+
+.app-shell[data-module-theme="community"]:not(.notifications-shell) {
+  --theme-canvas:#14222f;
+  --theme-canvas-soft:#1d2c39;
+  --theme-surface:#243541;
+  --theme-surface-raised:#2c3f4d;
+  --theme-glass:rgba(34,49,62,.92);
+  --theme-border:rgba(190,208,219,.17);
+  --theme-text:#edf1f2;
+  --theme-text-muted:#b7c3cc;
+  --theme-accent:#e5c17c;
+  --theme-accent-secondary:#83bdc5;
+  --theme-overlay:rgba(7,14,23,.72);
+  --theme-photo-overlay:rgba(7,14,23,.42);
+}
+
+.app-shell[data-module-theme="science"] {
+  --theme-canvas:#0b1726;
+  --theme-canvas-soft:#13243a;
+  --theme-surface:#1b2e43;
+  --theme-surface-raised:#263c53;
+  --theme-glass:rgba(20,39,59,.82);
+  --theme-border:rgba(153,216,234,.2);
+  --theme-accent:var(--science-cyan);
+  --theme-accent-secondary:#a99be7;
+  --theme-overlay:rgba(8,19,34,.78);
+  --theme-photo-overlay:rgba(8,19,34,.58);
+}
+
+.app-shell[data-module-theme="analytics"] {
+  --theme-canvas:#e8edf1;
+  --theme-canvas-soft:#dce4e9;
+  --theme-surface:#f7f9fa;
+  --theme-surface-raised:#fff;
+  --theme-glass:rgba(247,249,250,.92);
+  --theme-border:rgba(31,45,58,.16);
+  --theme-text:#1f2d3a;
+  --theme-text-muted:#51616f;
+  --theme-accent:#84651f;
+  --theme-accent-secondary:#287b8d;
+  --theme-overlay:rgba(9,20,32,.48);
+  --theme-photo-overlay:rgba(9,20,32,.22);
+}

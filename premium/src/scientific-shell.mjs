@@ -1,0 +1,9 @@
+import {escapeHTML} from './components.mjs';
+import {scientificAccessFor,scientificCorpusAccessFor} from './scientific-access.mjs';
+
+const links=[['/scientific','Laboratoire'],['/scientific/corpus','Corpus'],['/scientific/sessions','Sessions'],['/scientific/cohorts','Cohortes'],['/scientific/compare','Comparer'],['/scientific/longitudinal','Longitudinal'],['/scientific/anomalies','Anomalies'],['/scientific/blind','Aveugle'],['/scientific/benchmarks','Benchmarks'],['/scientific/annotations','Annotations'],['/scientific/runs','Runs']];
+export function ScientificShell(route,content,actor){
+ const access=route==='/scientific/corpus'?scientificCorpusAccessFor(actor):scientificAccessFor(actor);
+ if(!access.authorized)return`<section class="scientific-gate"><span class="scientific-eyebrow">ACCÈS RESTREINT</span><h1>Espace scientifique privé</h1><p>Accès restreint aux membres autorisés.</p><p>Les analyses présentées dans cet espace sont locales et en mode démonstration.</p><a href="/">Retour à l’accueil</a></section>`;
+ return`<div class="scientific-shell" data-scientific-member="${escapeHTML(access.memberId)}"><header class="scientific-header"><a href="/scientific" class="scientific-brand"><span aria-hidden="true">Σ</span><span><strong>LABORATOIRE JUMOLF</strong><small>ESPACE SCIENTIFIQUE PRIVÉ</small></span></a><div><span class="scientific-status">ACCÈS RESTREINT · LOCAL</span><span class="scientific-member">${escapeHTML(access.displayName)}</span></div></header><nav class="scientific-nav" aria-label="Navigation scientifique">${links.map(([href,label])=>`<a href="${href}" ${route===href?'aria-current="page"':''}>${label}</a>`).join('')}</nav><div class="scientific-banner">DONNÉES SYNTHÉTIQUES / DÉMONSTRATION <span>aucune conclusion scientifique réelle</span></div>${content}</div>`;
+}

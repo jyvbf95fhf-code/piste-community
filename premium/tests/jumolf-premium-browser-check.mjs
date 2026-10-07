@@ -1,0 +1,53 @@
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {createServer} from 'node:net';
+import {mkdir,mkdtemp,rm,writeFile} from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
+const root=fileURLToPath(new URL('..',import.meta.url)),out=path.join(root,'screenshots','jumolf-premium-access');
+const chromePath=process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const wait=async(fn,label,timeout=15000)=>{const end=Date.now()+timeout;while(Date.now()<end){try{const value=await fn();if(value)return value;}catch{}await new Promise(resolve=>setTimeout(resolve,100));}throw Error(`Timeout: ${label}`);};
+const port=()=>new Promise((resolve,reject)=>{const server=createServer();server.once('error',reject);server.listen(0,'127.0.0.1',()=>{const value=server.address().port;server.close(()=>resolve(value));});});
+await mkdir(out,{recursive:true});
+const serverPort=await port(),debugPort=await port(),profile=await mkdtemp(path.join(os.tmpdir(),'piste-jumolf-premium-'));
+const base=`http://localhost:${serverPort}`,server=spawn(process.execPath,['server.mjs'],{cwd:root,env:{...process.env,PORT:String(serverPort)},stdio:'ignore'});
+const chrome=spawn(chromePath,['--headless=new','--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-first-run','--no-default-browser-check','--no-proxy-server',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${profile}`,'--window-size=390,844','about:blank'],{stdio:'ignore'});
+let socket,id=1,first=true;const pending=new Map(),errors=[],external=[],requests=[],captures=[],checks=[];
+const cdp=(method,params={})=>new Promise((resolve,reject)=>{const requestId=id++;pending.set(requestId,{resolve,reject});socket.send(JSON.stringify({id:requestId,method,params}));setTimeout(()=>{if(pending.has(requestId)){pending.delete(requestId);reject(Error(`CDP timeout: ${method}`));}},15000).unref?.();});
+const evaluate=async expression=>{const response=await cdp('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(response.result?.exceptionDetails)throw Error(JSON.stringify(response.result.exceptionDetails));return response.result?.result?.value;};
+const delay=()=>new Promise(resolve=>setTimeout(resolve,170));
+async function goto(route){if(first){first=false;await cdp('Page.navigate',{url:`${base}${route}`});}else await evaluate(`(()=>{history.pushState({},'',${JSON.stringify(route)});dispatchEvent(new PopStateEvent('popstate'))})()`);await wait(()=>evaluate(`document.readyState==='complete'&&Boolean(document.querySelector('.app-shell,.auth-shell'))`),route);await delay();}
+async function capture(name){await evaluate('window.scrollTo(0,0)');const image=await cdp('Page.captureScreenshot',{format:'png',fromSurface:true,captureBeyondViewport:true});const file=path.join(out,`${name}-390.png`);await writeFile(file,Buffer.from(image.result.data,'base64'));captures.push(file);}
+async function click(selector){const found=await evaluate(`(()=>{const node=document.querySelector(${JSON.stringify(selector)});if(!node)return false;node.click();return true})()`);assert.equal(found,true,`Missing ${selector}`);await delay();}
+async function submitCode(code){await evaluate(`(()=>{const form=document.querySelector('[data-jumolf-form="code"]');form.elements.code.value=${JSON.stringify(code)};form.requestSubmit()})()`);await delay();}
+try{
+ await wait(async()=>{const response=await fetch(base);return response.ok;},'local server');
+ let targets=await wait(async()=>{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`);return response.ok?response.json():null;},'Chrome');
+ if(!targets.some(item=>item.type==='page')){await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`,{method:'PUT'});targets=await wait(async()=>{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`);return response.ok?response.json():null;},'Chrome page');}
+ socket=new WebSocket(targets.find(item=>item.type==='page').webSocketDebuggerUrl);
+ await new Promise((resolve,reject)=>{socket.addEventListener('open',resolve,{once:true});socket.addEventListener('error',reject,{once:true});});
+ socket.addEventListener('message',event=>{const message=JSON.parse(event.data);if(message.id&&pending.has(message.id)){pending.get(message.id).resolve(message);pending.delete(message.id);return;}if(message.method==='Runtime.exceptionThrown')errors.push(JSON.stringify(message.params.exceptionDetails));if(message.method==='Log.entryAdded'&&message.params.entry.level==='error')errors.push(message.params.entry.text);if(message.method==='Network.requestWillBeSent'){const {url}=message.params.request;if(!url.startsWith(`${base}/`)&&!url.startsWith('data:'))external.push(url);if(['Fetch','XHR','WebSocket','EventSource'].includes(message.params.type))requests.push(url);}});
+ await Promise.all(['Page.enable','Runtime.enable','Log.enable','Network.enable'].map(method=>cdp(method)));
+ await cdp('Page.addScriptToEvaluateOnNewDocument',{source:`if(!window.structuredClone)window.structuredClone=value=>JSON.parse(JSON.stringify(value));try{localStorage.setItem('piste.v2.mock-session',JSON.stringify({version:1,authenticated:true,profile:'standard',name:'Camille'}))}catch{}`});
+ await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true,screenWidth:390,screenHeight:844});
+ await goto('/auth');await evaluate(`localStorage.setItem('piste.v2.mock-session',JSON.stringify({version:1,authenticated:true,profile:'standard',name:'Camille'}))`);
+ await goto('/jumolf');assert.match(await evaluate(`document.querySelector('main').innerText`),/JUMOLF est une fonctionnalité Premium/);assert.doesNotMatch(await evaluate(`document.querySelector('main').innerText`),/Données combinées|Nox · forêt/);await capture('01-locked');
+ await goto('/jumolf/premium');assert.match(await evaluate(`document.querySelector('main').innerText`),/Simulation Premium — aucun paiement réel/);await capture('02-discover-premium');await click('[data-jumolf-action="simulate-premium"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/Activer JUMOLF/);assert.equal(await evaluate(`document.querySelectorAll('[data-jumolf-consent]:checked').length`),0);assert.equal(await evaluate(`Boolean(document.querySelector('[data-jumolf-consent="research_contribution"]'))`),false);await capture('06-premium-not-active');
+ await goto('/jumolf/access-code');await capture('03-access-code');await submitCode('NOT-A-CODE');assert.match(await evaluate(`document.querySelector('[data-jumolf-code-feedback]').innerText`),/Ce code n’est pas valide/);await capture('04-invalid-code');
+ for(const [code,pattern] of [['JUMOLF-EXPIRED',/Ce code n’est plus valide/],['JUMOLF-REVOKED',/Ce code a été révoqué/],['JUMOLF-LIMIT',/nombre maximal d’utilisations/]]){await submitCode(code);assert.match(await evaluate(`document.querySelector('[data-jumolf-code-feedback]').innerText`),pattern);}
+ await submitCode('PISTE-DEMO-2026');assert.match(await evaluate(`document.querySelector('main').innerText`),/Activer JUMOLF/);assert.equal(await evaluate(`document.querySelectorAll('[data-jumolf-consent]:checked').length`),0);await capture('05-access-via-code');
+ await click('[data-jumolf-action="activate"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/Étape 1 sur 4/);await capture('07-onboarding');
+ for(let step=1;step<4;step++)await click('[data-jumolf-action="onboarding-next"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/J’ai compris — Activer JUMOLF/);await capture('08-activation');
+ await click('[data-jumolf-action="complete-onboarding"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/Bienvenue dans JUMOLF/);
+ await goto('/profile');assert.match(await evaluate(`document.querySelector('main').innerText`),/Premium & JUMOLF/);assert.match(await evaluate(`document.querySelector('main').innerText`),/Accès via code/);await capture('09-profile-access');
+ await goto('/');assert.match(await evaluate(`document.querySelector('[data-jumolf-home-access]').innerText`),/Explorer JUMOLF/);
+ await goto('/jumolf/premium');await evaluate(`document.querySelector('.jumolf-profile-demo').open=true`);await click('[data-jumolf-profile="ADMIN"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/Activer JUMOLF/);await goto('/profile');assert.match(await evaluate(`document.querySelector('main').innerText`),/Accès accordé par l’administrateur/);
+ await goto('/jumolf/premium');await evaluate(`document.querySelector('.jumolf-profile-demo').open=true`);await click('[data-jumolf-profile="EXPIRED"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/Accès JUMOLF expiré/);await capture('10-entitlement-expired');
+ await goto('/jumolf/premium');await evaluate(`document.querySelector('.jumolf-profile-demo').open=true`);await click('[data-jumolf-profile="PREMIUM"]');assert.match(await evaluate(`document.querySelector('main').innerText`),/Votre espace JUMOLF/);await capture('11-premium-active');
+ for(const route of ['/jumolf','/jumolf/premium','/jumolf/access-code','/jumolf/activate'])for(const width of [320,375,390,430]){await goto(route);await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:2,mobile:true,screenWidth:width,screenHeight:844});await delay();const size=await evaluate(`(()=>({document:document.documentElement.scrollWidth,body:document.body.scrollWidth,main:document.querySelector('main')?.scrollWidth||0}))()`);assert.ok(size.document<=width&&size.body<=width&&size.main<=width,`Overflow at ${route} ${width}: ${JSON.stringify(size)}`);checks.push({route,width,...size});}
+ assert.deepEqual(errors,[]);assert.deepEqual(external,[]);assert.deepEqual(requests,[]);
+ const report={passed:true,mobile:[320,375,390,430],checks,captures,errors,externalRequests:external,apiRequests:requests,scientificConsentSeparate:true,codeValidation:['invalid','expired','revoked','quota','valid'],profiles:['FREE','PREMIUM','CODE','ADMIN','PREMIUM_NON_ACTIVE','EXPIRED']};
+ await writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
+}finally{socket?.close();server.kill('SIGTERM');chrome.kill('SIGTERM');await Promise.all([server,chrome].map(child=>child.exitCode!==null?Promise.resolve():new Promise(resolve=>{child.once('exit',resolve);setTimeout(resolve,3000).unref?.();})));await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});}

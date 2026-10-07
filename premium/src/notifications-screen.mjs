@@ -1,0 +1,18 @@
+import {escapeHTML as e,EmptyState,StatusBadge} from './components.mjs';
+
+function label(item){
+ if(item.type==='live_session_started')return item.session_type==='ops'?`${item.owner_display_name||'Un membre'} partage un suivi de piste opérationnel`:`${item.owner_display_name||'Un membre'} a démarré une session Live`;
+ const actor=item.actorId||item.owner_display_name||'Un membre';
+ return ({contact_request:`${actor} vous a envoyé une demande de contact`,contact_accepted:`${actor} a accepté votre demande de contact`,follow:`${actor} vous suit`,like:`${actor} aime votre publication`,comment:`${actor} a commenté votre publication`})[item.type]||'Nouvelle notification';
+}
+function target(item){return item.type==='live_session_started'?item.route||'/live':item.type==='contact_request'||item.type==='contact_accepted'?'/community/contacts':item.postId?`/community/post/${encodeURIComponent(item.postId)}`:item.actorId?`/community/profile/${encodeURIComponent(item.actorId)}`:'/notifications';}
+function timeLabel(value){const date=new Date(value);return Number.isFinite(date.getTime())?new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(date):'Date indisponible';}
+export function NotificationsScreen(items=[],unreadCount=0){
+ const rows=items.map(item=>`<article class="card notification-card ${item.read?'is-read':'is-unread'}" data-notification-id="${e(item.id)}"><div><span class="eyebrow">${item.type==='live_session_started'?e(item.session_type==='ops'?'LIVE OPS':'LIVE COACHING'):'COMMUNAUTÉ'}</span>${item.read?'':StatusBadge('NON LU','cyan')}</div><p>${e(label(item))}</p><time datetime="${e(item.createdAt||item.started_at||'')}">${e(timeLabel(item.createdAt||item.started_at))}</time>${item.type==='live_session_started'?`<small>${item.session_type==='ops'?'Rôle · Observateur de trace OPS · suivi en lecture seule.':'Rôle · Observateur · accès en lecture seule.'}</small>`:''}<a class="button ${item.type==='live_session_started'?'button-gold':'button-dark'}" href="${e(target(item))}" data-notification-open="${e(item.id)}">${item.type==='live_session_started'?'Voir le Live':item.type==='contact_request'?'Voir la demande':'Ouvrir'}</a></article>`).join('');
+ return `<section class="notifications-page"><header class="notifications-heading"><span class="eyebrow">CENTRE DE NOTIFICATIONS</span><h1>Notifications ${unreadCount?StatusBadge(String(unreadCount),'cyan'):''}</h1><a class="button button-dark" href="/notifications/preferences">Préférences</a></header>${rows?`<div class="notification-list">${rows}</div>`:EmptyState('Aucune notification','Les interactions et sessions Live autorisées apparaîtront ici.','bell')}</section>`;
+}
+export function NotificationPreferencesScreen(store,userId='self'){
+ const prefs=store.getPreferences(userId);
+ const row=(name,label,description)=>`<label class="notification-preference"><input type="checkbox" data-notification-preference="${name}" ${prefs[name]?'checked':''}><span><strong>${label}</strong><small>${description}</small></span></label>`;
+ return `<section class="notifications-page notification-preferences"><a class="back-link" href="/notifications">← Notifications</a><header class="notifications-heading"><span class="eyebrow">PRÉFÉRENCES LOCALES</span><h1>Notifications</h1><p>Ces réglages s’appliquent à votre compte mock sur cette visite.</p></header><section class="card notification-preference-list">${row('notify_live_in_app','Dans l’application','Afficher les événements dans la cloche et le centre.')}${row('notify_live_email','Email','Préférence enregistrée uniquement · aucun email envoyé.')}${row('notify_live_push','Web Push','Préférence enregistrée uniquement · aucun Push envoyé.')}</section></section>`;
+}
