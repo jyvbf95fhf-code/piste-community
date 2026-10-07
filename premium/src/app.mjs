@@ -95,6 +95,7 @@ let operationalUI={mode:'',eventType:'Départ',note:''};
 let operationalChronoInterval=null;
 let coachingAgeInterval=null;
 let terrainUnlockController=null,terrainUnlockPointerId=null,terrainUnlockReturnTimer=null;
+let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
 let tracerState=tracer.createTracer();
 let tracerUI={};
@@ -315,7 +316,7 @@ function renderPreparation(){
  if(['DEBRIEF','ARCHIVED'].includes(searchState.phase))return DebriefScreen(searchState,preparationState,tracerState,debriefUI);
  if(v?.role==='coach')return CoachScreen(searchState,preparationState,tracerState,preparationUI);
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
- if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,searchUI);return searchState.phase==='SEARCH_RUNNING'?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
+ if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracerState.messages,unreadCount:tracerState.messages.filter(message=>!message.read&&!message.outgoing).length});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
  if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,tracerUI).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
  return PreparationScreen(preparationState,preparationUI)+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
@@ -438,6 +439,11 @@ document.addEventListener('click',event=>{
    else if(action==='preparation'){searchUI.showPreparation=true;searchUI.devOpen=false;}
    else if(action==='release'){if(searchState.phase!=='LAYING_WAIT')throw Error('Attente de pose requise.');searchState=search.simulateSearch(searchState,{phase:'SEARCH_READY'});searchUI.devOpen=false;}
    else if(action==='finish'){if(!search.isSearchActor(preparationState)||searchState.phase!=='SEARCH_RUNNING')throw Error('Fin non autorisée.');searchUI.confirmFinish=true;}
+   else if(action==='pause'||action==='resume'){searchState=advanceSessionSearch(searchState,preparationState,action);}
+   else if(action==='lock-screen'){searchUI={...searchUI,locked:true,messagesOpen:false};}
+   else if(action==='unlock'&&event.detail===0){searchUI={...searchUI,locked:false};}
+   else if(action==='messages'){tracerState=tracer.readMessages(tracerState);searchUI={...searchUI,messagesOpen:true};}
+   else if(action==='close-messages')searchUI={...searchUI,messagesOpen:false};
    else if(action==='cancel-finish')searchUI.confirmFinish=false;
    else if(action==='confirm-finish'){if(!searchUI.confirmFinish)throw Error('Confirmation requise.');searchState=advanceSessionSearch(searchState,preparationState,'finish');searchUI.confirmFinish=false;}
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState);searchState=syncSession(searchState,preparationState,tracerState);}
@@ -451,6 +457,7 @@ document.addEventListener('click',event=>{
   else if(action==='close-dev')document.querySelector('[data-search="dev"]')?.focus();
   else if(action==='cancel-finish')document.querySelector('[data-search="finish"]')?.focus();
   else if(['start','confirm-finish','debrief'].includes(action)){window.scrollTo(0,0);document.querySelector('main')?.focus({preventScroll:true});}
+  else if(action==='close-messages')document.querySelector('[data-search="messages"]')?.focus();
   return;
  }
  const terrain=event.target.closest('[data-tracer]');
@@ -546,6 +553,12 @@ document.addEventListener('click',event=>{
  if(role) Toast('Conducteur sélectionné · rôle fictif, sans permission réelle.');
 });
 document.addEventListener('pointerdown',event=>{
+ const searchControl=event.target.closest?.('[data-search-unlock]');
+ if(searchControl&&event.button===0){
+  event.preventDefault();searchUnlockController?.cancel();searchUnlockPointerId=event.pointerId;searchControl.dataset.holdActive='true';
+  searchUnlockController=createHoldToUnlockController({durationMs:2000,onProgress:value=>{if(!value)searchControl.removeAttribute('data-hold-active');},onUnlock:()=>{searchUI={...searchUI,locked:false};searchUnlockController=null;searchUnlockPointerId=null;render();}});
+  searchUnlockController.press();return;
+ }
  const control=event.target.closest?.('[data-operational-unlock]');
  if(!control||event.button!==0)return;
  event.preventDefault();
@@ -572,11 +585,13 @@ document.addEventListener('pointerdown',event=>{
  terrainUnlockController.press();
 });
 document.addEventListener('pointerup',event=>{
+ if(searchUnlockController&&event.pointerId===searchUnlockPointerId){if(searchUnlockController.pressed)searchUnlockController.release();if(searchUI.locked){const feedback=document.querySelector('.search-unlock-feedback');if(feedback)feedback.textContent='Maintenez le bouton pendant 2 secondes pour déverrouiller.';}searchUnlockPointerId=null;return;}
  if(!terrainUnlockController||event.pointerId!==terrainUnlockPointerId)return;
  if(terrainUnlockController.pressed)terrainUnlockController.release();
  terrainUnlockPointerId=null;
 });
 document.addEventListener('pointercancel',event=>{
+ if(searchUnlockController&&event.pointerId===searchUnlockPointerId){searchUnlockController.cancel();searchUnlockPointerId=null;return;}
  if(!terrainUnlockController||event.pointerId!==terrainUnlockPointerId)return;
  terrainUnlockController.cancel();terrainUnlockPointerId=null;
 });

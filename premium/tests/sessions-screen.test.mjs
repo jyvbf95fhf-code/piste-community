@@ -91,6 +91,13 @@ test('static replay uses available pose and search paths from debriefView only',
  assert.match(html,/Lecture seule/);
 });
 
+test('static coaching replay exposes pause timeline and separate active and paused durations',()=>{
+ const record=terminalRecord('DEBRIEF');record.searchState={...record.searchState,searchDuration:360,searchActiveDuration:300,searchPausedDuration:60,searchPauseCount:1,searchPauseIntervals:[{pausedAt:'2026-10-07T09:10:00.000Z',resumedAt:'2026-10-07T09:11:00.000Z',durationMs:60_000}],events:[{id:1,type:'SEARCH_PAUSED',phase:'SEARCH_RUNNING',text:'La recherche est en pause',source:'driver',at:'2026-10-07T09:10:00.000Z'},{id:2,type:'SEARCH_RESUMED',phase:'SEARCH_RUNNING',text:'La recherche a repris',source:'driver',at:'2026-10-07T09:11:00.000Z'}]};
+ const view=sessionReplayView(record),html=SessionReplayScreen(view);
+ assert.equal(view.temporal.searchActiveDuration,300);assert.equal(view.temporal.searchPausedDuration,60);assert.equal(view.temporal.searchPauseCount,1);
+ assert.ok(view.events.some(event=>event.type==='SEARCH_PAUSED'));assert.match(html,/Durée active recherche/);assert.match(html,/Durée cumulée des pauses/);assert.match(html,/La recherche est en pause/);assert.match(html,/La recherche a repris/);
+});
+
 test('replay unavailable labels do not create fake paths and active sessions cannot replay',()=>{
  const record=terminalRecord('DEBRIEF');
  const view=sessionReplayView(record),html=SessionReplayScreen(view);

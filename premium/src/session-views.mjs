@@ -113,7 +113,7 @@ export function sessionDetailView(record,{currentSessionId=''}={}){
 export function sessionReplayView(record){
  if(!record?.searchState||!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return null;
  const report=debriefView(record.searchState,record.preparationState,record.tracerState||{});
- return {id:record.session.id,title:record.session.title||`Session ${record.session.code||record.session.id}`,status:statusFor(record.searchState.phase),mode:report.modeLabel,map:report.map,temporal:report.temporal,poseAvailable:!!report.map?.paths?.some(path=>path.kind==='pose'),searchAvailable:!!report.map?.paths?.some(path=>path.kind==='search'),readOnly:true};
+ return {id:record.session.id,title:record.session.title||`Session ${record.session.code||record.session.id}`,status:statusFor(record.searchState.phase),mode:report.modeLabel,map:report.map,temporal:report.temporal,events:report.events.filter(event=>['SEARCH_PAUSED','SEARCH_RESUMED'].includes(event.type)),poseAvailable:!!report.map?.paths?.some(path=>path.kind==='pose'),searchAvailable:!!report.map?.paths?.some(path=>path.kind==='search'),readOnly:true};
 }
 
 export function trackListView(libraryItems=[],sessionRecords=[]){
