@@ -4421,3 +4421,25 @@ main { padding-top:8px; }
  .auth-welcome-art img { object-position:25% center; }
  .auth-welcome-actions { left:55%; top:0; justify-content:center; padding-top:env(safe-area-inset-top); background:linear-gradient(90deg,transparent,#020e1873); }
 }
+
+/* Login continuity uses light and color only, scoped away from other Auth screens. */
+.auth-shell.auth-login-premium { max-width:none; min-height:100svh; background:radial-gradient(ellipse at 90% 12%,#c59a3c1c,transparent 48%),radial-gradient(ellipse at 0% 60%,#244a663b,transparent 60%),linear-gradient(155deg,#071826,#020a12 72%); }
+.auth-login-premium header,.auth-login-premium main { width:min(100%,460px); margin-inline:auto; }
+.auth-login-premium header { padding-top:calc(24px + env(safe-area-inset-top)); }
+.auth-login-premium main { padding-bottom:calc(28px + env(safe-area-inset-bottom)); }
+.auth-login-premium .brand { color:#f3dc9b; }
+.auth-login-premium .back-link { color:#c6d0d6; }
+.auth-login-premium .auth-heading { margin:28px 0 24px; }
+.auth-login-premium .auth-heading .eyebrow { color:#e1c47d; letter-spacing:.16em; }
+.auth-login-premium .auth-heading h1 { color:#f5f2e9; font-size:clamp(28px,7vw,36px); letter-spacing:-.025em; }
+.auth-login-premium .auth-heading p { color:#b8c7d1; line-height:1.6; }
+.auth-login-premium form { position:relative; padding:24px 20px; border:1px solid #d6b66a33; border-radius:22px; background:linear-gradient(145deg,#19304099,#081522e6); box-shadow:0 24px 70px #0005,0 -12px 48px #d6b66a08; }
+.auth-login-premium form::before { content:""; position:absolute; top:-1px; left:24px; right:24px; height:1px; background:linear-gradient(90deg,transparent,#e6c77988,transparent); pointer-events:none; }
+.auth-login-premium .auth-field { color:#e0e6e8; }
+.auth-login-premium .auth-field input { background:#06131ecc; border-color:#b4c9d338; border-radius:12px; color:#f4f5f2; }
+.auth-login-premium .auth-field input:focus-visible { outline:2px solid #e1c47d; outline-offset:3px; border-color:#e1c47d; box-shadow:0 0 24px #d6b66a12; }
+.auth-login-premium .auth-field input[aria-invalid=true] { border-color:var(--status-danger); }
+.auth-login-premium form>.button { min-height:48px; border-radius:12px; background:linear-gradient(120deg,#f0d997,#cfab59); color:#101923; border:1px solid #f1dcaa; }
+.auth-login-premium .password-hint,.auth-login-premium .auth-note { color:#aabac6; line-height:1.6; }
+.auth-login-premium .auth-switch a { color:#efd597; }
+@media (max-width:360px) { .auth-login-premium main { padding-inline:18px; } .auth-login-premium form { padding:20px 16px; } }
