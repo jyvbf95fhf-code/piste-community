@@ -4470,3 +4470,15 @@ main { padding-top:8px; }
 .home-shell .feature-tile[href] .tile-icon { display:grid; place-items:center; width:54px; height:54px; flex-shrink:0; border:1px solid #d5be824d; border-radius:15px; background:radial-gradient(ellipse at 25% 0%,#44627455,transparent 65%),linear-gradient(145deg,#142c3c,#071521); box-shadow:inset 0 1px 0 #f6dfa426,0 5px 12px #0003; color:#e9cf8e; }
 .home-shell .feature-tile .feature-pictogram { width:42px; height:42px; filter:drop-shadow(0 1px 1px #0005); }
 .home-shell .feature-tile .pictogram-cyan { stroke:#9acbd2; }
+
+/* Four quiet visual landscapes, with a shared readable foreground. */
+.home-shell .feature-tile[href] { position:relative; isolation:isolate; overflow:hidden; min-height:172px; background:radial-gradient(ellipse at 85% 5%,#d9ba6320,transparent 65%),linear-gradient(145deg,#142e40,#071623); }
+.home-shell .feature-backdrop { position:absolute; z-index:-2; top:0; right:-8px; width:100%; height:116px; color:#d8bc77; opacity:.85; pointer-events:none; }
+.home-shell .feature-tile::after { content:""; position:absolute; inset:0; z-index:-1; pointer-events:none; background:linear-gradient(180deg,#07162300 0%,#07162355 38%,#071623e8 73%,#071623fa 100%); }
+.home-shell .feature-backdrop .feature-cyan { stroke:#9dcdd3; }
+.home-shell .feature-backdrop .feature-glow { fill:#e9cf8e; stroke:none; opacity:.2; filter:blur(4px); }
+.home-shell .feature-tile[href] .tile-icon { width:28px; height:28px; border:0; border-radius:0; background:none; box-shadow:none; color:#ead49e; }
+.home-shell .feature-tile .feature-pictogram { width:26px; height:26px; filter:none; opacity:.75; }
+.home-shell .feature-tile .tile-top { margin-bottom:30px; }
+.home-shell .feature-tile[href] h3 { color:#f7f2e7; }
+.home-shell .feature-tile[href] p { color:#c7d3da; }

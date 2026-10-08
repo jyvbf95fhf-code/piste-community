@@ -18,7 +18,17 @@ function FeaturePictogram(name) {
  };
  return `<svg class="icon feature-pictogram" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawings[name] || drawings.route}</svg>`;
 }
-export function FeatureTile({title,description,icon,href,tone='gold'}) { return `<a class="feature-tile card ${e(tone)}" href="${e(href)}"><span class="tile-top"><span class="tile-icon">${FeaturePictogram(icon)}</span>${Icon('arrow','tile-arrow')}</span><h3>${e(title)}</h3><p>${e(description)}</p></a>`; }
+// Decorative compositions are independent of the small navigation pictograms.
+function FeatureBackdrop(name) {
+ const art={
+  plus:'<path d="M12 82C44 82 34 45 76 48S104 18 151 22"/><path d="M15 88C51 88 42 53 80 55S113 28 156 31" opacity=".22"/><circle class="feature-glow" cx="16" cy="82" r="10"/><circle cx="16" cy="82" r="3" fill="currentColor"/><circle cx="151" cy="22" r="2" fill="currentColor"/>',
+  route:'<g opacity=".22"><path d="M2 20Q45 4 67 28T157 16M0 32Q47 16 68 39T160 29M0 45Q44 28 68 51T160 42M0 59Q41 42 68 64T160 55"/></g><path d="M18 86C31 63 68 83 83 48S126 41 145 18"/><path class="feature-cyan" d="M31 92C57 70 53 55 99 67S128 54 151 47" opacity=".55"/><circle cx="18" cy="86" r="3"/><circle cx="145" cy="18" r="3"/>',
+  users:'<path d="m13 61 35-35 43 12 38-22M13 61l54 23 24-46 52 30M48 26l19 58 76-16" opacity=".5"/><g fill="currentColor"><circle cx="13" cy="61" r="2"/><circle cx="48" cy="26" r="3"/><circle cx="67" cy="84" r="2"/><circle cx="91" cy="38" r="4"/><circle cx="129" cy="16" r="2"/><circle cx="143" cy="68" r="3"/></g><circle class="feature-glow" cx="91" cy="38" r="12"/><circle class="feature-glow" cx="48" cy="26" r="8"/>',
+  chart:'<path d="M12 15v76h141M12 70h141M12 48h141M12 26h141M42 15v76m32-76v76m32-76v76m32-76v76" opacity=".15"/><path d="M27 87V73m26 14V62m26 25V48m26 39V39m26 48V24" opacity=".35" stroke-width="3"/><path class="feature-cyan" d="M15 73C38 73 41 50 65 55S93 39 110 33s24-18 40-20"/><g fill="currentColor"><circle cx="65" cy="55" r="2.5"/><circle cx="110" cy="33" r="2.5"/><circle cx="150" cy="13" r="3"/></g>'
+ };
+ return `<svg class="feature-backdrop" viewBox="0 0 160 104" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${art[name]||art.route}</svg>`;
+}
+export function FeatureTile({title,description,icon,href,tone='gold'}) { return `<a class="feature-tile card ${e(tone)}" href="${e(href)}">${FeatureBackdrop(icon)}<span class="tile-top"><span class="tile-icon">${FeaturePictogram(icon)}</span>${Icon('arrow','tile-arrow')}</span><h3>${e(title)}</h3><p>${e(description)}</p></a>`; }
 export function MetricTile({value,label,unit=''}) { return `<div class="metric"><div>${e(value)}<small>${e(unit)}</small></div><span>${e(label)}</span></div>`; }
 export function ScientificMetricTile(metric) { return PremiumCard(MetricTile(metric),'scientific-metric cyan'); }
 export function SessionCard(session) { return `<a href="/sessions" class="card session-card"><span class="session-symbol">${Icon('route')}</span><div>${StatusBadge(session.status || 'Terminée')}<h3>${e(session.title)}</h3><p>${e(session.distance)} · ${e(session.duration)} · ${e(session.date)}</p></div>${Icon('arrow')}</a>`; }
