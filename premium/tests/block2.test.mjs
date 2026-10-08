@@ -17,7 +17,9 @@ test('canonical greeting and permission entries are scoped to mock user',()=>{
 test('entry stays free of form fields and signup uses dedicated fields',async()=>{
  const {AuthScreen,PlaceholderScreen}=await import('../src/screens.mjs');
  assert.doesNotMatch(AuthScreen('/auth'),/<input/);
- assert.match(AuthScreen('/auth'),/src="\/src\/assets\/auth-piste-community-3dogs.png"/);
+ assert.match(AuthScreen('/auth'),/src="\/src\/assets\/piste-community-accueil-original.jpg"/);
+ assert.match(AuthScreen('/auth'),/>Se connecter<\/a>/);
+ assert.match(AuthScreen('/auth'),/width="864" height="1536"/);
  assert.doesNotMatch(AuthScreen('/auth'),/auth-manifesto|auth-signature|<header/);
  for(const route of ['login','signup']) assert.match(AuthScreen('/auth'),new RegExp(`href="/auth/${route}"`));
  for(const field of ['firstName','lastName','email','password','confirmPassword']) assert.match(AuthScreen('/auth/signup'),new RegExp(`name="${field}"`));

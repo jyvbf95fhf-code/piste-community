@@ -4405,3 +4405,13 @@ main { padding-top:8px; }
  .app-shell:has(.community-page) .community-feed { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
  .app-shell:has(.community-page) .community-feed>.community-post-card { min-width:0; }
 }
+
+/* Original welcome artwork: contain preserves every pixel; actions never overlap it. */
+.auth-shell.auth-welcome { max-width:none; height:auto; min-height:100svh; background:#020e18; }
+.auth-welcome main { min-height:100svh; width:100%; padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); gap:0; justify-content:center; }
+.auth-welcome-art { width:100%; height:max(240px,calc(100svh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom))); }
+.auth-welcome-art img { display:block; width:100%; height:100%; object-fit:contain; }
+.auth-welcome-actions { display:flex; flex-direction:column; align-items:center; gap:4px; padding:10px 20px; width:100%; }
+.auth-welcome-login { width:min(100%,320px); min-height:48px; border:1px solid #d4b86b; border-radius:14px; color:#f4dfa0; background:linear-gradient(135deg,#152738,#07131f); font-weight:600; }
+.auth-welcome-signup { display:flex; align-items:center; min-height:32px; color:#d0c6ae; font-size:12px; }
+.auth-welcome-actions a:focus-visible { outline:3px solid #f4dfa0; outline-offset:3px; }
