@@ -11,12 +11,12 @@ export function AppShell(content, route, name, initials, theme='base', unreadCou
 // Pictogrammes réservés aux quatre accès Home : même trait, dessins distincts.
 function FeaturePictogram(name) {
  const drawings = {
-  plus: '<path d="M10 35c0-9 14-4 14-13V11" stroke-opacity=".5"/><circle cx="10" cy="36" r="2.5"/><path d="M12 11h24M24 5v12" stroke-width="2.6"/><path d="M30 27h8m-4-4v8"/><path d="M19 37h19" stroke-opacity=".35"/>',
-  route: '<path d="m7 13 11-4 12 4 11-4v27l-11 4-12-4-11 4Z" stroke-opacity=".55"/><path d="M18 9v27m12-23v27" stroke-opacity=".3"/><path d="M13 29c4-12 17 5 23-9" stroke-width="2" stroke-dasharray="2.5 4"/><circle cx="13" cy="29" r="2.5" fill="currentColor" stroke="none"/><path d="M36 10a5 5 0 0 1 5 5c0 4-5 8-5 8s-5-4-5-8a5 5 0 0 1 5-5Z" fill="#10202f"/><circle cx="36" cy="15" r="1.2" fill="currentColor" stroke="none"/>',
-  users: '<path d="M7 27a17 17 0 0 1 34 0M10 35l5 3m18 0 5-3" stroke-opacity=".3"/><circle cx="24" cy="17" r="4"/><path d="M16 34v-3a8 8 0 0 1 16 0v3Z" stroke-width="2"/><circle cx="10" cy="23" r="3"/><circle cx="38" cy="23" r="3"/><path d="M5 35v-2a5 5 0 0 1 8-4m30 6v-2a5 5 0 0 0-8-4"/><path d="M19 40h10" stroke-opacity=".45"/>',
-  chart: '<path d="M7 9v31h34" stroke-opacity=".4"/><path d="M13 34v-8m9 8V21m9 13V16" stroke-width="3.5"/><path class="pictogram-cyan" d="m12 21 10-8 9 2 10-9" stroke-width="2"/><path class="pictogram-cyan" d="M35 6h6v6"/><circle cx="22" cy="13" r="2" fill="currentColor" stroke="none"/>'
+  plus: '<circle cx="13" cy="35" r="3"/><path d="M13 32v-8c0-5 5-7 10-7h3"/><path class="pictogram-cyan" d="M13 38h21" stroke-opacity=".55"/><circle cx="33" cy="16" r="8" fill="#102434"/><path d="M33 12v8m-4-4h8"/>',
+  route: '<path d="m7 12 11-4 12 4 11-4v27l-11 4-12-4-11 4Z" stroke-opacity=".65"/><path d="M18 8v27m12-23v27" stroke-opacity=".3"/><path class="pictogram-cyan" d="M12 30c5-11 12 7 22-6"/><circle cx="12" cy="30" r="2" fill="currentColor" stroke="none"/><path d="M34 11a5 5 0 0 1 5 5c0 4-5 8-5 8s-5-4-5-8a5 5 0 0 1 5-5Z" fill="#102434"/><circle cx="34" cy="16" r="1.3" fill="currentColor" stroke="none"/>',
+  users: '<path class="pictogram-cyan" d="M14 29 24 14l10 15M14 29h20" stroke-opacity=".65"/><circle cx="24" cy="12" r="4" fill="#102434"/><circle cx="12" cy="31" r="4" fill="#102434"/><circle cx="36" cy="31" r="4" fill="#102434"/><path d="M18 22a7 7 0 0 1 12 0M6 41a7 7 0 0 1 12 0m12 0a7 7 0 0 1 12 0"/>',
+  chart: '<path d="M8 10v29h32" stroke-opacity=".5"/><path d="M15 33v-7m9 7V22m9 11V17" stroke-width="3"/><path class="pictogram-cyan" d="m12 20 10-7 9 2 9-8m-6 0h6v6"/>'
  };
- return `<svg class="icon feature-pictogram" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawings[name] || drawings.route}</svg>`;
+ return `<svg class="icon feature-pictogram" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${drawings[name] || drawings.route}</svg>`;
 }
 export function FeatureTile({title,description,icon,href,tone='gold'}) { return `<a class="feature-tile card ${e(tone)}" href="${e(href)}"><span class="tile-top"><span class="tile-icon">${FeaturePictogram(icon)}</span>${Icon('arrow','tile-arrow')}</span><h3>${e(title)}</h3><p>${e(description)}</p></a>`; }
 export function MetricTile({value,label,unit=''}) { return `<div class="metric"><div>${e(value)}<small>${e(unit)}</small></div><span>${e(label)}</span></div>`; }

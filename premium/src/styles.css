@@ -4465,3 +4465,8 @@ main { padding-top:8px; }
 .home-shell .feature-tile[href] p,.home-shell .feature-tile[href] .tile-arrow { color:#b7c8d1; }
 .home-shell .feature-tile[href] .tile-icon { color:#e0c585; }
 .home-shell .feature-tile[href='/statistics'] .tile-icon { color:#a8d4db; }
+
+/* Four Home emblems share the same enamel setting and metal line weight. */
+.home-shell .feature-tile[href] .tile-icon { display:grid; place-items:center; width:54px; height:54px; flex-shrink:0; border:1px solid #d5be824d; border-radius:15px; background:radial-gradient(ellipse at 25% 0%,#44627455,transparent 65%),linear-gradient(145deg,#142c3c,#071521); box-shadow:inset 0 1px 0 #f6dfa426,0 5px 12px #0003; color:#e9cf8e; }
+.home-shell .feature-tile .feature-pictogram { width:42px; height:42px; filter:drop-shadow(0 1px 1px #0005); }
+.home-shell .feature-tile .pictogram-cyan { stroke:#9acbd2; }
