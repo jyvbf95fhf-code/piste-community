@@ -13,8 +13,9 @@ test('targeted hero CTA and shared premium dog identity',()=>{
 });
 
 test('Home uses the approved image while other headers keep their identity',()=>{
- assert.match(AppShell(HomeScreen(), '/', 'Sébastien', 'SL'), /<img[^>]+src="\/src\/assets\/piste-community-logo-reference.png"/);
- assert.doesNotMatch(AppShell('', '/sessions', 'Sébastien', 'SL'), /piste-community-logo-reference.png/);
+ assert.match(AppShell(HomeScreen(), '/', 'Sébastien', 'SL'), /class="home-welcome-logo"/);
+ assert.doesNotMatch(AppShell('', '/sessions', 'Sébastien', 'SL'), /home-welcome-logo/);
+ assert.doesNotMatch(ScreenHeader('Sébastien','SL',true),/premium-brand-dog/);
 });
 
 test('Home visual theme defines quiet accents and varied surfaces without changing navigation or content',async()=>{

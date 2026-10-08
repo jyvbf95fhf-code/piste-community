@@ -4443,3 +4443,25 @@ main { padding-top:8px; }
 .auth-login-premium .password-hint,.auth-login-premium .auth-note { color:#aabac6; line-height:1.6; }
 .auth-login-premium .auth-switch a { color:#efd597; }
 @media (max-width:360px) { .auth-login-premium main { padding-inline:18px; } .auth-login-premium form { padding:20px 16px; } }
+
+/* Connected Home: one material family, with restrained functional accents. */
+.home-shell { --home-card-border:#d5be823d; --home-card-shadow:0 14px 32px #0003,inset 0 1px 0 #ffffff0c; }
+.home-shell .screen-header .brand { width:156px; height:76px; min-width:0; flex-shrink:0; }
+.home-shell .home-welcome-logo { display:block; width:156px; height:76px; background-image:url('/src/assets/piste-community-accueil-original.jpg'); background-size:468px 832px; background-position:-285px -20px; background-repeat:no-repeat; }
+.home-shell :is(.discovery-hero,.feature-tile,.track-builder-entry,.active-sessions,.twin-card,.active-session-card) { border:1px solid var(--home-card-border); border-radius:20px; box-shadow:var(--home-card-shadow); }
+.home-shell :is(.feature-tile,.track-builder-entry,.active-sessions,.twin-card) { background:radial-gradient(ellipse at 100% 0%,#d6b66a0b,transparent 65%),linear-gradient(145deg,#1a3040,#0b1926); }
+.home-shell .discovery-hero { border-color:#d5be8266; }
+.home-shell .feature-tile h3 { color:#f0eee5; }
+.home-shell .feature-tile p,.home-shell .feature-tile .tile-arrow { color:#b7c8d1; }
+.home-shell .feature-tile .tile-icon { color:#e0c585; }
+.home-shell .feature-tile[href='/statistics'] .tile-icon { color:#a8d4db; }
+.home-shell .track-builder-entry>span:first-child { border-color:var(--home-card-border); border-radius:12px; background:#d6b66a0a; }
+.home-shell .active-session-card { background:linear-gradient(145deg,#203746,#122331); border-radius:14px; box-shadow:inset 0 1px 0 #ffffff0a; }
+.home-shell .feature-tile:focus-visible,.home-shell .track-builder-entry:focus-visible { outline:2px solid #e0c585; outline-offset:4px; }
+@media(max-width:360px) { .home-shell .screen-header .brand,.home-shell .home-welcome-logo { width:140px; } }
+
+.home-shell .feature-tile[href] { background:radial-gradient(ellipse at 100% 0%,#d6b66a0b,transparent 65%),linear-gradient(145deg,#1a3040,#0b1926); border-color:var(--home-card-border); box-shadow:var(--home-card-shadow); }
+.home-shell .feature-tile[href] h3 { color:#f0eee5; }
+.home-shell .feature-tile[href] p,.home-shell .feature-tile[href] .tile-arrow { color:#b7c8d1; }
+.home-shell .feature-tile[href] .tile-icon { color:#e0c585; }
+.home-shell .feature-tile[href='/statistics'] .tile-icon { color:#a8d4db; }

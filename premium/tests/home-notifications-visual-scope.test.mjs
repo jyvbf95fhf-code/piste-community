@@ -5,7 +5,7 @@ import {AppShell} from '../src/components.mjs';
 
 const css=await readFile(new URL('../src/styles.css',import.meta.url),'utf8');
 const marker='/* Home / Notifications depth pass';
-const start=css.lastIndexOf(marker),learningMarker=css.indexOf('/* JUMOLF learning: scoped',start),scoped=css.slice(start,learningMarker<0?undefined:learningMarker),jumolfScoped=learningMarker<0?'':css.slice(learningMarker);
+const start=css.lastIndexOf(marker),learningMarker=css.indexOf('/* JUMOLF learning: scoped',start),scoped=css.slice(start,learningMarker<0?undefined:learningMarker),jumolfScoped=learningMarker<0?'':css.slice(learningMarker,css.indexOf('/* Connected Home:')<0?undefined:css.indexOf('/* Connected Home:'));
 
 test('Home and Notifications receive scoped night surfaces while Community stays stone and JUMOLF learning stays separately scoped',()=>{
  assert.notEqual(scoped,css,'the scoped visual pass exists at the end of the stylesheet');
