@@ -25,7 +25,10 @@ inspecting=true;
 await page.goto(base+'/auth/login');await page.getByLabel('Email',{exact:true}).fill('prototype@example.test');await page.getByLabel('Mot de passe',{exact:true}).fill('fictif123');await page.getByRole('button',{name:'Se connecter',exact:true}).click();await page.waitForURL(base+'/');
 const storageBefore=await page.evaluate(()=>JSON.stringify({...localStorage}));
 const click=label=>page.getByRole('button',{name:label,exact:true}).click();
-await page.goto(base+'/new-session');await click('Commencer');await page.locator('[data-coaching-choice="mode"][data-value="normal"]').click();await click('Continuer');await click('Continuer');await page.locator('[data-coaching-choice="traceType"][data-value="direct"]').click();await click('Continuer');await page.locator('[data-coaching-observer="lea"]').check();await page.locator('[data-coaching-observer="hugo"]').check();await click('Continuer');await click('Créer la session');await page.getByRole('link',{name:'Ouvrir la préparation',exact:true}).click();if(await page.locator('[data-search-phase]').count()){await page.getByRole('button',{name:'Simulateur Conducteur',exact:true}).click();await page.getByRole('button',{name:'Préparation (DEV)',exact:true}).click();}await page.waitForURL(base+'/coaching/session');
+async function createPreparationSession(){
+ await page.goto(base+'/new-session');await click('Commencer');await page.locator('[data-coaching-choice="mode"][data-value="normal"]').click();await click('Continuer');await click('Continuer');await page.locator('[data-coaching-choice="traceType"][data-value="direct"]').click();await click('Continuer');await page.locator('[data-coaching-observer="lea"]').check();await page.locator('[data-coaching-observer="hugo"]').check();await click('Continuer');await click('Créer la session');await page.getByRole('link',{name:'Ouvrir la préparation',exact:true}).click();if(await page.locator('[data-search-phase]').count()){await page.getByRole('button',{name:'Simulateur Conducteur',exact:true}).click();await page.getByRole('button',{name:'Préparation (DEV)',exact:true}).click();}await page.waitForURL(base+'/coaching/session');
+}
+await createPreparationSession();
 const simOpen=async()=>{if(!await page.locator('[data-prep-simulator]').getAttribute('open')){if(!await page.locator('[data-prep-simulator]').evaluate(n=>n.open))await page.locator('[data-prep-simulator] summary').click();}};
 const sim=async(key,value)=>{await simOpen();const el=page.locator(`[data-prep-sim="${key}"]`);if(typeof value==='boolean')await el.setChecked(value);else await el.selectOption(value);};
 const markers=()=>page.locator('[data-map-actor]').evaluateAll(nodes=>nodes.map(n=>({id:n.dataset.mapActor,freshness:n.dataset.freshness,role:n.getAttribute('class').split(' ')[1]})));
@@ -37,22 +40,30 @@ const check=async label=>{
  checks.push({label,url:page.url(),markers:await markers(),paths:await page.locator('[data-map-path]').evaluateAll(n=>n.map(x=>x.dataset.mapPath))});
 };
 const capture=async name=>{
- if(await page.locator('[data-prep-simulator]').evaluate(n=>n.open))await page.locator('[data-prep-simulator] summary').click();
+ if(await page.locator('[data-prep-simulator]').count()&&await page.locator('[data-prep-simulator]').evaluate(n=>n.open))await page.locator('[data-prep-simulator] summary').click();
  await page.evaluate(()=>scrollTo(0,0));const filename=(remote?'remote-':'local-')+name+'.png';await page.screenshot({path:new URL(filename,dest).pathname,fullPage:true});captures.push({file:filename,url:page.url()});
 };
 await check('session créée GPS acquisition');await capture('01-created-acquisition');
 for(const mode of ['normal','simple_blind','full_blind'])for(const role of ['coach','traceur','driver','observer']){
- await sim('mode',mode);await sim('viewerRole',role);await sim('gps','fresh');await sim('layers',true);
- const m=await markers();const expectedCount=mode==='full_blind'&&role==='coach'?0:mode==='full_blind'&&role!=='traceur'?1:mode==='simple_blind'&&role==='driver'?4:5;assert.equal(m.length,expectedCount,mode+'/'+role+' position count');
+ // Each perspective starts with the same real wizard session and team.
+ await createPreparationSession();
+ await sim('mode',mode);await sim('gps','fresh');await sim('layers',true);await sim('viewerRole',role);
+ const m=await markers();const expectedCount=mode==='full_blind'&&['coach','observer'].includes(role)?0:mode==='full_blind'&&role!=='traceur'?1:mode==='simple_blind'&&role==='driver'?4:5;assert.equal(m.length,expectedCount,mode+'/'+role+' position count');
  if(mode==='simple_blind'&&['coach','observer'].includes(role))assert.ok(m.some(p=>p.role==='traceur'),mode+'/'+role+' must see tracer');
- if(mode==='full_blind'&&role!=='traceur'){assert.equal(m.length,role==='coach'?0:1);if(role!=='coach')assert.equal(m[0].role,role);assert.equal(await page.locator('[data-map-path], [data-map-arrival]').count(),0);}
+ if(mode==='full_blind'&&role!=='traceur'){assert.equal(m.length,['coach','observer'].includes(role)?0:1);if(!['coach','observer'].includes(role))assert.equal(m[0].role,role);assert.equal(await page.locator('[data-map-path], [data-map-arrival]').count(),0);}
  if(mode==='simple_blind'&&role==='driver'){assert.ok(m.every(p=>p.role!=='traceur'));assert.equal(await page.locator('[data-map-path]').count(),0);assert.ok(m.some(p=>p.role==='coach'));assert.ok(m.some(p=>p.role==='observer'));}
- if(role==='observer')assert.equal(await page.locator('[data-prep-action]').count(),0);
+ if(role==='observer'){
+  assert.equal(await page.locator('[data-prep-action],[data-search],[data-tracer],[data-prep-simulator], [data-prep-sim]').count(),0,'Observer has no business or DEV controls');
+  assert.equal(await page.locator('[data-session-role="observer"]').count(),1);
+  for(const [width,height] of [[320,568],[375,667],[390,844],[430,932],[844,390]]){await page.setViewportSize({width,height});await check(mode+'/observer '+width);}
+  await page.setViewportSize({width:390,height:844});
+ }
  await check(mode+'/'+role);
  if(mode==='simple_blind'&&['coach','observer','traceur'].includes(role))await capture('simple-'+role);
  if(role==='driver')await capture(mode==='normal'?'02-normal-team':mode==='simple_blind'?'03-simple-driver':'04-double-driver');
  if(mode==='full_blind'&&role==='traceur')await capture('05-double-tracer');
 }
+await createPreparationSession();
 await sim('mode','normal');await sim('viewerRole','traceur');await sim('phase','created');await sim('gps','acquiring');await page.locator('[data-prep-action="ready"]').click();await page.getByRole('button',{name:'Simulateur terrain',exact:true}).click();await page.getByRole('button',{name:'Préparation (DEV)',exact:true}).click();assert.equal(await page.locator('[data-preparation-phase]').getAttribute('data-preparation-phase'),'ready');await check('ready sans premier point');await capture('06-ready-acquisition');
 await sim('viewerRole','driver');await sim('gps','stale');await check('position ancienne');assert.equal((await markers()).find(p=>p.role==='driver').freshness,'stale');await capture('07-stale');
 await sim('gps','unavailable');assert.ok((await markers()).every(p=>p.role!=='driver'));await check('GPS indisponible');await capture('08-unavailable');
