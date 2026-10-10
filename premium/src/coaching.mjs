@@ -24,6 +24,7 @@ export const trackingScenarios=Object.freeze([
 ]);
 export function createDraft(user,dogs) {
  return {step:'intro',mode:null,traceType:null,trackingScenario:'connected_traceur',dogs:dogs.map(d=>({...d})),dogId:dogs.length===1?dogs[0].id:null,
+  identityContext:{userId:typeof user?.user_id==='string'&&user.user_id.length>0&&user.user_id.trim()===user.user_id?user.user_id:null,participantId:'self',localAlias:'self',source:'mock-auth',assurance:'local-simulation'},
   participants:[{id:'self',name:user?.name || 'Vous'},{id:'camille',name:'Camille'},{id:'alex',name:'Alex'},{id:'lea',name:'Léa'},{id:'hugo',name:'Hugo'},{id:'ines',name:'Inès'}],
  creatorRole:'driver',roles:{coach:'camille',traceur:'alex',driver:'self',observers:[]},preparationTrack:null,knownPeople:[],session:null,editing:false};
 }
