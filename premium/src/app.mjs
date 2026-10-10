@@ -5,7 +5,7 @@ import { createMockAuth, resolveMockRoute } from './mock-auth.mjs';
 import { debugSnapshot } from './config.mjs';
 import { themeForRoute } from './theme.mjs';
 import * as coaching from './coaching.mjs';
-import {createReferenceAssignmentState} from './coaching-reference-assignment.mjs';
+import {createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment} from './coaching-reference-assignment.mjs';
 import { CoachingScreen } from './coaching-screen.mjs';
 import { createTrackLibrary, gpxFixtures } from './track-library.mjs';
 import { TrackBuilderScreen } from './track-builder-screen.mjs';
@@ -132,6 +132,39 @@ function initializeCoachingReferenceAssignment(){
 }
 function invalidateCoachingReferenceAssignment(){
  if(coachingReferenceAssignment&&(qaInitialized||coachingReferenceAssignment.state.sessionId!==coachingDraft.session?.id||coachingDraft.sessionCreation?.creatorUserId!==currentUser?.user_id))coachingReferenceAssignment=null;
+}
+function coachingReferenceAssignmentView(){
+ const localUser=auth.getSession().user,identity=coachingDraft.identityContext,creation=coachingDraft.sessionCreation,session=coachingDraft.session,entry=coachingReferenceAssignment;
+ if(qaInitialized||!entry||!session||!localUser?.user_id||identity?.userId!==localUser.user_id||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||creation?.creatorUserId!==localUser.user_id||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session.id||entry.state.sessionId!==session.id||entry.context.sessionId!==session.id||entry.context.creatorParticipantId!==identity.participantId||entry.state.creatorParticipantId!==identity.participantId)return null;
+ const ref=session.preparation,roles=session.roles;
+ if(!ref?.id||entry.context.references.length!==1||entry.context.references[0].id!==ref.id||!Object.hasOwn(entry.state.references,ref.id)||preparationState?.session.id!==session.id||preparationState.viewerId!==identity.participantId)return null;
+ // Use actual session functions, never a DEV perspective as an identity or a
+ // new reference.read grant. Visibility is the existing creation-screen rule.
+ const members=session.participants.map(p=>({id:p.id,functions:[...['driver','traceur','coach'].filter(role=>roles[role]===p.id),...(roles.observers.includes(p.id)?['observer']:[])]}));
+ if(JSON.stringify(members)!==JSON.stringify(entry.context.participants)||!members.find(p=>p.id===identity.participantId)?.functions.includes(session.creatorRole)||!coaching.canSeeReference(session.mode,session.creatorRole,!!roles.coach&&roles.coach===roles.traceur))return null;
+ // Refuse after existing pose/search facts; do not manufacture a lock or pose
+ // attestation, and do not change the existing terrain modules.
+ if(!['before','approaching','arrived'].includes(tracerState.phase)||tracerState.segments.some(segment=>segment.length)||preparationState.physicalLaid||searchState.phase!=='PREPARATION'||searchState.layingSegments.some(segment=>segment.length))return null;
+ const assignment=getReferenceAssignment(entry.state,ref.id);
+ if(assignment.locked||!['none','pending'].includes(assignment.status))return null;
+ const beneficiaries=session.participants.filter(p=>members.find(member=>member.id===p.id)?.functions.includes('traceur')).map(p=>({id:p.id,name:p.name}));
+ if(!beneficiaries.length)return null;
+ return {sessionId:session.id,referenceId:ref.id,referenceName:session.traceType==='gpx'?(ref.fileName||ref.name):ref.name,revision:assignment.revision,status:assignment.status,beneficiaries,beneficiaryName:beneficiaries.find(p=>p.id===assignment.current?.beneficiaryParticipantId)?.name||''};
+}
+function confirmCoachingReferenceAssignment(form){
+ const request={sessionId:form.dataset.sessionId,referenceId:form.dataset.referenceId,revision:Number(form.dataset.revision),beneficiaryParticipantId:form.elements.beneficiary.value};
+ const view=coachingReferenceAssignmentView();
+ if(!view||view.status!=='none'||request.sessionId!==view.sessionId||request.referenceId!==view.referenceId||!Number.isSafeInteger(request.revision)||request.revision!==view.revision||!view.beneficiaries.some(p=>p.id===request.beneficiaryParticipantId)){Toast('Attribution indisponible : contexte modifié ou non autorisé.');return;}
+ ConfirmationDialog({title:'Confirmer l’attribution ?',description:'Cette attribution simulée restera en attente d’acceptation. Aucune invitation ni réponse distante ne sera envoyée.',onConfirm:()=>{
+  const current=coachingReferenceAssignmentView();
+  if(!current||current.status!=='none'||current.sessionId!==request.sessionId||current.referenceId!==request.referenceId||current.revision!==request.revision||!current.beneficiaries.some(p=>p.id===request.beneficiaryParticipantId)){Toast('Attribution refusée : la confirmation n’est plus valide.');return;}
+  const action={actionId:crypto.randomUUID(),sessionId:request.sessionId,referenceId:request.referenceId,authorParticipantId:coachingDraft.identityContext.participantId,beneficiaryParticipantId:request.beneficiaryParticipantId,type:'assign',occurredAt:new Date().toISOString(),origin:'simulation:coaching-reference-assignment',assurance:'local-simulation',delegationId:null,expectedRevision:request.revision,assignmentId:crypto.randomUUID()};
+  try{
+   const state=applyReferenceAssignmentAction(coachingReferenceAssignment.state,coachingReferenceAssignment.context,action);
+   coachingReferenceAssignment=Object.freeze({...coachingReferenceAssignment,state});
+   render();
+  }catch{Toast('Attribution refusée : état incompatible.');}
+ }});
 }
 let tracerState=tracer.createTracer();
 let tracerUI={};
@@ -263,7 +296,7 @@ function render(focus=false) {
  const jumolfContent=jumolfRoute?JumolfShell(jumolfRoute,jumolfController.screen(`${jumolfRoute}${location.search}`)):null;
  const scientificScreen=scientificRoute?.startsWith('/scientific/corpus')?scientificCorpusController.screen(`${scientificRoute}${location.search}`):scientificRoute?scientificController.screen(`${scientificRoute}${location.search}`):null;
  const scientificContent=scientificRoute?ScientificShell(scientificRoute,scientificScreen,currentUser):null;
- const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{}):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
+ const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
  operationalChronoInterval=null;
@@ -763,6 +796,7 @@ window.addEventListener('resize',syncNavigationHeight);
 render();
 
 document.addEventListener('submit',event=>{
+ if(event.target.matches('[data-reference-assignment]')){event.preventDefault();confirmCoachingReferenceAssignment(event.target);return;}
  if(profileController.handleSubmit(event))return;
  if(adminController.handleSubmit(event))return;
  if(scientificCorpusController.handleSubmit(event))return;

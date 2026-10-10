@@ -51,7 +51,7 @@ function requireState(a){assert.ok(a.state,'The actual application creation bran
 
 test('main application creation calls the existing assignment module for the actual session',()=>{
  const a=created(),{context,state}=requireState(a);
- assert.match(app,/import\s*\{\s*createReferenceAssignmentState\s*\}\s*from\s*['"]\.\/coaching-reference-assignment\.mjs['"]/);
+ assert.match(app,/import\s*\{\s*createReferenceAssignmentState\s*,\s*applyReferenceAssignmentAction\s*,\s*getReferenceAssignment\s*\}\s*from\s*['"]\.\/coaching-reference-assignment\.mjs['"]/);
  assert.equal(state.sessionId,a.sandbox.coachingDraft.session.id);assert.equal(context.sessionId,state.sessionId);
  assert.equal(context.creatorParticipantId,a.sandbox.coachingDraft.sessionCreation.creatorParticipantId);
  assert.deepEqual(plain(context.participants),[{id:'self',functions:['driver']},{id:'camille',functions:['coach']},{id:'alex',functions:['traceur']}]);
