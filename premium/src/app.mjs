@@ -5,6 +5,7 @@ import { createMockAuth, resolveMockRoute } from './mock-auth.mjs';
 import { debugSnapshot } from './config.mjs';
 import { themeForRoute } from './theme.mjs';
 import * as coaching from './coaching.mjs';
+import {createReferenceAssignmentState} from './coaching-reference-assignment.mjs';
 import { CoachingScreen } from './coaching-screen.mjs';
 import { createTrackLibrary, gpxFixtures } from './track-library.mjs';
 import { TrackBuilderScreen } from './track-builder-screen.mjs';
@@ -103,6 +104,35 @@ let coachingAgeInterval=null;
 let terrainUnlockController=null,terrainUnlockPointerId=null,terrainUnlockReturnTimer=null;
 let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
+// Local assignment metadata only; never part of a spatial projection or pose.
+let coachingReferenceAssignment=null;
+function initializeCoachingReferenceAssignment(){
+ const session=coachingDraft.session,creation=coachingDraft.sessionCreation;
+ const validId=value=>typeof value==='string'&&value.length>0&&value.trim()===value;
+ const referenceId=session?.preparation?.id;
+ if(qaInitialized||!validId(session?.id)||creation?.sessionId!==session.id||!validId(creation?.creatorUserId)||!validId(creation?.creatorParticipantId)||!validId(referenceId)){
+  coachingReferenceAssignment=null;return;
+ }
+ const roles=session.roles,members=session.participants;
+ if(!roles||!Array.isArray(members)||!Array.isArray(roles.observers)||Object.keys(roles).some(role=>!['driver','traceur','coach','observers'].includes(role))){coachingReferenceAssignment=null;return;}
+ const ids=members.map(p=>p?.id);
+ const assigned=[roles.driver,roles.traceur,roles.coach,...roles.observers].filter(id=>id!==null);
+ if(ids.some(id=>!validId(id))||new Set(ids).size!==ids.length||!ids.includes(creation.creatorParticipantId)||assigned.some(id=>!ids.includes(id))||new Set(roles.observers).size!==roles.observers.length){coachingReferenceAssignment=null;return;}
+ const participants=ids.map(id=>({id,functions:[...['driver','traceur','coach'].filter(role=>roles[role]===id),...(roles.observers.includes(id)?['observer']:[])]}));
+ if(participants.some(p=>!p.functions.length)){coachingReferenceAssignment=null;return;}
+ const context=Object.freeze({sessionId:session.id,creatorParticipantId:creation.creatorParticipantId,
+  participants:Object.freeze(participants.map(p=>Object.freeze({...p,functions:Object.freeze(p.functions)}))),
+  references:Object.freeze([Object.freeze({id:referenceId,layingStarted:false})]),delegations:Object.freeze([])});
+ // Same session: retain the exact instance, or fail closed on changed metadata.
+ if(coachingReferenceAssignment?.state.sessionId===session.id){
+  if(JSON.stringify(coachingReferenceAssignment.context)!==JSON.stringify(context))coachingReferenceAssignment=null;
+  return;
+ }
+ coachingReferenceAssignment=Object.freeze({context,state:createReferenceAssignmentState(context)});
+}
+function invalidateCoachingReferenceAssignment(){
+ if(coachingReferenceAssignment&&(qaInitialized||coachingReferenceAssignment.state.sessionId!==coachingDraft.session?.id||coachingDraft.sessionCreation?.creatorUserId!==currentUser?.user_id))coachingReferenceAssignment=null;
+}
 let tracerState=tracer.createTracer();
 let tracerUI={};
 let terrainOpen=false;
@@ -215,6 +245,7 @@ function render(focus=false) {
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
+ invalidateCoachingReferenceAssignment();
  const dogsRoute=resolveDogsRoute(route);
  const communityRoute=resolveCommunityRoute(route);
  const profileRoute=resolveProfileRoute(route);
@@ -266,6 +297,7 @@ function refreshDogPhotoPreview(form) {
  form.querySelector('[data-dog-photo-preview]').innerHTML=DogPhotoMarkup(dog,'dog-form-photo-preview-frame');
 }
 function resetCoachingQa(mode=qaMode,scenario=qaScenario){
+ coachingReferenceAssignment=null;
  qaMode=mode;qaScenario=scenario;
  qaInitialized=true;
  const qa=createCoachingQa(qaMode,currentUser,[{id:'nox',...mock.dog}],qaScenario);
@@ -542,7 +574,7 @@ document.addEventListener('click',event=>{
    const next=coachingDraft.returnStep || (coachingDraft.editing?(needsPreparation?'prepare':'review'):sequence[Math.min(sequence.length-1,index+1)]);
    coachingDraft={...coachingDraft,step:next,returnStep:null,editing:coachingDraft.editing&&next==='prepare'};
   }
-  if(action==='create') {if(coaching.validateDraft(coachingDraft).length)return;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};const selection=coachingDraft.preparationActions?.filter(entry=>entry.type==='reference-selection').at(-1);coachingDraft=coaching.createSession(coachingDraft,coachingActionContext('session-creation',{referenceId:coachingDraft.preparationTrack?.id??null,origin:'simulation:coaching-session-creation',...(selection&&selection.referenceId===coachingDraft.preparationTrack?.id?{selectionActionId:selection.actionId}:{})}));tracerState=tracer.createTracer();tracerUI={};terrainOpen=false;preparationState=preparation.createPreparation(coachingDraft.session);preparationUI={simulatorOpen:false,feedback:''};}
+  if(action==='create') {if(coaching.validateDraft(coachingDraft).length)return;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};const selection=coachingDraft.preparationActions?.filter(entry=>entry.type==='reference-selection').at(-1);coachingDraft=coaching.createSession(coachingDraft,coachingActionContext('session-creation',{referenceId:coachingDraft.preparationTrack?.id??null,origin:'simulation:coaching-session-creation',...(selection&&selection.referenceId===coachingDraft.preparationTrack?.id?{selectionActionId:selection.actionId}:{})}));initializeCoachingReferenceAssignment();tracerState=tracer.createTracer();tracerUI={};terrainOpen=false;preparationState=preparation.createPreparation(coachingDraft.session);preparationUI={simulatorOpen:false,feedback:''};}
   if(action==='restart'){qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={};coachingDraft=newCoachingDraft();preparationState=null;}
   render(action!=='creator');
   if(action==='creator')document.querySelector(`[data-coaching="creator"][data-role="${controlCoaching.dataset.role}"]`).focus({preventScroll:true});
