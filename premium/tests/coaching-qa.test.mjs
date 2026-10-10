@@ -41,6 +41,10 @@ test('QA action proxy offers only the real next control for the current function
  assert.equal(nextQaAction(qa.search,selectQaPerspective(qa.preparation,'traceur')).id,'ready');
  const ready=transition(selectQaPerspective(qa.preparation,'traceur'),'ready');
  assert.equal(nextQaAction(qa.search,ready).id,'start-laying');
+ assert.throws(()=>advanceTracer(qa.tracer,ready,'start'),/Position.*indisponible/);
+ // Explicit drawing-coordinate fixture for this QA scenario; never real GPS.
+ ready.points[ready.viewerId]={x:173,y:91};
+ ready.gps='fresh';
  let tracer=advanceTracer(qa.tracer,ready,'start');
  let search=syncSession(qa.search,ready,tracer);
  assert.equal(search.phase,'LAYING');
@@ -94,6 +98,10 @@ test('QA modes reuse the existing projections and preserve each visibility matri
 
 test('debrief and archive views are produced by existing session flow projections',()=>{
  const qa=make('normal'),ready=transition(selectQaPerspective(qa.preparation,'traceur'),'ready');
+ assert.throws(()=>advanceTracer(qa.tracer,ready,'start'),/Position.*indisponible/);
+ // Independent drawing-coordinate fixture for this QA scenario; never real GPS.
+ ready.points[ready.viewerId]={x:119,y:157};
+ ready.gps='fresh';
  let tracer=advanceTracer(qa.tracer,ready,'start'),search=syncSession(qa.search,ready,tracer);
  tracer=advanceTracer(tracer,ready,'finish');search=syncSession(search,ready,tracer);
  tracer=advanceTracer(tracer,ready,'in-place');search=syncSession(search,ready,tracer);

@@ -19,17 +19,18 @@ function preparedState(mode='full_blind',role='coach'){
  return simulate(createPreparation(session),{viewerRole:role,gps:'fresh',layers:true});
 }
 
-test('Double aveugle masque le départ préparé aux rôles non Traceur avant la carte',()=>{
+test('Double aveugle conserve le départ connu du Conducteur sans dévoiler la référence',()=>{
  for(const role of ['coach','observer','driver']){
   const state=preparedState('full_blind',role),view=preparationView(state),html=PreparationScreen(state),projected=searchView(createSearch(),state);
-  assert.equal(view.showStart,false,role);
-  assert.equal(view.knownStart,false,role);
-  assert.notDeepEqual(view.start,selectedStart,role);
+  const canReadStart=role==='driver';
+  assert.equal(view.showStart,canReadStart,role);
+  assert.equal(view.knownStart,canReadStart,role);
+  assert.deepEqual(view.start,canReadStart?{x:selectedStart.x,y:selectedStart.y}:null,role);
   assert.equal(view.preparation,null,role);
-  assert.equal(html.includes('data-map-start'),false,role);
+  assert.equal(html.includes('data-map-start'),canReadStart,role);
   assert.equal(html.includes('départ logistique'),false,role);
-  assert.equal(MapShell(projected).includes('data-map-start'),false,role+' Conducteur projection');
-  assert.deepEqual(projected.start,view.start,role+' Conducteur projection keeps only context start');
+  assert.equal(MapShell(projected).includes('data-map-start'),canReadStart,role+' Conducteur projection');
+  assert.deepEqual(projected.start,view.start,role+' projection respecte la visibilité du départ');
   assert.equal(view.paths.length,0,role);
   if(role==='driver')assert.ok(!SearchScreen(createSearch(),state).includes('départ logistique'));
  }
@@ -58,7 +59,8 @@ test('Normal conserve départ préparé et identité, Simple aveugle conserve le
  for(const role of ['coach','traceur','driver','observer']){
   const simple=preparationView(preparedState('simple_blind',role));
   const spatial=role!=='driver';
-  assert.equal(simple.showStart,spatial,'simple '+role);
+  assert.equal(simple.showStart,true,'simple '+role);
+  assert.deepEqual(simple.start,{x:selectedStart.x,y:selectedStart.y},'simple '+role);
   assert.equal(simple.team.find(p=>p.role==='traceur').name,tracerName,'simple '+role);
   assert.equal(simple.paths.some(p=>p.kind==='reference'),spatial,'simple '+role);
  }

@@ -5,6 +5,7 @@ export const searchPhases=Object.freeze({PREPARATION:'Session en attente',LAYING
 const offsets=[{x:0,y:0},{x:11,y:-8},{x:23,y:-18},{x:38,y:-13},{x:55,y:-27},{x:68,y:-42},{x:83,y:-49},{x:97,y:-62}];
 const poseFixture=[[{x:70,y:242},{x:91,y:210},{x:131,y:192},{x:180,y:162},{x:223,y:109}]];
 const clone=x=>structuredClone(x);
+const validPoint=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y);
 export function createSearch(){return {phase:'PREPARATION',searchTrackingState:'stopped',searchPausedAt:null,searchTotalPausedMs:0,searchPauseIntervals:[],seconds:0,distance:0,cursor:0,segments:[],gap:false,resumed:false,simulatedPhase:false,fixturePose:false,layingSegments:[]};}
 export {syncSession as syncSearch} from './coaching-session-flow.mjs';
 export function simulateSearch(s,patch){
@@ -24,8 +25,8 @@ function closePause(s,at){
 }
 export function advanceSearch(state,p,action,{now=Date.now}={}){
  if(!isSearchActor(p)||state.actorId&&state.actorId!==p.viewerId)throw Error('Seul le Conducteur actuellement désigné peut agir.');
- const s=clone(state),v=preparationView(p),own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&!!own;
- if(action==='start'&&s.phase==='SEARCH_READY'){s.phase='SEARCH_RUNNING';s.searchTrackingState='active';s.searchPausedAt=null;s.searchTotalPausedMs=0;s.searchPauseIntervals=[];s.actorId=v.viewerId;s.origin=own?{x:own.x,y:own.y}:{...v.start};if(available)s.segments=[[{...s.origin}]];else s.gap=true;return s;}
+ const s=clone(state),v=preparationView(p),own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
+ if(action==='start'&&s.phase==='SEARCH_READY'){s.phase='SEARCH_RUNNING';s.searchTrackingState='active';s.searchPausedAt=null;s.searchTotalPausedMs=0;s.searchPauseIntervals=[];s.actorId=v.viewerId;s.origin=available?{x:own.x,y:own.y}:null;if(available)s.segments=[[{...s.origin}]];else s.gap=true;return s;}
  if(action==='pause'&&s.phase==='SEARCH_RUNNING'&&s.searchTrackingState==='active'){
   const at=timestampFrom(now);s.searchTrackingState='paused';s.searchPausedAt=at;s.searchPauseIntervals=[...(s.searchPauseIntervals||[]),{pausedAt:at,resumedAt:null,durationMs:null}];return s;
  }
@@ -36,6 +37,7 @@ export function advanceSearch(state,p,action,{now=Date.now}={}){
   if(s.searchTrackingState!=='active')throw Error('Le suivi est en pause. Reprenez la recherche avant de progresser.');
   s.seconds+=30;s.cursor=Math.min(s.cursor+1,offsets.length-1);
   if(!available){s.gap=true;s.resumed=false;return s;}
+  if(!validPoint(s.origin)){s.origin={x:own.x,y:own.y};s.segments.push([{...s.origin}]);s.resumed=s.gap;s.gap=false;return s;}
   const point={x:s.origin.x+offsets[s.cursor].x,y:s.origin.y+offsets[s.cursor].y},last=s.segments.at(-1)?.at(-1);
   if(s.gap||!last){s.segments.push([point]);s.resumed=s.gap;s.gap=false;}
   else if(last.x!==point.x||last.y!==point.y){s.segments.at(-1).push(point);s.distance+=35;s.resumed=false;}
@@ -52,12 +54,17 @@ const paths=(segments,kind)=>segments.filter(s=>s.length>1).map((s,i)=>({kind,la
 export function searchView(s,p,{now=Date.now()}={}){
  const v=preparationView(p),spatial=!v.referenceHidden,pose=p.traceurKind==='internal'?(s.fixturePose?poseFixture:s.layingSegments):p.productScenario==='external_driver_recorded'?s.layingSegments:[];
  const postSession=['DEBRIEF','ARCHIVED'].includes(s.phase),canReadTrackAge=postSession||v.role==='driver'&&isSearchActor(p);
+ // A recorded departure is post-session data, never a live blind-mode fallback.
+ // fixturePose is a demonstration overlay, not an original recording.
+ const recordedStart=postSession&&spatial&&!s.fixturePose?pose[0]?.[0]:null;
+ const start=v.start||(validPoint(recordedStart)?{x:recordedStart.x,y:recordedStart.y}:null);
+ const startSource=v.start?'selected':start?'recorded-mock':null;
  const last=s.segments.at(-1)?.at(-1),recordVisible=spatial||v.role==='driver'&&isSearchActor(p)&&(!s.actorId||s.actorId===v.viewerId),markers=v.markers.map(m=>m.id===s.actorId&&last?{...m,...last}:m.role==='traceur'&&spatial&&pose.at(-1)?.at(-1)?{...m,...pose.at(-1).at(-1)}:m);
  const own=markers.find(m=>m.id===v.viewerId),canAct=isSearchActor(p)&&(!s.actorId||s.actorId===v.viewerId);
  // Return a whitelist, never the raw session, preparation state or protected pose coordinates.
  const searchTrackingState=s.searchTrackingState||(['SEARCH_RUNNING'].includes(s.phase)?'active':'stopped');
  return {phase:s.phase,phaseLabel:searchPhases[s.phase],searchTrackingState,trackingLabel:searchTrackingState==='paused'?'Recherche en pause':searchTrackingState==='active'?'Recherche en cours':'Suivi arrêté',code:v.code,dog:v.dog,mode:v.mode,modeLabel:v.modeLabel,traceLabel:v.traceLabel,role:v.role,viewerId:v.viewerId,team:v.team.map(a=>({...a,status:a.role==='traceur'&&v.mode==='full_blind'&&v.role!=='traceur'?'Informations masquées':a.role==='traceur'?s.phase==='PREPARATION'?'Préparation':s.phase==='LAYING'?'En pose':s.phase==='TRACK_FINISHED'?'Pose terminée':'En place':a.role==='driver'?searchTrackingState==='paused'?'Recherche en pause':searchPhases[s.phase]:a.status})),external:v.external,knowledgeNotice:v.knowledgeNotice,
-  markers,start:v.start,showStart:v.showStart,arrival:spatial&&pose.at(-1)?.at(-1)?{...pose.at(-1).at(-1)}:null,
+  markers,start,showStart:!!start,startSource,arrival:spatial&&pose.at(-1)?.at(-1)?{...pose.at(-1).at(-1)}:null,
   reference:spatial?v.preparation:null,paths:[...(spatial?v.paths.filter(x=>x.kind==='reference'):[]),...(spatial?paths(pose,'pose'):[]),...(recordVisible?paths(s.segments,'search'):[])],
   gps:v.gps,gpsLabel:v.gpsLabel,accuracy:v.gps==='fresh'&&own?'± 5 m · mock':null,orientation:v.gps==='fresh'&&own?38:null,
   seconds:recordVisible?s.seconds:null,distance:recordVisible?s.distance:null,resumed:recordVisible?s.resumed:false,progress:recordVisible?Math.round(s.cursor/(offsets.length-1)*100):null,canAct,
