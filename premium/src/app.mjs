@@ -78,6 +78,12 @@ const auth=createMockAuth(storage);
 let currentUser=auth.getSession().user;
 const newCoachingDraft=()=>coaching.createDraft(currentUser,[{id:'nox',...mock.dog}]);
 let coachingDraft=newCoachingDraft();
+// Created at the local UI action boundary. Never a server identity or GPS proof.
+function coachingActionContext(type,{draft=coachingDraft,referenceId=null,beneficiaryParticipantId=null,assignedFunction,origin,selectionActionId}={}){
+ const identity=draft.identityContext;
+ const known=identity?.userId!=null&&identity.userId===currentUser?.user_id;
+ return {actionId:crypto.randomUUID(),type,author:{userId:known?identity.userId:null,participantId:known?identity.participantId:null,source:'mock-auth',assurance:'local-simulation'},occurredAt:new Date().toISOString(),origin,sessionId:null,referenceId,beneficiaryParticipantId,...(assignedFunction!==undefined?{assignedFunction}:{}),...(selectionActionId!==undefined?{selectionActionId}:{})};
+}
 let trackLibrary=createTrackLibrary();
 let dogsStore=createDogsStore();
 let sessionCatalog=createSessionCatalog();
@@ -498,7 +504,7 @@ document.addEventListener('click',event=>{
  if(choice) {
   if(choice.dataset.coachingChoice==='preparation') {
    const items=coachingDraft.traceType==='gpx'?gpxFixtures:trackLibrary.list();
-   coachingDraft=coaching.selectPreparation(coachingDraft,items.find(t=>t.id===choice.dataset.value));
+   coachingDraft=coaching.selectPreparation(coachingDraft,items.find(t=>t.id===choice.dataset.value),coachingActionContext('reference-selection',{referenceId:choice.dataset.value,origin:coachingDraft.traceType==='gpx'?'simulation:gpx-fixture-selection':'simulation:track-library-selection'}));
   } else if(choice.dataset.coachingChoice==='trackingScenario')coachingDraft=coaching.setTrackingScenario(coachingDraft,choice.dataset.value);
   else coachingDraft=coaching.updateDraft(coachingDraft,{[choice.dataset.coachingChoice]:choice.dataset.value});
   render(); document.querySelector(`[data-coaching-choice="${choice.dataset.coachingChoice}"][data-value="${choice.dataset.value}"]`).focus({preventScroll:true}); return;
@@ -515,7 +521,8 @@ document.addEventListener('click',event=>{
    ConfirmationDialog({title:'Supprimer ce tracé mock ?',description:'Il ne sera plus proposé dans cette visite. Aucune donnée réelle n’est supprimée.',onConfirm:()=>{trackLibrary.remove(id);trackUI={...newTrackUI(),notice:'Tracé mock supprimé.'};render(true);}});return;
   }
   if(action==='use') {
-   coachingDraft=coaching.draftFromTrack(currentUser,[{id:'nox',...mock.dog}],item);
+   const selectionDraft=newCoachingDraft();
+   coachingDraft=coaching.draftFromTrack(currentUser,[{id:'nox',...mock.dog}],item,coachingActionContext('reference-selection',{draft:selectionDraft,referenceId:item.id,origin:item.provenance==='gpx-mock'?'simulation:gpx-fixture-reuse':'simulation:track-library-reuse'}));
    history.pushState({},'','/new-session');render(true);return;
   }
   render(action!=='file');return;
@@ -535,7 +542,7 @@ document.addEventListener('click',event=>{
    const next=coachingDraft.returnStep || (coachingDraft.editing?(needsPreparation?'prepare':'review'):sequence[Math.min(sequence.length-1,index+1)]);
    coachingDraft={...coachingDraft,step:next,returnStep:null,editing:coachingDraft.editing&&next==='prepare'};
   }
-  if(action==='create') {if(coaching.validateDraft(coachingDraft).length)return;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};coachingDraft=coaching.createSession(coachingDraft);tracerState=tracer.createTracer();tracerUI={};terrainOpen=false;preparationState=preparation.createPreparation(coachingDraft.session);preparationUI={simulatorOpen:false,feedback:''};}
+  if(action==='create') {if(coaching.validateDraft(coachingDraft).length)return;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};const selection=coachingDraft.preparationActions?.filter(entry=>entry.type==='reference-selection').at(-1);coachingDraft=coaching.createSession(coachingDraft,coachingActionContext('session-creation',{referenceId:coachingDraft.preparationTrack?.id??null,origin:'simulation:coaching-session-creation',...(selection&&selection.referenceId===coachingDraft.preparationTrack?.id?{selectionActionId:selection.actionId}:{})}));tracerState=tracer.createTracer();tracerUI={};terrainOpen=false;preparationState=preparation.createPreparation(coachingDraft.session);preparationUI={simulatorOpen:false,feedback:''};}
   if(action==='restart'){qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={};coachingDraft=newCoachingDraft();preparationState=null;}
   render(action!=='creator');
   if(action==='creator')document.querySelector(`[data-coaching="creator"][data-role="${controlCoaching.dataset.role}"]`).focus({preventScroll:true});
@@ -695,7 +702,7 @@ document.addEventListener('change',event=>{
  const control=event.target.closest('[data-coaching-role]');
  if(!control)return;
  coachingDraft=ensureCoachingContactParticipant(coachingDraft,control.value,communityStore);
- coachingDraft=coaching.assignRole(coachingDraft,control.dataset.coachingRole,control.value || null);
+ coachingDraft=coaching.assignRole(coachingDraft,control.dataset.coachingRole,control.value || null,coachingActionContext('function-assignment',{beneficiaryParticipantId:control.value||null,assignedFunction:control.dataset.coachingRole,origin:'simulation:coaching-role-selection'}));
  const position=window.scrollY;render();window.scrollTo(0,position);document.getElementById(control.id).focus({preventScroll:true});
 });
 document.addEventListener('input',event=>{

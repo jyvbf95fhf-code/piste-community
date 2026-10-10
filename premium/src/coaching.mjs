@@ -47,12 +47,13 @@ export function updateDraft(draft,patch) {
  const {mode=draft.mode,traceType=draft.traceType,dogId=draft.dogId}=patch;
  return {...draft,mode,traceType,dogId,preparationTrack:traceType===draft.traceType?draft.preparationTrack:null,session:null};
 }
-export function assignRole(draft,role,person) {
+export function assignRole(draft,role,person,action=null) {
  if(!['coach','traceur','driver'].includes(role))throw Error('Choisissez une fonction principale ; utilisez la sélection multiple pour les Observateurs.');
  if(draft.trackingScenario!=='connected_traceur'&&role==='traceur')throw Error('Le rôle olfactif est externe ou déjà assuré par vous-même dans ce parcours.');
  if(['self_trace','external_traceur','external_driver_recorded'].includes(draft.trackingScenario)&&role==='driver'&&person!=='self')throw Error('Le Conducteur connecté réalise ce parcours.');
  if(person!==null&&!draft.participants.some(p=>p.id===person))throw Error('Participant inconnu');
- return {...draft,roles:{...draft.roles,[role]:person},session:null};
+ const next=retainPreparationAction(draft,action,'function-assignment',{referenceId:null,beneficiaryParticipantId:person,assignedFunction:role});
+ return {...next,roles:{...draft.roles,[role]:person},session:null};
 }
 export function selectCreatorRole(draft,role) {
  if(!['coach','traceur','driver'].includes(role))throw Error('Choisissez un rôle principal Coach, Traceur ou Conducteur.');
@@ -85,12 +86,38 @@ export function setObservers(draft,people) {
  if(!Array.isArray(people)||people.some(id=>!draft.participants.some(p=>p.id===id)))throw Error('Participant inconnu');
  return {...draft,roles:{...draft.roles,observers:[...new Set(people)]},session:null};
 }
-export function selectPreparation(draft,track) {
+// Local action envelopes, not scientific provenance or server authentication.
+const actionId=value=>typeof value==='string'&&value.length>0&&value.trim()===value;
+function freezeAction(value){if(value&&typeof value==='object'){Object.values(value).forEach(freezeAction);Object.freeze(value);}return value;}
+function retainPreparationAction(draft,action,type,expected){
+ if(action==null)return draft; // Historical calls retain unknown metadata.
+ const invalid=()=>{throw Error('Contexte d’action de préparation incohérent.');};
+ const required=['actionId','type','author','occurredAt','origin','sessionId','referenceId','beneficiaryParticipantId'];
+ const optional=type==='function-assignment'?['assignedFunction']:type==='session-creation'?['selectionActionId']:[];
+ if(typeof action!=='object'||required.some(key=>!Object.hasOwn(action,key))||Object.keys(action).some(key=>![...required,...optional].includes(key)))invalid();
+ if(!actionId(action.actionId)||action.type!==type||(draft.preparationActions||[]).some(entry=>entry.actionId===action.actionId))invalid();
+ const author=action.author,identity=draft.identityContext;
+ if(!author||typeof author!=='object'||Object.keys(author).sort().join(',')!=='assurance,participantId,source,userId'||author.source!=='mock-auth'||author.assurance!=='local-simulation')invalid();
+ const unknown=author.userId===null&&author.participantId===null;
+ if(!unknown&&(!actionId(author.userId)||author.userId!==identity?.userId||author.participantId!==identity?.participantId||!draft.participants.some(p=>p.id===author.participantId)))invalid();
+ if(typeof action.occurredAt!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(action.occurredAt)||!Number.isFinite(Date.parse(action.occurredAt))||new Date(action.occurredAt).toISOString()!==action.occurredAt)invalid();
+ if(!actionId(action.origin)||!action.origin.startsWith('simulation:')||action.sessionId!==null)invalid();
+ for(const [key,value] of Object.entries(expected))if(action[key]!==value)invalid();
+ if(type==='session-creation'&&Object.hasOwn(action,'selectionActionId')){
+  const selection=(draft.preparationActions||[]).find(entry=>entry.actionId===action.selectionActionId);
+  if(!selection||selection.type!=='reference-selection'||selection.referenceId!==expected.referenceId)invalid();
+  const latest=(draft.preparationActions||[]).filter(entry=>entry.type==='reference-selection').at(-1);
+  if(latest?.actionId!==selection.actionId)invalid();
+ }
+ return {...draft,preparationActions:freezeAction([...(draft.preparationActions||[]).map(entry=>structuredClone(entry)),structuredClone(action)])};
+}
+export function selectPreparation(draft,track,action=null) {
  if(!['prepared','gpx'].includes(draft.traceType))throw Error('Cette méthode ne demande pas de préparation.');
  if(preparation(draft)==='delegated')throw Error('Votre visibilité ne permet pas de sélectionner la piste.');
  if(!track?.id||!track.name||(draft.traceType==='gpx'&&track.source!=='gpx'))throw Error('Choisissez un tracé compatible.');
  const {id,name,source,ownerId=null,fileName,start}=track;
- return {...draft,preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{})},knownPeople:[...new Set([...draft.knownPeople,'self',...(ownerId?[ownerId]:[])])],session:null};
+ const next=retainPreparationAction(draft,action,'reference-selection',{referenceId:id,beneficiaryParticipantId:null});
+ return {...next,preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{})},knownPeople:[...new Set([...draft.knownPeople,'self',...(ownerId?[ownerId]:[])])],session:null};
 }
 export function syncPreparation(draft,items) {
  if(draft.session||draft.traceType!=='prepared'||!draft.preparationTrack)return draft;
@@ -131,9 +158,10 @@ export function goToStep(draft,step) {
  return {...draft,step,editing:draft.step==='review'&&step!=='review'};
 }
 let nextSession=1;
-export function createSession(draft) {
+export function createSession(draft,action=null) {
  if(draft.session)return draft;
  if(validateDraft(draft).length)throw Error('Veuillez compléter la session avant de la créer.');
+ const next=retainPreparationAction(draft,action,'session-creation',{referenceId:draft.preparationTrack?.id??null,beneficiaryParticipantId:null});
  const roles={...draft.roles,observers:[...draft.roles.observers]}, ids=new Set([roles.coach,roles.traceur,roles.driver,...roles.observers].filter(Boolean));
  const number=nextSession++,code=`PC-${number.toString(36).toUpperCase().padStart(4,'0')}`;
  const trackingScenario=draft.trackingScenario||'connected_traceur';
@@ -143,7 +171,10 @@ export function createSession(draft) {
   searchActor:trackingScenario==='self_trace'?'self':'driver',
   preparation:draft.preparationTrack?structuredClone(draft.preparationTrack):null,
   dog:{...draft.dogs.find(d=>d.id===draft.dogId)},roles,participants:draft.participants.filter(p=>ids.has(p.id)).map(p=>({...p}))};
- return {...draft,step:'review',editing:false,session};
+ if(action==null)return {...draft,step:'review',editing:false,session};
+ const entries=next.preparationActions.map(entry=>entry.actionId===action.actionId?{...entry,sessionId:session.id}:entry);
+ const sessionCreation=freezeAction({sessionId:session.id,creatorUserId:action.author.userId,creatorParticipantId:action.author.participantId,createdAt:action.occurredAt,actionId:action.actionId});
+ return {...next,preparationActions:freezeAction(entries),sessionCreation,step:'review',editing:false,session};
 }
 
 export function mockInvitation(session) {
@@ -151,8 +182,9 @@ export function mockInvitation(session) {
  return {path:`/new-session?mock-invite=${encodeURIComponent(session.code)}`,text:`Invitation mock PISTE Community · code ${session.code}. Aperçu uniquement, aucune invitation réelle.`};
 }
 
-export function draftFromTrack(user,dogs,track) {
+export function draftFromTrack(user,dogs,track,action=null) {
  const {id,name,source,ownerId=null,fileName,start}=track;
  if(!id||!name)throw Error('Choisissez un tracé.');
- return {...createDraft(user,dogs),traceType:'prepared',preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{})},knownPeople:[...new Set(['self',...(ownerId?[ownerId]:[])])]};
+ const next=retainPreparationAction(createDraft(user,dogs),action,'reference-selection',{referenceId:id,beneficiaryParticipantId:null});
+ return {...next,traceType:'prepared',preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{})},knownPeople:[...new Set(['self',...(ownerId?[ownerId]:[])])]};
 }
