@@ -15,7 +15,7 @@ import * as tracer from './coaching-tracer.mjs';
 import {TracerScreen} from './coaching-tracer-screen.mjs';
 import * as search from './coaching-search.mjs';
 import {SearchScreen} from './coaching-search-screen.mjs';
-import {syncSession,advanceSessionSearch,markExternalTraceurInPlace,returnSelfTraceToStart,trackAgeSeconds,formatTrackAge,debriefView,archivePermissionView,setArchivePermission} from './coaching-session-flow.mjs';
+import {syncSession,advanceSessionSearch,markExternalTraceurInPlace,returnSelfTraceToStart,trackAgeSeconds,formatTrackAge,debriefView,archivePermissionView,setArchivePermission,saveDriverDebriefNote} from './coaching-session-flow.mjs';
 import {CoachScreen,ObserverScreen,SessionNotice} from './coaching-session-screen.mjs';
 import {DebriefScreen} from './coaching-debrief-screen.mjs';
 import {archiveSession} from './coaching-session-flow.mjs';
@@ -106,6 +106,14 @@ let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
 // Local assignment metadata only; never part of a spatial projection or pose.
 let coachingReferenceAssignment=null;
+function saveCoachingDriverDebriefNote(form){
+ try{
+  if(!['/coaching/session','/qa/coaching'].includes(location.pathname)||!preparationState||form.dataset.sessionId!==preparationState.session.id||form.dataset.authorId!==preparationState.viewerId)throw Error('Note refusée : ce formulaire ne correspond plus à la session active.');
+  searchState=saveDriverDebriefNote(searchState,preparationState,{sessionId:form.dataset.sessionId,expectedRevision:Number(form.dataset.revision),text:form.elements.note.value});
+  debriefUI={...debriefUI,noteDraft:undefined,notice:'Note enregistrée pour cette visite.'};
+ }catch(error){debriefUI={...debriefUI,noteDraft:{sessionId:form.dataset.sessionId,authorId:form.dataset.authorId,text:form.elements.note.value},notice:error.message};}
+ render();
+}
 function replyCoachingSearchMessage(text){
  try{
   if(searchUI.locked||!searchUI.messagesOpen||!preparationState)throw Error('Ouvrez les messages sur l’écran déverrouillé pour répondre.');
@@ -890,6 +898,7 @@ document.addEventListener('submit',event=>{
  if(scientificController.handleSubmit(event))return;
  if(jumolfController.handleSubmit(event))return;
  if(communityController.handleSubmit(event))return;
+ if(event.target.matches('[data-driver-debrief-note]')){event.preventDefault();saveCoachingDriverDebriefNote(event.target);return;}
  if(event.target.matches('[data-search-reply]')){event.preventDefault();replyCoachingSearchMessage(event.target.elements.reply.value);document.querySelector('#search-reply')?.focus();return;}
  if(event.target.matches('[data-tracer-reply]')){event.preventDefault();try{tracerState=tracer.replyMock(tracerState,event.target.elements.reply.value);}catch(error){tracerUI.notice=error.message;}render();document.querySelector('#tracer-reply')?.focus();return;}
 
