@@ -24,6 +24,7 @@ import {CoachingQaPanel} from './coaching-qa-screen.mjs';
 import { createDogsStore, resolveDogsRoute } from './dogs.mjs';
 import { DogFormScreen, DogNotFoundScreen, DogPhotoMarkup, DogProfileScreen, DogsListScreen } from './dogs-screen.mjs';
 import {createSessionCatalog} from './session-catalog.mjs';
+import {createCoachingHistoryStorage} from './coaching-history-storage.mjs';
 import {sessionListView,sessionDetailView,sessionReplayView,trackListView,trackDetailView,completedSessionHistoryView,homeActiveSessionView,resolveConsultationRoute} from './session-views.mjs';
 import {SessionListScreen,SessionListResults,SessionDetailScreen} from './sessions-screen.mjs';
 import {SessionReplayScreen} from './session-replay-screen.mjs';
@@ -87,7 +88,32 @@ function coachingActionContext(type,{draft=coachingDraft,referenceId=null,benefi
 }
 let trackLibrary=createTrackLibrary();
 let dogsStore=createDogsStore();
+const coachingHistoryStorage=createCoachingHistoryStorage(storage);
 let sessionCatalog=createSessionCatalog();
+let coachingHistoryOwnerId;
+let coachingHistoryNotice='',coachingHistoryShownNotice='';
+function restoreCoachingHistoryForUser(){
+ const ownerId=currentUser?.user_id||null;
+ if(ownerId===coachingHistoryOwnerId)return;
+ sessionCatalog.clear();coachingHistoryOwnerId=ownerId;coachingHistoryNotice='';coachingHistoryShownNotice='';
+ if(!ownerId)return;
+ const loaded=coachingHistoryStorage.load(ownerId);
+ if(!loaded.ok){coachingHistoryNotice='Historique local indisponible. Les sessions de cette visite restent accessibles en mémoire.';return;}
+ loaded.records.forEach(record=>sessionCatalog.capture(record));
+ coaching.reserveSessionIds(loaded.records.map(record=>record.session.id));
+}
+function captureCoachingHistory(){
+ if(qaInitialized||!currentUser?.user_id||!preparationState||!coachingDraft.session||coachingDraft.identityContext?.userId!==currentUser.user_id)return;
+ sessionCatalog.capture({session:coachingDraft.session,searchState,preparationState,tracerState});
+ if(!['DEBRIEF','ARCHIVED'].includes(searchState.phase))return;
+ const result=coachingHistoryStorage.save(currentUser.user_id,sessionCatalog.list());
+ coachingHistoryNotice=result.ok?'':result.reason==='conflict'?'Historique modifié dans un autre onglet ou illisible. Sauvegarde refusée pour préserver les données ; cette session reste en mémoire.':'Sauvegarde locale impossible. Cette session reste en mémoire et risque d’être perdue au rechargement.';
+}
+function showCoachingHistoryWarning(){
+ if(coachingHistoryNotice&&coachingHistoryNotice!==coachingHistoryShownNotice)Toast(coachingHistoryNotice);
+ coachingHistoryShownNotice=coachingHistoryNotice;
+}
+
 let operationalStore=createOperationalMissionStore();
 const adminStore=createAdminStore();
 let jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null});
@@ -385,6 +411,7 @@ function render(focus=false) {
  const consultation=resolveConsultationRoute(route);
  if(route!==scientificEntry)history.replaceState({},'',`${route}${location.search}${location.hash}`);
  currentUser=auth.getSession().user;
+ restoreCoachingHistoryForUser();
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
@@ -396,7 +423,7 @@ function render(focus=false) {
  const scientificRoute=resolveScientificRoute(route)?route:null;
  const scientificContributionRoute=resolveScientificContributionRoute(route);
  const dogForTitle=dogsRoute?.dogId?dogsStore.get(dogsRoute.dogId):null;
- if(preparationState&&coachingDraft.session)sessionCatalog.capture({session:coachingDraft.session,searchState,preparationState,tracerState});
+ captureCoachingHistory();
  const adminRoute=resolveAdminRoute(`${route}${location.search}`);
  const adminTitle=adminRoute?({dashboard:'Console Admin',members:'Membres',member:'Fiche membre',premium:'Premium & JUMOLF',codes:'Codes JUMOLF',scientific:'Gouvernance scientifique',services:'Services · Simulation Admin',deployments:'Déploiements · Simulation Admin',errors:'Erreurs · Simulation Admin',audit:'Audit Admin',unknown:'Console Admin'}[adminRoute.type]||'Console Admin'):null;
  const profileTitle=profileRoute?({home:'Profil',account:'Mon compte',dogs:'Mes chiens',premium:'Premium & JUMOLF',access:'Mes accès',notifications:'Notifications',preferences:'Préférences',about:'Aide & À propos'}[profileRoute.type]||'Profil'):null;
@@ -408,6 +435,7 @@ function render(focus=false) {
  const scientificContent=scientificRoute?ScientificShell(scientificRoute,scientificScreen,currentUser):null;
  const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
+ showCoachingHistoryWarning();
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
  operationalChronoInterval=null;
  if(coachingAgeInterval)clearInterval(coachingAgeInterval);
