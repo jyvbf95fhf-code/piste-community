@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createSessionCatalog} from '../src/session-catalog.mjs';
-import {sessionListView,homeActiveSessionView,completedSessionHistoryView} from '../src/session-views.mjs';
+import {sessionListView,homeActiveSessionView,completedSessionHistoryView,sessionDetailView} from '../src/session-views.mjs';
+import {formatTimestamp} from '../src/coaching-time.mjs';
 import {mock} from '../src/data.mjs';
 import {createCoachingQa} from '../src/coaching-qa.mjs';
 
@@ -93,4 +94,28 @@ test('summary-only completed demo remains in Mes pistes without inventing a repl
  assert.ok(recent);
  assert.equal(recent.status,'Terminée');
  assert.equal(recent.replayHref,null);
+});
+
+for(const phase of ['DEBRIEF','ARCHIVED'])test(`history displays the recorded search start date: ${phase}`,()=>{
+ const catalog=createSessionCatalog(),record=sample(phase),start='2026-10-11T18:01:00.000Z';
+ record.searchState.search_started_at=start;catalog.capture(record);
+ const [row]=sessionListView(catalog,{demoRows:false});
+ assert.equal(row.date,formatTimestamp(start));
+ assert.equal(row.date,sessionDetailView(catalog.get(record.session.id)).date);
+ assert.equal(completedSessionHistoryView(catalog,{includeDemoRows:false})[0].date,row.date);
+ assert.equal(record.session.date,undefined);
+});
+test('history never invents a date when the recorded start is missing or invalid',()=>{
+ for(const phase of ['DEBRIEF','ARCHIVED'])for(const start of [undefined,null,'','invalid']){
+  const catalog=createSessionCatalog(),record=sample(phase);record.searchState.search_started_at=start;catalog.capture(record);
+  assert.equal(sessionListView(catalog,{demoRows:false})[0].date,'Aucune donnée disponible');
+ }
+});
+test('history preserves an existing session date',()=>{
+ const catalog=createSessionCatalog(),record=sample('ARCHIVED');record.session.date='Date déjà renseignée';record.searchState.search_started_at='2026-10-11T18:01:00.000Z';catalog.capture(record);
+ assert.equal(sessionListView(catalog,{demoRows:false})[0].date,'Date déjà renseignée');
+});
+test('active session date display remains unchanged',()=>{
+ const catalog=createSessionCatalog(),record=sample('SEARCH_RUNNING');record.searchState.search_started_at='2026-10-11T18:01:00.000Z';catalog.capture(record);
+ assert.equal(sessionListView(catalog,{demoRows:false})[0].date,'Aucune donnée disponible');
 });

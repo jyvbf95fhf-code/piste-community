@@ -28,7 +28,7 @@ function liveRow(record,currentSessionId){
   status:statusFor(phase),phase,
   dogId:dog.id||null,dogName:dog.name||unavailable,
   modeLabel:modeLabel(mode),roleLabel:viewer?.team?.find(person=>person.id===viewer.viewerId)?.roleLabel||unavailable,
-  date:session.date||unavailable,
+  date:session.date||(isFinished(statusFor(phase))&&Number.isFinite(Date.parse(searchState?.search_started_at||''))?formatTimestamp(searchState.search_started_at):unavailable),
   distance:phase==='DEBRIEF'||phase==='ARCHIVED'?debriefView(searchState,preparationState,tracerState||{}).summary.searchDistance:unavailable,
   duration:phase==='DEBRIEF'||phase==='ARCHIVED'?debriefView(searchState,preparationState,tracerState||{}).summary.searchSeconds+' s · mock':unavailable,
   trackAgeAtSearchStart:phase==='DEBRIEF'||phase==='ARCHIVED'?searchState.trackAgeAtSearchStart??null:null,
