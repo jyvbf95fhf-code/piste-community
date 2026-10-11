@@ -71,6 +71,9 @@ export function transition(s,action){
 export function preparationView(s){
  const viewer=s.team.find(p=>p.id===s.viewerId),role=viewer.activeFunction,mode=s.session.mode;
  const readSpatial=mode==='normal'||role==='traceur'||mode==='simple_blind'&&role!=='driver';
+ // Reference-only exception: assigned internal poser acting as Coach.
+ const coachPoserReference=['prepared','gpx'].includes(s.session.traceType)&&typeof s.session.preparation?.id==='string'&&s.session.preparation.id.trim().length>0&&mode==='full_blind'&&role==='coach'&&s.traceurKind==='internal'&&viewer.id===s.session.roles.coach&&viewer.id===s.session.roles.traceur&&viewer.functions.includes('coach')&&viewer.functions.includes('traceur')&&!viewer.functions.includes('driver');
+ const readReference=readSpatial||coachPoserReference;
  const concealTracer=mode==='full_blind'&&role!=='traceur';
  const team=s.team.filter(p=>!(s.traceurKind==='external'&&p.activeFunction==='traceur')).map(p=>({id:p.id,name:concealTracer&&p.activeFunction==='traceur'?'Traceur — masqué':p.name,role:p.activeFunction,roleLabel:roleName(p.activeFunction),functions:[...p.functions],self:p.id===viewer.id,status:concealTracer&&p.activeFunction==='traceur'?'Informations masquées':p.activeFunction==='traceur'?(s.phase==='ready'?'Prêt à tracer':'Préparation'):p.activeFunction==='driver'?'En attente':p.activeFunction==='observer'?'Lecture seule':'Supervision'}));
  const markers=[];
@@ -82,15 +85,15 @@ export function preparationView(s){
   markers.push({...point,id:p.id,role:p.role,name:p.name,freshness});
  }
  const paths=[];
- if(readSpatial&&['prepared','gpx'].includes(s.session.traceType))paths.push({kind:'reference',label:'Référence préparée · simulée',d:geometry.reference});
+ if(readReference&&['prepared','gpx'].includes(s.session.traceType))paths.push({kind:'reference',label:'Référence préparée · simulée',d:geometry.reference});
  if(readSpatial&&s.layers&&s.traceurKind==='internal')paths.push({kind:'pose',label:'Pose · couche de test fictive',d:geometry.pose});
  if(readSpatial&&s.layers)paths.push({kind:'releve',label:'Relève · couche de test fictive',d:geometry.releve});
- const start=readSpatial||role==='driver'?referenceStart(s.session):null;
+ const start=readReference||role==='driver'?referenceStart(s.session):null;
  const knownStart=!!start;
  const actions=role==='traceur'&&s.traceurKind==='internal'?(['created','preparing','approaching'].includes(s.phase)?[{id:knownStart?'approach':'ready',label:knownStart?'Rejoindre le départ':'Me déclarer prêt à tracer'}]:s.phase==='ready'?[{id:'ready',label:'Ouvrir la carte terrain'}]:[]):[];
  const external=s.traceurKind==='external'&&(mode!=='full_blind'||role==='traceur')?{name:s.external.name,state:s.external.state}:null;
  const displayedGps=!s.positionsPresent||s.missingActors.includes(viewer.id)?'unavailable':s.gps;
- const preparation=readSpatial&&s.session.preparation?copy(s.session.preparation):null;
+ const preparation=readReference&&s.session.preparation?copy(s.session.preparation):null;
  const scenarioActions=s.productScenario==='external_traceur'?s.phase!=='external_ready'&&role==='driver'?[{id:'external-ready',label:'Le traceur est en place'}]:[]:s.productScenario==='external_driver_recorded'?s.phase==='created'&&role==='driver'?[{id:'start-pose',label:'Démarrer l’enregistrement de pose'}]:s.phase==='external_ready'&&role==='driver'?[{id:'external-ready',label:'Le traceur est en place'}]:[]:[];
- return {phase:s.phase,phaseLabel:phaseLabels[s.phase],code:s.session.code,scenario:s.productScenario,mode,modeLabel:modes.find(m=>m.id===mode).title,traceType:s.session.traceType,traceLabel:traceTypes.find(t=>t.id===s.session.traceType).title,dog:{...s.session.dog},viewerId:viewer.id,role,roleLabel:roleName(role),team,external,externalPosition:null,gps:displayedGps,gpsLabel:gpsStates[displayedGps],knownStart,showStart:knownStart,start,arrival:readSpatial&&paths.length?{...geometry.arrival}:null,markers,paths,actions:[...actions,...scenarioActions],preparation,knowledgeNotice:viewer.functions.includes('traceur')&&viewer.functions.includes('driver'),referenceHidden:!readSpatial,physicalLaid:false};
+ return {phase:s.phase,phaseLabel:phaseLabels[s.phase],code:s.session.code,scenario:s.productScenario,mode,modeLabel:modes.find(m=>m.id===mode).title,traceType:s.session.traceType,traceLabel:traceTypes.find(t=>t.id===s.session.traceType).title,dog:{...s.session.dog},viewerId:viewer.id,role,roleLabel:roleName(role),team,external,externalPosition:null,gps:displayedGps,gpsLabel:gpsStates[displayedGps],knownStart,showStart:knownStart,start,arrival:readSpatial&&paths.length?{...geometry.arrival}:null,markers,paths,actions:[...actions,...scenarioActions],preparation,knowledgeNotice:viewer.functions.includes('traceur')&&viewer.functions.includes('driver'),referenceHidden:!readSpatial,coachPoserReference,physicalLaid:false};
 }
