@@ -136,6 +136,17 @@ function replyCoachingSearchMessage(text){
  }catch(error){searchUI.notice=error.message;}
  render();
 }
+function handleCoachingCoachMessages(control,text=''){
+ try{
+  const request=control.dataset;
+  if(!['/coaching/session','/qa/coaching'].includes(location.pathname)||!preparationState||request.sessionId!==preparationState.session.id||request.authorId!==preparationState.viewerId||!tracer.canCoachMessage(preparationState,searchState))throw Error('Messagerie refusée : la session, la fonction ou la phase a changé.');
+  if(request.coachMessage==='open'){tracerState=tracer.readMessages(tracerState,preparationState);preparationUI={...preparationUI,messagesOpen:true,messageNotice:''};}
+  else if(request.coachMessage==='close')preparationUI={...preparationUI,messagesOpen:false,messageNotice:''};
+  else if(request.coachMessage==='reply'){if(!preparationUI.messagesOpen)throw Error('Ouvrez les messages pour répondre.');tracerState=tracer.replyCoachMock(tracerState,preparationState,searchState,text);preparationUI.messageNotice='';}
+  else throw Error('Commande de messagerie inconnue.');
+ }catch(error){preparationUI.messageNotice=error.message;}
+ render();
+}
 function confirmCoachingArchiveAction(control){
  const request={action:control.dataset.debrief,sessionId:control.dataset.sessionId,revision:Number(control.dataset.revision),beneficiaryParticipantId:control.dataset.beneficiaryId,viewerId:preparationState?.viewerId,viewerRole:preparationState?preparation.preparationView(preparationState).role:null};
  const compatible=()=>{if(!preparationState||preparationState.session.id!==request.sessionId||preparationState.viewerId!==request.viewerId||preparation.preparationView(preparationState).role!==request.viewerRole)return false;const v=archivePermissionView(searchState,preparationState);return v.revision===request.revision&&(request.action==='archive'?v.canArchive:['grant-archive','revoke-archive'].includes(request.action)&&v.canManageArchive&&v.beneficiaryParticipantId===request.beneficiaryParticipantId&&(request.action==='grant-archive'?v.status!=='active':v.status==='active'));};
@@ -486,7 +497,7 @@ function renderPreparation(){
  if(['DEBRIEF','ARCHIVED'].includes(searchState.phase))return DebriefScreen(searchState,preparationState,tracerState,debriefUI);
  if(v?.role==='coach')return CoachScreen(searchState,preparationState,tracerState,preparationUI);
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
- if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracerState.messages,unreadCount:tracerState.messages.filter(message=>!message.read&&!message.outgoing).length});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
+ if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracer.sessionMessages(tracerState,preparationState).messages,unreadCount:tracer.sessionMessages(tracerState,preparationState).unread});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
  if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,tracerUI).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
  return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceChoices:preparation.sessionReferenceChoices(preparationState,preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list(),{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]}),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
@@ -599,6 +610,8 @@ document.addEventListener('click',event=>{
  if(debriefTab&&preparationState){debriefUI={...debriefUI,tab:debriefTab.dataset.debriefTab};render();document.querySelector(`[data-debrief-tab="${debriefUI.tab}"]`)?.focus();return;}
  const debriefAction=event.target.closest('[data-debrief]');
  if(debriefAction&&preparationState){confirmCoachingArchiveAction(debriefAction);return;}
+ const coachMessage=event.target.closest('[data-coach-message]');
+ if(coachMessage){handleCoachingCoachMessages(coachMessage,coachMessage.dataset.text||'');if(preparationUI.messagesOpen)document.querySelector('#coach-reply')?.focus();return;}
  const coachControl=event.target.closest('[data-coach-search]');
  if(coachControl&&preparationState){try{const action=coachControl.dataset.coachSearch;if(!['pause','resume'].includes(action))throw Error('Commande Coach inconnue.');searchState=advanceSessionSearch(searchState,preparationState,action);}catch(error){searchUI.notice=error.message;}render(true);return;}
  const searchControl=event.target.closest('[data-search]');
@@ -615,7 +628,7 @@ document.addEventListener('click',event=>{
    else if(action==='pause'||action==='resume'){searchState=advanceSessionSearch(searchState,preparationState,action);}
    else if(action==='lock-screen'){searchUI={...searchUI,locked:true,messagesOpen:false};}
    else if(action==='unlock'&&event.detail===0){searchUI={...searchUI,locked:false};}
-   else if(action==='messages'){tracerState=tracer.readMessages(tracerState);searchUI={...searchUI,messagesOpen:true};}
+   else if(action==='messages'){tracerState=tracer.readMessages(tracerState,preparationState);searchUI={...searchUI,messagesOpen:true};}
    else if(action==='reply'){replyCoachingSearchMessage(searchControl.dataset.text);return;}
    else if(action==='close-messages')searchUI={...searchUI,messagesOpen:false};
    else if(action==='cancel-finish')searchUI.confirmFinish=false;
@@ -646,14 +659,14 @@ document.addEventListener('click',event=>{
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState,tracerState);terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(['start','progress','finish','in-place'].includes(action)){tracerState=tracer.advanceTracer(tracerState,preparationState,action);searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(action==='resume'){preparationState=preparation.simulate(preparationState,{gps:'fresh'});if(tracerState.phase==='active')tracerState=tracer.advanceTracer(tracerState,preparationState,'progress');}
-   else if(action==='messages'){tracerState=tracer.readMessages(tracerState);tracerUI={...tracerUI,messagesOpen:true,devOpen:false};}
+   else if(action==='messages'){tracerState=tracer.readMessages(tracerState,preparationState);tracerUI={...tracerUI,messagesOpen:true,devOpen:false};}
    else if(action==='close-messages')tracerUI.messagesOpen=false;
    else if(action==='dev')tracerUI.devOpen=true;
    else if(action==='close-dev')tracerUI.devOpen=false;
    else if(action==='layers')tracerUI.layersOpen=!tracerUI.layersOpen;
    else if(action==='clean')tracerUI.clean=!tracerUI.clean;
    else if(action==='center'){const point=tracer.tracerView(tracerState,preparationState).markers.find(m=>m.id===preparationState.viewerId);if(point)tracerUI.center={x:point.x,y:point.y};tracerUI.notice=point?'Vue recentrée sur votre position mock.':'Recentrage indisponible : aucune position.';}
-   else if(action==='reply')tracerState=tracer.replyMock(tracerState,terrain.dataset.text);
+   else if(action==='reply')tracerState=tracer.replyMock(tracerState,terrain.dataset.text,preparationState);
   }catch(error){tracerUI.notice=error.message;}
   render();
   if(tracerUI.messagesOpen)document.querySelector('[data-tracer="close-messages"]')?.focus();
@@ -915,8 +928,9 @@ document.addEventListener('submit',event=>{
  if(communityController.handleSubmit(event))return;
  if(event.target.matches('[data-tracer-reference]')){event.preventDefault();confirmCoachingTracerReference(event.target);return;}
  if(event.target.matches('[data-driver-debrief-note]')){event.preventDefault();saveCoachingDriverDebriefNote(event.target);return;}
+ if(event.target.matches('[data-coach-reply]')){event.preventDefault();handleCoachingCoachMessages({dataset:{...event.target.dataset,coachMessage:'reply'}},event.target.elements.reply.value);document.querySelector('#coach-reply')?.focus();return;}
  if(event.target.matches('[data-search-reply]')){event.preventDefault();replyCoachingSearchMessage(event.target.elements.reply.value);document.querySelector('#search-reply')?.focus();return;}
- if(event.target.matches('[data-tracer-reply]')){event.preventDefault();try{tracerState=tracer.replyMock(tracerState,event.target.elements.reply.value);}catch(error){tracerUI.notice=error.message;}render();document.querySelector('#tracer-reply')?.focus();return;}
+ if(event.target.matches('[data-tracer-reply]')){event.preventDefault();try{tracerState=tracer.replyMock(tracerState,event.target.elements.reply.value,preparationState);}catch(error){tracerUI.notice=error.message;}render();document.querySelector('#tracer-reply')?.focus();return;}
 
  const operationalIntakeForm=event.target.closest('form[data-operational-intake-form]');
  if(operationalIntakeForm){
