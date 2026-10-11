@@ -8,7 +8,7 @@ import * as search from '../src/coaching-search.mjs';
 import * as tracer from '../src/coaching-tracer.mjs';
 import {sessionView} from '../src/coaching-session-flow.mjs';
 import {createCoachingQa,selectQaPerspective} from '../src/coaching-qa.mjs';
-import {createReferenceAssignmentState,getReferenceAssignment} from '../src/coaching-reference-assignment.mjs';
+import {createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment} from '../src/coaching-reference-assignment.mjs';
 
 const app=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');
 const user={user_id:'integration-user-83',name:'Simulation fixture'};
@@ -23,7 +23,7 @@ function freeze(value){if(value&&typeof value==='object'){Object.values(value).f
 // real. This is not a browser-rendering test or a real identity/GPS scenario.
 function application(draft=ready(),identity=user){
  let nextId=0;
- const sandbox=createContext({coaching,preparation,search,tracer,createReferenceAssignmentState,createCoachingQa,selectQaPerspective,
+ const sandbox=createContext({coaching,preparation,search,tracer,createReferenceAssignmentState,applyReferenceAssignmentAction,createCoachingQa,selectQaPerspective,
   structuredClone,TypeError,currentUser:identity,coachingDraft:draft,qaInitialized:false,qaMode:'normal',qaScenario:'connected_traceur',mock:{dog:dogs[0]},
   searchState:search.createSearch(),searchUI:{},debriefUI:{},tracerState:tracer.createTracer(),tracerUI:{},terrainOpen:false,preparationState:null,preparationUI:{},qaUI:{},
   trackLibrary:{list:()=>[reference()]},crypto:{randomUUID:()=>`simulation-integration-action-${++nextId}`},
@@ -148,4 +148,17 @@ for(const [name,alter] of [
 });
 test('loss of current user invalidates local state without assigning identity to replacement',()=>{
  const a=created();requireState(a);a.sandbox.currentUser=null;a.render();assert.equal(a.state,null);
+});
+
+
+test('actual render maintenance preserves recorded grants and revocations without rebuilding ledger',()=>{
+ const a=created();requireState(a);
+ const command={actionId:'render-grant',type:'delegation-grant',sessionId:a.state.state.sessionId,authorParticipantId:'self',beneficiaryParticipantId:'camille',delegationId:'render-delegation',permission:'reference.assign',occurredAt:'2026-10-10T12:00:00.000Z',origin:'simulation:render-integration',assurance:'local-simulation',expectedRevision:0};
+ for(const action of [command,{...command,actionId:'render-revoke',type:'delegation-revoke',expectedRevision:1}]){
+  a.sandbox.delegationCommand=action;
+  runInContext('coachingReferenceAssignment=Object.freeze({...coachingReferenceAssignment,state:applyReferenceAssignmentAction(coachingReferenceAssignment.state,coachingReferenceAssignment.context,delegationCommand)});',a.sandbox);
+  const initial=a.state;for(let i=0;i<3;i++)a.render();assert.equal(a.state,initial);
+ }
+ assert.equal(a.state.state.delegationLedger.records[0].status,'revoked');assert.equal(a.state.state.delegationLedger.actions.length,2);
+ a.restart();assert.equal(a.state,null);
 });
