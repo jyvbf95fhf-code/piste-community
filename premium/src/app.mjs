@@ -516,6 +516,7 @@ function renderLive(route){
  return LiveScreen({ownSessions,contactSessions:[],invitations:[]});
 }
 function renderPreparation(){
+ if(!preparationState)return `<section class="coaching-flow prep-flow" data-coaching-no-current-session>${EmptyState('Aucune session en cours','La session courante n’est plus en mémoire. Vos sessions terminées et archivées sauvegardées sur cet appareil restent accessibles dans Sessions.','route')}<a class="button button-gold" href="/sessions">Voir mes sessions</a></section>`;
  const v=preparationState?preparation.preparationView(preparationState):null;
  if(preparationState)searchState=syncSession(searchState,preparationState,tracerState);
  if(coachingDraft.session?.id&&['LAYING','SEARCH_RUNNING'].includes(searchState.phase)&&!notifiedCoachingStarts.has(coachingDraft.session.id)){
