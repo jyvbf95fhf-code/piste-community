@@ -573,6 +573,7 @@ document.addEventListener('click',event=>{
    else if(action==='preparation'){searchUI.showPreparation=true;searchUI.devOpen=false;}
    else if(action==='release'){if(searchState.phase!=='LAYING_WAIT')throw Error('Attente de pose requise.');searchState=search.simulateSearch(searchState,{phase:'SEARCH_READY'});searchUI.devOpen=false;}
    else if(action==='finish'){if(!search.isSearchActor(preparationState)||searchState.phase!=='SEARCH_RUNNING')throw Error('Fin non autorisée.');searchUI.confirmFinish=true;}
+   else if(action==='record-pause'){if(!searchUI.devOpen||searchUI.locked)throw Error('Déplacement en pause réservé au simulateur DEV ouvert.');searchState=advanceSessionSearch(searchState,preparationState,'record-pause');}
    else if(action==='pause'||action==='resume'){searchState=advanceSessionSearch(searchState,preparationState,action);}
    else if(action==='lock-screen'){searchUI={...searchUI,locked:true,messagesOpen:false};}
    else if(action==='unlock'&&event.detail===0){searchUI={...searchUI,locked:false};}
