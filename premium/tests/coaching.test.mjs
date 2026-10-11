@@ -62,3 +62,33 @@ test('successive Coach and Conducteur functions are possible in double blind whe
 test('anonymous initialization does not prevent the existing auth screen from loading',()=>{
  setup();assert.doesNotThrow(()=>model.createDraft(null,[{id:'nox',name:'Nox'}]));
 });
+
+for(const mode of ['normal','simple_blind','full_blind']){
+ test(`connected Traceur is required without a prepared reference: ${mode}`,()=>{
+  const draft=model.assignRole(model.updateDraft(setup(),{mode,traceType:'none'}),'traceur',null);
+  const before=structuredClone(draft);
+  assert.deepEqual(model.validateDraft(draft),[{code:'traceur_required',message:'Choisissez un Traceur pour préparer la piste.'}]);
+  assert.throws(()=>model.createSession(draft),/compléter/i);
+  assert.deepEqual(draft,before);
+ });
+ test(`designated Traceur can create without a prepared reference: ${mode}`,()=>{
+  const draft=model.updateDraft(setup(),{mode,traceType:'none'});
+  assert.deepEqual(model.validateDraft(draft),[]);
+  const session=model.createSession(draft).session;
+  assert.equal(session.roles.traceur,'alex');assert.equal(session.preparation,null);
+ });
+}
+test('external Traceur remains valid without a connected participant or prepared reference',()=>{
+ for(const [scenario,modes] of [['external_traceur',['normal','simple_blind','full_blind']],['external_driver_recorded',['normal']]])for(const mode of modes){
+  const draft=model.setTrackingScenario(model.updateDraft(setup(),{mode,traceType:'none'}),scenario);
+  assert.deepEqual(model.validateDraft(draft),[]);
+  const session=model.createSession(draft).session;
+  assert.equal(session.roles.traceur,null);assert.equal(session.scenario,scenario);
+ }
+});
+test('self Traceur remains valid without a prepared reference',()=>{
+ const draft=model.setTrackingScenario(model.updateDraft(setup(),{mode:'normal',traceType:'none'}),'self_trace');
+ assert.deepEqual(model.validateDraft(draft),[]);
+ const session=model.createSession(draft).session;
+ assert.equal(session.roles.traceur,'self');assert.equal(session.roles.driver,'self');assert.equal(session.preparation,null);
+});
