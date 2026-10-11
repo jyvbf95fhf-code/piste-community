@@ -13,6 +13,11 @@ const delegation=(patch={})=>({id:'delegation-701',sessionId:'session-811',grant
 const command=(patch={})=>({actionId:'action-201',sessionId:'session-811',referenceId:'reference-101',authorParticipantId:'creator-17',beneficiaryParticipantId:'tracer-31',type:'assign',occurredAt:'2026-10-10T12:00:00.000Z',origin:'simulation:assignment-contract',assurance:'local-simulation',delegationId:null,expectedRevision:0,assignmentId:'assignment-301',...patch});
 const state=c=>createReferenceAssignmentState(c??context());
 const act=(s,c,a)=>applyReferenceAssignmentAction(s,c,a);
+// An external description is insufficient: explicitly record the creator's
+// local grant before exercising delegated assignment authority.
+const grant=(patch={})=>({actionId:'delegation-grant-709',type:'delegation-grant',sessionId:'session-811',authorParticipantId:'creator-17',beneficiaryParticipantId:'coach-23',delegationId:'delegation-701',permission:'reference.assign',occurredAt:'2026-10-10T11:58:00.000Z',origin:'simulation:assignment-contract',assurance:'local-simulation',expectedRevision:0,...patch});
+const granted=c=>act(state(c),c,grant());
+const revokeDelegation=(s,c)=>act(s,c,grant({actionId:'delegation-revoke-719',type:'delegation-revoke',occurredAt:'2026-10-10T12:04:00.000Z',expectedRevision:1}));
 const view=s=>getReferenceAssignment(s,'reference-101');
 const assigned=(c=context())=>act(state(c),c,command());
 const response=(type='accept',patch={})=>command({actionId:'action-203',type,authorParticipantId:'tracer-31',expectedRevision:1,occurredAt:'2026-10-10T12:01:00.000Z',...patch});
@@ -31,16 +36,16 @@ test('noncreator without delegation cannot assign even to themselves',()=>{
  assert.throws(()=>act(state(),context(),command({authorParticipantId:'tracer-31'})),/NOT_ASSIGNMENT_AUTHORITY/);
 });
 test('Coach requires explicit reference.assign delegation',()=>{
- const c=context();c.delegations=[delegation()];const s=act(state(c),c,command({authorParticipantId:'coach-23',delegationId:'delegation-701'}));assert.equal(s.actions[0].delegationId,'delegation-701');assert.equal(view(s).status,'pending');
+ const c=context();c.delegations=[delegation()];const a=command({authorParticipantId:'coach-23',delegationId:'delegation-701'});assert.throws(()=>act(state(c),c,a),/INVALID_DELEGATION/);const s=act(granted(c),c,a);assert.equal(s.actions[0].delegationId,'delegation-701');assert.equal(view(s).status,'pending');
 });
 for(const [name,patch] of [['revoked',{status:'revoked'}],['other session',{sessionId:'foreign-session'}],['closure only',{permission:'session.close'}],['wrong beneficiary',{beneficiaryParticipantId:'coach-tracer-59'}],['wrong grantor',{grantedByParticipantId:'driver-67'}]])test(`Coach delegation refused: ${name}`,()=>{
- const c=context();c.delegations=[delegation(patch)];assert.throws(()=>act(state(c),c,command({authorParticipantId:'coach-23',delegationId:'delegation-701'})),/INVALID_DELEGATION/);
+ const c=context();c.delegations=[delegation(patch)];assert.throws(()=>act(granted(c),c,command({authorParticipantId:'coach-23',delegationId:'delegation-701'})),/INVALID_DELEGATION/);
 });
 test('Coach without delegation or with nonexistent delegation refused',()=>{
  for(const delegationId of [null,'missing'])assert.throws(()=>act(state(),context(),command({authorParticipantId:'coach-23',delegationId})),/INVALID_DELEGATION/);
 });
 test('incomplete delegation refuses authority without inventing fields',()=>{
- const c=context(),d=delegation();delete d.grantedByParticipantId;c.delegations=[d];assert.throws(()=>act(state(c),c,command({authorParticipantId:'coach-23',delegationId:d.id})),/INVALID_DELEGATION/);
+ const c=context(),d=delegation();delete d.grantedByParticipantId;c.delegations=[d];assert.throws(()=>act(granted(c),c,command({authorParticipantId:'coach-23',delegationId:d.id})),/INVALID_DELEGATION/);
 });
 test('delegation does not turn a non-Coach into an assignment authority',()=>{
  const c=context();c.delegations=[delegation({beneficiaryParticipantId:'tracer-31'})];assert.throws(()=>act(state(c),c,command({authorParticipantId:'tracer-31',delegationId:'delegation-701'})),/NOT_ASSIGNMENT_AUTHORITY/);
@@ -68,8 +73,8 @@ test('revocation removes current attribution and retains history',()=>{
  const s=act(assigned(),context(),revocation());assert.equal(view(s).status,'revoked');assert.equal(view(s).current,null);assert.equal(view(s).assignments[0].status,'revoked');assert.equal(s.actions.length,2);
 });
 test('delegated Coach can revoke but revoked delegation cannot',()=>{
- const c=context();c.delegations=[delegation()];const s=assigned(c),a=revocation({authorParticipantId:'coach-23',delegationId:'delegation-701'});
- assert.equal(view(act(s,c,a)).status,'revoked');c.delegations[0].status='revoked';assert.throws(()=>act(s,c,a),/INVALID_DELEGATION/);
+ const c=context();c.delegations=[delegation()];const s=act(granted(c),c,command()),a=revocation({authorParticipantId:'coach-23',delegationId:'delegation-701'});
+ assert.equal(view(act(s,c,a)).status,'revoked');const terminated=revokeDelegation(s,c);assert.throws(()=>act(terminated,c,a),/INVALID_DELEGATION/);c.delegations[0].status='revoked';assert.throws(()=>act(s,c,a),/INVALID_DELEGATION/);
 });
 test('no contradictory second active assignment without explicit replacement',()=>assert.throws(()=>act(assigned(),context(),command({actionId:'other',assignmentId:'other',expectedRevision:1,beneficiaryParticipantId:'tracer-43'})),/ACTIVE_ASSIGNMENT_EXISTS/));
 test('new assignment after decline uses a distinct caller identity',()=>{
@@ -139,10 +144,10 @@ test('unrelated reference remains unassigned through all changes',()=>{
  const s=act(assigned(),context(),replacement());assert.equal(getReferenceAssignment(s,'reference-103').status,'none');assert.throws(()=>getReferenceAssignment(s,'missing'));
 });
 for(const field of ['sessionId','grantedByParticipantId','beneficiaryParticipantId','permission','status'])test(`missing delegation field explicitly refused: ${field}`,()=>{
- const c=context(),d=delegation();delete d[field];c.delegations=[d];assert.throws(()=>act(state(c),c,command({authorParticipantId:'coach-23',delegationId:d.id})),/INVALID_DELEGATION/);
+ const c=context(),d=delegation();delete d[field];c.delegations=[d];assert.throws(()=>act(granted(c),c,command({authorParticipantId:'coach-23',delegationId:d.id})),/INVALID_DELEGATION/);
 });
 test('historical delegation use is preserved after subsequent revocation, without new authority',()=>{
- const c=context();c.delegations=[delegation()];const a=command({authorParticipantId:'coach-23',delegationId:'delegation-701'}),s=act(state(c),c,a);
+ const c=context();c.delegations=[delegation()];const a=command({authorParticipantId:'coach-23',delegationId:'delegation-701'}),s=revokeDelegation(act(granted(c),c,a),c);
  c.delegations[0].status='revoked';assert.deepEqual(act(s,c,a),s);assert.equal(view(s).current.delegationId,'delegation-701');
  assert.throws(()=>act(s,c,replacement({authorParticipantId:'coach-23',delegationId:'delegation-701'})),/INVALID_DELEGATION/);
 });
@@ -161,7 +166,7 @@ test('revision is specific to each reference and identities remain distinct',()=
  assert.throws(()=>act(s,context(),command({referenceId:'reference-103',actionId:'action-other-ref'})),/ASSIGNMENT_ID_REUSED/);
 });
 test('duplicate delegation identities cannot grant ambiguous authority',()=>{
- const c=context();c.delegations=[delegation(),delegation()];assert.throws(()=>act(state(c),c,command({authorParticipantId:'coach-23',delegationId:'delegation-701'})),/INVALID_DELEGATION/);
+ const c=context();c.delegations=[delegation(),delegation()];assert.throws(()=>act(granted(c),c,command({authorParticipantId:'coach-23',delegationId:'delegation-701'})),/INVALID_DELEGATION/);
 });
 test('previous accepted status and all source actions survive replacement',()=>{
  const accepted=act(assigned(),context(),response()),next=act(accepted,context(),replacement({expectedRevision:2}));

@@ -1,5 +1,5 @@
 // Pure local assignment contract, not authentication or reference.read policy.
-// The caller supplies a trusted session/delegation context and explicit pose-
+// The caller supplies a trusted participant context and explicit pose-
 // start facts. No pose proof, participant identity, date or action id is inferred.
 const reject=reason=>{throw new TypeError(reason);};
 const isId=value=>typeof value==='string'&&value.length>0&&value.trim()===value;
@@ -30,7 +30,7 @@ function validateContext(context){
  if(!context.references.length)reject('INVALID_REFERENCE');
 }
 function validateState(state,context){
- fields(state,['schemaVersion','sessionId','creatorParticipantId','references','actions']);
+ fields(state,['schemaVersion','sessionId','creatorParticipantId','references','actions'],['delegationLedger']);
  if(state.schemaVersion!==1||state.sessionId!==context.sessionId||state.creatorParticipantId!==context.creatorParticipantId||!isObject(state.references)||!Array.isArray(state.actions))reject('CONTEXT_MISMATCH');
  if(canonical(Object.keys(state.references).sort())!==canonical(context.references.map(r=>r.id).sort()))reject('CONTEXT_MISMATCH');
  for(const r of Object.values(state.references)){
@@ -38,6 +38,78 @@ function validateState(state,context){
   if(!Number.isSafeInteger(r.revision)||r.revision<0||typeof r.locked!=='boolean'||!Array.isArray(r.assignments))reject('INVALID_STATE');
   if(r.assignments.filter(a=>['pending','accepted'].includes(a.status)).length>1)reject('INVALID_STATE');
  }
+}
+const delegationTypes=['delegation-grant','delegation-revoke','delegation-invalidate'];
+const validTimestamp=value=>typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString()===value;
+function validateDelegationAction(action){
+ fields(action,['actionId','type','sessionId','authorParticipantId','beneficiaryParticipantId','delegationId','permission','occurredAt','origin','assurance','expectedRevision'],action?.type==='delegation-invalidate'?['functionEvent']:[]);
+ if(action.type==='delegation-invalidate'&&!own(action,'functionEvent'))reject('INVALID_FIELDS');
+ for(const key of ['actionId','sessionId','authorParticipantId','beneficiaryParticipantId','delegationId'])if(!isId(action[key]))reject('MISSING_DELEGATION_IDENTITY');
+ if(!delegationTypes.includes(action.type))reject('UNKNOWN_ACTION');
+ if(action.permission!=='reference.assign')reject('INVALID_DELEGATION_PERMISSION');
+ if(!isId(action.origin)||!action.origin.startsWith('simulation:')||action.assurance!=='local-simulation')reject('INVALID_LOCAL_ASSURANCE');
+ if(!validTimestamp(action.occurredAt))reject('INVALID_TIMESTAMP');
+ if(!Number.isSafeInteger(action.expectedRevision)||action.expectedRevision<0)reject('INVALID_REVISION');
+ if(action.type==='delegation-invalidate'){
+  const e=action.functionEvent;
+  try{fields(e,['eventId','sessionId','participantId','function','type','authorParticipantId','occurredAt','origin','assurance']);}catch{reject('INVALID_FUNCTION_REMOVAL_EVENT');}
+  if(!isId(e.eventId)||e.sessionId!==action.sessionId||e.participantId!==action.beneficiaryParticipantId||e.function!=='coach'||e.type!=='function-removed'||e.authorParticipantId!==action.authorParticipantId||!validTimestamp(e.occurredAt)||!isId(e.origin)||!e.origin.startsWith('simulation:')||e.assurance!=='local-simulation')reject('INVALID_FUNCTION_REMOVAL_EVENT');
+ }
+}
+// Check the ledger against its immutable action history, rather than trusting
+// a status field independently of the grant and terminal transitions.
+function validateLedger(state){
+ if(!own(state,'delegationLedger'))return;
+ const ledger=state.delegationLedger;
+ fields(ledger,['revision','records','actions','functionEvents']);
+ if(!Number.isSafeInteger(ledger.revision)||ledger.revision<0||!Array.isArray(ledger.records)||!Array.isArray(ledger.actions)||!Array.isArray(ledger.functionEvents)||ledger.revision!==ledger.actions.length)reject('INVALID_DELEGATION_STATE');
+ const rebuilt={revision:0,records:[],actions:[],functionEvents:[]},ids=new Set(state.actions.map(a=>a.actionId));
+ for(const a of ledger.actions){
+  validateDelegationAction(a);
+  if(ids.has(a.actionId)||a.expectedRevision!==rebuilt.revision||a.sessionId!==state.sessionId||a.authorParticipantId!==state.creatorParticipantId)reject('INVALID_DELEGATION_STATE');
+  ids.add(a.actionId);
+  const record=rebuilt.records.find(d=>d.id===a.delegationId);
+  if(a.type==='delegation-grant'){
+   if(record)reject('INVALID_DELEGATION_STATE');
+  }else if(!record||record.status!=='active'||record.beneficiaryParticipantId!==a.beneficiaryParticipantId)reject('INVALID_DELEGATION_STATE');
+  appendDelegation(rebuilt,a);
+ }
+ if(canonical(rebuilt)!==canonical(ledger))reject('INVALID_DELEGATION_STATE');
+}
+function appendDelegation(ledger,action){
+ let record=ledger.records.find(d=>d.id===action.delegationId);
+ const status=action.type==='delegation-grant'?'active':action.type==='delegation-revoke'?'revoked':'invalidated';
+ if(!record){record={id:action.delegationId,sessionId:action.sessionId,grantedByParticipantId:action.authorParticipantId,beneficiaryParticipantId:action.beneficiaryParticipantId,permission:action.permission,status,revision:0,transitions:[]};ledger.records.push(record);}
+ if(action.type==='delegation-invalidate'){
+  const event=ledger.functionEvents.find(e=>e.eventId===action.functionEvent.eventId);
+  if(event&&canonical(event)!==canonical(action.functionEvent))reject('FUNCTION_EVENT_ID_CONFLICT');
+  if(!event)ledger.functionEvents.push(clone(action.functionEvent));
+ }
+ record.status=status;record.revision++;record.transitions.push({status,...clone(action)});
+ ledger.revision++;ledger.actions.push(clone(action));
+}
+function applyDelegation(state,context,action){
+ validateDelegationAction(action);
+ if(action.sessionId!==state.sessionId)reject('SESSION_MISMATCH');
+ const previous=[...state.actions,...(state.delegationLedger?.actions??[])].find(a=>a.actionId===action.actionId);
+ if(previous){if(canonical(previous)!==canonical(action))reject('ACTION_ID_CONFLICT');return frozen(clone(state));}
+ const author=context.participants.find(p=>p.id===action.authorParticipantId);
+ if(!author)reject('UNKNOWN_AUTHOR');
+ if(author.id!==state.creatorParticipantId)reject('NOT_DELEGATION_CREATOR');
+ const ledger=state.delegationLedger??{revision:0,records:[],actions:[],functionEvents:[]};
+ if(action.expectedRevision!==ledger.revision)reject('STALE_DELEGATION_REVISION');
+ const beneficiary=context.participants.find(p=>p.id===action.beneficiaryParticipantId),record=ledger.records.find(d=>d.id===action.delegationId);
+ if(action.type==='delegation-grant'){
+  if(!beneficiary)reject('UNKNOWN_BENEFICIARY');
+  if(!beneficiary.functions.includes('coach'))reject('BENEFICIARY_NOT_COACH');
+  if(record)reject('DELEGATION_ID_REUSED');
+ }else{
+  if(!record||record.beneficiaryParticipantId!==action.beneficiaryParticipantId)reject('INVALID_DELEGATION');
+  if(record.status!=='active')reject('DELEGATION_NOT_ACTIVE');
+  if(action.type==='delegation-invalidate'&&beneficiary?.functions.includes('coach'))reject('COACH_FUNCTION_STILL_PRESENT');
+ }
+ // Delegation commands do not synchronize pose locks or alter references.
+ const next=clone(state);next.delegationLedger=clone(ledger);appendDelegation(next.delegationLedger,action);return frozen(next);
 }
 function validateAction(action){
  const optional=action?.type==='reassign'?['previousAssignmentId','reason']:['reason'];
@@ -51,12 +123,13 @@ function validateAction(action){
  if(own(action,'reason')&&(typeof action.reason!=='string'||!action.reason.trim()))reject('INVALID_REASON');
  if(action.type==='reassign'&&!isId(action.previousAssignmentId))reject('MISSING_PREDECESSOR');
 }
-function authority(context,action,author){
+function authority(state,context,action,author){
  if(author.id===context.creatorParticipantId){if(action.delegationId!==null)reject('INVALID_DELEGATION');return;}
  if(!author.functions.includes('coach'))reject('NOT_ASSIGNMENT_AUTHORITY');
- const matches=context.delegations.filter(d=>d?.id===action.delegationId);
- if(action.delegationId===null||matches.length!==1)reject('INVALID_DELEGATION');
- const d=matches[0];
+ const d=state.delegationLedger?.records.find(d=>d.id===action.delegationId);
+ if(action.delegationId===null||!d)reject('INVALID_DELEGATION');
+ const matches=context.delegations.filter(h=>h?.id===action.delegationId);
+ if(matches.length>1||matches.some(h=>h.sessionId!==d.sessionId||h.grantedByParticipantId!==d.grantedByParticipantId||h.beneficiaryParticipantId!==d.beneficiaryParticipantId||h.permission!==d.permission||h.status!=='active'))reject('INVALID_DELEGATION');
  if(d.sessionId!==context.sessionId||d.grantedByParticipantId!==context.creatorParticipantId||d.beneficiaryParticipantId!==author.id||d.permission!=='reference.assign'||d.status!=='active')reject('INVALID_DELEGATION');
 }
 function synchronizeLocks(state,context){
@@ -71,7 +144,8 @@ export function createReferenceAssignmentState(context){
  return frozen({schemaVersion:1,sessionId:context.sessionId,creatorParticipantId:context.creatorParticipantId,references:Object.fromEntries(context.references.map(r=>[r.id,{revision:0,locked:r.layingStarted,assignments:[]}])),actions:[]});
 }
 export function applyReferenceAssignmentAction(state,context,action=null){
- validateContext(context);validateState(state,context);
+ validateContext(context);validateState(state,context);validateLedger(state);
+ if(delegationTypes.includes(action?.type))return applyDelegation(state,context,action);
  const next=synchronizeLocks(state,context);
  // null explicitly synchronizes caller-provided start facts without inventing
  // an action, an attestation, or a physical poser. Locks are monotonic.
@@ -79,7 +153,7 @@ export function applyReferenceAssignmentAction(state,context,action=null){
  validateAction(action);
  if(action.sessionId!==state.sessionId)reject('SESSION_MISMATCH');
  if(!own(next.references,action.referenceId))reject('UNKNOWN_REFERENCE');
- const previous=state.actions.find(a=>a.actionId===action.actionId);
+ const previous=[...state.actions,...(state.delegationLedger?.actions??[])].find(a=>a.actionId===action.actionId);
  if(previous){if(canonical(previous)!==canonical(action))reject('ACTION_ID_CONFLICT');return frozen(next);}
  const author=context.participants.find(p=>p.id===action.authorParticipantId),beneficiary=context.participants.find(p=>p.id===action.beneficiaryParticipantId);
  if(!author)reject('UNKNOWN_AUTHOR');
@@ -87,7 +161,7 @@ export function applyReferenceAssignmentAction(state,context,action=null){
  const ref=next.references[action.referenceId],active=current(ref);
  if(action.expectedRevision!==ref.revision)reject('STALE_REVISION');
  if(ref.locked)reject('ASSIGNMENT_LOCKED');
- if(['assign','reassign','revoke'].includes(action.type))authority(context,action,author);
+ if(['assign','reassign','revoke'].includes(action.type))authority(state,context,action,author);
  else {
   if(action.delegationId!==null)reject('INVALID_DELEGATION');
   if(!active||active.assignmentId!==action.assignmentId)reject('ASSIGNMENT_NOT_CURRENT');
