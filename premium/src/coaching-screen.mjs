@@ -31,9 +31,11 @@ function roleCards(d,contacts=[]) {
 }
 function referenceAssignmentPanel(view){
  if(!view)return '';
- const heading=`<span class="eyebrow">ATTRIBUTION DE LA RÉFÉRENCE</span><h2>${e(view.referenceName)}</h2>`;
- if(view.status==='pending')return `<section class="card coaching-preparation coaching-role">${heading}<p role="status">En attente d’acceptation · ${e(view.beneficiaryName)}</p><p class="coaching-local-note">Attribution simulée. Aucune acceptation ni pose attestée.</p></section>`;
- return `<section class="card coaching-preparation coaching-role">${heading}<form data-reference-assignment data-session-id="${e(view.sessionId)}" data-reference-id="${e(view.referenceId)}" data-revision="${view.revision}"><label for="reference-beneficiary">Traceur destinataire</label><select id="reference-beneficiary" name="beneficiary" required><option value="">Choisir un Traceur</option>${view.beneficiaries.map(p=>`<option value="${e(p.id)}">${e(p.name)}</option>`).join('')}</select><div class="coaching-actions"><button type="submit" class="button button-dark">Attribuer la référence</button></div><p class="coaching-local-note">Une confirmation vous sera demandée. L’attribution restera en attente d’acceptation.</p></form></section>`;
+ const heading=`<span class="eyebrow">PARCOURS POUR LE TRACEUR</span><h2>${e(view.referenceName)}</h2>`;
+ const beneficiary=view.beneficiaries[0];
+ if(view.status!=='none')return `<section class="card coaching-preparation coaching-role">${heading}<p role="status">${e({pending:'En attente d’acceptation',accepted:'Parcours accepté',declined:'Parcours refusé'}[view.status]||view.status)} · ${e(view.beneficiaryName||beneficiary?.name||'')}</p><p class="coaching-local-note">Transmission simulée. Aucune pose attestée.</p></section>`;
+ if(!beneficiary)return '';
+ return `<section class="card coaching-preparation coaching-role">${heading}<form data-reference-assignment data-session-id="${e(view.sessionId)}" data-reference-id="${e(view.referenceId)}" data-revision="${view.revision}"><p>Traceur destinataire · ${e(beneficiary.name)}</p><input type="hidden" name="beneficiary" value="${e(beneficiary.id)}"><div class="coaching-actions"><button type="submit" class="button button-dark">Transmettre ${e(view.referenceName)} à ${e(beneficiary.name)}</button></div><p class="coaching-local-note">Une confirmation vous sera demandée. Le Traceur pourra accepter ou refuser ce parcours.</p></form></section>`;
 }
 function referenceDelegationPanel(view){
  if(!view)return '';

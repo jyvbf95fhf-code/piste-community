@@ -146,8 +146,8 @@ function coachingReferenceAssignmentView(){
  // attestation, and do not change the existing terrain modules.
  if(!['before','approaching','arrived'].includes(tracerState.phase)||tracerState.segments.some(segment=>segment.length)||preparationState.physicalLaid||searchState.phase!=='PREPARATION'||searchState.layingSegments.some(segment=>segment.length))return null;
  const assignment=getReferenceAssignment(entry.state,ref.id);
- if(assignment.locked||!['none','pending'].includes(assignment.status))return null;
- const beneficiaries=session.participants.filter(p=>members.find(member=>member.id===p.id)?.functions.includes('traceur')).map(p=>({id:p.id,name:p.name}));
+ if(assignment.locked||!['none','pending','accepted','declined'].includes(assignment.status))return null;
+ const beneficiaries=session.participants.filter(p=>p.id===roles.traceur&&members.find(member=>member.id===p.id)?.functions.includes('traceur')).map(p=>({id:p.id,name:p.name}));
  if(!beneficiaries.length)return null;
  return {sessionId:session.id,referenceId:ref.id,referenceName:session.traceType==='gpx'?(ref.fileName||ref.name):ref.name,revision:assignment.revision,status:assignment.status,beneficiaries,beneficiaryName:beneficiaries.find(p=>p.id===assignment.current?.beneficiaryParticipantId)?.name||''};
 }
@@ -164,6 +164,31 @@ function confirmCoachingReferenceAssignment(form){
    coachingReferenceAssignment=Object.freeze({...coachingReferenceAssignment,state});
    render();
   }catch{Toast('Attribution refusée : état incompatible.');}
+ }});
+}
+// DEV actor selection is a session-bound simulation, never an auth identity.
+function coachingReferenceResponseView(){
+ const user=auth.getSession().user,d=coachingDraft,session=d.session,entry=coachingReferenceAssignment,p=preparationState;
+ if(qaInitialized||!entry||!session||!user?.user_id||d.identityContext?.userId!==user.user_id||d.identityContext.source!=='mock-auth'||d.identityContext.assurance!=='local-simulation'||d.sessionCreation?.creatorUserId!==user.user_id||d.sessionCreation.sessionId!==session.id||entry.state.sessionId!==session.id||p?.session.id!==session.id||p.scenario!=='session'||p.traceurKind!=='internal')return null;
+ const view=preparation.preparationView(p),id=session.roles.traceur;
+ if(view.role!=='traceur'||view.viewerId!==id||!entry.context.participants.find(m=>m.id===id)?.functions.includes('traceur'))return null;
+ const actor=preparationUI.referenceResponseActor,simulated=id!==d.identityContext.participantId;
+ if(simulated&&(!actor||actor.sessionId!==session.id||actor.participantId!==id))return null;
+ if(!['before','approaching','arrived'].includes(tracerState.phase)||tracerState.segments.some(segment=>segment.length)||p.physicalLaid||searchState.phase!=='PREPARATION'||searchState.layingSegments.some(segment=>segment.length))return null;
+ const ref=session.preparation;if(!ref?.id||entry.context.references.length!==1||entry.context.references[0].id!==ref.id)return null;
+ const assignment=getReferenceAssignment(entry.state,ref.id);
+ const record=assignment.current||assignment.assignments.at(-1);
+ if(assignment.locked||record?.beneficiaryParticipantId!==id||!['pending','accepted','declined'].includes(assignment.status))return null;
+ return {sessionId:session.id,referenceId:ref.id,referenceName:ref.fileName||ref.name,assignmentId:record.assignmentId,revision:assignment.revision,participantId:id,status:assignment.status,simulated};
+}
+function confirmCoachingReferenceResponse(form){
+ const request={type:form.dataset.command,sessionId:form.dataset.sessionId,referenceId:form.dataset.referenceId,assignmentId:form.dataset.assignmentId,revision:Number(form.dataset.revision)};
+ const compatible=v=>!!v&&v.status==='pending'&&['accept','decline'].includes(request.type)&&Number.isSafeInteger(request.revision)&&v.revision===request.revision&&v.sessionId===request.sessionId&&v.referenceId===request.referenceId&&v.assignmentId===request.assignmentId;
+ const initial=coachingReferenceResponseView();if(!compatible(initial)){Toast('Réponse indisponible : destinataire ou contexte incompatible.');return;}
+ ConfirmationDialog({title:request.type==='accept'?'Accepter ce parcours ?':'Refuser ce parcours ?',description:'Réponse locale uniquement. Elle ne constitue pas une preuve de pose.',onConfirm:()=>{
+  const view=coachingReferenceResponseView();if(!compatible(view)||view.participantId!==initial.participantId||view.simulated!==initial.simulated){Toast('Réponse refusée : contexte modifié.');return;}
+  const action={actionId:crypto.randomUUID(),type:request.type,sessionId:view.sessionId,referenceId:view.referenceId,assignmentId:view.assignmentId,expectedRevision:view.revision,authorParticipantId:view.participantId,beneficiaryParticipantId:view.participantId,delegationId:null,occurredAt:new Date().toISOString(),origin:view.simulated?'simulation:coaching-reference-response-dev':'simulation:coaching-reference-response',assurance:'local-simulation'};
+  try{const state=applyReferenceAssignmentAction(coachingReferenceAssignment.state,coachingReferenceAssignment.context,action);coachingReferenceAssignment=Object.freeze({...coachingReferenceAssignment,state});render();}catch{Toast('Réponse refusée : état incompatible.');}
  }});
 }
 // Delegation metadata is separate from spatial access and creator attribution.
@@ -415,7 +440,7 @@ function renderPreparation(){
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
  if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracerState.messages,unreadCount:tracerState.messages.filter(message=>!message.read&&!message.outgoing).length});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
  if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,tracerUI).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
- return PreparationScreen(preparationState,preparationUI)+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
+ return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
 function filterSessions() {
  const query=(document.querySelector('input[type=search]')?.value || '').toLocaleLowerCase('fr');
@@ -776,9 +801,14 @@ document.addEventListener('change',event=>{
   render();document.querySelector(`[data-tracer-sim="${field.dataset.tracerSim}"]`)?.focus();return;
  }
 
+ if(event.target.matches('[data-reference-response-test]')&&preparationState){
+  const v=preparation.preparationView(preparationState);
+  preparationUI.referenceResponseActor=event.target.checked&&!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&preparationState.scenario==='session'&&v.role==='traceur'&&v.viewerId===coachingDraft.session?.roles.traceur?{sessionId:preparationState.session.id,participantId:v.viewerId}:null;render();return;
+ }
  const sim=event.target.closest('[data-prep-sim], [data-prep-position]');
  if(sim&&preparationState){
   const scroll=window.scrollY;
+  preparationUI.referenceResponseActor=null;
   const patch=sim.dataset.prepPosition?{missingActors:[...document.querySelectorAll('[data-prep-position]')].filter(i=>!i.checked).map(i=>i.dataset.prepPosition)}:{[sim.dataset.prepSim]:sim.type==='checkbox'?sim.checked:sim.value};
   try{preparationState=preparation.simulate(preparationState,patch);preparationUI.feedback='';}catch(error){preparationUI.feedback=error.message;}
   preparationUI.simulatorOpen=true;render();window.scrollTo(0,scroll);
@@ -822,6 +852,7 @@ window.addEventListener('resize',syncNavigationHeight);
 render();
 
 document.addEventListener('submit',event=>{
+ if(event.target.matches('[data-reference-response]')){event.preventDefault();confirmCoachingReferenceResponse(event.target);return;}
  if(event.target.matches('[data-reference-assignment]')){event.preventDefault();confirmCoachingReferenceAssignment(event.target);return;}
  if(event.target.matches('[data-reference-delegation]')){event.preventDefault();confirmCoachingReferenceDelegation(event.target);return;}
  if(profileController.handleSubmit(event))return;
