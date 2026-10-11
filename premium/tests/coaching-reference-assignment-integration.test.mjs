@@ -23,7 +23,7 @@ function freeze(value){if(value&&typeof value==='object'){Object.values(value).f
 // real. This is not a browser-rendering test or a real identity/GPS scenario.
 function application(draft=ready(),identity=user){
  let nextId=0;
- const sandbox=createContext({coaching,preparation,search,tracer,createReferenceAssignmentState,applyReferenceAssignmentAction,createCoachingQa,selectQaPerspective,
+ const sandbox=createContext({coaching,preparation,search,tracer,createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment,createCoachingQa,selectQaPerspective,
   structuredClone,TypeError,currentUser:identity,coachingDraft:draft,qaInitialized:false,qaMode:'normal',qaScenario:'connected_traceur',mock:{dog:dogs[0]},
   searchState:search.createSearch(),searchUI:{},debriefUI:{},tracerState:tracer.createTracer(),tracerUI:{},terrainOpen:false,preparationState:null,preparationUI:{},qaUI:{},
   trackLibrary:{list:()=>[reference()]},crypto:{randomUUID:()=>`simulation-integration-action-${++nextId}`},
@@ -55,14 +55,14 @@ test('main application creation calls the existing assignment module for the act
  assert.equal(state.sessionId,a.sandbox.coachingDraft.session.id);assert.equal(context.sessionId,state.sessionId);
  assert.equal(context.creatorParticipantId,a.sandbox.coachingDraft.sessionCreation.creatorParticipantId);
  assert.deepEqual(plain(context.participants),[{id:'self',functions:['driver']},{id:'camille',functions:['coach']},{id:'alex',functions:['traceur']}]);
- assert.deepEqual(Object.keys(context).sort(),['creatorParticipantId','delegations','participants','references','sessionId']);
+ assert.deepEqual(Object.keys(context).sort(),['assignmentAuthority','creatorParticipantId','delegations','participants','references','sessionId']);
 });
-test('only the selected reference exists, with no assignment, action or pose event',()=>{
+test('selected reference is transmitted automatically without pose event',()=>{
  const {context,state}=requireState(created());
  assert.deepEqual(plain(context.references),[{id:reference().id,layingStarted:false}]);
  assert.deepEqual(Object.keys(state.references),[reference().id]);
- assert.deepEqual(getReferenceAssignment(state,reference().id),{sessionId:state.sessionId,referenceId:reference().id,revision:0,locked:false,status:'none',current:null,assignments:[]});
- assert.deepEqual(state.actions,[]);assert.equal(state.events,undefined);
+ assert.equal(getReferenceAssignment(state,reference().id).status,'pending');assert.equal(state.actions[0].beneficiaryParticipantId,'alex');
+ assert.equal(state.actions.length,1);assert.equal(state.events,undefined);
 });
 for(const role of ['driver','coach','traceur'])test(`immutable creator is independent of creator function ${role}`,()=>{
  const a=created(coaching.selectCreatorRole(ready(),role));const {context}=requireState(a);
@@ -85,16 +85,16 @@ test('uncreated draft has no assignment state',()=>{const a=application();a.init
 test('historical creation without immutable creator context has no assignment state',()=>{
  const a=application(coaching.createSession(ready()));a.initialize();assert.equal(a.state,null);
 });
-test('assignRole selects a function without creating a reference assignment',()=>{
+test('creation transmits to Traceur selected by assignRole',()=>{
  const a=created(coaching.assignRole(ready(),'traceur','hugo'));const {context,state}=requireState(a);
- assert.deepEqual(plain(context.participants.find(p=>p.id==='hugo').functions),['traceur']);assert.deepEqual(state.references[reference().id].assignments,[]);
+ assert.deepEqual(plain(context.participants.find(p=>p.id==='hugo').functions),['traceur']);assert.equal(state.references[reference().id].assignments[0].beneficiaryParticipantId,'hugo');
 });
-test('GPX fixture selection does not assign its owner or Traceur',()=>{
+test('creation transmits selected GPX to chosen Traceur',()=>{
  const d=coaching.selectPreparation(ready(user,'gpx'),{...reference(),source:'gpx',fileName:'explicit-simulation.gpx'});
- const {state}=requireState(created(d));assert.deepEqual(state.references[reference().id].assignments,[]);assert.deepEqual(state.actions,[]);
+ const {state}=requireState(created(d));assert.equal(state.references[reference().id].assignments[0].beneficiaryParticipantId,'alex');assert.equal(state.actions.length,1);
 });
-test('initial context has zero delegations and no fabricated assignment command',()=>{
- const {context,state}=requireState(created());assert.deepEqual(plain(context.delegations),[]);assert.deepEqual(state.actions,[]);
+test('initial context has role authority and no synthetic delegation',()=>{
+ const {context,state}=requireState(created());assert.deepEqual(plain(context.delegations),[]);assert.equal(state.actions[0].origin,'simulation:coaching-reference-automatic');
  assert.equal(context.participants.find(p=>p.id==='camille').functions[0],'coach');assert.equal(state.delegations,undefined);
 });
 test('repeated creation and initialization preserve the same state instance',()=>{
@@ -112,7 +112,7 @@ test('actual DEV perspective handler preserves state while changing only project
 });
 test('editing invalidates prior session state, next creation never transfers it',()=>{
  const a=created(),initial=requireState(a);a.sandbox.coachingDraft=coaching.updateDraft(a.sandbox.coachingDraft,{mode:'normal'});a.render();assert.equal(a.state,null);
- a.create();const next=requireState(a);assert.notEqual(next,initial);assert.notEqual(next.state.sessionId,initial.state.sessionId);assert.deepEqual(next.state.actions,[]);
+ a.create();const next=requireState(a);assert.notEqual(next,initial);assert.notEqual(next.state.sessionId,initial.state.sessionId);assert.equal(next.state.actions.length,1);assert.notEqual(next.state.actions[0].actionId,initial.state.actions[0].actionId);
 });
 test('restart explicitly leaves absence until another compatible creation',()=>{const a=created();requireState(a);a.restart();assert.equal(a.state,null);assert.equal(a.sandbox.coachingDraft.session,null);});
 test('entering QA clears main state and QA cannot initialize from stale main draft',()=>{

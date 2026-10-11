@@ -37,6 +37,8 @@ function application(d=draft()){
  runInContext(app.slice(app.indexOf('function coachingActionContext('),app.indexOf('\nlet trackLibrary=')),c);
  c.render=()=>{};
  runInContext(`(function(){const action='create';${app.slice(app.indexOf("  if(action==='create')"),app.indexOf("  if(action==='restart')"))}})()`,c);
+ // Isolated legacy command fixture: actual creation is verified by automatic integration tests.
+ runInContext('const legacyContext=coachingReferenceAssignment.context;coachingReferenceAssignment=Object.freeze({context:legacyContext,state:createReferenceAssignmentState(legacyContext)});',c);
  return {
   c,
   get assignment(){return runInContext('coachingReferenceAssignment',c);},
@@ -70,8 +72,8 @@ function grant(a){assert.ok(delegationSubmit(a),'Explicit grant confirmation is 
 function html(a){return CoachingScreen(a.c.coachingDraft,'',[],[],{},a.view,delegationView(a));}
 
 test('creator sees Coach delegation controls without protected reference metadata',()=>{
- const a=application();assert.ok(delegationView(a));assert.match(html(a),/data-reference-delegation/);
- const panel=html(a).split('DÉLÉGATIONS COACH')[1];assert.ok(panel);assert.doesNotMatch(panel,/217|139|Visible fixture reference|mock-map/);
+ const a=application();assert.ok(delegationView(a));assert.doesNotMatch(html(a),/data-reference-delegation/);
+ assert.doesNotMatch(html(a),/DÉLÉGATIONS COACH/);
 });
 test('grant is confirmed, explicit and recorded without changing references or projections',()=>{
  const a=application(),before=structuredClone({session:a.c.coachingDraft.session,projection:a.projection(),state:a.assignment.state});
@@ -82,7 +84,7 @@ test('grant is confirmed, explicit and recorded without changing references or p
 test('cancelled confirmation has no effect',()=>{const a=application();assert.ok(delegationSubmit(a));a.c.dialog=null;assert.equal(ledger(a),undefined);});
 test('revocation requires confirmation, conserves grant and forbids revived authority',()=>{
  const a=application();grant(a);const initial=structuredClone(ledger(a));assert.ok(delegationSubmit(a,'revoke'));assert.equal(ledger(a).revision,1);a.confirm();
- assert.equal(ledger(a).revision,2);assert.equal(ledger(a).records[0].status,'revoked');assert.deepEqual(plain(ledger(a).actions[0]),plain(initial.actions[0]));assert.equal(ledger(a).records[0].transitions.length,2);assert.match(html(a),/Révoquée/);assert.equal(delegationSubmit(a,'revoke'),null);
+ assert.equal(ledger(a).revision,2);assert.equal(ledger(a).records[0].status,'revoked');assert.deepEqual(plain(ledger(a).actions[0]),plain(initial.actions[0]));assert.equal(ledger(a).records[0].transitions.length,2);assert.doesNotMatch(html(a),/data-reference-delegation/);assert.equal(delegationSubmit(a,'revoke'),null);
  const action={actionId:'delegated-after-revoke',sessionId:a.assignment.state.sessionId,referenceId:reference().id,authorParticipantId:'camille',beneficiaryParticipantId:'alex',type:'assign',occurredAt:'2026-10-10T14:00:00.000Z',origin:'simulation:test',assurance:'local-simulation',delegationId:initial.records[0].id,expectedRevision:0,assignmentId:'attempt'};
  assert.throws(()=>applyReferenceAssignmentAction(a.assignment.state,a.assignment.context,action),/INVALID_DELEGATION/);
 });
@@ -94,7 +96,7 @@ for(const mode of ['normal','simple_blind','full_blind'])test(`delegation convey
 for(const change of [a=>{a.c.authUser=null;},a=>{a.c.authUser={user_id:'outsider'};},a=>{a.c.preparationState=preparation.simulate(a.c.preparationState,{viewerRole:'coach'});},a=>{a.c.qaInitialized=true;},a=>{a.c.coachingDraft=coaching.updateDraft(a.c.coachingDraft,{mode:'normal'});},a=>{a.c.searchState.phase='ARCHIVED';}])test(`changed context refuses pending confirmation ${change}`,()=>{const a=application();delegationSubmit(a);change(a);a.confirm();assert.equal(ledger(a),undefined);assert.equal(delegationView(a),null);});
 test('terminal sessions expose no delegation controls',()=>{const a=application();for(const phase of ['DEBRIEF','ARCHIVED']){a.c.searchState.phase=phase;assert.equal(delegationView(a),null);}});
 test('context changes do not invent function removal evidence or invalidation',()=>{const a=application();grant(a);a.c.coachingDraft={...a.c.coachingDraft,session:{...a.c.coachingDraft.session,roles:{...a.c.coachingDraft.session.roles,coach:null}}};assert.equal(delegationView(a),null);assert.equal(ledger(a).records[0].status,'active');assert.deepEqual(plain(ledger(a).functionEvents),[]);});
-test('no Coach means no grant control; markup escapes beneficiary name',()=>{const a=application();a.c.coachingDraft.session.participants.find(p=>p.id==='camille').name='<script>x</script>';assert.match(html(a),/&lt;script&gt;/);assert.doesNotMatch(html(a),/<script>x/);const b=application(coaching.assignRole(draft(),'coach',null));assert.ok(delegationView(b));assert.doesNotMatch(html(b),/data-command="grant"/);});
+test('no Coach means no grant control; markup escapes beneficiary name',()=>{const a=application();a.c.coachingDraft.session.participants.find(p=>p.id==='camille').name='<script>x</script>';assert.doesNotMatch(html(a),/data-reference-delegation/);assert.doesNotMatch(html(a),/<script>x/);const b=application(coaching.assignRole(draft(),'coach',null));assert.ok(delegationView(b));assert.doesNotMatch(html(b),/data-command="grant"/);});
 test('same-session initialization preserves ledger instance across renders',()=>{const a=application();grant(a);const initial=a.assignment;for(let i=0;i<3;i++)runInContext('initializeCoachingReferenceAssignment();invalidateCoachingReferenceAssignment();',a.c);assert.equal(a.assignment,initial);assert.equal(ledger(a).revision,1);});
 
 

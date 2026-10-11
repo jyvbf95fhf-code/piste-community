@@ -59,12 +59,12 @@ function application(d=draft()){
 
 function responseView(a){return runInContext('typeof coachingReferenceResponseView === "function" ? coachingReferenceResponseView() : null',a.c);}
 function recipient(a,enabled=true){a.c.preparationState=preparation.simulate(a.c.preparationState,{viewerRole:'traceur'});a.c.preparationUI.referenceResponseActor=enabled?{sessionId:a.assignment.state.sessionId,participantId:a.c.preparationState.viewerId}:null;}
-function transmit(a){assert.ok(a.submit());a.confirm();}
+function transmit(a){assert.equal(a.assignment.state.references[reference().id].assignments[0].status,'pending');}
 function respond(a,type='accept',patch={}){
  const v=responseView(a);a.c.form={dataset:{command:type,sessionId:v?.sessionId,referenceId:v?.referenceId,assignmentId:v?.assignmentId,revision:String(v?.revision),...patch}};a.c.dialog=null;
  runInContext('if(typeof confirmCoachingReferenceResponse === "function")confirmCoachingReferenceResponse(form);',a.c);return a.c.dialog;
 }
-test('transmission uses the selected Traceur without another selector',()=>{const a=application();assert.doesNotMatch(a.html(),/<select id="reference-beneficiary"/);assert.match(a.html(),/Transmettre/);assert.match(a.html(),/name="beneficiary"[^>]*value="alex"/);});
+test('transmission automatically uses selected Traceur without command',()=>{const a=application();assert.doesNotMatch(a.html(),/data-reference-assignment|reference-beneficiary/);assert.match(a.html(),/En attente d’acceptation/);assert.equal(a.assignment.state.actions[0].beneficiaryParticipantId,'alex');});
 for(const type of ['accept','decline'])test(`recipient explicitly confirms ${type} with separate simulated author`,()=>{
  const a=application();transmit(a);recipient(a);assert.ok(responseView(a));assert.ok(respond(a,type));assert.equal(a.assignment.state.actions.length,1);a.confirm();
  const action=a.assignment.state.actions.at(-1);assert.equal(action.authorParticipantId,'alex');assert.equal(action.type,type);assert.equal(action.origin,'simulation:coaching-reference-response-dev');assert.equal(a.c.coachingDraft.identityContext.participantId,'self');assert.equal(a.assignment.state.references[reference().id].assignments[0].status,type==='accept'?'accepted':'declined');assert.equal(respond(a,type),null);
@@ -84,7 +84,7 @@ test('accepted status remains visible to creator',()=>{const a=application();tra
 test('declined status is explicit and does not automatically retransmit',()=>{const a=application();transmit(a);recipient(a);respond(a,'decline');a.confirm();a.c.preparationState=preparation.simulate(a.c.preparationState,{viewerRole:'driver'});assert.match(a.html(),/refusé/i);assert.doesNotMatch(a.html(),/data-reference-assignment/);});
 
 for(const mode of ['normal','simple_blind','full_blind'])test(`Traceur response respects assigned actor in ${mode}`,()=>{
- const a=application(draft(mode,'traceur'));assert.ok(a.submit());a.confirm();assert.ok(responseView(a));assert.equal(responseView(a).simulated,false);assert.ok(respond(a));a.confirm();assert.equal(a.assignment.state.actions.at(-1).authorParticipantId,'self');assert.equal(a.assignment.state.actions.at(-1).origin,'simulation:coaching-reference-response');
+ const a=application(draft(mode,'traceur'));transmit(a);assert.ok(responseView(a));assert.equal(responseView(a).simulated,false);assert.ok(respond(a));a.confirm();assert.equal(a.assignment.state.actions.at(-1).authorParticipantId,'self');assert.equal(a.assignment.state.actions.at(-1).origin,'simulation:coaching-reference-response');
 });
 test('real DEV checkbox handler enables only the current recipient then perspective clears it',()=>{
  const a=application();transmit(a);recipient(a,false);

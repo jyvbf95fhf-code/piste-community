@@ -16,7 +16,8 @@ function canonical(value){
  return JSON.stringify(value);
 }
 function validateContext(context){
- fields(context,['sessionId','creatorParticipantId','participants','references','delegations']);
+ fields(context,['sessionId','creatorParticipantId','participants','references','delegations'],['assignmentAuthority']);
+ if(own(context,'assignmentAuthority')&&context.assignmentAuthority!=='coach-role')reject('INVALID_ASSIGNMENT_AUTHORITY');
  if(!isId(context.sessionId)||!isId(context.creatorParticipantId)||!Array.isArray(context.participants)||!Array.isArray(context.references)||!Array.isArray(context.delegations))reject('INVALID_CONTEXT');
  const ids=new Set();
  for(const p of context.participants){
@@ -126,6 +127,8 @@ function validateAction(action){
 function authority(state,context,action,author){
  if(author.id===context.creatorParticipantId){if(action.delegationId!==null)reject('INVALID_DELEGATION');return;}
  if(!author.functions.includes('coach'))reject('NOT_ASSIGNMENT_AUTHORITY');
+ // New sessions grant this right by Coach function, without synthetic grants.
+ if(context.assignmentAuthority==='coach-role'){if(action.delegationId!==null)reject('INVALID_DELEGATION');return;}
  const d=state.delegationLedger?.records.find(d=>d.id===action.delegationId);
  if(action.delegationId===null||!d)reject('INVALID_DELEGATION');
  const matches=context.delegations.filter(h=>h?.id===action.delegationId);

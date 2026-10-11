@@ -37,6 +37,8 @@ function application(d=draft()){
  runInContext(app.slice(app.indexOf('function coachingActionContext('),app.indexOf('\nlet trackLibrary=')),c);
  c.render=()=>{};
  runInContext(`(function(){const action='create';${app.slice(app.indexOf("  if(action==='create')"),app.indexOf("  if(action==='restart')"))}})()`,c);
+ // Isolated legacy command fixture: actual creation is verified by automatic integration tests.
+ runInContext('const legacyContext=coachingReferenceAssignment.context;coachingReferenceAssignment=Object.freeze({context:legacyContext,state:createReferenceAssignmentState(legacyContext)});',c);
  return {
   c,
   get assignment(){return runInContext('coachingReferenceAssignment',c);},
@@ -60,7 +62,7 @@ function confirmed(a){a.submit();a.confirm();return pending(a);}
 
 test('actual submit opens confirmation and only explicit confirmation assigns to session Traceur',()=>{
  const a=application(),before=a.assignment;assert.ok(a.view,'Compatible creator must have an application entry point');
- const html=a.html();assert.match(html,/data-reference-assignment/);assert.match(html,/Transmettre Visible fixture reference à/);assert.match(html,/Visible fixture reference/);
+ const html=a.html();assert.doesNotMatch(html,/data-reference-assignment/);
  a.submit();assert.equal(a.assignment,before);a.confirm();const result=pending(a);
  assert.equal(result.status,'pending');assert.equal(result.current.beneficiaryParticipantId,a.c.coachingDraft.session.roles.traceur);assert.equal(result.revision,1);
  assert.match(a.html(),/En attente d’acceptation/);assert.doesNotMatch(a.html(),/data-reference-assignment(?:\s|>)/);
@@ -145,5 +147,5 @@ test('historical screen output is identical without assignment presentation',()=
 });
 test('assignment widget exposes no geometry or new protected metadata',()=>{
  const a=application();assert.ok(a.view);assert.deepEqual(Object.keys(plain(a.view)).sort(),['sessionId','referenceId','referenceName','revision','status','beneficiaries','beneficiaryName'].sort());assert.equal(a.view.start,undefined);assert.equal(a.view.ownerId,undefined);
- const widget=a.html().split('PARCOURS POUR LE TRACEUR')[1].split('</section>')[0];assert.doesNotMatch(widget,/217|139|mock-map/);
+ assert.doesNotMatch(a.html(),/data-reference-assignment|data-reference-delegation/);
 });
