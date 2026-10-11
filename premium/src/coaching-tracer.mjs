@@ -1,5 +1,5 @@
 // Drawing coordinates, counters and messages are explicit in-memory fixtures, never sensor data.
-import {preparationView} from './coaching-preparation.mjs';
+import {preparationView,needsSessionReference} from './coaching-preparation.mjs';
 import {isSearchActor} from './coaching-search.mjs';
 const points=[{x:70,y:242},{x:86,y:225},{x:109,y:209},{x:137,y:198},{x:166,y:171},{x:192,y:149},{x:211,y:118},{x:236,y:96},{x:268,y:76}];
 const validPoint=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y);
@@ -11,6 +11,7 @@ export function advanceTracer(state,prep,action){
  if(action==='approach'&&['before','approaching'].includes(s.phase)&&v.knownStart){s.phase='approaching';return s;}
  if(action==='arrive'&&s.phase==='approaching'){s.phase='arrived';s.arrivalPoint=available?{...v.start}:null;return s;}
  if(action==='ready'&&s.phase==='arrived'&&prep.phase==='ready'){s.phase='before';return s;}
+ if(action==='start'&&needsSessionReference(prep))throw Error('La référence requise doit être choisie avant la pose.');
  if(action==='start'&&s.phase==='before'){if(prep.productScenario==='external_driver_recorded'?prep.phase!=='created':prep.phase!=='ready')throw Error('Déclarez-vous prêt à tracer avant la pose.');if(!available)throw Error('Position du Traceur indisponible : démarrage de pose refusé.');s.phase='active';s.origin={x:own.x,y:own.y};s.originSource='mock-position';s.segments=[[{...s.origin}]];return s;}
  if(action==='progress'&&s.phase==='active'){
   s.seconds+=30;s.cursor=Math.min(s.cursor+1,points.length-1);

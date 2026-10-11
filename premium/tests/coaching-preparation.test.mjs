@@ -31,7 +31,7 @@ test('all 12 mode/function projections filter positions, reference, pose, relèv
 });
 test('prepared and GPX references never prove physical laying and names do not leak to blind viewers',()=>{
  for(const traceType of ['prepared','gpx'])for(const mode of ['simple_blind','full_blind']){
-  let s=state({traceType,mode,viewerRole:'driver'});s={...s,session:{...s.session,preparation:{name:'CONFIDENTIEL-FORET',fileName:'SECRET.gpx'}}};
+  let s=state({traceType,mode,viewerRole:'driver'});s={...s,session:{...s.session,preparation:{id:'confidential-fixture-reference',name:'CONFIDENTIEL-FORET',fileName:'SECRET.gpx'}}};
   const html=PreparationScreen(s);assert.ok(!html.includes('CONFIDENTIEL'));assert.ok(!html.includes('SECRET.gpx'));
   assert.equal(preparationView(s).paths.length,0);assert.equal(s.physicalLaid,false);
   const t=simulate(s,{viewerRole:'traceur'});assert.ok(preparationView(t).paths.some(p=>p.kind==='reference'));

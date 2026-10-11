@@ -106,6 +106,21 @@ let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
 // Local assignment metadata only; never part of a spatial projection or pose.
 let coachingReferenceAssignment=null;
+function confirmCoachingTracerReference(form){
+ const request={sessionId:form.dataset.sessionId,authorId:form.dataset.authorId,phase:form.dataset.phase,referenceId:form.elements.reference.value};
+ const candidate=()=>{if(!preparationState||(qaInitialized?location.pathname!=='/qa/coaching':location.pathname!=='/coaching/session'||coachingDraft.session?.id!==request.sessionId||JSON.stringify(preparationState.session)!==JSON.stringify(coachingDraft.session))||preparationState.session.id!==request.sessionId||preparationState.viewerId!==request.authorId||preparationState.phase!==request.phase||!preparation.canChooseSessionReference(preparationState)||searchState.phase!=='PREPARATION'||searchState.layingSegments.some(segment=>segment.length)||tracerState.phase!=='before'||tracerState.segments.some(segment=>segment.length))throw Error('Choix refusé : la session ou la préparation a changé.');const items=preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list();const track=items.find(item=>item.id===request.referenceId);if(!track)throw Error('Cette référence n’est plus disponible.');return track;};
+ let initial;
+ try{initial=candidate();}catch(error){preparationUI.feedback=error.message;render();return;}
+ const fingerprint=JSON.stringify(initial);
+ ConfirmationDialog({title:'Confirmer cette piste ?',description:'Ce choix concerne cette session uniquement. Il ne démarre pas la pose et ne nécessite pas une seconde acceptation de votre part.',onConfirm:()=>{
+  try{const track=candidate();if(JSON.stringify(track)!==fingerprint)throw Error('La référence a changé pendant la confirmation.');
+   const next=preparation.selectSessionReference(preparationState,track,{sessionId:request.sessionId,authorParticipantId:request.authorId,expectedPhase:request.phase,actionId:crypto.randomUUID(),occurredAt:new Date().toISOString()},{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]});
+   if(!qaInitialized)coachingDraft={...coachingDraft,session:structuredClone(next.session),preparationTrack:structuredClone(next.session.preparation),knownPeople:[...new Set([...(coachingDraft.knownPeople||[]),request.authorId,...(track.ownerId?[track.ownerId]:[])])]};
+   preparationState=next;preparationUI={...preparationUI,feedback:'Référence choisie. Vous pouvez rejoindre le départ.'};
+  }catch(error){preparationUI.feedback=error.message;}
+  render();
+ }});
+}
 function saveCoachingDriverDebriefNote(form){
  try{
   if(!['/coaching/session','/qa/coaching'].includes(location.pathname)||!preparationState||form.dataset.sessionId!==preparationState.session.id||form.dataset.authorId!==preparationState.viewerId)throw Error('Note refusée : ce formulaire ne correspond plus à la session active.');
@@ -473,7 +488,7 @@ function renderPreparation(){
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
  if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracerState.messages,unreadCount:tracerState.messages.filter(message=>!message.read&&!message.outgoing).length});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
  if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,tracerUI).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
- return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
+ return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceChoices:preparation.sessionReferenceChoices(preparationState,preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list(),{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]}),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
 function filterSessions() {
  const query=(document.querySelector('input[type=search]')?.value || '').toLocaleLowerCase('fr');
@@ -898,6 +913,7 @@ document.addEventListener('submit',event=>{
  if(scientificController.handleSubmit(event))return;
  if(jumolfController.handleSubmit(event))return;
  if(communityController.handleSubmit(event))return;
+ if(event.target.matches('[data-tracer-reference]')){event.preventDefault();confirmCoachingTracerReference(event.target);return;}
  if(event.target.matches('[data-driver-debrief-note]')){event.preventDefault();saveCoachingDriverDebriefNote(event.target);return;}
  if(event.target.matches('[data-search-reply]')){event.preventDefault();replyCoachingSearchMessage(event.target.elements.reply.value);document.querySelector('#search-reply')?.focus();return;}
  if(event.target.matches('[data-tracer-reply]')){event.preventDefault();try{tracerState=tracer.replyMock(tracerState,event.target.elements.reply.value);}catch(error){tracerUI.notice=error.message;}render();document.querySelector('#tracer-reply')?.focus();return;}
