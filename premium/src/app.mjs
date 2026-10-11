@@ -106,6 +106,13 @@ let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
 // Local assignment metadata only; never part of a spatial projection or pose.
 let coachingReferenceAssignment=null;
+function replyCoachingSearchMessage(text){
+ try{
+  if(searchUI.locked||!searchUI.messagesOpen||!preparationState)throw Error('Ouvrez les messages sur l’écran déverrouillé pour répondre.');
+  tracerState=tracer.replySearchMock(tracerState,preparationState,searchState,text);searchUI.notice='';
+ }catch(error){searchUI.notice=error.message;}
+ render();
+}
 function confirmCoachingArchiveAction(control){
  const request={action:control.dataset.debrief,sessionId:control.dataset.sessionId,revision:Number(control.dataset.revision),beneficiaryParticipantId:control.dataset.beneficiaryId,viewerId:preparationState?.viewerId,viewerRole:preparationState?preparation.preparationView(preparationState).role:null};
  const compatible=()=>{if(!preparationState||preparationState.session.id!==request.sessionId||preparationState.viewerId!==request.viewerId||preparation.preparationView(preparationState).role!==request.viewerRole)return false;const v=archivePermissionView(searchState,preparationState);return v.revision===request.revision&&(request.action==='archive'?v.canArchive:['grant-archive','revoke-archive'].includes(request.action)&&v.canManageArchive&&v.beneficiaryParticipantId===request.beneficiaryParticipantId&&(request.action==='grant-archive'?v.status!=='active':v.status==='active'));};
@@ -586,6 +593,7 @@ document.addEventListener('click',event=>{
    else if(action==='lock-screen'){searchUI={...searchUI,locked:true,messagesOpen:false};}
    else if(action==='unlock'&&event.detail===0){searchUI={...searchUI,locked:false};}
    else if(action==='messages'){tracerState=tracer.readMessages(tracerState);searchUI={...searchUI,messagesOpen:true};}
+   else if(action==='reply'){replyCoachingSearchMessage(searchControl.dataset.text);return;}
    else if(action==='close-messages')searchUI={...searchUI,messagesOpen:false};
    else if(action==='cancel-finish')searchUI.confirmFinish=false;
    else if(action==='confirm-finish'){if(!searchUI.confirmFinish)throw Error('Confirmation requise.');searchState=advanceSessionSearch(searchState,preparationState,'finish');searchUI.confirmFinish=false;}
@@ -882,6 +890,7 @@ document.addEventListener('submit',event=>{
  if(scientificController.handleSubmit(event))return;
  if(jumolfController.handleSubmit(event))return;
  if(communityController.handleSubmit(event))return;
+ if(event.target.matches('[data-search-reply]')){event.preventDefault();replyCoachingSearchMessage(event.target.elements.reply.value);document.querySelector('#search-reply')?.focus();return;}
  if(event.target.matches('[data-tracer-reply]')){event.preventDefault();try{tracerState=tracer.replyMock(tracerState,event.target.elements.reply.value);}catch(error){tracerUI.notice=error.message;}render();document.querySelector('#tracer-reply')?.focus();return;}
 
  const operationalIntakeForm=event.target.closest('form[data-operational-intake-form]');
