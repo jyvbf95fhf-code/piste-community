@@ -2,6 +2,7 @@
 import {createDraft,updateDraft,setTrackingScenario,setObservers,createSession,modes} from './coaching.mjs';
 import {createPreparation,preparationView,simulate} from './coaching-preparation.mjs';
 import {createTracer} from './coaching-tracer.mjs';
+import {archivePermissionView} from './coaching-session-flow.mjs';
 import {createSearch} from './coaching-search.mjs';
 
 export const qaPerspectives=Object.freeze([
@@ -56,8 +57,7 @@ export function nextQaAction(search,preparation,ui={}){
  if(search.phase==='SEARCH_READY'&&role==='driver')return action('start-search','Démarrer la recherche','[data-search="start"]','SEARCH_STARTED');
  if(search.phase==='SEARCH_RUNNING'&&search.cursor<2&&role==='driver'&&preparation.productScenario!=='connected_traceur')return action('progress-search','Avancer la recherche mock','[data-search="progress"]','Progression de recherche mock');
  if(search.phase==='SEARCH_RUNNING'&&role==='driver')return ui.confirmFinish?action('confirm-search','Confirmer la fin','[data-search="confirm-finish"]','SEARCH_FINISHED · DEBRIEF'):action('finish-search','Terminer la recherche','[data-search="finish"]','SEARCH_FINISHED · DEBRIEF');
- const creatorId=preparation.session.roles[preparation.session.creatorRole];
- if(search.phase==='DEBRIEF'&&role!=='observer'&&(role==='coach'||view.viewerId===creatorId))return action('archive','Clôturer le débrief','[data-debrief="archive"]','SESSION_ARCHIVED');
+ if(archivePermissionView(search,preparation).canArchive)return action('archive','Clôturer le débrief','[data-debrief="archive"]','SESSION_ARCHIVED');
  return null;
 }
 function tracerProgress(_search,ui){return ui.tracerProgress||0;}

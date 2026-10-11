@@ -15,7 +15,7 @@ import * as tracer from './coaching-tracer.mjs';
 import {TracerScreen} from './coaching-tracer-screen.mjs';
 import * as search from './coaching-search.mjs';
 import {SearchScreen} from './coaching-search-screen.mjs';
-import {syncSession,advanceSessionSearch,markExternalTraceurInPlace,returnSelfTraceToStart,trackAgeSeconds,formatTrackAge,debriefView} from './coaching-session-flow.mjs';
+import {syncSession,advanceSessionSearch,markExternalTraceurInPlace,returnSelfTraceToStart,trackAgeSeconds,formatTrackAge,debriefView,archivePermissionView,setArchivePermission} from './coaching-session-flow.mjs';
 import {CoachScreen,ObserverScreen,SessionNotice} from './coaching-session-screen.mjs';
 import {DebriefScreen} from './coaching-debrief-screen.mjs';
 import {archiveSession} from './coaching-session-flow.mjs';
@@ -106,6 +106,12 @@ let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
 // Local assignment metadata only; never part of a spatial projection or pose.
 let coachingReferenceAssignment=null;
+function confirmCoachingArchiveAction(control){
+ const request={action:control.dataset.debrief,sessionId:control.dataset.sessionId,revision:Number(control.dataset.revision),beneficiaryParticipantId:control.dataset.beneficiaryId,viewerId:preparationState?.viewerId,viewerRole:preparationState?preparation.preparationView(preparationState).role:null};
+ const compatible=()=>{if(!preparationState||preparationState.session.id!==request.sessionId||preparationState.viewerId!==request.viewerId||preparation.preparationView(preparationState).role!==request.viewerRole)return false;const v=archivePermissionView(searchState,preparationState);return v.revision===request.revision&&(request.action==='archive'?v.canArchive:['grant-archive','revoke-archive'].includes(request.action)&&v.canManageArchive&&v.beneficiaryParticipantId===request.beneficiaryParticipantId&&(request.action==='grant-archive'?v.status!=='active':v.status==='active'));};
+ if(!compatible()){searchUI.notice='Confirmation refusée : les droits ou la session ont changé.';render();return;}
+ ConfirmationDialog({title:request.action==='archive'?'Archiver cette session ?':request.action==='grant-archive'?'Autoriser le Coach à archiver ?':'Retirer cette autorisation ?',description:request.action==='archive'?'Le débrief sera clôturé et la session restera en lecture seule. Simulation locale uniquement.':'Cette autorisation concerne uniquement l’archivage de cette session après son débrief. Simulation locale uniquement.',onConfirm:()=>{try{if(!compatible())throw Error('Confirmation expirée : les droits ou la session ont changé.');searchState=request.action==='archive'?archiveSession(searchState,preparationState):setArchivePermission(searchState,preparationState,{type:request.action==='grant-archive'?'grant':'revoke',sessionId:request.sessionId,beneficiaryParticipantId:request.beneficiaryParticipantId,expectedRevision:request.revision,actionId:crypto.randomUUID(),occurredAt:new Date().toISOString()});searchUI.notice='';}catch(error){searchUI.notice=error.message;}render(true);}});
+}
 function initializeCoachingReferenceAssignment(){
  const session=coachingDraft.session,creation=coachingDraft.sessionCreation;
  const validId=value=>typeof value==='string'&&value.length>0&&value.trim()===value;
@@ -562,7 +568,9 @@ document.addEventListener('click',event=>{
  const debriefTab=event.target.closest('[data-debrief-tab]');
  if(debriefTab&&preparationState){debriefUI={...debriefUI,tab:debriefTab.dataset.debriefTab};render();document.querySelector(`[data-debrief-tab="${debriefUI.tab}"]`)?.focus();return;}
  const debriefAction=event.target.closest('[data-debrief]');
- if(debriefAction&&preparationState){try{if(debriefAction.dataset.debrief==='archive')searchState=archiveSession(searchState,preparationState);else throw Error('Action debrief inconnue');}catch(error){searchUI.notice=error.message;}render(true);return;}
+ if(debriefAction&&preparationState){confirmCoachingArchiveAction(debriefAction);return;}
+ const coachControl=event.target.closest('[data-coach-search]');
+ if(coachControl&&preparationState){try{const action=coachControl.dataset.coachSearch;if(!['pause','resume'].includes(action))throw Error('Commande Coach inconnue.');searchState=advanceSessionSearch(searchState,preparationState,action);}catch(error){searchUI.notice=error.message;}render(true);return;}
  const searchControl=event.target.closest('[data-search]');
  if(searchControl&&preparationState){
   const action=searchControl.dataset.search;

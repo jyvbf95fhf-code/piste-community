@@ -62,8 +62,9 @@ test('QA action proxy offers only the real next control for the current function
  search=advanceSessionSearch(search,driver,'finish');
  assert.equal(search.phase,'DEBRIEF');
  assert.equal(search.events.at(-1).type,'DEBRIEF_ENTERED');
- assert.equal(nextQaAction(search,simulate(ready,{viewerRole:'coach'})).id,'archive');
- const archived=archiveSession(search,simulate(ready,{viewerRole:'coach'}));
+ assert.equal(nextQaAction(search,simulate(ready,{viewerRole:'coach'})),null);
+ assert.equal(nextQaAction(search,simulate(ready,{viewerRole:'driver'})).id,'archive');
+ const archived=archiveSession(search,simulate(ready,{viewerRole:'driver'}));
  assert.equal(archived.phase,'ARCHIVED');
  assert.equal(nextQaAction(archived,simulate(ready,{viewerRole:'coach'})),null);
 });
@@ -108,7 +109,7 @@ test('debrief and archive views are produced by existing session flow projection
  const driver=simulate(ready,{viewerRole:'driver'});
  search=advanceSessionSearch(search,driver,'start');search=advanceSessionSearch(search,driver,'finish');
  assert.equal(debriefView(search,driver,tracer).phase,'DEBRIEF');
- const archived=archiveSession(search,simulate(ready,{viewerRole:'coach'}));
+ const archived=archiveSession(search,simulate(ready,{viewerRole:'driver'}));
  assert.equal(debriefView(archived,simulate(ready,{viewerRole:'observer'}),tracer).phase,'ARCHIVED');
 });
 

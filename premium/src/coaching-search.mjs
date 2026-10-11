@@ -15,6 +15,7 @@ export function simulateSearch(s,patch){
  return next;
 }
 export function isSearchActor(p){const v=preparationView(p);return v.role==='driver'&&v.viewerId===p.session.roles.driver&&p.team.some(a=>a.id===v.viewerId&&a.functions.includes('driver'));}
+export function isSearchCoach(p){const v=preparationView(p);return v.role==='coach'&&v.viewerId===p.session.roles.coach&&p.team.some(a=>a.id===v.viewerId&&a.functions.includes('coach'));}
 const timestampMs=value=>{const parsed=Date.parse(value||'');return Number.isFinite(parsed)?parsed:null;};
 function closePause(s,at){
  const intervals=[...(s.searchPauseIntervals||[])];let index=-1;for(let i=intervals.length-1;i>=0;i--)if(!intervals[i].resumedAt){index=i;break;}
@@ -24,7 +25,7 @@ function closePause(s,at){
  return {...s,searchPauseIntervals:intervals,searchPausedAt:null,searchTotalPausedMs:(s.searchTotalPausedMs||0)+(durationMs??0)};
 }
 export function advanceSearch(state,p,action,{now=Date.now}={}){
- if(!isSearchActor(p)||state.actorId&&state.actorId!==p.viewerId)throw Error('Seul le Conducteur actuellement désigné peut agir.');
+ if(!(isSearchActor(p)||['pause','resume'].includes(action)&&isSearchCoach(p))||state.actorId&&state.actorId!==p.session.roles.driver)throw Error('Seul le Conducteur actuellement désigné peut agir.');
  const s=clone(state),v=preparationView(p),own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
  if(action==='start'&&s.phase==='SEARCH_READY'){s.phase='SEARCH_RUNNING';s.searchTrackingState='active';s.searchPausedAt=null;s.searchTotalPausedMs=0;s.searchPauseIntervals=[];s.actorId=v.viewerId;s.origin=available?{x:own.x,y:own.y}:null;if(available){s.segments=[[{...s.origin}]];s.segmentTrackingStates=[{trackingState:'active',pauseIntervalIndex:null}];}else s.gap=true;return s;}
  if(action==='pause'&&s.phase==='SEARCH_RUNNING'&&s.searchTrackingState==='active'){

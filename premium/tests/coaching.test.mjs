@@ -50,7 +50,7 @@ test('creation is an idempotent in-memory snapshot with no compulsory estimates 
  let d=setup();d=model.updateDraft(d,{mode:'normal',traceType:'direct'});d=model.setObservers(d,['lea']);
  const result=model.createSession(d);assert.equal(result.session.dog.name,'Nox');assert.equal(result.session.traceType,'direct');assert.deepEqual(result.session.roles.observers,['lea']);assert.equal(result.session.prototype,true);
  assert.equal(model.createSession(result).session.id,result.session.id);
- assert.deepEqual(Object.keys(result.session).sort(),['creatorRole','dog','id','code','mode','participants','preparation','prototype','roles','traceType','scenario','scentActor','layingRecorder','searchActor'].sort());
+ assert.deepEqual(Object.keys(result.session).sort(),['creatorParticipantId','creatorRole','dog','id','code','mode','participants','preparation','prototype','roles','traceType','scenario','scentActor','layingRecorder','searchActor'].sort());
  assert.equal(model.goToStep(d,'mode').traceType,'direct');assert.equal(d.session,null);
 });
 

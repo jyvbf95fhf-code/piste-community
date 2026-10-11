@@ -1,6 +1,6 @@
 // Session phase and event journal shared by every view; local memory only.
 import {preparationView,simulate as simulatePreparation} from './coaching-preparation.mjs';
-import {advanceSearch,searchView} from './coaching-search.mjs';
+import {advanceSearch,searchView,isSearchCoach} from './coaching-search.mjs';
 import {elapsedSeconds,formatElapsed,timestampFrom} from './coaching-time.mjs';
 const definitions={LAYING_STARTED:['LAYING','Le traceur réalise la piste','traceur'],LAYING_FINISHED:['TRACK_FINISHED','La piste est terminée','traceur'],TRACEUR_IN_POSITION:['LAYING_WAIT','Le traceur est en place','traceur'],SEARCH_READY:['SEARCH_READY','La recherche est prête','session'],SEARCH_STARTED:['SEARCH_RUNNING','La relève a commencé','driver'],SEARCH_PAUSED:['SEARCH_RUNNING','La recherche est en pause','driver'],SEARCH_RESUMED:['SEARCH_RUNNING','La recherche a repris','driver'],SEARCH_FINISHED:['SEARCH_FINISHED','Recherche terminée','driver'],DEBRIEF_ENTERED:['DEBRIEF','Le débrief est accessible en lecture seule','session'],SESSION_ARCHIVED:['ARCHIVED','Session archivée','session']};
 const elapsedMilliseconds=(start,end)=>{const from=Date.parse(start||''),to=Date.parse(end||'');return Number.isFinite(from)&&Number.isFinite(to)?Math.max(0,to-from):null;};
@@ -43,6 +43,7 @@ export function advanceSessionSearch(s,p,action,{now=Date.now}={}){
  if(!type)return next;
  const at=timestampFrom(now);
  let result=emit(next,type,action==='pause'||action==='resume'?at:null);
+ if(['pause','resume'].includes(action)){const v=preparationView(p);result.events[result.events.length-1]={...result.events.at(-1),source:v.role,authorParticipantId:v.viewerId};}
  if(action==='start')result={...result,search_started_at:at,trackAgeAtSearchStart:elapsedSeconds(s.track_finished_at,at)};
  if(action==='pause')result={...result,searchPausedAt:at};
  if(action==='finish'){
@@ -52,11 +53,23 @@ export function advanceSessionSearch(s,p,action,{now=Date.now}={}){
  if(action==='finish')result=emit(result,'DEBRIEF_ENTERED');
  return result;
 }
+export function archivePermissionView(s,p){
+ const v=preparationView(p),id=p.session.creatorParticipantId,member=p.team.some(a=>a.id===v.viewerId),creator=!!id&&member&&v.viewerId===id,authorization=s.archiveAuthorization;
+ const beneficiaryParticipantId=p.session.roles.coach,beneficiary=p.team.find(a=>a.id===beneficiaryParticipantId&&a.functions.includes('coach'));
+ const active=authorization?.sessionId===p.session.id&&authorization.status==='active'&&authorization.grantedByParticipantId===id&&authorization.beneficiaryParticipantId===beneficiaryParticipantId&&!!beneficiary;
+ return {sessionId:p.session.id,revision:authorization?.revision??0,status:active?'active':'none',beneficiaryParticipantId,beneficiaryName:beneficiary?.name||'Coach',canManageArchive:s.phase==='DEBRIEF'&&creator&&!!beneficiary&&beneficiaryParticipantId!==id,canArchive:s.phase==='DEBRIEF'&&(creator||active&&isSearchCoach(p))};
+}
+export function setArchivePermission(s,p,command){
+ const v=archivePermissionView(s,p),validId=x=>typeof x==='string'&&x.length>0&&x.trim()===x;
+ if(!v.canManageArchive||!['grant','revoke'].includes(command?.type)||command.sessionId!==v.sessionId||command.beneficiaryParticipantId!==v.beneficiaryParticipantId||command.expectedRevision!==v.revision||!validId(command.actionId)||!Number.isFinite(Date.parse(command.occurredAt||'')))throw Error('Autorisation d’archivage refusée : droits ou confirmation invalides.');
+ const history=s.archiveAuthorization?.history||[];
+ if(history.some(a=>a.actionId===command.actionId)||command.type==='grant'&&v.status==='active'||command.type==='revoke'&&v.status!=='active')throw Error('Cette autorisation a déjà évolué.');
+ const entry={...command,authorParticipantId:p.viewerId,revision:v.revision+1};
+ return {...s,archiveAuthorization:{sessionId:v.sessionId,revision:v.revision+1,beneficiaryParticipantId:v.beneficiaryParticipantId,grantedByParticipantId:p.session.creatorParticipantId,status:command.type==='grant'?'active':'revoked',history:[...structuredClone(history),entry]}};
+}
 export function archiveSession(s,p){
- if(s.phase!=='DEBRIEF')throw Error('Seul un débrief peut être clôturé.');
- const v=preparationView(p),creatorId=p.session.roles[p.session.creatorRole];
- if(v.role!=='coach'&&(v.role==='observer'||v.viewerId!==creatorId))throw Error('Clôture réservée au Coach ou au créateur de la session.');
- return emit(s,'SESSION_ARCHIVED');
+ if(!archivePermissionView(s,p).canArchive)throw Error('Archivage réservé au créateur ou au Coach explicitement autorisé, après le débrief.');
+ const result=emit(s,'SESSION_ARCHIVED');result.events[result.events.length-1]={...result.events.at(-1),source:preparationView(p).role,authorParticipantId:p.viewerId};return result;
 }
 export const trackAgeSeconds=(s,now=Date.now())=>elapsedSeconds(s?.track_finished_at,now);
 export const formatTrackAge=formatElapsed;
@@ -73,7 +86,7 @@ export function debriefView(s,p,t){
  const hasRecordedPose=poseAvailable;
  const temporal={trackFinishedAt:s.track_finished_at||null,searchStartedAt:s.search_started_at||null,searchFinishedAt:s.search_finished_at||null,trackAgeAtSearchStart:s.trackAgeAtSearchStart??null,trackAgeAtSearchEnd:s.trackAgeAtSearchEnd??null,searchDuration:s.searchDuration??null,searchActiveDuration:s.searchActiveDuration??null,searchActiveDurationMs:s.searchActiveDurationMs??null,searchPausedDuration:s.searchPausedDuration??null,searchPauseCount:s.searchPauseCount??(s.searchPauseIntervals||[]).length,searchPauseIntervals:structuredClone(s.searchPauseIntervals||[])};
  const trackAgeAvailable=temporal.trackAgeAtSearchStart!==null;
- return {phase:s.phase,role:v.role,viewerId:v.viewerId,mode:v.mode,modeLabel:v.modeLabel,dog:p.session.dog,traceLabel:map?.traceLabel||p.session.traceType,team:debriefTeam,canArchive:s.phase==='DEBRIEF'&&(v.role==='coach'||v.role!=='observer'&&v.viewerId===p.session.roles[p.session.creatorRole]),summary:{mode:v.mode,dog:p.session.dog,participants:debriefTeam.map(a=>({name:a.name,role:a.roleLabel,status:a.status})),traceType:p.session.traceType,traceLabel:map?.traceLabel||p.session.traceType,layingSeconds:!hasRecordedPose?'Tracé de pose indisponible':blind?null:t.seconds,searchSeconds:s.seconds,totalSeconds:total,layingDistance:!hasRecordedPose?'Tracé de pose indisponible':blind?null:t.distance,searchDistance:s.distance,startedAt:s.search_started_at||null,finishedAt:s.search_finished_at||null,status:s.phase==='ARCHIVED'?'Session archivée':s.phase==='DEBRIEF'?'Débrief en cours':'Recherche terminée',...temporal},temporal,map,science:{weather:{temperature:{value:'16 °C',status:'estimé'},humidity:{value:'64 %',status:'estimé'},wind:{value:'5 km/h · nord-ouest',status:'estimé'},provenance:'scénario mock · non mesuré'},layingDuration:{value:blind?null:hasRecordedPose?t.seconds:null,status:blind?'inconnu':hasRecordedPose?'estimé':'inconnu'},trackAge:{value:trackAgeAvailable?formatElapsed(temporal.trackAgeAtSearchStart):null,status:trackAgeAvailable?'calculé':'indisponible'},search:{duration:{value:s.seconds,status:'estimé'},distance:{value:s.distance,status:'estimé'},provenance:'scénario mock'} ,corridor:{value:'Couloir olfactif non calculé',status:'estimé'}},observations:{items:['Vent léger simulé','Nox suit le scénario de recherche mock','Aucun obstacle signalé dans cette démonstration'],persisted:false},events:confidentialityReleased?structuredClone(s.events||[]):v.events,lastAction:v.lastAction};
+ return {phase:s.phase,role:v.role,viewerId:v.viewerId,mode:v.mode,modeLabel:v.modeLabel,dog:p.session.dog,traceLabel:map?.traceLabel||p.session.traceType,team:debriefTeam,archivePermission:archivePermissionView(s,p),canArchive:archivePermissionView(s,p).canArchive,summary:{mode:v.mode,dog:p.session.dog,participants:debriefTeam.map(a=>({name:a.name,role:a.roleLabel,status:a.status})),traceType:p.session.traceType,traceLabel:map?.traceLabel||p.session.traceType,layingSeconds:!hasRecordedPose?'Tracé de pose indisponible':blind?null:t.seconds,searchSeconds:s.seconds,totalSeconds:total,layingDistance:!hasRecordedPose?'Tracé de pose indisponible':blind?null:t.distance,searchDistance:s.distance,startedAt:s.search_started_at||null,finishedAt:s.search_finished_at||null,status:s.phase==='ARCHIVED'?'Session archivée':s.phase==='DEBRIEF'?'Débrief en cours':'Recherche terminée',...temporal},temporal,map,science:{weather:{temperature:{value:'16 °C',status:'estimé'},humidity:{value:'64 %',status:'estimé'},wind:{value:'5 km/h · nord-ouest',status:'estimé'},provenance:'scénario mock · non mesuré'},layingDuration:{value:blind?null:hasRecordedPose?t.seconds:null,status:blind?'inconnu':hasRecordedPose?'estimé':'inconnu'},trackAge:{value:trackAgeAvailable?formatElapsed(temporal.trackAgeAtSearchStart):null,status:trackAgeAvailable?'calculé':'indisponible'},search:{duration:{value:s.seconds,status:'estimé'},distance:{value:s.distance,status:'estimé'},provenance:'scénario mock'} ,corridor:{value:'Couloir olfactif non calculé',status:'estimé'}},observations:{items:['Vent léger simulé','Nox suit le scénario de recherche mock','Aucun obstacle signalé dans cette démonstration'],persisted:false},events:confidentialityReleased?structuredClone(s.events||[]):v.events,lastAction:v.lastAction};
 }
 export function sessionView(s,p,t){
  const v=preparationView(p),coach=v.role==='coach',observer=v.role==='observer',blind=(coach||observer)&&v.mode==='full_blind',spatial=!v.referenceHidden;
@@ -82,5 +95,5 @@ export function sessionView(s,p,t){
  const search=(v.role==='traceur'||spatial||observer)&&s.actorId?{seconds:s.seconds,distance:s.distance,progress:Math.round(s.cursor/7*100)}:null;
  const team=v.team.map(a=>({...a,status:a.role==='traceur'?['SEARCH_READY','SEARCH_RUNNING','SEARCH_FINISHED','DEBRIEF','ARCHIVED'].includes(s.phase)?'En place':s.phase==='LAYING'?'En pose':s.phase==='TRACK_FINISHED'?'Pose terminée':a.status:a.role==='driver'?s.phase==='SEARCH_RUNNING'?(s.searchTrackingState==='paused'?'Recherche en pause':'En recherche'):s.phase==='SEARCH_FINISHED'||s.phase==='DEBRIEF'||s.phase==='ARCHIVED'?'Recherche terminée':'En attente':a.status}));
  // Blind Coach gets no live spatial metrics; the poser may retain only own reference.
- return {phase:s.phase,searchTrackingState:s.searchTrackingState||'stopped',role:v.role,viewerId:v.viewerId,mode:v.mode,modeLabel:v.modeLabel,team,laying:blind?null:laying,search:coach&&blind?null:search,map:blind&&!v.coachPoserReference?null:{...projection,team},events,lastAction:events.at(-1)||null,notifications:events.filter(e=>v.role==='driver'?['LAYING_STARTED','LAYING_FINISHED','SEARCH_READY','SEARCH_FINISHED','DEBRIEF_ENTERED','SESSION_ARCHIVED'].includes(e.type):v.role==='traceur'?['SEARCH_STARTED','SEARCH_FINISHED','DEBRIEF_ENTERED','SESSION_ARCHIVED'].includes(e.type):v.role==='coach'||v.role==='observer'?true:false),canAct:false};
+ return {phase:s.phase,searchTrackingState:s.searchTrackingState||'stopped',role:v.role,viewerId:v.viewerId,mode:v.mode,modeLabel:v.modeLabel,team,laying:blind?null:laying,search:coach&&blind?null:search,map:blind&&!v.coachPoserReference?null:{...projection,team},events,lastAction:events.at(-1)||null,notifications:events.filter(e=>v.role==='driver'?['LAYING_STARTED','LAYING_FINISHED','SEARCH_READY','SEARCH_FINISHED','DEBRIEF_ENTERED','SESSION_ARCHIVED'].includes(e.type):v.role==='traceur'?['SEARCH_STARTED','SEARCH_FINISHED','DEBRIEF_ENTERED','SESSION_ARCHIVED'].includes(e.type):v.role==='coach'||v.role==='observer'?true:false),coachAction:isSearchCoach(p)&&s.phase==='SEARCH_RUNNING'&&s.actorId===p.session.roles.driver?(s.searchTrackingState==='paused'?'resume':s.searchTrackingState==='active'?'pause':null):null,canAct:false};
 }

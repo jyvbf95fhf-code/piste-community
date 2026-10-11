@@ -165,7 +165,7 @@ export function createSession(draft,action=null) {
  const roles={...draft.roles,observers:[...draft.roles.observers]}, ids=new Set([roles.coach,roles.traceur,roles.driver,...roles.observers].filter(Boolean));
  const number=nextSession++,code=`PC-${number.toString(36).toUpperCase().padStart(4,'0')}`;
  const trackingScenario=draft.trackingScenario||'connected_traceur';
- const session={id:`mock-coaching-${number}`,code,prototype:true,mode:draft.mode,traceType:draft.traceType,creatorRole:draft.creatorRole,scenario:trackingScenario,
+ const session={id:`mock-coaching-${number}`,code,prototype:true,mode:draft.mode,traceType:draft.traceType,creatorRole:draft.creatorRole,creatorParticipantId:action? action.author.participantId:roles[draft.creatorRole],scenario:trackingScenario,
   scentActor:trackingScenario==='connected_traceur'?'internal':trackingScenario==='self_trace'?'self':'external',
   layingRecorder:trackingScenario==='external_driver_recorded'?'driver':trackingScenario==='self_trace'?'self':trackingScenario==='external_traceur'?'none':'traceur',
   searchActor:trackingScenario==='self_trace'?'self':'driver',
