@@ -12,12 +12,12 @@ export function advanceTracer(state,prep,action){
  if(action==='arrive'&&s.phase==='approaching'){s.phase='arrived';s.arrivalPoint=available?{...v.start}:null;return s;}
  if(action==='ready'&&s.phase==='arrived'&&prep.phase==='ready'){s.phase='before';return s;}
  if(action==='start'&&needsSessionReference(prep))throw Error('La référence requise doit être choisie avant la pose.');
- if(action==='start'&&s.phase==='before'){if(prep.productScenario==='external_driver_recorded'?prep.phase!=='created':prep.phase!=='ready')throw Error('Déclarez-vous prêt à tracer avant la pose.');if(!available)throw Error('Position du Traceur indisponible : démarrage de pose refusé.');s.phase='active';s.origin={x:own.x,y:own.y};s.originSource='mock-position';s.segments=[[{...s.origin}]];return s;}
+ if(action==='start'&&s.phase==='before'){if(prep.productScenario==='external_driver_recorded'?prep.phase!=='created':prep.phase!=='ready')throw Error('Déclarez-vous prêt à tracer avant la pose.');s.phase='active';s.origin=available?{x:own.x,y:own.y}:null;s.originSource=available?'mock-position':null;s.originCursor=available?0:null;s.startPointMissing=!available;s.segments=available?[[{...s.origin}]]:[];s.gap=!available;s.resumed=false;return s;}
  if(action==='progress'&&s.phase==='active'){
   s.seconds+=30;s.cursor=Math.min(s.cursor+1,points.length-1);
   if(!available){s.gap=true;s.resumed=false;return s;}
-  if(!validPoint(s.origin)){s.gap=true;s.resumed=false;return s;}
-  const origin=s.origin,point={x:origin.x+points[s.cursor].x-points[0].x,y:origin.y+points[s.cursor].y-points[0].y},last=s.segments.at(-1)?.at(-1);
+  if(!validPoint(s.origin)){s.origin={x:own.x,y:own.y};s.originSource='mock-position';s.originCursor=s.cursor;s.segments.push([{...s.origin}]);s.resumed=s.gap;s.gap=false;return s;}
+  const origin=s.origin,base=points[s.originCursor??0],point={x:origin.x+points[s.cursor].x-base.x,y:origin.y+points[s.cursor].y-base.y},last=s.segments.at(-1)?.at(-1);
   if(s.gap||!last){s.segments.push([point]);s.resumed=s.gap;s.gap=false;}
   else if(last.x!==point.x||last.y!==point.y){s.segments.at(-1).push(point);s.distance+=45;s.resumed=false;}
   return s;

@@ -65,7 +65,7 @@ export function searchView(s,p,{now=Date.now()}={}){
  const postSession=['DEBRIEF','ARCHIVED'].includes(s.phase),canReadTrackAge=postSession||v.role==='driver'&&isSearchActor(p);
  // A recorded departure is post-session data, never a live blind-mode fallback.
  // fixturePose is a demonstration overlay, not an original recording.
- const recordedStart=postSession&&spatial&&!s.fixturePose?pose[0]?.[0]:null;
+ const recordedStart=postSession&&spatial&&!s.fixturePose&&!s.layingStartMissing?pose[0]?.[0]:null;
  const start=v.start||(validPoint(recordedStart)?{x:recordedStart.x,y:recordedStart.y}:null);
  const startSource=v.start?'selected':start?'recorded-mock':null;
  const last=s.segments.at(-1)?.at(-1),recordVisible=spatial||v.role==='driver'&&isSearchActor(p)&&(!s.actorId||s.actorId===v.viewerId),markers=v.markers.map(m=>m.id===s.actorId&&last?{...m,...last}:m.role==='traceur'&&spatial&&pose.at(-1)?.at(-1)?{...m,...pose.at(-1).at(-1)}:m);

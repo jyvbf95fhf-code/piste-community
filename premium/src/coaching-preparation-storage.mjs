@@ -69,7 +69,10 @@ function validTerrainSnapshot(ownerId,snapshot){
   }
   if(s.cursor>7||t.cursor>8||!Array.isArray(t.messages)||!Number.isSafeInteger(t.messageSequence)||t.messageSequence<0||!['before','active','finished','in_place'].includes(t.phase))return false;
   if(scenario==='external_traceur'&&(t.phase!=='before'||t.segments.length||t.distance||t.seconds))return false;
-  if(scenario!=='external_traceur'&&(!t.segments.length||!point(t.origin)))return false;
+  if(scenario!=='external_traceur'){
+   if(t.segments.length?!point(t.origin):t.origin!==null||t.originSource!==null||t.distance!==0)return false;
+   if(t.originCursor!==undefined&&t.originCursor!==null&&(!Number.isSafeInteger(t.originCursor)||t.originCursor<0||t.originCursor>t.cursor))return false;
+  }
   if(!same(s.layingSegments,t.segments)||!Array.isArray(s.events)||s.events.some(event=>!event||!Number.isSafeInteger(event.id)||typeof event.type!=='string'||event.at!==undefined&&!time(event.at)))return false;
   if(s.phase==='LAYING'&&t.phase!=='active'||s.phase==='TRACK_FINISHED'&&t.phase!=='finished'||s.phase==='LAYING_WAIT'&&(scenario!=='self_trace'||t.phase!=='in_place'||t.returnedToStart))return false;
   if(['SEARCH_READY','SEARCH_RUNNING','SEARCH_FINISHED'].includes(s.phase)){

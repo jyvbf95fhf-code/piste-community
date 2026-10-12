@@ -8,7 +8,7 @@ function emit(s,type,at=null){const [phase,text,source]=definitions[type],events
 export function syncSession(s,p,t,{now=Date.now}={}){
  // DEV phase selection is deliberately isolated from the actual terrain flow.
  if(s.simulatedPhase)return s;
- let next={...s,scenario:p?.productScenario||s.scenario||'connected_traceur',layingSegments:structuredClone(t?.segments||[])};
+ let next={...s,...(t?.startPointMissing?{layingStartMissing:true}:{}),scenario:p?.productScenario||s.scenario||'connected_traceur',layingSegments:structuredClone(t?.segments||[])};
  if(['external_traceur','external_driver_recorded'].includes(next.scenario)&&p?.phase==='external_ready'&&!['SEARCH_READY','SEARCH_RUNNING','SEARCH_FINISHED','DEBRIEF','ARCHIVED'].includes(next.phase)){
   if(next.phase==='PREPARATION'||next.phase==='TRACK_FINISHED')next=emit(next,'TRACEUR_IN_POSITION');
   if(next.phase==='LAYING_WAIT')next=emit(next,'SEARCH_READY');
