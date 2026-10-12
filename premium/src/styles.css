@@ -4482,3 +4482,11 @@ main { padding-top:8px; }
 .home-shell .feature-tile .tile-top { margin-bottom:30px; }
 .home-shell .feature-tile[href] h3 { color:#f7f2e7; }
 .home-shell .feature-tile[href] p { color:#c7d3da; }
+
+/* Session exit control: ancillary menu, primary terrain actions remain unchanged. */
+.session-exit-menu{position:relative;margin-left:auto;flex-shrink:0;z-index:45;font-size:13px}
+.session-exit-menu summary{cursor:pointer;list-style:none;padding:9px 10px;border:1px solid #b9a36a88;border-radius:10px;background:#152331;color:#f3dfad;white-space:nowrap}
+.session-exit-options{position:absolute;right:0;top:100%;margin-top:6px;width:250px;max-width:calc(100vw - 32px);display:grid;padding:8px;background:#152331;border:1px solid #b9a36a88;border-radius:12px;box-shadow:0 12px 25px #0006}
+.session-exit-options button{background:transparent;color:#f5e6c2;text-align:left;padding:12px;border:0;border-radius:8px;font:inherit;cursor:pointer}
+.session-exit-options button:hover,.session-exit-options button:focus-visible{background:#294050}
+dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:8px 0 18px;padding:10px;border-radius:8px;font:inherit}

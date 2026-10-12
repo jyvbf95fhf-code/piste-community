@@ -1,3 +1,4 @@
+import {isExitClosure,isCollectivelyClosed,canParticipate} from '../src/coaching-session-control.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -12,7 +13,7 @@ import {createCoachingPreparationStorage,isRecoverableCoachingPreparation,create
 const source=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');
 const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};};
 function app(storage,user={user_id:'owner',name:'Owner'},sessionCatalog=createSessionCatalog()){
- const c=createContext({storage,currentUser:user,sessionCatalog,createCoachingPreparationStorage,isRecoverableCoachingPreparation,createCoachingSessionStorage,isRecoverableCoachingSession,syncSession,structuredClone,coaching,tracer,search,qaInitialized:false,coachingReferenceAssignment:null,preparationState:null,tracerState:tracer.createTracer(),searchState:search.createSearch(),preparationUI:{},tracerUI:{},searchUI:{},terrainOpen:false,coachingDraft:null,newCoachingDraft:()=>coaching.createDraft(c.currentUser,[{id:'nox',name:'Nox'}]),Toast:message=>{c.notice=message;}});
+ const c=createContext({isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,storage,currentUser:user,sessionCatalog,createCoachingPreparationStorage,isRecoverableCoachingPreparation,createCoachingSessionStorage,isRecoverableCoachingSession,syncSession,structuredClone,coaching,tracer,search,qaInitialized:false,coachingReferenceAssignment:null,preparationState:null,tracerState:tracer.createTracer(),searchState:search.createSearch(),preparationUI:{},tracerUI:{},searchUI:{},terrainOpen:false,coachingDraft:null,newCoachingDraft:()=>coaching.createDraft(c.currentUser,[{id:'nox',name:'Nox'}]),Toast:message=>{c.notice=message;}});
  c.coachingDraft=c.newCoachingDraft();const start=source.indexOf('const coachingPreparationStorage=');assert.ok(start>=0,'real application must integrate preparation persistence');runInContext(source.slice(start,source.indexOf('const newTrackUI=',start)),c);c.restoreCoachingPreparationForUser();return c;
 }
 function create(c){

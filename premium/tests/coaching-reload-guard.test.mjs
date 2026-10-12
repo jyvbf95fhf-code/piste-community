@@ -1,3 +1,4 @@
+import {isExitClosure,isCollectivelyClosed,canParticipate} from '../src/coaching-session-control.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -12,7 +13,7 @@ import {createCoachingQa,selectQaPerspective} from '../src/coaching-qa.mjs';
 import {syncSession} from '../src/coaching-session-flow.mjs';
 const source=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');
 function context(preparationState=null,qa=null){
- const c=createContext({preparationState,preparation,tracer,EmptyState,PreparationScreen,SearchScreen,CoachScreen,ObserverScreen,SessionNotice,syncSession,
+ const c=createContext({renderSessionExitMenu:()=>'',isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,preparationState,preparation,tracer,EmptyState,PreparationScreen,SearchScreen,CoachScreen,ObserverScreen,SessionNotice,syncSession,
   searchState:qa?.search||{phase:'PREPARATION'},tracerState:qa?.tracer||{},coachingDraft:{session:qa?.preparation.session||null,knownPeople:[],dogs:[{id:'nox',name:'Nox'}]},terrainOpen:false,preparationUI:{},searchUI:{},qaInitialized:false,
   coachingReferenceResponseView:()=>null,trackLibrary:{list:()=>[]},coachingReferenceAssignment:null,notifiedCoachingStarts:new Set(),communityLiveStore:{notifySessionStarted(){throw Error('must not notify');}}});
  const start=source.indexOf('function renderPreparation()');runInContext(source.slice(start,source.indexOf('function filterSessions()',start)),c);return c;

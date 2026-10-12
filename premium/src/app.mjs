@@ -1,3 +1,8 @@
+import {sessionControlView,applySessionControl,isExitClosure,isCollectivelyClosed,canParticipate} from './coaching-session-control.mjs';
+import {persistSessionExit,resolveSessionExitActor,createExitConfirmation,confirmExitCommand} from './coaching-session-exit-controller.mjs';
+import {SessionExitMenu,ExitConfirmationMarkup} from './coaching-session-exit-screen.mjs';
+import {coachingClosureView} from './coaching-closure-view.mjs';
+import {CoachingClosureScreen} from './coaching-closure-screen.mjs';
 import { AppShell, Toast, ConfirmationDialog, SessionCard, EmptyState, escapeHTML } from './components.mjs';
 import { HomeScreen, PlaceholderScreen, AuthScreen, routes } from './screens.mjs';
 import { mock } from './data.mjs';
@@ -106,7 +111,7 @@ function restoreCoachingHistoryForUser(){
 function captureCoachingHistory(){
  if(qaInitialized||!currentUser?.user_id||!preparationState||!coachingDraft.session||coachingDraft.identityContext?.userId!==currentUser.user_id)return;
  sessionCatalog.capture({session:coachingDraft.session,searchState,preparationState,tracerState});
- if(!['DEBRIEF','ARCHIVED'].includes(searchState.phase))return;
+ if(isExitClosure(searchState.phase)||!['DEBRIEF','ARCHIVED'].includes(searchState.phase))return;
  const result=coachingHistoryStorage.save(currentUser.user_id,sessionCatalog.list());
  coachingHistoryNotice=result.ok?'':result.reason==='conflict'?'Historique modifié dans un autre onglet ou illisible. Sauvegarde refusée pour préserver les données ; cette session reste en mémoire.':'Sauvegarde locale impossible. Cette session reste en mémoire et risque d’être perdue au rechargement.';
 }
@@ -221,7 +226,7 @@ function invalidateCoachingReferenceAssignment(){
 }
 function coachingReferenceAssignmentView(){
  const localUser=auth.getSession().user,identity=coachingDraft.identityContext,creation=coachingDraft.sessionCreation,session=coachingDraft.session,entry=coachingReferenceAssignment;
- if(qaInitialized||!entry||!session||!localUser?.user_id||identity?.userId!==localUser.user_id||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||creation?.creatorUserId!==localUser.user_id||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session.id||entry.state.sessionId!==session.id||entry.context.sessionId!==session.id||entry.context.creatorParticipantId!==identity.participantId||entry.state.creatorParticipantId!==identity.participantId)return null;
+ if(qaInitialized||preparationState&&!canParticipate(preparationState,preparationState.viewerId)||!entry||!session||!localUser?.user_id||identity?.userId!==localUser.user_id||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||creation?.creatorUserId!==localUser.user_id||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session.id||entry.state.sessionId!==session.id||entry.context.sessionId!==session.id||entry.context.creatorParticipantId!==identity.participantId||entry.state.creatorParticipantId!==identity.participantId)return null;
  const ref=session.preparation,roles=session.roles;
  if(!ref?.id||entry.context.references.length!==1||entry.context.references[0].id!==ref.id||!Object.hasOwn(entry.state.references,ref.id)||preparationState?.session.id!==session.id||preparationState.viewerId!==identity.participantId)return null;
  // Use actual session functions, never a DEV perspective as an identity or a
@@ -255,7 +260,7 @@ function confirmCoachingReferenceAssignment(form){
 // DEV actor selection is a session-bound simulation, never an auth identity.
 function coachingReferenceResponseView(){
  const user=auth.getSession().user,d=coachingDraft,session=d.session,entry=coachingReferenceAssignment,p=preparationState;
- if(qaInitialized||!entry||!session||!user?.user_id||d.identityContext?.userId!==user.user_id||d.identityContext.source!=='mock-auth'||d.identityContext.assurance!=='local-simulation'||d.sessionCreation?.creatorUserId!==user.user_id||d.sessionCreation.sessionId!==session.id||entry.state.sessionId!==session.id||p?.session.id!==session.id||p.scenario!==(session.roles.traceur===session.roles.driver?'solo':'session')||p.traceurKind!=='internal')return null;
+ if(qaInitialized||preparationState&&!canParticipate(preparationState,preparationState.viewerId)||!entry||!session||!user?.user_id||d.identityContext?.userId!==user.user_id||d.identityContext.source!=='mock-auth'||d.identityContext.assurance!=='local-simulation'||d.sessionCreation?.creatorUserId!==user.user_id||d.sessionCreation.sessionId!==session.id||entry.state.sessionId!==session.id||p?.session.id!==session.id||p.scenario!==(session.roles.traceur===session.roles.driver?'solo':'session')||p.traceurKind!=='internal')return null;
  const view=preparation.preparationView(p),id=session.roles.traceur;
  if(view.role!=='traceur'||view.viewerId!==id||!entry.context.participants.find(m=>m.id===id)?.functions.includes('traceur'))return null;
  const actor=preparationUI.referenceResponseActor,simulated=id!==d.identityContext.participantId;
@@ -280,7 +285,7 @@ function confirmCoachingReferenceResponse(form){
 // Delegation metadata is separate from spatial access and creator attribution.
 function coachingReferenceDelegationView(){
  const localUser=auth.getSession().user,identity=coachingDraft.identityContext,creation=coachingDraft.sessionCreation,session=coachingDraft.session,entry=coachingReferenceAssignment;
- if(qaInitialized||!entry||!session||!localUser?.user_id||identity?.userId!==localUser.user_id||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||creation?.creatorUserId!==localUser.user_id||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session.id||entry.state.sessionId!==session.id||entry.context.sessionId!==session.id||entry.context.creatorParticipantId!==identity.participantId||entry.state.creatorParticipantId!==identity.participantId)return null;
+ if(qaInitialized||preparationState&&!canParticipate(preparationState,preparationState.viewerId)||!entry||!session||!localUser?.user_id||identity?.userId!==localUser.user_id||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||creation?.creatorUserId!==localUser.user_id||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session.id||entry.state.sessionId!==session.id||entry.context.sessionId!==session.id||entry.context.creatorParticipantId!==identity.participantId||entry.state.creatorParticipantId!==identity.participantId)return null;
  if(preparationState?.session.id!==session.id||preparationState.viewerId!==identity.participantId||preparation.preparationView(preparationState).role==='observer'||['SEARCH_FINISHED','DEBRIEF','ARCHIVED'].includes(searchState.phase))return null;
  const roles=session.roles,members=session.participants.map(p=>({id:p.id,functions:[...['driver','traceur','coach'].filter(role=>roles[role]===p.id),...(roles.observers.includes(p.id)?['observer']:[])]}));
  if(JSON.stringify(members)!==JSON.stringify(entry.context.participants))return null;
@@ -331,7 +336,7 @@ function restoreCoachingPreparationForUser(){
  if(!loaded.snapshot)return;
  const snapshot=loaded.snapshot;
  // Completed history wins over a preparation retained by a stale tab.
- if(['DEBRIEF','ARCHIVED'].includes(sessionCatalog.get(snapshot.draft.session.id)?.searchState.phase)){
+ if(isCollectivelyClosed(sessionCatalog.get(snapshot.draft.session.id)?.searchState.phase)){
   const cleared=coachingPreparationStorage.clear(ownerId);
   if(!cleared.ok)coachingPreparationNotice='Une ancienne préparation subsiste dans un autre onglet. La session terminée reste accessible dans Sessions.';
   return;
@@ -341,12 +346,13 @@ function restoreCoachingPreparationForUser(){
  coachingReferenceAssignment=snapshot.referenceAssignment;terrainOpen=snapshot.terrainOpen;
  searchUI={locked:!!snapshot.searchLocked};
  coaching.reserveSessionIds([coachingDraft.session.id]);
+ if(isExitClosure(searchState.phase))exitSavePending=true;
  preparationUI.feedback=searchState.phase==='PREPARATION'?'Préparation retrouvée sur cet appareil.':'Session terrain retrouvée sur cet appareil. Position en acquisition.';
 }
 function captureCoachingPreparation(){
  const ownerId=currentUser?.user_id;
  if(qaInitialized||!ownerId||ownerId!==coachingPreparationOwnerId)return;
- if(coachingDraft.identityContext?.userId!==ownerId)return;
+ if(coachingDraft.identityContext?.userId!==ownerId||isExitClosure(searchState.phase))return;
  // GPS return can advance the poser before the screen synchronizes the session.
  if(preparationState)searchState=syncSession(searchState,preparationState,tracerState);
  const snapshot={draft:coachingDraft,preparationState,tracerState,searchState,referenceAssignment:coachingReferenceAssignment,terrainOpen,searchLocked:!!searchUI.locked};
@@ -357,6 +363,47 @@ function showCoachingPreparationWarning(){
  if(coachingPreparationNotice&&coachingPreparationNotice!==coachingPreparationShownNotice)Toast(coachingPreparationNotice);
  coachingPreparationShownNotice=coachingPreparationNotice;
 }
+
+let exitEpoch=0,exitRoute='',exitDialog=null,exitSavePending=false,normalCoachingBeforeQa=null;
+function exitSnapshot(){return {session:preparationState.session,draft:coachingDraft,preparationState,tracerState,searchState,referenceAssignment:coachingReferenceAssignment,terrainOpen,searchLocked:!!searchUI.locked};}
+function exitActor(){return qaInitialized?{participantId:preparationState?.viewerId}:resolveSessionExitActor(coachingDraft,currentUser);}
+function cleanupCoachingExit(){
+ exitEpoch++;exitDialog?.close();exitDialog=null;
+ searchUnlockController?.cancel();searchUnlockController=null;searchUnlockPointerId=null;
+ if(coachingAgeInterval)clearInterval(coachingAgeInterval);coachingAgeInterval=null;
+ tracerUI={};searchUI={};preparationUI={simulatorOpen:false,feedback:''};
+}
+function applyExitSnapshot(n){preparationState=n.preparationState;tracerState=n.tracerState;searchState=n.searchState;if(!qaInitialized)coachingDraft=n.draft;}
+function submitSessionExit(action){
+ if(!preparationState||!['/coaching/session','/qa/coaching'].includes(location.pathname)||searchUI.locked)return;
+ if(action==='home'){cleanupCoachingExit();history.pushState({},'','/');render(true);return;}
+ if(action==='retry'){
+  try{const snapshot=exitSnapshot(),entry=snapshot.session.control.actions.at(-1),{authorParticipantId,...command}=entry;
+   const result=persistSessionExit({snapshot,actor:exitActor(),command,ownerId:currentUser.user_id,sessionStore:coachingPreparationStorage,historyStorage:coachingHistoryStorage,records:sessionCatalog.list()});
+   exitSavePending=!result.ok;coachingPreparationNotice=result.ok?'':'Sauvegarde incomplète : les données restent conservées en mémoire. Réessayez sans recharger.';coachingHistoryNotice='';render();
+  }catch(error){Toast(error.message);}return;
+ }
+ const actor=exitActor();if(!actor)return;
+ const snapshot=exitSnapshot(),view=sessionControlView(snapshot,actor);
+ if(!view[{cancel:'canCancel',interrupt:'canInterrupt',leave:'canLeave'}[action]]){Toast('Cette sortie n’est pas autorisée.');return;}
+ const request=createExitConfirmation(snapshot,actor,action,exitEpoch),dialog=document.createElement('dialog');exitDialog?.close();exitDialog=dialog;dialog.innerHTML=ExitConfirmationMarkup(action);document.body.append(dialog);
+ dialog.querySelector('[data-exit-cancel]').onclick=()=>dialog.close();
+ dialog.addEventListener('close',()=>{dialog.remove();if(exitDialog===dialog)exitDialog=null;});
+ dialog.querySelector('[data-exit-confirm]').onclick=()=>{
+  try{
+   if(!['/coaching/session','/qa/coaching'].includes(location.pathname)||searchUI.locked)throw Error('Déverrouillez le même écran avant de confirmer.');
+   const snapshot=exitSnapshot(),actor=exitActor(),command=confirmExitCommand(request,snapshot,actor,exitEpoch,{actionId:crypto.randomUUID(),occurredAt:new Date().toISOString(),reason:dialog.querySelector('[data-exit-reason]').value.trim()});
+   const result=qaInitialized?{ok:true,snapshot:applySessionControl(snapshot,actor,command)}:persistSessionExit({snapshot,actor,command,ownerId:currentUser.user_id,sessionStore:coachingPreparationStorage,historyStorage:coachingHistoryStorage,records:sessionCatalog.list()});
+   if(result.reason==='conflict'&&!result.applied){Toast('Session modifiée dans un autre onglet. Arrêt refusé ; rechargez pour consulter le dernier état.');dialog.close();return;}
+   applyExitSnapshot(result.snapshot);cleanupCoachingExit();exitSavePending=!result.ok;
+   coachingPreparationNotice=result.ok?'':'Sauvegarde incomplète : les données restent en mémoire. Réessayez sans recharger.';coachingHistoryNotice='';
+   render(true);
+  }catch(error){dialog.close();Toast(error.message);}
+ };
+ dialog.showModal();
+}
+function renderSessionExitMenu(){return SessionExitMenu(sessionControlView(exitSnapshot(),exitActor()),{locked:!!searchUI.locked});}
+
 const newTrackUI=()=>({view:'list',selectedId:null,fileId:null,name:'',notice:'',error:''});
 let trackUI=newTrackUI();
 let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:'',copySource:null};
@@ -455,6 +502,8 @@ function render(focus=false) {
  const consultation=resolveConsultationRoute(route);
  if(route!==scientificEntry)history.replaceState({},'',`${route}${location.search}${location.hash}`);
  currentUser=auth.getSession().user;
+ if(exitRoute!==route){exitEpoch++;exitDialog?.close();exitDialog=null;searchUnlockController?.cancel();searchUnlockController=null;exitRoute=route;}
+ if(qaInitialized&&route!=='/qa/coaching'&&normalCoachingBeforeQa){const n=normalCoachingBeforeQa;coachingDraft=n.draft;preparationState=n.preparationState;tracerState=n.tracerState;searchState=n.searchState;terrainOpen=n.terrainOpen;coachingReferenceAssignment=n.referenceAssignment;tracerUI=n.tracerUI;searchUI=n.searchUI;preparationUI=n.preparationUI;exitSavePending=n.exitSavePending;normalCoachingBeforeQa=null;qaInitialized=false;}
  restoreCoachingHistoryForUser();
  restoreCoachingPreparationForUser();
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
@@ -515,6 +564,8 @@ function refreshDogPhotoPreview(form) {
  form.querySelector('[data-dog-photo-preview]').innerHTML=DogPhotoMarkup(dog,'dog-form-photo-preview-frame');
 }
 function resetCoachingQa(mode=qaMode,scenario=qaScenario){
+ if(!qaInitialized)normalCoachingBeforeQa=structuredClone({draft:coachingDraft,preparationState,tracerState,searchState,terrainOpen,referenceAssignment:coachingReferenceAssignment,tracerUI,searchUI,preparationUI,exitSavePending});
+ cleanupCoachingExit();
  coachingReferenceAssignment=null;
  qaMode=mode;qaScenario=scenario;
  qaInitialized=true;
@@ -546,6 +597,7 @@ function renderSessionDetail(id){
 }
 function renderSessionDebrief(id){
  const record=sessionCatalog.get(id);
+ if(isExitClosure(record?.searchState?.phase))return CoachingClosureScreen(coachingClosureView(record));
  if(!record||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))return SessionDetailScreen(null);
  return DebriefScreen(record.searchState,record.preparationState,record.tracerState,debriefUI,{readOnly:true});
 }
@@ -563,6 +615,11 @@ function renderLive(route){
  return LiveScreen({ownSessions,contactSessions:[],invitations:[]});
 }
 function renderPreparation(){
+ const content=renderPreparationContent();
+ if(!preparationState)return content;
+ return content.replace('</header>',renderSessionExitMenu()+'</header>');
+}
+function renderPreparationContent(){
  if(!preparationState)return `<section class="coaching-flow prep-flow" data-coaching-no-current-session>${EmptyState('Aucune session en cours','La session courante n’est plus en mémoire. Vos sessions terminées et archivées sauvegardées sur cet appareil restent accessibles dans Sessions.','route')}<a class="button button-gold" href="/sessions">Voir mes sessions</a></section>`;
  const v=preparationState?preparation.preparationView(preparationState):null;
  if(preparationState)searchState=syncSession(searchState,preparationState,tracerState);
@@ -570,6 +627,8 @@ function renderPreparation(){
   notifiedCoachingStarts.add(coachingDraft.session.id);
   communityLiveStore.notifySessionStarted('coaching',coachingDraft.session.id,{dogName:coachingDraft.dogs.find(dog=>dog.id===coachingDraft.dogId)?.name||null});
  }
+ if(isExitClosure(searchState.phase))return CoachingClosureScreen(coachingClosureView(exitSnapshot()))+(exitSavePending?'<section class="card"><p role="status">Sauvegarde locale non achevée. Les données restent en mémoire.</p><button class="button button-gold" data-session-exit="retry">Réessayer la sauvegarde</button></section>':'');
+ if(!canParticipate(preparationState,preparationState.viewerId))return '<section class="coaching-flow"><header><h1>Participation arrêtée</h1><p>Votre contribution est conservée. Aucun suivi ni commande terrain ne reste actif pour vous.</p></header></section>'+ObserverScreen(searchState,preparationState,tracerState);
  if(['DEBRIEF','ARCHIVED'].includes(searchState.phase))return DebriefScreen(searchState,preparationState,tracerState,debriefUI);
  if(v?.role==='coach')return CoachScreen(searchState,preparationState,tracerState,preparationUI);
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
@@ -674,6 +733,7 @@ document.addEventListener('click',event=>{
   if(action==='delete')ConfirmationDialog({title:'Supprimer ce tracé mock ?',description:'Le tracé préparé sera retiré de la bibliothèque de cette visite.',onConfirm:()=>{trackLibrary.remove(id);history.pushState({},'','/tracks');render(true);}});
   return;
  }
+ const exitControl=event.target.closest('[data-session-exit]');if(exitControl){submitSessionExit(exitControl.dataset.sessionExit);return;}
  const qaReset=event.target.closest('[data-qa-reset]');
  if(qaReset){resetCoachingQa(qaMode,qaScenario);render(true);return;}
  const qaScenarioButton=event.target.closest('[data-qa-scenario]');
@@ -799,14 +859,14 @@ document.addEventListener('click',event=>{
    const next=coachingDraft.returnStep || (coachingDraft.editing?(needsPreparation?'prepare':'review'):sequence[Math.min(sequence.length-1,index+1)]);
    coachingDraft={...coachingDraft,step:next,returnStep:null,editing:coachingDraft.editing&&next==='prepare'};
   }
-  if(action==='create') {if(coaching.validateDraft(coachingDraft).length)return;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};const selection=coachingDraft.preparationActions?.filter(entry=>entry.type==='reference-selection').at(-1);coachingDraft=coaching.createSession(coachingDraft,coachingActionContext('session-creation',{referenceId:coachingDraft.preparationTrack?.id??null,origin:'simulation:coaching-session-creation',...(selection&&selection.referenceId===coachingDraft.preparationTrack?.id?{selectionActionId:selection.actionId}:{})}));initializeCoachingReferenceAssignment();tracerState=tracer.createTracer();tracerUI={};terrainOpen=false;preparationState=preparation.createPreparation(coachingDraft.session);preparationUI={simulatorOpen:false,feedback:''};transmitCoachingReferenceAutomatically();}
-  if(action==='restart'){qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={};coachingDraft=newCoachingDraft();preparationState=null;}
+  if(action==='create') {if(coaching.validateDraft(coachingDraft).length)return;cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};const selection=coachingDraft.preparationActions?.filter(entry=>entry.type==='reference-selection').at(-1);coachingDraft=coaching.createSession(coachingDraft,coachingActionContext('session-creation',{referenceId:coachingDraft.preparationTrack?.id??null,origin:'simulation:coaching-session-creation',...(selection&&selection.referenceId===coachingDraft.preparationTrack?.id?{selectionActionId:selection.actionId}:{})}));initializeCoachingReferenceAssignment();tracerState=tracer.createTracer();tracerUI={};terrainOpen=false;preparationState=preparation.createPreparation(coachingDraft.session);preparationUI={simulatorOpen:false,feedback:''};transmitCoachingReferenceAutomatically();}
+  if(action==='restart'){cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={};coachingDraft=newCoachingDraft();preparationState=null;}
   render(action!=='creator');
   if(action==='creator')document.querySelector(`[data-coaching="creator"][data-role="${controlCoaching.dataset.role}"]`).focus({preventScroll:true});
   return;
  }
  const action=event.target.closest('[data-action]')?.dataset.action;
- if(action==='logout') {qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
+ if(action==='logout') {cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
  const photoReset=event.target.closest('[data-dog-photo-reset]');
  if(photoReset){const form=photoReset.closest('form[data-dog-form]');form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl='';form.querySelector('[data-dog-photo]').value='';photoReset.hidden=true;form.querySelector('.dog-photo-pick span').textContent='Ajouter une photo';form.querySelector('.dog-photo-feedback').textContent='';refreshDogPhotoPreview(form);return;}
  if(action==='notification') Toast(mock.notification);

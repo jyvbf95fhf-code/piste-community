@@ -1,3 +1,4 @@
+import {assertParticipation,canParticipate} from './coaching-session-control.mjs';
 // Drawing coordinates, counters and messages are explicit in-memory fixtures, never sensor data.
 import {preparationView,needsSessionReference} from './coaching-preparation.mjs';
 import {isSearchActor} from './coaching-search.mjs';
@@ -7,6 +8,7 @@ const texts=['Je suis en place','Attends 2 min','Tu peux démarrer','J’arrive'
 export function createTracer(){return {phase:'before',seconds:0,distance:0,cursor:0,segments:[],gap:false,resumed:false,messages:[],messageSequence:0};}
 const authorised=p=>{const v=preparationView(p),externalRecorder=p.productScenario==='external_driver_recorded'&&v.role==='driver'&&v.mode==='normal';if(!(v.role==='traceur'&&p.traceurKind==='internal')&&!externalRecorder)throw Error('Fonction de pose non autorisée pour ce parcours.');return v;};
 export function advanceTracer(state,prep,action){
+ assertParticipation(prep);if(state.recordingStoppedAt)throw Error('Enregistrement arrêté.');
  const v=authorised(prep),s=structuredClone(state);const own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
  if(action==='approach'&&['before','approaching'].includes(s.phase)&&v.knownStart){s.phase='approaching';return s;}
  if(action==='arrive'&&s.phase==='approaching'){s.phase='arrived';s.arrivalPoint=available?{...v.start}:null;return s;}
@@ -44,11 +46,11 @@ export function sessionMessages(state,p){
 }
 export function readMessages(state,p=null){
  if(!p)return {...state,messages:state.messages.map(m=>({...m,read:true}))};
- const actor=messageActor(p);
+ assertParticipation(p);const actor=messageActor(p);
  return {...state,messages:state.messages.map(m=>m.sessionId&&m.sessionId!==p.session.id?m:{...m,readBy:[...new Set([...(m.readBy||[]),actor.id])]})};
 }
 function appendSessionMessage(state,p,text){
- const actor=messageActor(p),next=replyMock(state,text);
+ assertParticipation(p);const actor=messageActor(p),next=replyMock(state,text);
  next.messages[next.messages.length-1]={...next.messages.at(-1),sender:actor.name,role:{coach:'Coach',traceur:'Traceur',driver:'Conducteur'}[actor.role],participantId:actor.id,sessionId:p.session.id,readBy:[actor.id]};
  return next;
 }
@@ -56,15 +58,15 @@ export function replyMock(state,text,p=null){
  if(p){const actor=messageActor(p);if(actor.role!=='traceur'&&!(actor.role==='driver'&&p.productScenario==='external_driver_recorded'))throw Error('Réponse réservée au poseur désigné.');return appendSessionMessage(state,p,text);}
  const value=String(text).trim();if(!value||value.length>120)throw Error('Réponse de 1 à 120 caractères requise.');return {...state,messageSequence:state.messageSequence+1,messages:[...state.messages,{id:state.messageSequence+1,sender:'Vous',role:'Traceur',time:'09:15 · mock',text:value,read:true,outgoing:true}]};
 }
-export function canCoachMessage(p,s){try{return messageActor(p).role==='coach'&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(s?.phase);}catch{return false;}}
+export function canCoachMessage(p,s){try{return canParticipate(p,p.viewerId)&&messageActor(p).role==='coach'&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(s?.phase);}catch{return false;}}
 export function replyCoachMock(state,p,s,text){if(!canCoachMessage(p,s))throw Error('Réponse réservée au Coach désigné pendant la session.');return appendSessionMessage(state,p,text);}
 // Driver replies are local messages, never recording or physical laying actions.
 export function canDriverMessage(p,s){
- if(!s||!['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(s.phase)||!isSearchActor(p))return false;
+ if(!canParticipate(p,p.viewerId)||!s||!['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(s.phase)||!isSearchActor(p))return false;
  return s.phase==='SEARCH_RUNNING'?s.actorId===p.session.roles.driver:!s.actorId||s.actorId===p.session.roles.driver;
 }
 export function replySearchMock(state,p,searchState,text){
  if(!canDriverMessage(p,searchState))throw Error('Réponse réservée au Conducteur désigné pendant la préparation ou la recherche.');
  return appendSessionMessage(state,p,text);
 }
-export function tracerView(s,p){const v=authorised(p);const last=s.segments.at(-1)?.at(-1),approaching=['approaching','arrived'].includes(s.phase),own=v.markers.find(m=>m.id===v.viewerId);const approach=approaching?{distance:own?(s.phase==='arrived'?0:180):null,direction:own&&v.gps==='fresh'?42:null}:null;return {...v,markers:v.markers.map(m=>m.id===v.viewerId&&(last||s.arrivalPoint)?{...m,...(last||s.arrivalPoint)}:m),paths:v.knownStart?v.paths.filter(p=>p.kind==='reference'):[],arrival:null,approach,segments:s.segments,phase:s.phase,seconds:s.seconds,distance:s.distance,progress:Math.round(s.cursor/(points.length-1)*100),resumed:s.resumed,...sessionMessages(s,p),orientation:v.gps==='fresh'&&v.markers.some(m=>m.id===v.viewerId)?42:null,action:s.phase==='approaching'?['arrive','Approche du départ']:s.phase==='arrived'?['ready','Me déclarer prêt à tracer']:s.phase==='before'?['start','Tracer la piste']:s.phase==='active'?['finish','Terminer la piste']:s.phase==='finished'?['in-place','Je suis en place']:null};}
+export function tracerView(s,p){const v=authorised(p);const last=s.segments.at(-1)?.at(-1),approaching=['approaching','arrived'].includes(s.phase),own=v.markers.find(m=>m.id===v.viewerId);const approach=approaching?{distance:own?(s.phase==='arrived'?0:180):null,direction:own&&v.gps==='fresh'?42:null}:null;return {...v,markers:v.markers.map(m=>m.id===v.viewerId&&(last||s.arrivalPoint)?{...m,...(last||s.arrivalPoint)}:m),paths:v.knownStart?v.paths.filter(p=>p.kind==='reference'):[],arrival:null,approach,segments:s.segments,phase:s.phase,seconds:s.seconds,distance:s.distance,progress:Math.round(s.cursor/(points.length-1)*100),resumed:s.resumed,...sessionMessages(s,p),orientation:v.gps==='fresh'&&v.markers.some(m=>m.id===v.viewerId)?42:null,action:!canParticipate(p,v.viewerId)||s.recordingStoppedAt?null:s.phase==='approaching'?['arrive','Approche du départ']:s.phase==='arrived'?['ready','Me déclarer prêt à tracer']:s.phase==='before'?['start','Tracer la piste']:s.phase==='active'?['finish','Terminer la piste']:s.phase==='finished'?['in-place','Je suis en place']:null};}

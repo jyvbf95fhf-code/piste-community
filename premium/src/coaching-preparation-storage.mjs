@@ -1,3 +1,4 @@
+import {isExitClosure,validSessionControl} from './coaching-session-control.mjs';
 // Device-local Coaching recovery. Never an authenticated remote session.
 import {validateDraft} from './coaching.mjs';
 import {createPreparation,preparationView} from './coaching-preparation.mjs';
@@ -12,13 +13,14 @@ export function isRecoverableCoachingPreparation(snapshot){
 }
 const terrainPhases=['LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING','SEARCH_FINISHED'];
 export function isRecoverableCoachingSession(snapshot){
- return isRecoverableCoachingPreparation(snapshot)||terrainPhases.includes(snapshot?.searchState?.phase);
+ return !isExitClosure(snapshot?.searchState?.phase)&&(isRecoverableCoachingPreparation(snapshot)||terrainPhases.includes(snapshot?.searchState?.phase));
 }
 function validContext(ownerId,snapshot){
  try{
   const {draft,preparationState:p,referenceAssignment:entry,terrainOpen}=snapshot;
   const session=draft.session,identity=draft.identityContext,creation=draft.sessionCreation;
   if(identity?.userId!==ownerId||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||identity.participantId!=='self'||creation?.creatorUserId!==ownerId||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session?.id||!/^mock-coaching-[1-9]\d*(?:-.+)?$/.test(session.id)||session.creatorParticipantId!==identity.participantId||validateDraft(draft).length)return false;
+  if(!validSessionControl(session,snapshot.searchState.phase))return false;
   if(!same(session,p.session)||!same(session.roles,draft.roles)||session.mode!==draft.mode||session.traceType!==draft.traceType||session.scenario!==draft.trackingScenario||session.creatorRole!==draft.creatorRole||!same(session.preparation,draft.preparationTrack)||typeof terrainOpen!=='boolean')return false;
   if(!same(session.dog,draft.dogs.find(d=>d.id===draft.dogId)))return false;
   const roles=session.roles,ids=[roles.driver,roles.traceur,roles.coach,...roles.observers].filter(Boolean);
@@ -57,10 +59,12 @@ const nonnegative=value=>Number.isFinite(value)&&value>=0;
 const point=value=>Number.isFinite(value?.x)&&Number.isFinite(value?.y);
 const segments=value=>Array.isArray(value)&&value.every(segment=>Array.isArray(segment)&&segment.length>0&&segment.every(point));
 const time=value=>typeof value==='string'&&Number.isFinite(Date.parse(value));
-function validTerrainSnapshot(ownerId,snapshot){
+function validTerrainSnapshot(ownerId,snapshot,closed=false){
  try{
-  if(!terrainPhases.includes(snapshot?.searchState?.phase)||!validContext(ownerId,snapshot))return false;
-  const {draft,preparationState:p,tracerState:t,searchState:s}=snapshot;
+  const actual=snapshot?.searchState?.phase,prior=closed?snapshot.draft.session.control.closure.previousPhase:actual;
+  if(!terrainPhases.includes(prior)||!validContext(ownerId,snapshot))return false;
+  const {draft,preparationState:p,tracerState:t}=snapshot,s={...snapshot.searchState,phase:prior};
+  const stopped=closed||!!s.recordingStoppedAt;
   const scenario=draft.session.scenario;
   if(s.simulatedPhase!==false||s.fixturePose!==false||s.scenario!==scenario||!['created','preparing','ready','approaching','arrived','external_ready'].includes(p.phase))return false;
   for(const state of [s,t]){
@@ -81,7 +85,7 @@ function validTerrainSnapshot(ownerId,snapshot){
   }
   if(!['stopped','active','paused'].includes(s.searchTrackingState)||!Array.isArray(s.searchPauseIntervals)||!nonnegative(s.searchTotalPausedMs))return false;
   if(s.phase==='SEARCH_RUNNING'){
-   if(!['active','paused'].includes(s.searchTrackingState)||s.actorId!==draft.session.roles.driver||!time(s.search_started_at))return false;
+   if(!(stopped?s.searchTrackingState==='stopped':['active','paused'].includes(s.searchTrackingState))||s.actorId!==draft.session.roles.driver||!time(s.search_started_at))return false;
   }else if(s.searchTrackingState!=='stopped')return false;
   if(!Array.isArray(s.segmentTrackingStates)||s.segmentTrackingStates.length!==s.segments.length)return false;
   let closedPauseMs=0,open=0;
@@ -93,11 +97,19 @@ function validTerrainSnapshot(ownerId,snapshot){
   }
   if(closedPauseMs!==s.searchTotalPausedMs||open!==(s.searchTrackingState==='paused'?1:0)||s.searchTrackingState!=='paused'&&s.searchPausedAt!==null)return false;
   for(const state of s.segmentTrackingStates)if(!['active','paused'].includes(state.trackingState)||state.trackingState==='active'&&state.pauseIntervalIndex!==null||state.trackingState==='paused'&&(!Number.isSafeInteger(state.pauseIntervalIndex)||!s.searchPauseIntervals[state.pauseIntervalIndex]))return false;
+  if(s.recordingStoppedAt!==undefined&&(!time(s.recordingStoppedAt)||!closed&&!draft.session.control?.departures.some(d=>d.participantId===draft.session.roles.driver&&d.occurredAt===s.recordingStoppedAt)))return false;
+  if(t.recordingStoppedAt!==undefined&&(!time(t.recordingStoppedAt)||!closed&&!draft.session.control?.departures.some(d=>d.participantId===(scenario==='external_driver_recorded'?draft.session.roles.driver:draft.session.roles.traceur)&&d.occurredAt===t.recordingStoppedAt)))return false;
   if(s.track_finished_at!==undefined&&!time(s.track_finished_at))return false;
   for(const field of ['trackAgeAtSearchStart','searchDuration','searchDurationMs','searchActiveDuration','searchActiveDurationMs','searchPausedDuration','searchPauseCount'])if(s[field]!==undefined&&s[field]!==null&&!nonnegative(s[field]))return false;
   searchView(s,p);
   return true;
  }catch{return false;}
+}
+function validClosedSnapshot(ownerId,snapshot){
+ if(!isExitClosure(snapshot?.searchState?.phase)||!validContext(ownerId,snapshot))return false;
+ if(snapshot.searchState.phase==='INTERRUPTED')return validTerrainSnapshot(ownerId,snapshot,true)&&snapshot.searchState.searchTrackingState==='stopped';
+ const restored=structuredClone(snapshot);restored.searchState.phase='PREPARATION';delete restored.draft.session.control;delete restored.preparationState.session.control;
+ return validSnapshot(ownerId,restored);
 }
 function createSnapshotStorage(storage,validate,terrainRecovery=false){
  const observed=new Map();
@@ -134,4 +146,4 @@ function createSnapshotStorage(storage,validate,terrainRecovery=false){
  });
 }
 export function createCoachingPreparationStorage(storage){return createSnapshotStorage(storage,validSnapshot);}
-export function createCoachingSessionStorage(storage){return createSnapshotStorage(storage,(ownerId,snapshot)=>validSnapshot(ownerId,snapshot)||validTerrainSnapshot(ownerId,snapshot),true);}
+export function createCoachingSessionStorage(storage){return createSnapshotStorage(storage,(ownerId,snapshot)=>validSnapshot(ownerId,snapshot)||validTerrainSnapshot(ownerId,snapshot)||validClosedSnapshot(ownerId,snapshot),true);}

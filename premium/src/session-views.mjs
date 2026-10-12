@@ -1,3 +1,5 @@
+import {isExitClosure,isCollectivelyClosed,canParticipate} from './coaching-session-control.mjs';
+import {coachingClosureView} from './coaching-closure-view.mjs';
 import {mock} from './data.mjs';
 import {modes} from './coaching.mjs';
 import {sessionView,debriefView} from './coaching-session-flow.mjs';
@@ -7,7 +9,7 @@ import {formatElapsed,formatTimestamp} from './coaching-time.mjs';
 
 const unavailable='Aucune donnée disponible';
 const roleLabels={coach:'Coach',traceur:'Traceur',driver:'Conducteur',observer:'Observateur'};
-const statusFor=phase=>['DEBRIEF'].includes(phase)?'Terminée':phase==='ARCHIVED'?'Archivée':'En cours';
+const statusFor=phase=>['DEBRIEF'].includes(phase)?'Terminée':phase==='ARCHIVED'?'Archivée':phase==='CANCELLED'?'Annulée':phase==='INTERRUPTED'?'Interrompue':'En cours';
 const isFinished=status=>['Terminée','Archivée'].includes(status);
 const modeLabel=id=>modes.find(mode=>mode.id===id)?.title||unavailable;
 const encode=id=>encodeURIComponent(id);
@@ -19,7 +21,7 @@ function liveRow(record,currentSessionId){
  const viewer=preparationState?preparationView(preparationState):null;
  const accessible=!!viewer?.team?.some(person=>person.id===viewer.viewerId);
  const current=Boolean(currentSessionId&&currentSessionId===session.id);
- const canResume=current&&accessible&&!isFinished(statusFor(phase));
+ const canResume=current&&accessible&&canParticipate(preparationState,viewer.viewerId)&&!isCollectivelyClosed(phase);
  const dog=session.dog||preparationState?.session?.dog||{};
  return {
   id:session.id,
@@ -66,7 +68,7 @@ export function homeActiveSessionView(catalog,fallbackRows=[] ,{currentSessionId
  const records=catalog.list();
  if(!records.length)return [...fallbackRows];
  return records.map(record=>liveRow(record,currentSessionId))
-  .filter(row=>!isFinished(row.status))
+  .filter(row=>!isCollectivelyClosed(row.phase))
   .map(row=>({
    ...row,
    status:row.phase==='PREPARATION'?'EN PRÉPARATION':row.phase==='LAYING_WAIT'||row.phase==='SEARCH_READY'?'EN PAUSE':'EN COURS',
@@ -97,6 +99,7 @@ export function sessionDetailView(record,{currentSessionId=''}={}){
  if(!record?.session||!record.searchState||!record.preparationState)return null;
  const {session,searchState,preparationState,tracerState={}}=record;
  const phase=searchState.phase;
+ if(isExitClosure(phase)){const v=coachingClosureView(record);return v?{...v,report:null,distance:v.searchDistance==null?unavailable:v.searchDistance+' m · mock',duration:unavailable,date:formatTimestamp(v.closure.occurredAt)}:null;}
  const terminal=phase==='DEBRIEF'||phase==='ARCHIVED';
  const status=statusFor(phase),dog=session.dog||preparationState.session?.dog||{};
  const mode=modeLabel(session.mode);
@@ -107,10 +110,11 @@ export function sessionDetailView(record,{currentSessionId=''}={}){
  const view=sessionView(searchState,preparationState,tracerState);
  const allowed=preparationView(preparationState).team.some(person=>person.id===view.viewerId);
  const current=Boolean(currentSessionId&&currentSessionId===session.id);
- return {id:session.id,title:session.title||`Session ${session.code||session.id}`,status,phase,readOnly:true,mode,dog,participants:view.team.map(person=>({name:person.name,role:person.roleLabel,status:person.status})),creatorRole:roleLabels[session.creatorRole]||unavailable,date:unavailable,distance:unavailable,duration:unavailable,observations:[],poseAvailable:false,searchAvailable:false,canResume:current&&allowed,report:null};
+ return {id:session.id,title:session.title||`Session ${session.code||session.id}`,status,phase,readOnly:true,mode,dog,participants:view.team.map(person=>({name:person.name,role:person.roleLabel,status:person.status})),creatorRole:roleLabels[session.creatorRole]||unavailable,date:unavailable,distance:unavailable,duration:unavailable,observations:[],poseAvailable:false,searchAvailable:false,canResume:current&&allowed&&canParticipate(preparationState,view.viewerId),report:null};
 }
 
 export function sessionReplayView(record){
+ if(isExitClosure(record?.searchState?.phase)){const v=coachingClosureView(record);return v?.canReplay?{...v,readOnly:true}:null;}
  if(!record?.searchState||!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return null;
  const report=debriefView(record.searchState,record.preparationState,record.tracerState||{});
  return {id:record.session.id,title:record.session.title||`Session ${record.session.code||record.session.id}`,status:statusFor(record.searchState.phase),mode:report.modeLabel,map:report.map,temporal:report.temporal,events:report.events.filter(event=>['SEARCH_PAUSED','SEARCH_RESUMED'].includes(event.type)),poseAvailable:!!report.map?.paths?.some(path=>path.kind==='pose'),searchAvailable:!!report.map?.paths?.some(path=>path.kind==='search'),readOnly:true};

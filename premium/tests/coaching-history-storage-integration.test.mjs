@@ -1,3 +1,4 @@
+import {isExitClosure,isCollectivelyClosed,canParticipate} from '../src/coaching-session-control.mjs';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
@@ -21,7 +22,7 @@ function finished(){
  return {session:p.session,preparationState:p,tracerState:t,searchState:s};
 }
 function app(storage,user={user_id:'owner-sebastien'}){
- const c=createContext({coaching,createSessionCatalog,createCoachingHistoryStorage,storage,currentUser:user,qaInitialized:false,coachingDraft:{identityContext:{userId:user?.user_id},session:null},preparationState:null,tracerState:null,searchState:null});
+ const c=createContext({isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,coaching,createSessionCatalog,createCoachingHistoryStorage,storage,currentUser:user,qaInitialized:false,coachingDraft:{identityContext:{userId:user?.user_id},session:null},preparationState:null,tracerState:null,searchState:null});
  const start=source.indexOf('const coachingHistoryStorage=');assert.ok(start>=0,'application history integration is missing');
  runInContext(source.slice(start,source.indexOf('let operationalStore=',start)),c);
  Object.defineProperty(c,'sessionCatalog',{get:()=>runInContext('sessionCatalog',c)});Object.defineProperty(c,'coachingHistoryNotice',{get:()=>runInContext('coachingHistoryNotice',c)});

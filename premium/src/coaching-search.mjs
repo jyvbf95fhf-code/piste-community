@@ -1,7 +1,8 @@
+import {assertParticipation,canParticipate,isCollectivelyClosed,closeSearchPause} from './coaching-session-control.mjs';
 // Conducteur prototype: phase, counters and coordinates live in memory only.
 import {preparationView} from './coaching-preparation.mjs';
 import {elapsedSeconds,formatElapsed,timestampFrom} from './coaching-time.mjs';
-export const searchPhases=Object.freeze({PREPARATION:'Session en attente',LAYING:'Traceur en pose',TRACK_FINISHED:'Pose terminée',LAYING_WAIT:'Traceur en place · attente',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',SEARCH_FINISHED:'Recherche terminée',DEBRIEF:'Débrief · lecture seule',ARCHIVED:'Session archivée · lecture seule'});
+export const searchPhases=Object.freeze({PREPARATION:'Session en attente',LAYING:'Traceur en pose',TRACK_FINISHED:'Pose terminée',LAYING_WAIT:'Traceur en place · attente',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',SEARCH_FINISHED:'Recherche terminée',DEBRIEF:'Débrief · lecture seule',ARCHIVED:'Session archivée · lecture seule',CANCELLED:'Session annulée',INTERRUPTED:'Session interrompue'});
 const offsets=[{x:0,y:0},{x:11,y:-8},{x:23,y:-18},{x:38,y:-13},{x:55,y:-27},{x:68,y:-42},{x:83,y:-49},{x:97,y:-62}];
 const poseFixture=[[{x:70,y:242},{x:91,y:210},{x:131,y:192},{x:180,y:162},{x:223,y:109}]];
 const clone=x=>structuredClone(x);
@@ -16,15 +17,9 @@ export function simulateSearch(s,patch){
 }
 export function isSearchActor(p){const v=preparationView(p);return v.role==='driver'&&v.viewerId===p.session.roles.driver&&p.team.some(a=>a.id===v.viewerId&&a.functions.includes('driver'));}
 export function isSearchCoach(p){const v=preparationView(p);return v.role==='coach'&&v.viewerId===p.session.roles.coach&&p.team.some(a=>a.id===v.viewerId&&a.functions.includes('coach'));}
-const timestampMs=value=>{const parsed=Date.parse(value||'');return Number.isFinite(parsed)?parsed:null;};
-function closePause(s,at){
- const intervals=[...(s.searchPauseIntervals||[])];let index=-1;for(let i=intervals.length-1;i>=0;i--)if(!intervals[i].resumedAt){index=i;break;}
- if(index<0)return s;
- const pausedAt=timestampMs(intervals[index].pausedAt),resumedAt=timestampMs(at),durationMs=pausedAt===null||resumedAt===null?null:Math.max(0,resumedAt-pausedAt);
- intervals[index]={...intervals[index],resumedAt:at,durationMs};
- return {...s,searchPauseIntervals:intervals,searchPausedAt:null,searchTotalPausedMs:(s.searchTotalPausedMs||0)+(durationMs??0)};
-}
 export function advanceSearch(state,p,action,{now=Date.now}={}){
+ assertParticipation(p);
+ if(isCollectivelyClosed(state.phase)||state.recordingStoppedAt||!canParticipate(p,p.session.roles.driver)||p.traceurKind==='internal'&&!canParticipate(p,p.session.roles.traceur))throw Error('Suivi arrêté ou acteur requis absent.');
  if(!(isSearchActor(p)||['pause','resume'].includes(action)&&isSearchCoach(p))||state.actorId&&state.actorId!==p.session.roles.driver)throw Error('Seul le Conducteur actuellement désigné peut agir.');
  const s=clone(state),v=preparationView(p),own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
  if(action==='start'&&s.phase==='SEARCH_READY'){s.phase='SEARCH_RUNNING';s.searchTrackingState='active';s.searchPausedAt=null;s.searchTotalPausedMs=0;s.searchPauseIntervals=[];s.actorId=v.viewerId;s.origin=available?{x:own.x,y:own.y}:null;if(available){s.segments=[[{...s.origin}]];s.segmentTrackingStates=[{trackingState:'active',pauseIntervalIndex:null}];}else s.gap=true;return s;}
@@ -32,7 +27,7 @@ export function advanceSearch(state,p,action,{now=Date.now}={}){
   const at=timestampFrom(now);s.searchTrackingState='paused';s.searchPausedAt=at;s.searchPauseIntervals=[...(s.searchPauseIntervals||[]),{pausedAt:at,resumedAt:null,durationMs:null}];return s;
  }
  if(action==='resume'&&s.phase==='SEARCH_RUNNING'&&s.searchTrackingState==='paused'){
-  const at=timestampFrom(now),closed=closePause(s,at);closed.searchTrackingState='active';closed.gap=s.gap||s.segmentTrackingStates?.at(-1)?.trackingState!=='paused'||s.segmentTrackingStates.at(-1).pauseIntervalIndex!==s.searchPauseIntervals.length-1;closed.resumed=false;return closed;
+  const at=timestampFrom(now),closed=closeSearchPause(s,at);closed.searchTrackingState='active';closed.gap=s.gap||s.segmentTrackingStates?.at(-1)?.trackingState!=='paused'||s.segmentTrackingStates.at(-1).pauseIntervalIndex!==s.searchPauseIntervals.length-1;closed.resumed=false;return closed;
  }
  if(['progress','record-pause'].includes(action)&&s.phase==='SEARCH_RUNNING'){
   if(action==='progress'&&s.searchTrackingState!=='active')throw Error('Le suivi est en pause. Reprenez la recherche avant de progresser.');
@@ -53,7 +48,7 @@ export function advanceSearch(state,p,action,{now=Date.now}={}){
   return s;
  }
  if(action==='finish'&&s.phase==='SEARCH_RUNNING'){
-  if(s.searchTrackingState==='paused')Object.assign(s,closePause(s,timestampFrom(now)));
+  if(s.searchTrackingState==='paused')Object.assign(s,closeSearchPause(s,timestampFrom(now)));
   s.phase='SEARCH_FINISHED';s.searchTrackingState='stopped';s.searchPausedAt=null;return s;
  }
  if(action==='debrief'&&s.phase==='SEARCH_FINISHED'){s.phase='DEBRIEF';return s;}
@@ -69,7 +64,7 @@ export function searchView(s,p,{now=Date.now()}={}){
  const start=v.start||(validPoint(recordedStart)?{x:recordedStart.x,y:recordedStart.y}:null);
  const startSource=v.start?'selected':start?'recorded-mock':null;
  const last=s.segments.at(-1)?.at(-1),recordVisible=spatial||v.role==='driver'&&isSearchActor(p)&&(!s.actorId||s.actorId===v.viewerId),markers=v.markers.map(m=>m.id===s.actorId&&last?{...m,...last}:m.role==='traceur'&&spatial&&pose.at(-1)?.at(-1)?{...m,...pose.at(-1).at(-1)}:m);
- const own=markers.find(m=>m.id===v.viewerId),canAct=isSearchActor(p)&&(!s.actorId||s.actorId===v.viewerId);
+ const own=markers.find(m=>m.id===v.viewerId),canAct=canParticipate(p,v.viewerId)&&!isCollectivelyClosed(s.phase)&&!s.recordingStoppedAt&&isSearchActor(p)&&(!s.actorId||s.actorId===v.viewerId);
  // Return a whitelist, never the raw session, preparation state or protected pose coordinates.
  const searchTrackingState=s.searchTrackingState||(['SEARCH_RUNNING'].includes(s.phase)?'active':'stopped');
  return {phase:s.phase,phaseLabel:searchPhases[s.phase],searchTrackingState,trackingLabel:searchTrackingState==='paused'?'Recherche en pause':searchTrackingState==='active'?'Recherche en cours':'Suivi arrêté',code:v.code,dog:v.dog,mode:v.mode,modeLabel:v.modeLabel,traceLabel:v.traceLabel,role:v.role,viewerId:v.viewerId,team:v.team.map(a=>({...a,status:a.role==='traceur'&&v.mode==='full_blind'&&v.role!=='traceur'?'Informations masquées':a.role==='traceur'?s.phase==='PREPARATION'?'Préparation':s.phase==='LAYING'?'En pose':s.phase==='TRACK_FINISHED'?'Pose terminée':'En place':a.role==='driver'?searchTrackingState==='paused'?'Recherche en pause':searchPhases[s.phase]:a.status})),external:v.external,knowledgeNotice:v.knowledgeNotice,

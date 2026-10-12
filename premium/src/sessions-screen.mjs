@@ -1,3 +1,4 @@
+import {CoachingClosureScreen} from './coaching-closure-screen.mjs';
 import {escapeHTML as e,StatusBadge,EmptyState} from './components.mjs';
 import {Icon} from './icons.mjs';
 
@@ -11,6 +12,7 @@ export function SessionListScreen(rows,{filter='Toutes',query='',dogId='',dogNam
 }
 
 export function SessionDetailScreen(view){
+ if(view?.partial)return CoachingClosureScreen(view);
  if(!view)return `<section class="sessions-not-found">${EmptyState('Session introuvable','Elle n’est pas disponible dans les données mock de cette visite.','navSessions')}<a class="button button-dark" href="/sessions">Retour aux sessions</a></section>`;
  const participants=view.participants?.length?`<ul class="session-participant-list">${view.participants.map(person=>`<li><strong>${e(person.name||'Participant indisponible')}</strong><span>${e(person.role||'Fonction indisponible')} · ${e(person.status||'Statut indisponible')}</span></li>`).join('')}</ul>`:EmptyState('Participants indisponibles','Aucun participant n’est présent dans ce résumé.','users');
  const rows=[['Chien',view.dog?.name||'Aucune donnée disponible'],['Mode',view.mode||'Aucune donnée disponible'],['Créateur',view.creatorRole||'Aucune donnée disponible'],['Date',view.date||'Aucune donnée disponible'],['Durée',view.duration||'Aucune donnée disponible'],['Distance',view.distance||'Aucune donnée disponible'],...(view.trackAgeAtSearchStart!==undefined?[['Âge de piste au départ recherche',view.trackAgeLabel||'Indisponible']]:[])];

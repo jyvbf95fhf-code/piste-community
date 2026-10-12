@@ -1,3 +1,4 @@
+import {assertParticipation,canParticipate} from './coaching-session-control.mjs';
 // Preparation-only simulator. Coordinates below are drawing units, never GPS data.
 import {modes,traceTypes,roleTypes} from './coaching.mjs';
 export const gpsStates=Object.freeze({acquiring:'Acquisition en cours',fresh:'Position fraîche · simulée',stale:'Position ancienne · simulée',unavailable:'Position indisponible'});
@@ -59,7 +60,7 @@ export function simulate(state,patch={}){
  return s;
 }
 export function needsSessionReference(s){return s.traceurKind==='internal'&&['prepared','gpx'].includes(s.session.traceType)&&!s.session.preparation?.id;}
-export function canChooseSessionReference(s){const viewer=s.team.find(person=>person.id===s.viewerId);return needsSessionReference(s)&&s.productScenario==='connected_traceur'&&['created','preparing'].includes(s.phase)&&!s.physicalLaid&&viewer?.activeFunction==='traceur'&&viewer.functions.includes('traceur')&&viewer.id===s.session.roles.traceur;}
+export function canChooseSessionReference(s){const viewer=s.team.find(person=>person.id===s.viewerId);return canParticipate(s,s.viewerId)&&needsSessionReference(s)&&s.productScenario==='connected_traceur'&&['created','preparing'].includes(s.phase)&&!s.physicalLaid&&viewer?.activeFunction==='traceur'&&viewer.functions.includes('traceur')&&viewer.id===s.session.roles.traceur;}
 function validateSessionReference(s,track,knownPeople){
  const id=value=>typeof value==='string'&&value.trim()===value&&value.length>0;
  if(!id(track?.id)||!id(track.name)||!['draw','gpx'].includes(track.source)||s.session.traceType==='gpx'&&track.source!=='gpx')throw Error('Choisissez une référence compatible et disponible.');
@@ -79,6 +80,7 @@ export function selectSessionReference(s,track,command,{knownPeople=[]}={}){
  return {...s,session:{...s.session,preparation:reference},referenceSelection:{sessionId:s.session.id,referenceId,authorParticipantId:s.viewerId,actionId:command.actionId,occurredAt:command.occurredAt,status:'selected',assurance:'local-simulation'}};
 }
 export function transition(s,action){
+ assertParticipation(s);
  const v=preparationView(s);
  if(v.role!=='traceur'||s.traceurKind!=='internal')throw Error('Fonction actuelle non autorisée');
  if(needsSessionReference(s)&&['approach','ready'].includes(action))throw Error('Choisissez la référence avant de préparer le départ.');
@@ -96,12 +98,12 @@ export function preparationView(s){
  const coachPoserReference=['prepared','gpx'].includes(s.session.traceType)&&typeof s.session.preparation?.id==='string'&&s.session.preparation.id.trim().length>0&&mode==='full_blind'&&role==='coach'&&s.traceurKind==='internal'&&viewer.id===s.session.roles.coach&&viewer.id===s.session.roles.traceur&&viewer.functions.includes('coach')&&viewer.functions.includes('traceur')&&!viewer.functions.includes('driver');
  const readReference=readSpatial||coachPoserReference;
  const concealTracer=mode==='full_blind'&&role!=='traceur';
- const team=s.team.filter(p=>!(s.traceurKind==='external'&&p.activeFunction==='traceur')).map(p=>({id:p.id,name:concealTracer&&p.activeFunction==='traceur'?'Traceur — masqué':p.name,role:p.activeFunction,roleLabel:roleName(p.activeFunction),functions:[...p.functions],self:p.id===viewer.id,status:concealTracer&&p.activeFunction==='traceur'?'Informations masquées':p.activeFunction==='traceur'?(s.phase==='ready'?'Prêt à tracer':'Préparation'):p.activeFunction==='driver'?'En attente':p.activeFunction==='observer'?'Lecture seule':'Supervision'}));
+ const team=s.team.filter(p=>!(s.traceurKind==='external'&&p.activeFunction==='traceur')).map(p=>({id:p.id,name:concealTracer&&p.activeFunction==='traceur'?'Traceur — masqué':p.name,role:p.activeFunction,roleLabel:roleName(p.activeFunction),functions:[...p.functions],self:p.id===viewer.id,status:s.session.control?.departures?.some(d=>d.participantId===p.id)?'Participation arrêtée':concealTracer&&p.activeFunction==='traceur'?'Informations masquées':p.activeFunction==='traceur'?(s.phase==='ready'?'Prêt à tracer':'Préparation'):p.activeFunction==='driver'?'En attente':p.activeFunction==='observer'?'Lecture seule':'Supervision'}));
  const markers=[];
  for(const p of team){
   const freshness=p.self?s.gps:'fresh';
   const permitted=mode==='normal'||role==='traceur'||p.self||mode==='simple_blind'&&(role!=='driver'||p.role!=='traceur');
-  if(!permitted||!s.positionsPresent||s.missingActors.includes(p.id)||!['fresh','stale'].includes(freshness))continue;
+  if(!canParticipate(s,p.id)||!permitted||!s.positionsPresent||s.missingActors.includes(p.id)||!['fresh','stale'].includes(freshness))continue;
   const point=s.points[p.id];if(!point)continue;
   markers.push({...point,id:p.id,role:p.role,name:p.name,freshness});
  }
@@ -116,5 +118,5 @@ export function preparationView(s){
  const displayedGps=!s.positionsPresent||s.missingActors.includes(viewer.id)?'unavailable':s.gps;
  const preparation=readReference&&s.session.preparation?copy(s.session.preparation):null;
  const scenarioActions=s.productScenario==='external_traceur'?s.phase!=='external_ready'&&role==='driver'?[{id:'external-ready',label:'Le traceur est en place'}]:[]:s.productScenario==='external_driver_recorded'?s.phase==='created'&&role==='driver'?[{id:'start-pose',label:'Démarrer l’enregistrement de pose'}]:s.phase==='external_ready'&&role==='driver'?[{id:'external-ready',label:'Le traceur est en place'}]:[]:[];
- return {phase:s.phase,phaseLabel:phaseLabels[s.phase],code:s.session.code,scenario:s.productScenario,mode,modeLabel:modes.find(m=>m.id===mode).title,traceType:s.session.traceType,traceLabel:traceTypes.find(t=>t.id===s.session.traceType).title,dog:{...s.session.dog},viewerId:viewer.id,role,roleLabel:roleName(role),team,external,externalPosition:null,gps:displayedGps,gpsLabel:gpsStates[displayedGps],knownStart,showStart:knownStart,start,arrival:readSpatial&&paths.length?{...geometry.arrival}:null,markers,paths,actions:[...actions,...scenarioActions],preparation,knowledgeNotice:viewer.functions.includes('traceur')&&viewer.functions.includes('driver'),referenceHidden:!readSpatial,coachPoserReference,physicalLaid:false,referenceSelectionRequired:needsSessionReference(s),canChooseReference:canChooseSessionReference(s)};
+ return {phase:s.phase,phaseLabel:phaseLabels[s.phase],code:s.session.code,scenario:s.productScenario,mode,modeLabel:modes.find(m=>m.id===mode).title,traceType:s.session.traceType,traceLabel:traceTypes.find(t=>t.id===s.session.traceType).title,dog:{...s.session.dog},viewerId:viewer.id,role,roleLabel:roleName(role),team,external,externalPosition:null,gps:displayedGps,gpsLabel:gpsStates[displayedGps],knownStart,showStart:knownStart,start,arrival:readSpatial&&paths.length?{...geometry.arrival}:null,markers,paths,actions:canParticipate(s,s.viewerId)?[...actions,...scenarioActions]:[],preparation,knowledgeNotice:viewer.functions.includes('traceur')&&viewer.functions.includes('driver'),referenceHidden:!readSpatial,coachPoserReference,physicalLaid:false,referenceSelectionRequired:needsSessionReference(s),canChooseReference:canChooseSessionReference(s)};
 }

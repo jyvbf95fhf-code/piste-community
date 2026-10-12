@@ -3,7 +3,7 @@
 Date : 12 octobre 2026.
 Base : `4ab05757e14db1f02cff63771e9f3ecd22c1b1c3`, dernier démarrage de pose validé sur iPhone.
 Branche : `feature/v2-premium-session-exit-control`.
-Statut : spécification à relire ; aucun code applicatif modifié.
+Statut : spécification validée le 12 octobre 2026 ; implémentation sur branche V2 dédiée.
 
 ## Objectif et choix déjà validé
 

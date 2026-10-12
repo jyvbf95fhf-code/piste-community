@@ -1,3 +1,4 @@
+import {canParticipate,isCollectivelyClosed} from './coaching-session-control.mjs';
 // QA setup and action-proxy metadata only. Session phases and transitions stay in their existing modules.
 import {createDraft,updateDraft,setTrackingScenario,setObservers,createSession,modes} from './coaching.mjs';
 import {createPreparation,preparationView,simulate} from './coaching-preparation.mjs';
@@ -36,6 +37,7 @@ export function selectQaPerspective(state,role){
 
 const action=(id,label,selector,event)=>({id,label,selector,event});
 export function nextQaAction(search,preparation,ui={}){
+ if(!canParticipate(preparation,preparation.viewerId)||['CANCELLED','INTERRUPTED','ARCHIVED'].includes(search.phase))return null;
  const view=preparationView(preparation),role=view.role;
  if(preparation.productScenario==='external_traceur'&&search.phase==='PREPARATION'&&preparation.phase!=='external_ready')return action('external-ready','Le traceur est en place','[data-search="external-ready"]','TRACEUR_IN_POSITION · SEARCH_READY');
  if(preparation.productScenario==='external_driver_recorded'&&role==='driver'){
