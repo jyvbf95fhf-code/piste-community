@@ -1,3 +1,4 @@
+import {openCoachingHelp} from './coaching-help.mjs';
 import {sessionControlView,applySessionControl,isExitClosure,isCollectivelyClosed,canParticipate} from './coaching-session-control.mjs';
 import {persistSessionExit,resolveSessionExitActor,createExitConfirmation,confirmExitCommand} from './coaching-session-exit-controller.mjs';
 import {SessionExitMenu,ExitConfirmationMarkup} from './coaching-session-exit-screen.mjs';
@@ -489,6 +490,7 @@ function requestTrackEditorExit(destination,{replace=false}={}){
 }
 window.addEventListener('beforeunload',event=>{if(trackEditorActive&&trackEditor.draft?.dirty){event.preventDefault();event.returnValue='';}});
 function render(focus=false) {
+ document.querySelector('[data-coaching-help-dialog]')?.close();
  currentUser=auth.getSession().user;
  if(currentUser&&!adminStore.accountIsActive(currentUser.user_id)){auth.signOut();currentUser=null;history.replaceState({},'','/auth');return render(focus);}
  const requested=location.pathname.replace(/\/$/,'') || '/';
@@ -643,6 +645,7 @@ function filterSessions() {
  document.querySelector('#session-results').innerHTML=SessionListResults(rows);
 }
 document.addEventListener('click',event=>{
+ const help=event.target.closest('[data-coaching-help]');if(help){openCoachingHelp(document,help.dataset.coachingHelp,help);return;}
  if(profileController.handleClick(event))return;
  if(scientificContributionController.handleClick(event))return;
  if(scientificCorpusController.handleClick(event))return;

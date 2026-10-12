@@ -1,0 +1,26 @@
+import {PremiumPictogram as P} from './coaching-pictograms.mjs';
+const sections=[
+ {id:'mode',title:'Les modes de visibilité',subtitle:'Qui connaît la piste ?',body:`<article class="coaching-help-mode" data-help-mode="normal"><h3>${P('modeNormal')}Normal</h3><p>Tous les participants voient les données de piste disponibles. Une vision partagée pour travailler ensemble.</p></article><article class="coaching-help-mode" data-help-mode="simple_blind"><h3>${P('modeSimple')}Simple aveugle</h3><p>Le Conducteur découvre la piste. Coach, Traceur et Observateurs connaissent la pose.</p></article><article class="coaching-help-mode" data-help-mode="full_blind"><h3>${P('modeDouble')}Double aveugle</h3><p>La pose reste masquée au Conducteur, au Coach et aux Observateurs. Le Traceur conserve sa visibilité.</p><p>Un Coach également poseur conserve l’accès à sa propre référence, sans transmettre ce droit aux autres fonctions.</p></article>`},
+ {id:'pose',title:'L’organisation de la pose',subtitle:'Qui trace et qui enregistre ?',body:`<dl><dt>Traceur avec application</dt><dd>Le Traceur réalise et enregistre sa pose avec son téléphone.</dd><dt>Je trace pour moi-même</dt><dd>Vous réalisez la pose puis la recherche avec le même téléphone, en mode Normal uniquement.</dd><dt>Traceur externe</dt><dd>Il pose sans application. Le Conducteur déclare sa mise en place ; aucune position du Traceur n’est disponible, quel que soit le mode.</dd><dt>Traceur externe + enregistrement</dt><dd>Le Conducteur enregistre la pose avec son téléphone, en mode Normal uniquement.</dd></dl>`},
+ {id:'trace',title:'La préparation de piste',subtitle:'Terrain, tracé préparé ou GPX',body:`<dl><dt>Terrain direct</dt><dd>La piste est définie pendant la pose sur le terrain.</dd><dt>Tracé préparé</dt><dd>Une référence déjà enregistrée sert à organiser l’exercice. Elle ne remplace pas la pose.</dd><dt>Import GPX</dt><dd>Un fichier sert de référence de préparation, avec la visibilité autorisée par le mode.</dd><dt>Sans tracé préparé</dt><dd>Vous organisez la session sans choisir de référence à l’avance.</dd></dl>`},
+ {id:'roles',title:'Les fonctions de l’équipe',subtitle:'Des responsabilités claires',body:`<dl><dt>Créateur</dt><dd>Organise la session. Peut l’annuler avant terrain ou l’interrompre collectivement, avec conservation des données, indépendamment de sa fonction actuelle.</dd><dt>Coach</dt><dd>Accompagne le binôme et observe l’exercice. Sa présence dépend de l’organisation choisie.</dd><dt>Traceur</dt><dd>Réalise la pose et signale sa mise en place.</dd><dt>Conducteur</dt><dd>Travaille avec le chien et enregistre la recherche.</dd><dt>Observateur</dt><dd>Consulte les informations autorisées sans commander le terrain.</dd></dl><p>Une personne peut exercer plusieurs fonctions successives dans les limites du mode choisi. Connaître la référence reste incompatible avec une fonction qui doit travailler en aveugle.</p>`}
+];
+export function coachingHelpTopic(step){return {mode:'mode',scenario:'pose',trace:'trace',prepare:'trace',roles:'roles'}[step]||'all';}
+export function CoachingHelpButton(step){
+ const topic=coachingHelpTopic(step),label=sections.find(s=>s.id===topic)?.title||'les choix de création';
+ return step==='intro'?'<button type="button" class="coaching-help-link" data-coaching-help="all">ⓘ Comprendre les choix</button>':`<button type="button" class="coaching-help-icon" data-coaching-help="${topic}" aria-label="Comprendre ${label}">ⓘ</button>`;
+}
+export function CoachingHelpMarkup(topic='all'){
+ const selected=sections.some(s=>s.id===topic)?topic:'mode';
+ return `<header class="coaching-help-heading"><div><span class="eyebrow">LES CHOIX, SIMPLEMENT</span><h2 id="coaching-help-title">Comprendre les sessions</h2><p>Le bon mode, la bonne organisation.</p></div><button type="button" data-coaching-help-close aria-label="Fermer l’aide">×</button></header><div class="coaching-help-body">${sections.map((s,i)=>`<details data-help-topic="${s.id}"${selected===s.id?' open':''}><summary><span class="coaching-help-number">0${i+1}</span><span><strong>${s.title}</strong><small>${s.subtitle}</small></span><span class="coaching-help-chevron" aria-hidden="true">›</span></summary><div class="coaching-help-content">${s.body}</div></details>`).join('')}</div><footer class="coaching-help-footer"><button type="button" class="button button-gold" data-coaching-help-close>Revenir à ma préparation</button></footer>`;
+}
+// Read-only aid: opening and closing never rerenders or writes the Coaching draft.
+export function openCoachingHelp(doc,topic,trigger=doc.activeElement){
+ doc.querySelector('[data-coaching-help-dialog]')?.close();
+ const dialog=doc.createElement('dialog');dialog.className='coaching-help-dialog';dialog.dataset.coachingHelpDialog='';dialog.setAttribute?.('aria-labelledby','coaching-help-title');dialog.innerHTML=CoachingHelpMarkup(topic);
+ dialog.querySelectorAll('[data-coaching-help-close]').forEach(button=>button.onclick=()=>dialog.close());
+ dialog.addEventListener('close',()=>{dialog.remove();if(trigger?.isConnected)trigger.focus();});
+ doc.body.append(dialog);dialog.showModal();
+ if(topic!=='all')dialog.querySelector('details[open]')?.scrollIntoView({block:'nearest'});
+ return dialog;
+}
