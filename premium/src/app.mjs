@@ -25,6 +25,7 @@ import { createDogsStore, resolveDogsRoute } from './dogs.mjs';
 import { DogFormScreen, DogNotFoundScreen, DogPhotoMarkup, DogProfileScreen, DogsListScreen } from './dogs-screen.mjs';
 import {createSessionCatalog} from './session-catalog.mjs';
 import {createCoachingHistoryStorage} from './coaching-history-storage.mjs';
+import {createCoachingPreparationStorage,isRecoverableCoachingPreparation} from './coaching-preparation-storage.mjs';
 import {sessionListView,sessionDetailView,sessionReplayView,trackListView,trackDetailView,completedSessionHistoryView,homeActiveSessionView,resolveConsultationRoute} from './session-views.mjs';
 import {SessionListScreen,SessionListResults,SessionDetailScreen} from './sessions-screen.mjs';
 import {SessionReplayScreen} from './session-replay-screen.mjs';
@@ -313,6 +314,46 @@ let qaScenario='connected_traceur';
 let qaUI={error:''};
 let qaInitialized=false;
 let preparationUI={simulatorOpen:false,feedback:''};
+const coachingPreparationStorage=createCoachingPreparationStorage(storage);
+let coachingPreparationOwnerId;
+let coachingPreparationNotice='',coachingPreparationShownNotice='';
+function restoreCoachingPreparationForUser(){
+ const ownerId=currentUser?.user_id||null;
+ if(ownerId===coachingPreparationOwnerId)return;
+ coachingPreparationOwnerId=ownerId;coachingPreparationNotice='';coachingPreparationShownNotice='';
+ // A profile change never carries a prior profile's in-memory cockpit.
+ coachingDraft=newCoachingDraft();preparationState=null;coachingReferenceAssignment=null;
+ tracerState=tracer.createTracer();searchState=search.createSearch();terrainOpen=false;
+ tracerUI={};searchUI={};preparationUI={simulatorOpen:false,feedback:''};
+ if(!ownerId)return;
+ const loaded=coachingPreparationStorage.load(ownerId);
+ if(!loaded.ok){coachingPreparationNotice='Préparation locale indisponible. La sauvegarde existante est conservée.';return;}
+ if(!loaded.snapshot)return;
+ const snapshot=loaded.snapshot;
+ // Completed history wins over a preparation retained by a stale tab.
+ if(['DEBRIEF','ARCHIVED'].includes(sessionCatalog.get(snapshot.draft.session.id)?.searchState.phase)){
+  const cleared=coachingPreparationStorage.clear(ownerId);
+  if(!cleared.ok)coachingPreparationNotice='Une ancienne préparation subsiste dans un autre onglet. La session terminée reste accessible dans Sessions.';
+  return;
+ }
+ coachingDraft=snapshot.draft;preparationState=snapshot.preparationState;
+ tracerState=snapshot.tracerState;searchState=snapshot.searchState;
+ coachingReferenceAssignment=snapshot.referenceAssignment;terrainOpen=snapshot.terrainOpen;
+ coaching.reserveSessionIds([coachingDraft.session.id]);
+ preparationUI.feedback='Préparation retrouvée sur cet appareil.';
+}
+function captureCoachingPreparation(){
+ const ownerId=currentUser?.user_id;
+ if(qaInitialized||!ownerId||ownerId!==coachingPreparationOwnerId)return;
+ if(coachingDraft.identityContext?.userId!==ownerId)return;
+ const snapshot={draft:coachingDraft,preparationState,tracerState,searchState,referenceAssignment:coachingReferenceAssignment,terrainOpen};
+ const result=isRecoverableCoachingPreparation(snapshot)?coachingPreparationStorage.save(ownerId,snapshot):coachingPreparationStorage.clear(ownerId);
+ coachingPreparationNotice=result.ok?'':result.reason==='conflict'?'Préparation modifiée dans un autre onglet. Sauvegarde refusée pour préserver les données ; cette session reste en mémoire.':'Sauvegarde de la préparation impossible. Cette session reste en mémoire et risque d’être perdue au rechargement.';
+}
+function showCoachingPreparationWarning(){
+ if(coachingPreparationNotice&&coachingPreparationNotice!==coachingPreparationShownNotice)Toast(coachingPreparationNotice);
+ coachingPreparationShownNotice=coachingPreparationNotice;
+}
 const newTrackUI=()=>({view:'list',selectedId:null,fileId:null,name:'',notice:'',error:''});
 let trackUI=newTrackUI();
 let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:'',copySource:null};
@@ -412,6 +453,7 @@ function render(focus=false) {
  if(route!==scientificEntry)history.replaceState({},'',`${route}${location.search}${location.hash}`);
  currentUser=auth.getSession().user;
  restoreCoachingHistoryForUser();
+ restoreCoachingPreparationForUser();
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
@@ -424,6 +466,7 @@ function render(focus=false) {
  const scientificContributionRoute=resolveScientificContributionRoute(route);
  const dogForTitle=dogsRoute?.dogId?dogsStore.get(dogsRoute.dogId):null;
  captureCoachingHistory();
+ captureCoachingPreparation();
  const adminRoute=resolveAdminRoute(`${route}${location.search}`);
  const adminTitle=adminRoute?({dashboard:'Console Admin',members:'Membres',member:'Fiche membre',premium:'Premium & JUMOLF',codes:'Codes JUMOLF',scientific:'Gouvernance scientifique',services:'Services · Simulation Admin',deployments:'Déploiements · Simulation Admin',errors:'Erreurs · Simulation Admin',audit:'Audit Admin',unknown:'Console Admin'}[adminRoute.type]||'Console Admin'):null;
  const profileTitle=profileRoute?({home:'Profil',account:'Mon compte',dogs:'Mes chiens',premium:'Premium & JUMOLF',access:'Mes accès',notifications:'Notifications',preferences:'Préférences',about:'Aide & À propos'}[profileRoute.type]||'Profil'):null;
@@ -436,6 +479,7 @@ function render(focus=false) {
  const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
  showCoachingHistoryWarning();
+ showCoachingPreparationWarning();
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
  operationalChronoInterval=null;
  if(coachingAgeInterval)clearInterval(coachingAgeInterval);
