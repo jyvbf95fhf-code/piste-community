@@ -92,15 +92,15 @@
 
 **Interfaces:** Produit une branche testée, un rapport de vérification et une Preview staging protégée sur le commit exact. Aucun changement de production.
 
-- [ ] Exécuter `npm test --prefix premium`, `git diff --check` et vérifier que les changements restent dans Premium. Corriger toute régression avec un test reproduisant le défaut ; relancer les suites concernées puis la suite entière après la correction finale.
-- [ ] Demander une revue indépendante via `superpowers:requesting-code-review`, en fournissant base, diff et spécification. Corriger les défauts réels avant publication et vérifier à nouveau les suites concernées.
-- [ ] Publier la branche avec vérification de l’arbre identique au code testé, créer une Preview Vercel staging protégée et contrôler le commit déployé.
-- [ ] Vérifier dans le navigateur : annulation en préparation ; interruption sans GPS ; interruption avec points puis reload ; recherche en pause interrompue ; accueil puis reprise sans fermeture ; dossier partiel masqué ; retrait dans QA ; messages/actions périmés refusés. Vérifier erreurs applicatives et débordement horizontal.
-- [ ] Ajouter `premium/docs/superpowers/reports/2026-10-12-coaching-exit-cancel-interrupt-verification.md` avec résultats et limites réelles. Ne pas annoncer un test iPhone automatisé si seul le navigateur desktop a été utilisé.
-- [ ] Envoyer uniquement le lien temporaire après ces vérifications, avec un parcours iPhone court ; attendre la validation utilisateur avant le chantier suivant.
+- [x] Exécuter `npm test --prefix premium`, `git diff --check` et vérifier que les changements restent dans Premium. Corriger toute régression avec un test reproduisant le défaut ; relancer les suites concernées puis la suite entière après la correction finale.
+- [x] Demander une revue indépendante via `superpowers:requesting-code-review`, en fournissant base, diff et spécification. Corriger les défauts réels avant publication et vérifier à nouveau les suites concernées.
+- [x] Publier la branche avec vérification de l’arbre identique au code testé, créer une Preview Vercel staging protégée et contrôler le commit déployé.
+- [x] Vérifier dans le navigateur : annulation en préparation ; interruption sans GPS ; interruption avec points puis reload ; recherche en pause interrompue ; accueil puis reprise sans fermeture ; dossier partiel masqué ; retrait dans QA ; messages/actions périmés refusés. Vérifier erreurs applicatives et débordement horizontal.
+- [x] Ajouter `premium/docs/superpowers/reports/2026-10-12-coaching-exit-cancel-interrupt-verification.md` avec résultats et limites réelles. Ne pas annoncer un test iPhone automatisé si seul le navigateur desktop a été utilisé.
+- [x] Envoyer uniquement le lien temporaire après ces vérifications, avec un parcours iPhone court ; attendre la validation utilisateur avant le chantier suivant.
 
 ## Relecture du plan
 
 Contrôlé contre la spécification : les quatre sorties, matrice d’autorité, données partielles, confidentialité, sauvegarde, idempotence, conflits, QA et nettoyage ont chacun une tâche et un test propriétaire. Les interfaces partagent un instantané unique et un journal unique ; la sauvegarde fermée évite la fenêtre de résurrection entre les deux stores. Les cinq axes de revue sont couverts. Exécution ici recommandée, les raccords de lifecycle, stockage et UI étant étroitement liés ; revue indépendante à la fin.
 
-Statut : plan validé ; tâches 1–5 implémentées, revue finale corrigée ; vérification distante en cours.
+Statut : implémentation, revue corrigée, tests et Preview vérifiée terminés ; validation iPhone utilisateur attendue.

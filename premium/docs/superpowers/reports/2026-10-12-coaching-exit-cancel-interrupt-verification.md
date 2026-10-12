@@ -6,6 +6,8 @@ Spécification et plan validés le 12 octobre. Un seul bloc, exécution ici et u
 
 ## Résultat local
 
+Suite complète finale : **1 527 tests passés**, aucun échec. `git diff --check` passé.
+
 - Annulation avant terrain ; interruption collective par le créateur après début, y compris sans premier GPS ; retrait personnel des autres membres en simulation QA isolée.
 - Enregistrements partiels, pauses, référence, rôles et contributions conservés. Aucun point ou fin normale inventé.
 - Dossiers fermés consultables en lecture seule, sans reprise ni inclusion comme exercice normalement terminé ; masquages Normal/Simple/Double conservés.
@@ -21,6 +23,22 @@ Les anciens tests VM exécutent des extraits de l’app : leurs contextes ont re
 
 ## Vérification distante
 
-En attente du déploiement Preview et du contrôle navigateur. Aucun lien envoyé avant ces contrôles.
+Preview Vercel staging protégée **READY**, déploiement `dpl_5aUmXDcp4kR87A8R1e8uJjCCopkx`, commit applicatif publié `c74e7b15db3922d3914dca7531a2f138fb10517f`, arbre `23e1bea13f6a586e90f0aea0cb7d395972e5dbf2`. L’arbre GitHub a été comparé au code local testé sans différence.
+
+Contrôles navigateur effectués sur la Preview :
+
+- Annulation depuis la préparation, confirmation collective et motif facultatif ; dossier Annulée présent dans Sessions après reload.
+- Retour accueil depuis le cockpit puis reprise de la même session, sans clôture.
+- Pose commencée pendant acquisition, aucun point GPS ; menu Interrompre et absence d’Annuler ; confirmation, motif et dossier partiel conservés après reload, aucune commande terrain restante.
+- Parcours normal : position fictive fraîche choisie dans DEV, pose avec points, interruption ; après reload puis ouverture dans Sessions, segment de pose et 45 m/30 s mock conservés, aucune commande terrain.
+- QA isolée : pose avec points, démarrage recherche, progression, pause, verrouillage ; aucun menu sur écran verrouillé. Après déverrouillage, interruption collective, 45 m/30 s de pose et 35 m/30 s de recherche mock conservés ; chemins distincts, aucune commande terrain.
+- Double aveugle : dossier interrompu du Conducteur ne contient aucun chemin de pose ou référence, métriques de pose indisponibles ; sa propre recherche reste consultable.
+- Retrait Observateur dans QA : phase collective PREPARATION inchangée, statut Participation arrêtée, aucun contrôle terrain ; historique normal inchangé après sortie QA.
+- Aucune erreur applicative dans les logs du navigateur et aucun débordement horizontal détecté sur les écrans contrôlés.
+- Lien de partage temporaire testé à l’ouverture ; protection Vercel maintenue, durée de sept jours.
+
+Limites : vérification navigateur desktop, **pas de test iPhone automatisé**. L’utilisateur valide ensuite le lien sur iPhone. Le prototype reste local avec identité et GPS simulés ; le retrait distant multi-compte attend le futur backend.
+
+Le rapport et la coche finale du plan sont publiés après ces contrôles ; aucun changement applicatif après le commit Preview ci-dessus.
 
 V1/main/V10.55/production et Supabase/SQL/RLS/Auth inchangés. Aucune migration, fusion ou publication de production.
