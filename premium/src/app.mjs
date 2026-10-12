@@ -347,6 +347,8 @@ function captureCoachingPreparation(){
  const ownerId=currentUser?.user_id;
  if(qaInitialized||!ownerId||ownerId!==coachingPreparationOwnerId)return;
  if(coachingDraft.identityContext?.userId!==ownerId)return;
+ // GPS return can advance the poser before the screen synchronizes the session.
+ if(preparationState)searchState=syncSession(searchState,preparationState,tracerState);
  const snapshot={draft:coachingDraft,preparationState,tracerState,searchState,referenceAssignment:coachingReferenceAssignment,terrainOpen,searchLocked:!!searchUI.locked};
  const result=isRecoverableCoachingSession(snapshot)?coachingPreparationStorage.save(ownerId,snapshot):coachingPreparationStorage.clear(ownerId);
  coachingPreparationNotice=result.ok?'':result.reason==='conflict'?'Session modifiée dans un autre onglet. Sauvegarde refusée pour préserver les données ; cette session reste en mémoire.':'Sauvegarde de la session impossible. Cette session reste en mémoire et risque d’être perdue au rechargement.';
