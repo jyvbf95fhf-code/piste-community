@@ -25,7 +25,7 @@ import { createDogsStore, resolveDogsRoute } from './dogs.mjs';
 import { DogFormScreen, DogNotFoundScreen, DogPhotoMarkup, DogProfileScreen, DogsListScreen } from './dogs-screen.mjs';
 import {createSessionCatalog} from './session-catalog.mjs';
 import {createCoachingHistoryStorage} from './coaching-history-storage.mjs';
-import {createCoachingPreparationStorage,isRecoverableCoachingPreparation} from './coaching-preparation-storage.mjs';
+import {createCoachingSessionStorage,isRecoverableCoachingSession} from './coaching-preparation-storage.mjs';
 import {sessionListView,sessionDetailView,sessionReplayView,trackListView,trackDetailView,completedSessionHistoryView,homeActiveSessionView,resolveConsultationRoute} from './session-views.mjs';
 import {SessionListScreen,SessionListResults,SessionDetailScreen} from './sessions-screen.mjs';
 import {SessionReplayScreen} from './session-replay-screen.mjs';
@@ -314,7 +314,7 @@ let qaScenario='connected_traceur';
 let qaUI={error:''};
 let qaInitialized=false;
 let preparationUI={simulatorOpen:false,feedback:''};
-const coachingPreparationStorage=createCoachingPreparationStorage(storage);
+const coachingPreparationStorage=createCoachingSessionStorage(storage);
 let coachingPreparationOwnerId;
 let coachingPreparationNotice='',coachingPreparationShownNotice='';
 function restoreCoachingPreparationForUser(){
@@ -339,16 +339,17 @@ function restoreCoachingPreparationForUser(){
  coachingDraft=snapshot.draft;preparationState=snapshot.preparationState;
  tracerState=snapshot.tracerState;searchState=snapshot.searchState;
  coachingReferenceAssignment=snapshot.referenceAssignment;terrainOpen=snapshot.terrainOpen;
+ searchUI={locked:!!snapshot.searchLocked};
  coaching.reserveSessionIds([coachingDraft.session.id]);
- preparationUI.feedback='Préparation retrouvée sur cet appareil.';
+ preparationUI.feedback=searchState.phase==='PREPARATION'?'Préparation retrouvée sur cet appareil.':'Session terrain retrouvée sur cet appareil. Position en acquisition.';
 }
 function captureCoachingPreparation(){
  const ownerId=currentUser?.user_id;
  if(qaInitialized||!ownerId||ownerId!==coachingPreparationOwnerId)return;
  if(coachingDraft.identityContext?.userId!==ownerId)return;
- const snapshot={draft:coachingDraft,preparationState,tracerState,searchState,referenceAssignment:coachingReferenceAssignment,terrainOpen};
- const result=isRecoverableCoachingPreparation(snapshot)?coachingPreparationStorage.save(ownerId,snapshot):coachingPreparationStorage.clear(ownerId);
- coachingPreparationNotice=result.ok?'':result.reason==='conflict'?'Préparation modifiée dans un autre onglet. Sauvegarde refusée pour préserver les données ; cette session reste en mémoire.':'Sauvegarde de la préparation impossible. Cette session reste en mémoire et risque d’être perdue au rechargement.';
+ const snapshot={draft:coachingDraft,preparationState,tracerState,searchState,referenceAssignment:coachingReferenceAssignment,terrainOpen,searchLocked:!!searchUI.locked};
+ const result=isRecoverableCoachingSession(snapshot)?coachingPreparationStorage.save(ownerId,snapshot):coachingPreparationStorage.clear(ownerId);
+ coachingPreparationNotice=result.ok?'':result.reason==='conflict'?'Session modifiée dans un autre onglet. Sauvegarde refusée pour préserver les données ; cette session reste en mémoire.':'Sauvegarde de la session impossible. Cette session reste en mémoire et risque d’être perdue au rechargement.';
 }
 function showCoachingPreparationWarning(){
  if(coachingPreparationNotice&&coachingPreparationNotice!==coachingPreparationShownNotice)Toast(coachingPreparationNotice);
