@@ -1,6 +1,6 @@
 import {geographicCoordinates,trackDeparture} from './track-geographic.mjs';
-// Reusable track metadata lives only in this page's memory. No real route is drawn.
-// Normalized reference departure in drawing units; no GPX parsing or real coordinates.
+// Prepared tracks use owner-scoped local persistence when storage is supplied.
+// Legacy demonstration entries retain explicit drawing coordinates.
 const mockStart=()=>({x:70,y:242,space:'mock-map'});
 const copy=value=>structuredClone(value);
 export const gpxFixtures=Object.freeze([
@@ -23,16 +23,42 @@ const validPoints=value=>{
  });
 };
 const optionalText=(value,max=240)=>String(value??'').trim().slice(0,max);
-export function createTrackLibrary() {
- let items=seed.map(copy),nextId=1;
+export function createTrackLibrary({storage,ownerId=null}={}) {
+ let items=seed.map(copy),nextId=1,warning='',blocked=false;
+ const key=ownerId?`piste-v2-prepared-tracks:${encodeURIComponent(ownerId)}`:null;
+ if(key&&storage){try{
+  const raw=storage.getItem(key);
+  if(raw){const snapshot=JSON.parse(raw);
+   if(snapshot.version!==1||snapshot.ownerId!==ownerId||!Array.isArray(snapshot.items)||snapshot.items.length>1000)throw Error('Sauvegarde incompatible');
+   const ids=new Set();const restored=snapshot.items.map(item=>{
+    if(!item||item.ownerId!=='self'||!/^track-local-[1-9][0-9]*$/.test(item.id)||!Number.isSafeInteger(Number(item.id.slice(12)))||ids.has(item.id)||!['draw','gpx'].includes(item.source))throw Error('Tracé invalide');
+    ids.add(item.id);const normalized={id:item.id,ownerId:'self',source:item.source,name:validName(item.name),provenance:optionalText(item.provenance,80),description:optionalText(item.description),category:optionalText(item.category,80),difficulty:optionalText(item.difficulty,80),dogId:optionalText(item.dogId,80),notes:optionalText(item.notes,1000)};
+    if(item.fileName)normalized.fileName=optionalText(item.fileName,240);
+    if(item.copiedFrom?.id&&['prepared','pose','search','reference'].includes(item.copiedFrom.kind))normalized.copiedFrom={id:optionalText(item.copiedFrom.id,240),kind:item.copiedFrom.kind};
+    if(item.geometry){const points=validPoints(item.geometry.points);normalized.geometry={points};normalized.start=trackDeparture(points[0]);}
+    else normalized.start=mockStart();
+    return normalized;
+   });
+   items=[...items,...restored];nextId=1+Math.max(0,...restored.map(item=>Number(item.id.slice(12))));
+  }
+ }catch{blocked=true;warning='Sauvegarde des tracés non restaurée. Les données existantes sont conservées sans être écrasées.';}}
+ if(key&&!storage)warning='Sauvegarde locale indisponible dans ce navigateur.';
+ const commit=next=>{
+  if(key){if(blocked)throw Error(warning);if(!storage)throw Error('Tracé non enregistré : sauvegarde locale indisponible.');
+   try{storage.setItem(key,JSON.stringify({version:1,ownerId,items:next.filter(item=>item.ownerId==='self')}));warning='';}
+   catch{warning='Tracé non enregistré : sauvegarde locale impossible (stockage plein ou bloqué).';throw Error(warning);}
+  }
+  items=next;
+ };
  const list=()=>items.map(copy);
  const find=id=>{const item=items.find(t=>t.id===id);if(!item)throw Error('Ce tracé n’est plus disponible.');return item;};
  const get=id=>copy(find(id));
- const insert=item=>{const saved={...item,id:`track-local-${nextId++}`,ownerId:'self'};items=[...items,saved];return copy(saved);};
+ const insert=item=>{const saved={...item,id:`track-local-${nextId}`,ownerId:'self'};commit([...items,saved]);nextId++;return copy(saved);};
  return {
   list,
   get,
-  create(name) {const item={id:`track-local-${nextId++}`,name:validName(name),source:'draw',ownerId:'self',start:mockStart(),description:'Votre tracé mock'};items=[...items,item];return copy(item);},
+  persistenceWarning:()=>warning,
+  create(name) {return insert({name:validName(name),source:'draw',start:mockStart(),description:'Votre tracé mock'});},
   createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',geometry,copiedFrom}={}) {
    if(!['draw','gpx'].includes(source))throw Error('Provenance source inconnue.');
    const points=validPoints(geometry?.points);
@@ -45,7 +71,7 @@ export function createTrackLibrary() {
    for(const key of ['name','description','category','difficulty','dogId','notes'])if(Object.hasOwn(patch,key))next[key]=key==='name'?validName(patch[key]):optionalText(patch[key],key==='notes'?1000:key==='description'?240:80);
    if(Object.hasOwn(patch,'geometry'))next.geometry={points:validPoints(patch.geometry?.points)};
    if(next.geometry?.points?.length)next.start=trackDeparture(next.geometry.points[0]);
-   items=items.map(item=>item.id===id?next:item);return copy(next);
+   commit(items.map(item=>item.id===id?next:item));return copy(next);
   },
   duplicatePrepared(id,{name}={}) {
    const current=find(id);if(!current.geometry?.points?.length)throw Error('Aucune géométrie disponible à copier.');
@@ -56,8 +82,8 @@ export function createTrackLibrary() {
    if(!sourceId||!['pose','search','reference'].includes(sourceKind))throw Error('Source de copie invalide.');
    return this.createPrepared({name,description,category,difficulty,dogId,notes,source:'draw',provenance:'copy',geometry:{points:validPoints(points)},copiedFrom:{id:String(sourceId),kind:sourceKind}});
   },
-  importFixture(id,name) {const file=gpxFixtures.find(f=>f.id===id);if(!file)throw Error('Choisissez un fichier de démonstration.');const item={...file,id:`track-local-${nextId++}`,name:validName(name || file.name),ownerId:'self',description:'GPX de démonstration',provenance:'gpx-mock'};items=[...items,item];return copy(item);},
-  rename(id,name) {const item=find(id);items=items.map(t=>t.id===id?{...item,name:validName(name)}:t);return get(id);},
-  remove(id) {find(id);items=items.filter(t=>t.id!==id);}
+  importFixture(id,name) {const file=gpxFixtures.find(f=>f.id===id);if(!file)throw Error('Choisissez un fichier de démonstration.');return insert({...file,name:validName(name || file.name),description:'GPX de démonstration',provenance:'gpx-mock'});},
+  rename(id,name) {const item=find(id);commit(items.map(t=>t.id===id?{...item,name:validName(name)}:t));return get(id);},
+  remove(id) {find(id);commit(items.filter(t=>t.id!==id));}
  };
 }
