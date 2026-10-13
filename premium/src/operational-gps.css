@@ -1,3 +1,6 @@
+/* The legacy tracer GPS status badge is capped at 118px. OPS is a full-screen cockpit. */
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"].tracer-gps{max-width:none;font-size:10px;line-height:1.5;text-align:left}
+
 /* Visual-only cockpit polish: reserve label columns and override module gold. */
 .app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-round{
  flex:1 1 0;min-width:0;width:auto;height:auto;min-height:110px;
