@@ -6,7 +6,7 @@
 [data-gps-live][data-gps-kind="search"]{--gps-track:#62c6e5}
 [data-gps-live]>.gps-map-stage{position:absolute;inset:0;z-index:0;overflow:hidden}
 [data-gps-live] .gps-map-stage>.gps-map{position:absolute;inset:0;height:100%;width:100%;max-height:none;min-height:0;border:0;border-radius:0}
-[data-gps-live] .gps-map-stage:after{content:"";position:absolute;inset:0;z-index:401;pointer-events:none;background:linear-gradient(180deg,#06131ff5 0,#071722d9 145px,transparent 245px,transparent 65%,#07141ab3 85%,#07141af2 100%)}
+[data-gps-live] .gps-map-stage:after{content:"";position:absolute;inset:0;z-index:401;pointer-events:none;background:linear-gradient(180deg,#06131f73 0,#07172240 110px,transparent 200px,transparent 72%,#07141a40 88%,#07141a73 100%)}
 [data-gps-live]>.coaching-heading{flex:none;z-index:4;margin:0;padding:0 85px 0 0;min-height:40px;text-align:left}
 [data-gps-live]>.coaching-heading .eyebrow{font-size:8px;letter-spacing:1.1px;color:#b8cdd5}
 [data-gps-live]>.coaching-heading h1{font-size:16px;line-height:1.2;margin:3px 0;color:#f2f5f8}
@@ -136,3 +136,6 @@
 [data-gps-live] .gps-corridor-info strong{font-size:12px;color:#eaf3f5}
 [data-gps-live] .gps-corridor-info p{margin:6px 0 0}
 [data-gps-live] .gps-corridor-info small{display:block;color:#acd0df;margin-top:4px}
+
+/* Keep cockpit labels readable over the lighter aerial map. */
+[data-gps-live]>.coaching-heading,[data-gps-live]>.gps-tools>summary{text-shadow:0 2px 5px #000,0 0 10px #0009}
