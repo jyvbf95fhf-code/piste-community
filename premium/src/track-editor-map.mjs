@@ -1,3 +1,4 @@
+import {endpointBadge} from './route-endpoint-markers.mjs';
 import {escapeHTML as e} from './components.mjs';
 
 const clamp=(value,max)=>Math.max(0,Math.min(max,value));
@@ -18,7 +19,7 @@ export function TrackEditorMap(draft,{selectedPointId=null}={}){
  const segments=points.slice(1).map((point,index)=>point.breakBefore?'':`<path class="track-editor-segment ${point.incomingMode==='follow'?'is-follow':'is-free'}" data-editor-segment="${index+1}" data-mode="${e(point.incomingMode||'free')}" d="${e(routePath(points,index+1))}" fill="none"><title>${point.incomingMode==='follow'?'Rues / chemins · simulation':'Libre'} · segment ${index+1}</title></path>`).join('');
  const markers=points.map((point,index)=>{
   const kind=point.kind||'via',name=pointName(point,index+1),selected=point.id===selectedPointId;
-  const symbol=kind==='start'?`<circle class="track-editor-point-core" r="8"/><path class="track-editor-start-flag" d="M5 -6V-20l17 4-17 4"/>`:kind==='arrival'?`<circle class="track-editor-point-arrival-ring" r="12"/><path class="track-editor-arrival-diamond" d="m0-7 7 7-7 7-7-7Z"/>`:`<circle class="track-editor-point-core" r="6"/>`;
+  const symbol=['start','arrival'].includes(kind)?endpointBadge(kind==='start'?'D':'A').replace('<svg ', '<svg x="-15" y="-15" pointer-events="none" '):`<circle class="track-editor-point-core" r="6"/>`;
   return `<g class="track-editor-point track-editor-point--${e(kind)} ${selected?'is-selected':''}" data-editor-point-id="${e(point.id)}" data-point-kind="${e(kind)}" data-selected="${selected}" transform="translate(${point.x} ${point.y})" role="button" tabindex="0" aria-pressed="${selected}" aria-label="${e(name)}, déplacer ou sélectionner"><circle class="track-editor-point-hit" r="28" data-touch-target="44px-minimum"/><circle class="track-editor-point-halo" r="15"/>${symbol}<text class="track-editor-point-label" x="15" y="-12">${e(name)}</text><title>${e(name)} · appui long ou glisser pour déplacer</title></g>`;
  }).join('');
  const contour=`<g class="track-editor-contours" fill="none"><path d="M-10 54 Q74 5 142 56T370 34M-10 83Q65 35 145 80T370 59M-10 112Q70 65 151 108T370 89M-10 218Q68 155 142 214T370 179M-10 249Q75 185 151 244T370 210M-10 280Q76 217 160 274T370 242"/><path d="M31 0c24 37 18 53 4 73m92-78c-21 34-19 58 7 76m115-72c-18 39-12 61 11 82M48 188c20-27 45-30 67-7m92 36c25-31 49-33 79-11"/></g>`;
