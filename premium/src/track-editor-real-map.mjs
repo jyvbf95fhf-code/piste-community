@@ -3,7 +3,7 @@ import {GPS_BASE_LAYERS} from './coaching-gps-screen.mjs';
 import {endpointBadge} from './route-endpoint-markers.mjs';
 let mounted=null;
 export function disposeTrackEditorMap(){if(mounted){mounted.disposed=true;mounted.observer?.disconnect();mounted.map.remove();mounted=null;}}
-export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L,draft,onAdd=()=>{},onMove=()=>{},onSelect=()=>{},onView=()=>{},ResizeObserver=globalThis.ResizeObserver}={}){
+export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L,draft,selectedPointId=null,onAdd=()=>{},onMove=()=>{},onSelect=()=>{},onView=()=>{},ResizeObserver=globalThis.ResizeObserver}={}){
  disposeTrackEditorMap();const element=document?.querySelector('[data-editor-real-map]');if(!element)return;
  let route=draft;const readOnly=element.dataset.readonly==='true';if(readOnly){try{route=JSON.parse(element.dataset.route);}catch{return;}}
  if(!L){element.textContent='Carte indisponible. Le brouillon reste conservé.';return;}
@@ -11,15 +11,18 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  const notice=message=>{const status=element.parentElement.querySelector('[data-editor-map-status]');if(status)status.textContent=message;};
  const basemap=route?.basemap==='satellite'?'aerial':'plan';const base=id=>{const def=GPS_BASE_LAYERS[id],tiles=L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution}).addTo(map);row.tiles=tiles;tiles.on('tileerror',()=>{if(row.disposed||row.tiles!==tiles)return;if(id==='aerial'){map.removeLayer(tiles);base('plan');notice('Vue aérienne indisponible · fond Plan affiché.');}else notice('Fond indisponible · vérifiez la connexion. Les points restent conservés.');});};base(basemap);
  if(points.length&&!view)map.fitBounds(points.map(p=>[p.y,p.x]),{padding:[30,30],maxZoom:17});
+ let free=[];const flushFree=()=>{if(free.length>1)L.polyline(free,{color:'#e5c17c',weight:4}).addTo(layers);free=[];};
  for(let i=1;i<points.length;i++){
- const a=points[i-1],b=points[i];if(b.breakBefore)continue;
- const coordinates=segmentCoordinates(a,b);if(coordinates.length<2)continue;
+ const a=points[i-1],b=points[i];if(b.breakBefore){flushFree();continue;}
+ const coordinates=segmentCoordinates(a,b);if(coordinates.length<2){flushFree();continue;}
  const routed=routeForSegment(a,b);
- if(routed){L.polyline(routed.coordinates.map(c=>[c[1],c[0]]),{color:'#e5c17c',weight:4}).addTo(layers);
+ if(routed){flushFree();L.polyline(routed.coordinates.map(c=>[c[1],c[0]]),{color:'#e5c17c',weight:4}).addTo(layers);
   for(const pair of [[[a.x,a.y],routed.coordinates[0]],[routed.coordinates.at(-1),[b.x,b.y]]])L.polyline(pair.map(c=>[c[1],c[0]]),{color:'#9dd7df',weight:2,dashArray:'3 5'}).addTo(layers);
- }else L.polyline(coordinates.map(c=>[c[1],c[0]]),{color:'#e5c17c',weight:4}).addTo(layers);
+ }else{if(!free.length)free.push([a.y,a.x]);free.push([b.y,b.x]);}
  }
+ flushFree();
  for(const [index,p] of points.entries()){
+ if(points.length>250&&index!==0&&index!==points.length-1&&!p.breakBefore&&!points[index+1]?.breakBefore&&p.id!==selectedPointId)continue;
  const label=p.kind==='start'?'D':p.kind==='arrival'?'A':null;
  const html=label?endpointBadge(label):`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="30" height="30"><circle cx="16" cy="16" r="8" fill="#9dd7df" stroke="#102438" stroke-width="2"/></svg>`;
  const marker=L.marker([p.y,p.x],{draggable:!readOnly,icon:L.divIcon({className:'gps-endpoint-marker',html,iconSize:[30,30],iconAnchor:[15,15]}),title:label==='D'?'Départ':label==='A'?'Arrivée':`Étape ${index}`,keyboard:true}).addTo(layers);

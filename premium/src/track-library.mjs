@@ -60,10 +60,10 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
   get,
   persistenceWarning:()=>warning,
   create(name) {return insert({name:validName(name),source:'draw',start:mockStart(),description:'Votre tracé mock'});},
-  createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',geometry,copiedFrom}={}) {
+  createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',fileName,geometry,copiedFrom}={}) {
    if(!['draw','gpx'].includes(source))throw Error('Provenance source inconnue.');
    const points=validPoints(geometry?.points);
-   return insert({name:validName(name),source,provenance,...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),geometry:{points},start:trackDeparture(points[0])});
+   return insert({name:validName(name),source,provenance,...(source==='gpx'&&fileName?{fileName:optionalText(fileName,240)}:{}),...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),geometry:{points},start:trackDeparture(points[0])});
   },
   updatePrepared(id,patch={}) {
    const current=find(id);

@@ -5,7 +5,7 @@ test('creator menu provides an icon shortcut and organized sections without chan
  assert.match(h,/aria-label="Ouvrir le menu du tracé"/);assert.doesNotMatch(h,/Nom et enregistrement ▴/);
  for(const label of ['Mon tracé','Importer un GPX','Points et édition','Mes pistes'])assert.ok(h.includes(label));
  assert.match(h,/data-editor-action="close-menu"/);assert.match(h,/data-track-editor-form/);assert.match(h,/href="\/tracks"/);
- assert.match(h,/Importer un GPX[\s\S]*?Bientôt/);
+ assert.match(h,/data-editor-action="import-gpx"/);assert.match(h,/data-editor-gpx-file/);
  for(const id of ['remove-last-segment','toggle-route','remove-point'])assert.ok(h.includes(`data-editor-action="${id}"`));
 });
 test('close-menu command collapses the sheet and returns focus to its shortcut',async()=>{

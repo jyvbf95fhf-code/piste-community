@@ -123,9 +123,9 @@ export function sessionReplayView(record){
 export function trackListView(libraryItems=[],sessionRecords=[]){
  const prepared=(libraryItems||[]).map(item=>({
   id:`prepared:${item.id}`,libraryId:item.id,name:item.name,kind:item.source==='gpx'?'gpx':'prepared',
-  provenance:item.provenance==='copy'?`Copie d’un tracé · ${item.copiedFrom?.kind||'source'}`:item.source==='gpx'?'Import GPX · démonstration':'Préparé manuellement',
+  realGpx:item.provenance==='gpx-import'||Boolean(item.fileName&&item.geometry?.points?.every(p=>p.space==='wgs84')),provenance:item.provenance==='gpx-import'?'Import GPX · fichier réel':item.provenance==='copy'?`Copie d’un tracé · ${item.copiedFrom?.kind||'source'}`:item.source==='gpx'?'Import GPX · démonstration':'Préparé manuellement',
   fileName:item.fileName||null,geometryAvailable:Array.isArray(item.geometry?.points)&&item.geometry.points.length>1,
-  editable:item.source!=='gpx',sessionId:null,map:null,path:null,points:item.geometry?.points||[]
+  editable:item.source!=='gpx'||item.provenance==='gpx-import',sessionId:null,map:null,path:null,points:item.geometry?.points||[]
  }));
  const derived=[];
  for(const record of sessionRecords||[]){

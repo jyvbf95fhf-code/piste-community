@@ -46,7 +46,7 @@ export function createTrackDraft({track=null,copySource=null,geographic=false}={
   description:copySource?.description||track?.description||'',
   category:copySource?.category||track?.category||'',difficulty:copySource?.difficulty||track?.difficulty||'',
   dogId:copySource?.dogId||track?.dogId||'',notes:copySource?.notes||track?.notes||'',
-  provenance:copySource?'copy':track?.provenance||'manual',
+  source:track?.source||'draw',fileName:track?.fileName||null,provenance:copySource?'copy':track?.provenance||'manual',
   points,activeMode:'free',basemap:'standard',center:{x:180,y:150},searchQuery:'',undoStack:[],dirty:!!copySource,
   baseline:copySource?null:null
  };

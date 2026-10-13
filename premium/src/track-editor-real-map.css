@@ -73,3 +73,7 @@
 [data-track-cockpit] .creator-gpx-placeholder small,[data-track-cockpit] .creator-library-link small{font-size:11px;line-height:1.4;color:#a9c1cd}
 [data-track-cockpit] .creator-gpx-placeholder b{font-size:9px;font-weight:500;color:#c9c7b5;padding:4px 7px;border:1px solid #bba76d4a;border-radius:8px}
 [data-track-cockpit] .creator-library-link b{font-size:22px;color:#d4c28e}
+
+[data-track-cockpit] [data-editor-gpx-file]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
+[data-track-cockpit] .creator-gpx-placeholder button:not(:disabled){opacity:1;cursor:pointer}
+[data-track-cockpit] .creator-gpx-placeholder button:not(:disabled):hover{background:#1b3a50}
