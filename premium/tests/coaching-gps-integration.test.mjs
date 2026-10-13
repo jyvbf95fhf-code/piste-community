@@ -1,0 +1,12 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {createTracer,advanceTracer} from '../src/coaching-tracer.mjs';
+import {createGpsPose} from '../src/coaching-gps-model.mjs';
+import {createCoachingQa} from '../src/coaching-qa.mjs';
+import {readFileSync} from 'node:fs';import {createContext,runInContext} from 'node:vm';
+const api=await import('../src/coaching-gps-controller.mjs').catch(()=>({}));
+const user={name:'Test',user_id:'owner'};
+const qa=()=>createCoachingQa('normal',user,[{id:'dog',name:'Dog'}]);
+const ready=()=>{const p=qa().preparation;p.phase='ready';p.viewerId=p.session.roles.traceur;return p;};
+test('real pose cannot append simulated progress',()=>{const p=ready();let t={...createTracer(),gpsPose:createGpsPose(p.session.id,p.viewerId)};t=advanceTracer(t,p,'start',{now:()=>1000000});assert.equal(t.gpsPose.phase,'active');assert.equal(t.segments.length,0);assert.equal(t.origin,null);assert.throws(()=>advanceTracer(t,p,'progress'));t=advanceTracer(t,p,'finish',{now:()=>1001000});assert.equal(t.gpsPose.phase,'finished');assert.equal(t.gpsPose.elapsedMs,1000);assert.equal(t.segments.length,0);});
+test('QA and other identities cannot enable GPS',()=>{assert.equal(typeof api.canUseTracerGps,'function');assert.equal(api.canUseTracerGps({qa:true}),false);assert.equal(api.canUseTracerGps({}),false);});
+test('GPS replay route refuses active phases instead of revealing the pose',()=>{const source=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');for(const phase of ['LAYING','SEARCH_READY','SEARCH_RUNNING']){let revealed=false;const c=createContext({sessionCatalog:{get:()=>({tracerState:{gpsPose:{segments:[]}},searchState:{phase}})},isExitClosure:()=>false,DebriefScreen:()=>{revealed=true;return 'revealed';},SessionDetailScreen:()=> 'unavailable',operationalStore:{get:()=>null},OperationalReplayScreen:()=>null,SessionReplayScreen:()=> 'unavailable',sessionReplayView:()=>null});runInContext(source.slice(source.indexOf('function renderSessionReplay('),source.indexOf('\nfunction renderTracks(')),c);assert.equal(c.renderSessionReplay('s'),'unavailable');assert.equal(revealed,false);}});

@@ -27,7 +27,7 @@ const plain=value=>JSON.parse(JSON.stringify(value));
 function freeze(value){if(value&&typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}return value;}
 function application(d=draft()){
  let sequence=0;
- const c=createContext({isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,coaching,preparation,tracer,search,createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment,createCoachingQa,selectQaPerspective,
+ const c=createContext({tracerGps:{pause(){}},gpsChronoInterval:null,isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,coaching,preparation,tracer,search,createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment,createCoachingQa,selectQaPerspective,
   structuredClone,TypeError,coachingDraft:d,currentUser:user,authUser:user,qaInitialized:false,qaMode:'normal',qaScenario:'connected_traceur',mock:{dog:dogs[0]},
   tracerState:tracer.createTracer(),searchState:search.createSearch(),tracerUI:{},searchUI:{},debriefUI:{},preparationState:null,preparationUI:{},terrainOpen:false,
   crypto:{randomUUID:()=>`simulation-creator-uuid-${++sequence}`},Date:class extends Date{constructor(...args){super(...(args.length?args:['2026-10-10T13:00:00.000Z']));}},

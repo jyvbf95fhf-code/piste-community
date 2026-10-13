@@ -1,4 +1,5 @@
 // Local model policy only. Caller binds participant identity; DEV perspective is not authentication.
+import {finishGpsPose} from './coaching-gps-model.mjs';
 const clone=x=>structuredClone(x);
 const id=x=>typeof x==='string'&&x.length>0&&x.trim()===x;
 const phases=['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING','SEARCH_FINISHED','DEBRIEF','ARCHIVED','CANCELLED','INTERRUPTED'];
@@ -28,6 +29,7 @@ export function applySessionControl(r,actor,c){
   if((collective||actor.participantId===next.session.roles.driver)&&['active','paused'].includes(next.searchState.searchTrackingState))next.searchState={...closeSearchPause(next.searchState,c.occurredAt),searchTrackingState:'stopped',recordingStoppedAt:c.occurredAt,gap:true,resumed:false};
  }
  if(c.type==='leave')next.preparationState.missingActors=[...new Set([...(next.preparationState.missingActors||[]),actor.participantId])];
+ if(next.tracerState.gpsPose&&(c.type!=='leave'||actor.participantId===next.tracerState.gpsPose.actorId))next.tracerState.gpsPose=finishGpsPose(next.tracerState.gpsPose,Date.parse(c.occurredAt),'stopped');
  next.session={...next.session,control:journal};next.preparationState.session=clone(next.session);if(next.draft)next.draft.session=clone(next.session);
  return next;
 }

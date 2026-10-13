@@ -1,3 +1,5 @@
+import {createTracerGpsController,canUseTracerGps,ownsTracerGps} from './coaching-gps-controller.mjs';
+import {mountGpsMaps,refreshGpsScreen,centerGpsMap,GpsPoseReport} from './coaching-gps-screen.mjs';
 import {openCoachingHelp} from './coaching-help.mjs';
 import {sessionControlView,applySessionControl,isExitClosure,isCollectivelyClosed,canParticipate} from './coaching-session-control.mjs';
 import {persistSessionExit,resolveSessionExitActor,createExitConfirmation,confirmExitCommand} from './coaching-session-exit-controller.mjs';
@@ -134,6 +136,7 @@ let notifiedCoachingStarts=new Set();
 let operationalUI={mode:'',eventType:'Départ',note:''};
 let operationalChronoInterval=null;
 let coachingAgeInterval=null;
+let gpsChronoInterval=null;
 let terrainUnlockController=null,terrainUnlockPointerId=null,terrainUnlockReturnTimer=null;
 let searchUnlockController=null,searchUnlockPointerId=null;
 let preparationState=null;
@@ -315,6 +318,15 @@ let terrainOpen=false;
 let searchState=search.createSearch();
 let searchUI={};
 let debriefUI={tab:'summary'};
+function gpsContext(){return {draft:coachingDraft,preparation:preparationState,tracer:tracerState,search:searchState,user:currentUser,qa:qaInitialized};}
+function gpsFeedback(){
+ const live=document.querySelector('[data-gps-live]'),status=tracerGps.view();
+ if(live&&tracerState.gpsPose&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(tracerState.gpsPose,status);}
+ else render();
+}
+const tracerGps=createTracerGpsController({getContext:gpsContext,setTracer:t=>{tracerState=t;},render:gpsFeedback});
+window.addEventListener('pagehide',()=>{tracerGps.pause();captureCoachingPreparation();});
+
 let qaMode='normal';
 let qaScenario='connected_traceur';
 let qaUI={error:''};
@@ -371,6 +383,8 @@ function exitActor(){return qaInitialized?{participantId:preparationState?.viewe
 function cleanupCoachingExit(){
  exitEpoch++;exitDialog?.close();exitDialog=null;
  searchUnlockController?.cancel();searchUnlockController=null;searchUnlockPointerId=null;
+ if(gpsChronoInterval)clearInterval(gpsChronoInterval);
+ gpsChronoInterval=null;
  if(coachingAgeInterval)clearInterval(coachingAgeInterval);coachingAgeInterval=null;
  tracerUI={};searchUI={};preparationUI={simulatorOpen:false,feedback:''};
 }
@@ -454,7 +468,7 @@ function parseJumolfPath(path){
 function jumolfRawSources(){
  const sessions=[];
  for(const record of sessionCatalog.list()){
-  if(!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))continue;
+  if(record.tracerState?.gpsPose||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))continue;
   const report=debriefView(record.searchState,record.preparationState,record.tracerState);
   if(!report?.map)continue;
   const paths=report.map.paths||[],searchPaths=paths.filter(path=>path.kind==='search').map(path=>parseJumolfPath(path.d)).filter(Boolean),reference=paths.filter(path=>path.kind==='reference').flatMap(path=>parseJumolfPath(path.d)||[]);
@@ -508,6 +522,7 @@ function render(focus=false) {
  if(qaInitialized&&route!=='/qa/coaching'&&normalCoachingBeforeQa){const n=normalCoachingBeforeQa;coachingDraft=n.draft;preparationState=n.preparationState;tracerState=n.tracerState;searchState=n.searchState;terrainOpen=n.terrainOpen;coachingReferenceAssignment=n.referenceAssignment;tracerUI=n.tracerUI;searchUI=n.searchUI;preparationUI=n.preparationUI;exitSavePending=n.exitSavePending;normalCoachingBeforeQa=null;qaInitialized=false;}
  restoreCoachingHistoryForUser();
  restoreCoachingPreparationForUser();
+ tracerGps.reconcile();
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
@@ -532,10 +547,15 @@ function render(focus=false) {
  const scientificContent=scientificRoute?ScientificShell(scientificRoute,scientificScreen,currentUser):null;
  const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
+ mountGpsMaps({livePose:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  showCoachingHistoryWarning();
  showCoachingPreparationWarning();
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
  operationalChronoInterval=null;
+ if(gpsChronoInterval)clearInterval(gpsChronoInterval);
+ gpsChronoInterval=null;
+ const gpsClock=document.querySelector('[data-gps-clock]');
+ if(gpsClock&&tracerState.gpsPose?.phase==='active'){const update=()=>{const n=Math.floor(Math.max(0,Date.now()-tracerState.gpsPose.startedAt)/1000);gpsClock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;};update();gpsChronoInterval=setInterval(update,1000);}
  if(coachingAgeInterval)clearInterval(coachingAgeInterval);
  coachingAgeInterval=null;
  if(operationalRoute?.type==='mission'&&operationalMission?.trackingState==='active'){
@@ -566,6 +586,7 @@ function refreshDogPhotoPreview(form) {
  form.querySelector('[data-dog-photo-preview]').innerHTML=DogPhotoMarkup(dog,'dog-form-photo-preview-frame');
 }
 function resetCoachingQa(mode=qaMode,scenario=qaScenario){
+ tracerGps.pause();
  if(!qaInitialized)normalCoachingBeforeQa=structuredClone({draft:coachingDraft,preparationState,tracerState,searchState,terrainOpen,referenceAssignment:coachingReferenceAssignment,tracerUI,searchUI,preparationUI,exitSavePending});
  cleanupCoachingExit();
  coachingReferenceAssignment=null;
@@ -603,7 +624,7 @@ function renderSessionDebrief(id){
  if(!record||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))return SessionDetailScreen(null);
  return DebriefScreen(record.searchState,record.preparationState,record.tracerState,debriefUI,{readOnly:true});
 }
-function renderSessionReplay(id){const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational));return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
+function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational));return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
 function renderTracks(){return TrackListScreen(trackListView(trackLibrary.list(),sessionCatalog.list()),completedSessionHistoryView(sessionCatalog,{currentSessionId:coachingDraft.session?.id}));}
 function renderTrackDetail(id){return TrackDetailScreen(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list()),id));}
 function renderLive(route){
@@ -635,7 +656,7 @@ function renderPreparationContent(){
  if(v?.role==='coach')return CoachScreen(searchState,preparationState,tracerState,preparationUI);
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
  if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracer.sessionMessages(tracerState,preparationState).messages,unreadCount:tracer.sessionMessages(tracerState,preparationState).unread});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
- if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,tracerUI).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
+ if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,{...tracerUI,allowGps:canUseTracerGps(gpsContext()),gps:tracerGps.view()}).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
  return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceChoices:preparation.sessionReferenceChoices(preparationState,preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list(),{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]}),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
 function filterSessions() {
@@ -790,13 +811,16 @@ document.addEventListener('click',event=>{
  if(terrain){
   const action=terrain.dataset.tracer;
   try{
-   if(action==='enter'){terrainOpen=true;tracerUI={};}
+   if(action==='gps-enable'){tracerGps.activate();}
+   else if(action==='gps-resume'){tracerGps.resume();}
+   else if(action==='gps-center'){centerGpsMap();return;}
+   else if(action==='enter'){terrainOpen=true;tracerUI={};}
    else if(action==='back')terrainOpen=false;
    else if(action==='arrive'){const t=tracer.advanceTracer(tracerState,preparationState,'arrive');const p=preparation.simulate(preparationState,{phase:'arrived'});tracerState=t;preparationState=p;}
    else if(action==='ready'){const next=preparation.transition(preparationState,'ready');const t=tracer.advanceTracer(tracerState,next,'ready');preparationState=next;tracerState=t;}
    else if(action==='return-start'){tracerState=returnSelfTraceToStart(tracerState,preparationState);preparationState=preparation.simulate(preparationState,{viewerFunction:'driver'});terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState,tracerState);terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
-   else if(['start','progress','finish','in-place'].includes(action)){tracerState=tracer.advanceTracer(tracerState,preparationState,action);searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
+   else if(['start','progress','finish','in-place'].includes(action)){tracerState=tracer.advanceTracer(tracerState,preparationState,action);if(action==='start'&&tracerState.gpsPose)tracerGps.seed();searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(action==='resume'){preparationState=preparation.simulate(preparationState,{gps:'fresh'});if(tracerState.phase==='active')tracerState=tracer.advanceTracer(tracerState,preparationState,'progress');}
    else if(action==='messages'){tracerState=tracer.readMessages(tracerState,preparationState);tracerUI={...tracerUI,messagesOpen:true,devOpen:false};}
    else if(action==='close-messages')tracerUI.messagesOpen=false;

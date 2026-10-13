@@ -24,7 +24,7 @@ function freeze(value){if(value&&typeof value==='object'){Object.values(value).f
 // real. This is not a browser-rendering test or a real identity/GPS scenario.
 function application(draft=ready(),identity=user){
  let nextId=0;
- const sandbox=createContext({isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,coaching,preparation,search,tracer,createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment,createCoachingQa,selectQaPerspective,
+ const sandbox=createContext({tracerGps:{pause(){}},gpsChronoInterval:null,isExitClosure,isCollectivelyClosed,canParticipate,cleanupCoachingExit:()=>{},exitSavePending:false,normalCoachingBeforeQa:null,coaching,preparation,search,tracer,createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment,createCoachingQa,selectQaPerspective,
   structuredClone,TypeError,currentUser:identity,coachingDraft:draft,qaInitialized:false,qaMode:'normal',qaScenario:'connected_traceur',mock:{dog:dogs[0]},
   searchState:search.createSearch(),searchUI:{},debriefUI:{},tracerState:tracer.createTracer(),tracerUI:{},terrainOpen:false,preparationState:null,preparationUI:{},qaUI:{},
   trackLibrary:{list:()=>[reference()]},crypto:{randomUUID:()=>`simulation-integration-action-${++nextId}`},

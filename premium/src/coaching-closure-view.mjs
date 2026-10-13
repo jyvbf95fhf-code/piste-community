@@ -12,6 +12,7 @@ export function coachingClosureView(record,viewerId=record?.preparationState?.vi
  return {id:record.session.id,title:record.session.title||`Session ${record.session.code||record.session.id}`,status:record.searchState.phase==='CANCELLED'?'Annulée':'Interrompue',phase:record.searchState.phase,readonly:true,readOnly:true,canResume:false,partial:true,mode:v.modeLabel,dog:v.dog,
   closure:{type:closure.type,previousPhase:closure.previousPhase,authorName:author?.name||'Auteur indisponible',occurredAt:closure.occurredAt,reason:closure.reason||''},
   participants:v.team.map(m=>({name:m.name,role:m.roleLabel,status:m.status})),
+  gpsPose:record.tracerState.gpsPose&&(poseAllowed||record.tracerState.gpsPose.actorId===viewerId)?structuredClone(record.tracerState.gpsPose):null,
   poseDistance:poseAllowed?record.tracerState.distance:null,poseSeconds:poseAllowed?record.tracerState.seconds:null,searchDistance:map.distance,searchSeconds:map.seconds,
   map:{...map,paths,markers:[],orientation:null,arrival:null},canReplay:paths.length>0,poseAvailable:paths.some(p=>p.kind==='pose'),searchAvailable:paths.some(p=>p.kind==='search'),
   temporal:{trackAgeAtSearchStart:map.trackAgeAtSearchStart??null,searchStartedAt:map.searchStartedAt??null},events:[],observations:[]};

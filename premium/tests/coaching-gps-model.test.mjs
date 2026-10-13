@@ -1,0 +1,15 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+const api=await import('../src/coaching-gps-model.mjs').catch(()=>({}));
+const {createGpsPose,startGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,validGpsPose}=api;
+const at=1000000;
+const fix=(timestamp=at,latitude=48,longitude=7,accuracy=5)=>({timestamp,coords:{latitude,longitude,accuracy}});
+test('GPS model API exists',()=>assert.equal(typeof createGpsPose,'function'));
+test('start without fix does not invent a departure',()=>{const p=startGpsPose(createGpsPose('s','a'),at);assert.equal(p.segments.length,0);assert.equal(p.distanceM,0);assert.equal(p.phase,'active');});
+test('geodesic distance measured inside a segment',()=>{let p=startGpsPose(createGpsPose('s','a'),at);p=appendGpsFix(p,fix(),at);p=appendGpsFix(p,fix(at+1000,48.0001),at+1000);assert.ok(Math.abs(p.distanceM-11.1195)<.01);assert.equal(p.segments[0].length,2);assert.equal(p.segments[0][0].accuracy,5);assert.equal(p.segments[0][0].receivedAt,at);});
+for(const [name,position,now] of [['poor accuracy',fix(at,48,7,31),at],['invalid lat',fix(at,91),at],['invalid lon',fix(at,48,181),at],['invalid accuracy',fix(at,48,7,0),at],['old',fix(at-15001),at],['future',fix(at+5001),at],['NaN',fix(NaN),at]])test(`reject ${name}`,()=>{const p=appendGpsFix(startGpsPose(createGpsPose('s','a'),at),position,now);assert.equal(p.segments.length,0);assert.equal(p.distanceM,0);assert.equal(p.gap,true);});
+test('duplicate and reordered fixes do not append',()=>{let p=appendGpsFix(startGpsPose(createGpsPose('s','a'),at),fix(),at);p=appendGpsFix(p,fix(),at);p=appendGpsFix(p,fix(at-1),at);assert.equal(p.segments[0].length,1);});
+test('explicit gap does not join or count missing movement',()=>{let p=appendGpsFix(startGpsPose(createGpsPose('s','a'),at),fix(),at);p=gapGpsPose(p);p=appendGpsFix(p,fix(at+1000,49),at+1000);assert.equal(p.segments.length,2);assert.equal(p.distanceM,0);});
+test('long silence starts a new segment',()=>{let p=appendGpsFix(startGpsPose(createGpsPose('s','a'),at),fix(),at);p=appendGpsFix(p,fix(at+15001,49),at+15001);assert.equal(p.segments.length,2);assert.equal(p.distanceM,0);});
+test('finished and stopped dossiers are immutable',()=>{let p=appendGpsFix(startGpsPose(createGpsPose('s','a'),at),fix(),at);for(const phase of ['finished','stopped']){const closed=finishGpsPose(p,at+1000,phase);assert.deepEqual(appendGpsFix(closed,fix(at+2000),at+2000),closed);assert.equal(closed.elapsedMs,1000);assert.throws(()=>startGpsPose(closed,at+2000));}});
+test('validator rejects corrupt and foreign dossiers',()=>{const p=appendGpsFix(startGpsPose(createGpsPose('s','a'),at),fix(),at);assert.equal(validGpsPose(p,'s','a'),true);assert.equal(validGpsPose(p,'other','a'),false);assert.equal(validGpsPose(p,'s','other'),false);for(const patch of [{version:9},{distanceM:999},{phase:'garbage'},{segments:[[{latitude:999,longitude:7,accuracy:5,timestamp:at,receivedAt:at}]]}])assert.equal(validGpsPose({...p,...patch},'s','a'),false);});

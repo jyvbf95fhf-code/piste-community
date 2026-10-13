@@ -1,0 +1,23 @@
+import {createGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,normalizeGpsFix} from './coaching-gps-model.mjs';
+import {createGpsSensor} from './coaching-gps-sensor.mjs';
+import {canParticipate,isCollectivelyClosed} from './coaching-session-control.mjs';
+export function ownsTracerGps(c){const {draft:d,preparation:p,user,qa}=c||{},id=d?.identityContext?.participantId;return !qa&&!!user?.user_id&&d?.identityContext?.userId===user.user_id&&d.identityContext.source==='mock-auth'&&d.identityContext.assurance==='local-simulation'&&d.sessionCreation?.creatorUserId===user.user_id&&d.sessionCreation?.sessionId===p?.session?.id&&d.session?.id===p?.session?.id&&p?.session?.roles.traceur===id&&p.viewerId===id&&p.traceurKind==='internal'&&p.team?.some(m=>m.id===id&&m.activeFunction==='traceur'&&m.functions.includes('traceur'));}
+export function canUseTracerGps(c){return ownsTracerGps(c)&&canParticipate(c.preparation,c.preparation.viewerId)&&!isCollectivelyClosed(c.search?.phase)&&['connected_traceur','self_trace'].includes(c.preparation.productScenario)&&['direct','none'].includes(c.preparation.session.traceType)&&!c.preparation.session.preparation;}
+export function createTracerGpsController({getContext,setTracer,render=()=>{},navigator=globalThis.navigator,document=globalThis.document,clock=Date.now}={}){
+ let bound=null,lastFix=null,lastReceived=null,timer=null,status='idle',wake='unavailable';
+ const context=()=>getContext(),same=c=>bound&&canUseTracerGps(c)&&c.preparation.session.id===bound.sessionId&&c.preparation.viewerId===bound.actorId&&c.tracer.gpsPose?.sessionId===bound.sessionId&&!c.tracer.recordingStoppedAt&&['before','active'].includes(c.tracer.phase);
+ const setPose=(c,p)=>setTracer({...c.tracer,gpsPose:p});
+ const changed=()=>render();
+ const sensor=createGpsSensor({navigator,document,onFix(position){const c=context();if(!same(c)){stop();return;}const at=clock(),accepted=normalizeGpsFix(position,at);if(accepted){lastFix=position;lastReceived=at;status='fresh';}else status='poor';setPose(c,appendGpsFix(c.tracer.gpsPose,position,at));changed();},onStatus(value){if(value.startsWith('wake-'))wake=value==='wake-active'?'active':'unavailable';else status=value;changed();},onGap(){const c=context();lastFix=null;if(same(c))setPose(c,gapGpsPose(c.tracer.gpsPose));}});
+ function stop(){sensor.stop();bound=null;lastFix=null;lastReceived=null;if(timer!==null)clearInterval(timer);timer=null;wake='unavailable';}
+ function connect(c){stop();bound={sessionId:c.preparation.session.id,actorId:c.preparation.viewerId};status='acquiring';sensor.start();timer=setInterval(()=>{const current=context();if(!same(current)){stop();return;}if(lastReceived!==null&&clock()-lastReceived>15000&&status==='fresh'){status='stale';setPose(current,gapGpsPose(current.tracer.gpsPose));changed();}},5000);}
+ return {
+  view(){return {status,wake,running:sensor.running(),lastFix:normalizeGpsFix(lastFix,clock())};},
+  activate(){const c=context();if(!canUseTracerGps(c)||c.tracer.phase!=='before'||c.search.phase!=='PREPARATION'||c.tracer.gpsPose)throw Error('GPS réservé au Traceur de ce téléphone, avant une pose sans référence.');setTracer({...c.tracer,gpsPose:createGpsPose(c.preparation.session.id,c.preparation.viewerId)});connect(context());},
+  resume(){const c=context();if(!canUseTracerGps(c)||!c.tracer.gpsPose||!['before','active'].includes(c.tracer.phase)||c.tracer.recordingStoppedAt)throw Error('Cette pose GPS ne peut pas être reprise.');setPose(c,gapGpsPose(c.tracer.gpsPose));connect(context());},
+  seed(){const c=context();if(same(c)&&lastFix)setPose(c,appendGpsFix(c.tracer.gpsPose,lastFix,clock()));},
+  reconcile(){const c=context();if(c.tracer?.gpsPose&&isCollectivelyClosed(c.search?.phase)||c.tracer?.gpsPose&&c.tracer.recordingStoppedAt){setPose(c,finishGpsPose(c.tracer.gpsPose,clock(),'stopped'));stop();return;}if(bound&&!same(c))stop();},
+  pause(){const c=context();if(same(c))setPose(c,gapGpsPose(c.tracer.gpsPose));stop();status='hidden';},
+  destroy(){stop();sensor.destroy();}
+ };
+}

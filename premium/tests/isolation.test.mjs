@@ -12,18 +12,22 @@ test('chaque accès accueil et chaque navigation résout une route',()=>{
  for(const match of HomeScreen().matchAll(/href="([^"]+)"/g)) assert.ok(routes[match[1]],match[1]);
  for(const route of Object.keys(routes)) assert.ok((route==='/'?HomeScreen():PlaceholderScreen(route)).length>100);
 });
-test('aucun moteur V1, API réseau, GPS, stockage métier ou service worker importé',async()=>{
+test('aucun moteur V1 ni transport réseau ; capteur GPS limité à son adaptateur dédié',async()=>{
  for(const file of await readdir(new URL('../src/',import.meta.url))) {
   if(!file.endsWith('.mjs'))continue;
   const source=await readFile(new URL(`../src/${file}`,import.meta.url),'utf8');
   const withoutAdminServiceLabel=file==='admin-services.mjs'?source.replace("id:'supabase'", "id:'fixture-service'").replace("name:'Supabase'", "name:'Service fixture'"):source;
-  assert.doesNotMatch(withoutAdminServiceLabel,/\b(fetch|XMLHttpRequest|WebSocket|EventSource|geolocation|supabase|serviceWorker|indexedDB)\b/,file);
+  const boundedCapability=withoutAdminServiceLabel.replaceAll('device-geolocation','device-position');
+  const isolatedCapability=file==='coaching-gps-sensor.mjs'?boundedCapability.replaceAll('geolocation','devicePosition'):boundedCapability;
+  assert.doesNotMatch(isolatedCapability,/\b(fetch|XMLHttpRequest|WebSocket|EventSource|geolocation|supabase|serviceWorker|indexedDB)\b/,file);
   if(file!=='app.mjs')assert.doesNotMatch(source,/\blocalStorage\b/,file);
   assert.doesNotMatch(source,/\b(sessionStorage|document\.cookie)\b/,file);
   for(const [,name] of source.matchAll(/from ['"]([^'"]+)['"]/g))assert.match(name,/^\.\/[^/]+\.mjs$/,file);
  }
  const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
  assert.match(html,/connect-src 'none'/);
- assert.doesNotMatch(html,/https?:\/\//);
+ assert.match(html,/img-src 'self' data: https:\/\/tile\.openstreetmap\.org/);
+ assert.doesNotMatch(html.replace('https://tile.openstreetmap.org',''),/https?:\/\//);
+ assert.match(html,/referrer" content="strict-origin-when-cross-origin/);
 });
 test('les chaînes de composants sont échappées',()=>assert.equal(escapeHTML('<script>"&'), '&lt;script&gt;&quot;&amp;'));

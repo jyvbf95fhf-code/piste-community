@@ -16,8 +16,15 @@ export function resolveSessionExitActor(draft,user,{qa=false}={}){
  if(qa||!user?.user_id||identity?.userId!==user.user_id||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||creation?.creatorUserId!==user.user_id||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session?.id||session.creatorParticipantId!==identity.participantId)return null;
  return {participantId:identity.participantId};
 }
-export function createExitConfirmation(snapshot,actor,type,epoch){return {snapshotFingerprint:JSON.stringify(snapshot),actorId:actor?.participantId,sessionId:snapshot.session.id,phase:snapshot.searchState.phase,revision:snapshot.session.control?.revision??0,type,epoch};}
+function exitFingerprint(snapshot){
+ const value=structuredClone(snapshot),gps=value.tracerState?.gpsPose;
+ // Recording keeps running while the modal is open. Bind policy/phase/identity,
+ // then close the latest trace rather than demanding identical point samples.
+ if(gps?.phase==='active')value.tracerState.gpsPose={...gps,segments:[],distanceM:0,elapsedMs:0,gap:true};
+ return JSON.stringify(value);
+}
+export function createExitConfirmation(snapshot,actor,type,epoch){return {snapshotFingerprint:exitFingerprint(snapshot),actorId:actor?.participantId,sessionId:snapshot.session.id,phase:snapshot.searchState.phase,revision:snapshot.session.control?.revision??0,type,epoch};}
 export function confirmExitCommand(request,snapshot,actor,epoch,{actionId,occurredAt,reason}={}){
- if(request.epoch!==epoch||request.actorId!==actor?.participantId||request.snapshotFingerprint!==JSON.stringify(snapshot))throw Error('Confirmation périmée : la session ou son contexte a changé.');
+ if(request.epoch!==epoch||request.actorId!==actor?.participantId||request.snapshotFingerprint!==exitFingerprint(snapshot))throw Error('Confirmation périmée : la session ou son contexte a changé.');
  return {type:request.type,sessionId:request.sessionId,expectedPhase:request.phase,expectedRevision:request.revision,actionId,occurredAt,...(reason?{reason}:{})};
 }

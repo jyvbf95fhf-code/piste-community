@@ -2,14 +2,22 @@ import {assertParticipation,canParticipate} from './coaching-session-control.mjs
 // Drawing coordinates, counters and messages are explicit in-memory fixtures, never sensor data.
 import {preparationView,needsSessionReference} from './coaching-preparation.mjs';
 import {isSearchActor} from './coaching-search.mjs';
+import {startGpsPose,finishGpsPose} from './coaching-gps-model.mjs';
 const points=[{x:70,y:242},{x:86,y:225},{x:109,y:209},{x:137,y:198},{x:166,y:171},{x:192,y:149},{x:211,y:118},{x:236,y:96},{x:268,y:76}];
 const validPoint=p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y);
 const texts=['Je suis en place','Attends 2 min','Tu peux démarrer','J’arrive','Problème GPS','On se retrouve au départ.'];
 export function createTracer(){return {phase:'before',seconds:0,distance:0,cursor:0,segments:[],gap:false,resumed:false,messages:[],messageSequence:0};}
 const authorised=p=>{const v=preparationView(p),externalRecorder=p.productScenario==='external_driver_recorded'&&v.role==='driver'&&v.mode==='normal';if(!(v.role==='traceur'&&p.traceurKind==='internal')&&!externalRecorder)throw Error('Fonction de pose non autorisée pour ce parcours.');return v;};
-export function advanceTracer(state,prep,action){
+export function advanceTracer(state,prep,action,{now=Date.now}={}){
  assertParticipation(prep);if(state.recordingStoppedAt)throw Error('Enregistrement arrêté.');
  const v=authorised(prep),s=structuredClone(state);const own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
+ if(s.gpsPose){
+  if(s.gpsPose.sessionId!==prep.session.id||s.gpsPose.actorId!==v.viewerId)throw Error('Pose GPS liée à un autre acteur ou une autre session.');
+  if(action==='start'&&s.phase==='before'&&prep.phase==='ready'&&!needsSessionReference(prep)){s.phase='active';s.origin=null;s.originSource=null;s.originCursor=null;s.startPointMissing=true;s.gap=true;s.gpsPose=startGpsPose(s.gpsPose,now());return s;}
+  if(action==='finish'&&s.phase==='active'){s.phase='finished';s.gpsPose=finishGpsPose(s.gpsPose,now());return s;}
+  if(action==='in-place'&&s.phase==='finished'){s.phase='in_place';return s;}
+  throw Error('Commande simulée indisponible pendant une pose GPS réelle.');
+ }
  if(action==='approach'&&['before','approaching'].includes(s.phase)&&v.knownStart){s.phase='approaching';return s;}
  if(action==='arrive'&&s.phase==='approaching'){s.phase='arrived';s.arrivalPoint=available?{...v.start}:null;return s;}
  if(action==='ready'&&s.phase==='arrived'&&prep.phase==='ready'){s.phase='before';return s;}
