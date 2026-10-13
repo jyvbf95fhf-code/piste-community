@@ -1,3 +1,7 @@
+import {createTrackRoutingService} from './track-routing-service.mjs';
+import {createTrackRoutingController} from './track-routing-controller.mjs';
+import {trackHasPendingRoutes} from './track-route-segments.mjs';
+import {applyTrackRoute} from './track-editor.mjs';
 import {removeLastTrackSegment} from './track-editor.mjs';
 import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap} from './track-editor-real-map.mjs';
 import {createOperationalGpsController,canUseOperationalGps,ownsOperationalGps} from './operational-gps-controller.mjs';
@@ -454,6 +458,7 @@ const newTrackUI=()=>({view:'list',selectedId:null,fileId:null,name:'',notice:''
 let trackUI=newTrackUI();
 let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:'',copySource:null};
 let trackEditorActive=false,trackEditorHref='/track-builder',trackEditorDrag=null,trackEditorExitDialog=false,trackEditorIgnoreMapClickUntil=0;
+const trackRouting=createTrackRoutingController({service:createTrackRoutingService(),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?.coordinateSpace==='wgs84'?{id:trackEditor.routeKey,ownerId:currentUser?.user_id,draft:trackEditor.draft}:null,onResult:(id,route)=>{trackEditor={...trackEditor,draft:applyTrackRoute(trackEditor.draft,id,route)};render();},onStatus:notice=>{if(trackEditor.notice===notice)return;trackEditor={...trackEditor,notice};render();}});
 const trackPlaces=[{name:'Forêt de Fontainebleau',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Sentier des crêtes',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Place du village',subtitle:'Adresse fictive · démonstration',center:{x:180,y:150}}];
 function ensureTrackEditor(){
  const key=`${location.pathname}${location.search}`;
@@ -586,6 +591,7 @@ function render(focus=false) {
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  mountTrackEditorMap({draft:trackEditor.draft,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
+ trackRouting.reconcile();
  if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;}
  const trackWarning=trackLibrary.persistenceWarning?.();if(trackWarning&&trackWarning!==trackLibraryWarningShown){trackLibraryWarningShown=trackWarning;Toast(trackWarning);}
  showCoachingHistoryWarning();
@@ -778,7 +784,9 @@ document.addEventListener('click',event=>{
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
   try{
-   if(action==='remove-last-segment')editorChange(removeLastTrackSegment(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});
+   if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
+   else if(action==='retry-routing')trackRouting.retry();
+   else if(action==='remove-last-segment')editorChange(removeLastTrackSegment(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});
    else if(action==='undo')editorChange(undoTrackEdit(trackEditor.draft),{selectedPointId:null});
    else if(action==='remove-point')editorChange(removeTrackPoint(trackEditor.draft,trackEditor.selectedPointId),{selectedPointId:null});
    else if(action==='clear')ConfirmationDialog({title:'Effacer tout le tracé ?',description:'Tous les points du brouillon seront retirés. Cette action peut être annulée avec Undo.',onConfirm:()=>{try{editorChange(clearTrackDraft(trackEditor.draft),{selectedPointId:null});}catch(error){trackEditor={...trackEditor,error:error.message};render();}}});
@@ -1029,7 +1037,7 @@ document.addEventListener('change',event=>{
  if(field.matches('[data-live-policy]')){const type=field.dataset.sessionType,id=field.dataset.sessionId,key=field.dataset.livePolicy;try{communityLiveStore.setSessionPolicy({sessionType:type,sessionId:id,patch:{[key]:field.checked}});}catch(error){Toast(error.message);}render();return;}
  if(field.matches('[data-live-option]')){const id=field.dataset.sessionId,key=field.dataset.liveOption;try{const current=communityLiveStore.getSessionPolicy('ops',id);communityLiveStore.setSessionPolicy({sessionType:'ops',sessionId:id,patch:{projectionOptions:{...current.projectionOptions,[key]:field.checked}}});}catch(error){Toast(error.message);}render();return;}
  if(field.matches('[data-operational-event-type]')){operationalUI={...operationalUI,eventType:field.value};return;}
- if(field.closest?.('[data-track-editor-form]')&&field.name){try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[field.name]:field.value},{record:false});const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim();}catch(error){trackEditor={...trackEditor,error:error.message};render();}return;}
+ if(field.closest?.('[data-track-editor-form]')&&field.name){try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[field.name]:field.value},{record:false});const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim()||trackHasPendingRoutes(trackEditor.draft.points);}catch(error){trackEditor={...trackEditor,error:error.message};render();}return;}
  if(field.matches('[data-dog-photo]')){
   const file=field.files?.[0];if(!file)return;
   const form=field.closest('form[data-dog-form]'),feedback=form.querySelector('.dog-photo-feedback');
@@ -1114,7 +1122,7 @@ document.addEventListener('input',event=>{
  if(event.target.matches('input[name="interventionAddress"]')){const form=event.target.closest('[data-operational-intake-form]');const target=form?.querySelector('[data-operational-intake-navigation]');if(target)target.innerHTML=OperationalNavigation(event.target.value);}
  if(event.target.id==='track-name')trackUI.name=event.target.value;
  if(event.target.matches('[data-editor-search]'))trackEditor.draft={...trackEditor.draft,searchQuery:event.target.value};
- if(event.target.closest?.('[data-track-editor-form]')&&event.target.name){try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[event.target.name]:event.target.value},{record:false});const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim();}catch(error){trackEditor.error=error.message;}}
+ if(event.target.closest?.('[data-track-editor-form]')&&event.target.name){try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[event.target.name]:event.target.value},{record:false});const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim()||trackHasPendingRoutes(trackEditor.draft.points);}catch(error){trackEditor.error=error.message;}}
  if(event.target.matches('[data-session-query]'))filterSessions();
 });
 window.addEventListener('popstate',event=>{
@@ -1218,6 +1226,7 @@ document.addEventListener('submit',event=>{
  if(editorForm){
   event.preventDefault();
   try{
+   if(trackHasPendingRoutes(trackEditor.draft.points))throw Error('Attendez le calcul des routes ou corrigez le segment en attente.');
    const values=Object.fromEntries(new FormData(editorForm).entries());
    let saved;
    if(trackEditor.draft.id)saved=trackLibrary.updatePrepared(trackEditor.draft.id,{...values,geometry:{points:trackEditor.draft.points}});

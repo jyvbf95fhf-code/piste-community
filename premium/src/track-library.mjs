@@ -1,3 +1,4 @@
+import {normalizeTrackRoute} from './track-route-segments.mjs';
 import {geographicCoordinates,trackDeparture} from './track-geographic.mjs';
 // Prepared tracks use owner-scoped local persistence when storage is supplied.
 // Legacy demonstration entries retain explicit drawing coordinates.
@@ -19,7 +20,7 @@ const validPoints=value=>{
   const x=Number(point.x),y=Number(point.y);
   if(!geo&&(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>360||y<0||y>300))throw Error('Coordonnée de tracé invalide.');
   const breakBefore=index>0&&Boolean(point.breakBefore);
-  return {id:String(point.id||`saved-point-${index+1}`),...(geo?geographicCoordinates({x,y}):{x,y}),kind:index===0?'start':point.kind==='arrival'&&index===value.length-1?'arrival':'via',breakBefore,incomingMode:index===0||breakBefore?null:['free','follow'].includes(point.incomingMode)?point.incomingMode:'free'};
+  return {id:String(point.id||`saved-point-${index+1}`),...(geo?geographicCoordinates({x,y}):{x,y}),kind:index===0?'start':point.kind==='arrival'&&index===value.length-1?'arrival':'via',breakBefore,incomingMode:index===0||breakBefore?null:['free','follow'].includes(point.incomingMode)?point.incomingMode:'free',...(geo&&index>0&&!breakBefore&&point.incomingMode==='follow'?{route:normalizeTrackRoute(point.route,value[index-1],point)}:{})};
  });
 };
 const optionalText=(value,max=240)=>String(value??'').trim().slice(0,max);

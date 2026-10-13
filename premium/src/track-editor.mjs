@@ -1,3 +1,4 @@
+import {normalizeTrackRoute,segmentDistance} from './track-route-segments.mjs';
 import {geographicCoordinates,geographicDistance} from './track-geographic.mjs';
 export const TRACK_MAP_BOUNDS=Object.freeze({width:360,height:300});
 export const MOCK_METERS_PER_UNIT=10;
@@ -24,7 +25,7 @@ const normalizedPoints=points=>{
   ...(point.space==='wgs84'?geographicCoordinates(point):{x:bounded(point.x,TRACK_MAP_BOUNDS.width),y:bounded(point.y,TRACK_MAP_BOUNDS.height)}),
   kind:index===0?'start':point.kind==='arrival'&&index===copyPoints.length-1?'arrival':'via',
   breakBefore:index>0&&Boolean(point.breakBefore),
-  incomingMode:index===0||point.breakBefore?null:['free','follow'].includes(point.incomingMode)?point.incomingMode:'free'
+  incomingMode:index===0||point.breakBefore?null:['free','follow'].includes(point.incomingMode)?point.incomingMode:'free',...(point.route?{route:normalizeTrackRoute(point.route,copyPoints[index-1],point)}:{})
  }));
 };
 function recalculate(draft,patch,record=true){
@@ -54,7 +55,6 @@ export function createTrackDraft({track=null,copySource=null,geographic=false}={
 }
 
 export function setTrackMode(draft,mode){
- if(draft.coordinateSpace==='wgs84'&&mode==='follow')throw Error('Le suivi automatique des chemins sera ajouté ultérieurement.');
  if(!['free','follow'].includes(mode))throw Error('Mode de tracé inconnu.');
  if(draft.activeMode===mode)return draft;
  return recalculate(draft,{activeMode:mode});
@@ -130,14 +130,16 @@ export function clearTrackDraft(draft){
 
 export function trackDraftMetrics(draft){
  const points=draft.points||[];
- if(points.length<2)return {pointCount:points.length,lastSegmentEstimateMeters:null,distanceEstimateMeters:null,label:draft.coordinateSpace==='wgs84'?'Distance des segments directs':'Estimation du tracé · mock'};
+ if(points.length<2)return {pointCount:points.length,lastSegmentEstimateMeters:null,distanceEstimateMeters:null,label:draft.coordinateSpace==='wgs84'?'Distance du parcours préparé':'Estimation du tracé · mock'};
  const lengths=[];
  for(let index=1;index<points.length;index++){
   if(points[index].breakBefore)continue;
   const dx=points[index].x-points[index-1].x,dy=points[index].y-points[index-1].y;
-  lengths.push(draft.coordinateSpace==='wgs84'?geographicDistance(points[index-1],points[index]):Math.hypot(dx,dy)*MOCK_METERS_PER_UNIT);
+  lengths.push(draft.coordinateSpace==='wgs84'?segmentDistance(points[index-1],points[index]):Math.hypot(dx,dy)*MOCK_METERS_PER_UNIT);
  }
- return {pointCount:points.length,lastSegmentEstimateMeters:Math.round(lengths.at(-1)),distanceEstimateMeters:Math.round(lengths.reduce((sum,value)=>sum+value,0)),label:draft.coordinateSpace==='wgs84'?'Distance des segments directs':'Estimation du tracé · mock'};
+ return {pointCount:points.length,lastSegmentEstimateMeters:Math.round(lengths.at(-1)),distanceEstimateMeters:Math.round(lengths.reduce((sum,value)=>sum+value,0)),label:draft.coordinateSpace==='wgs84'?'Distance du parcours préparé':'Estimation du tracé · mock'};
 }
 
 export function removeLastTrackSegment(draft){return draft.points.length>1?recalculate(draft,{points:clone(draft.points.slice(0,-1))}):draft;}
+
+export function applyTrackRoute(draft,pointId,route){const index=draft.points.findIndex(p=>p.id===pointId);if(index<1||draft.points[index].incomingMode!=='follow')return draft;const valid=normalizeTrackRoute(route,draft.points[index-1],draft.points[index]);const points=clone(draft.points);points[index].route=valid;return recalculate(draft,{points},false);}
