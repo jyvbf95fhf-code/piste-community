@@ -6,7 +6,7 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  disposeTrackEditorMap();const element=document?.querySelector('[data-editor-real-map]');if(!element)return;
  let route=draft;const readOnly=element.dataset.readonly==='true';if(readOnly){try{route=JSON.parse(element.dataset.route);}catch{return;}}
  if(!L){element.textContent='Carte indisponible. Le brouillon reste conservé.';return;}
- const points=route?.points||[],view=route?.mapView;const map=L.map(element,{doubleClickZoom:false}).setView(view?.center||[46.6,2.5],view?.zoom||6),layers=L.layerGroup().addTo(map),row={map,layers,element,disposed:false};mounted=row;
+ const points=route?.points||[],view=route?.mapView;const map=L.map(element,{doubleClickZoom:false,zoomControl:!element.closest?.('[data-track-cockpit]')}).setView(view?.center||[46.6,2.5],view?.zoom||6),layers=L.layerGroup().addTo(map),row={map,layers,element,disposed:false};mounted=row;
  const notice=message=>{const status=element.parentElement.querySelector('[data-editor-map-status]');if(status)status.textContent=message;};
  const basemap=route?.basemap==='satellite'?'aerial':'plan';const base=id=>{const def=GPS_BASE_LAYERS[id],tiles=L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution}).addTo(map);row.tiles=tiles;tiles.on('tileerror',()=>{if(row.disposed||row.tiles!==tiles)return;if(id==='aerial'){map.removeLayer(tiles);base('plan');notice('Vue aérienne indisponible · fond Plan affiché.');}else notice('Fond indisponible · vérifiez la connexion. Les points restent conservés.');});};base(basemap);
  if(points.length&&!view)map.fitBounds(points.map(p=>[p.y,p.x]),{padding:[30,30],maxZoom:17});

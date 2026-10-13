@@ -139,3 +139,5 @@ export function trackDraftMetrics(draft){
  }
  return {pointCount:points.length,lastSegmentEstimateMeters:Math.round(lengths.at(-1)),distanceEstimateMeters:Math.round(lengths.reduce((sum,value)=>sum+value,0)),label:draft.coordinateSpace==='wgs84'?'Distance des segments directs':'Estimation du tracé · mock'};
 }
+
+export function removeLastTrackSegment(draft){return draft.points.length>1?recalculate(draft,{points:clone(draft.points.slice(0,-1))}):draft;}

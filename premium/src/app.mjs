@@ -1,3 +1,4 @@
+import {removeLastTrackSegment} from './track-editor.mjs';
 import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap} from './track-editor-real-map.mjs';
 import {createOperationalGpsController,canUseOperationalGps,ownsOperationalGps} from './operational-gps-controller.mjs';
 import {formatOperationalGpsClock,operationalGpsStatusText} from './operational-gps-screen.mjs';
@@ -533,6 +534,7 @@ function requestTrackEditorExit(destination,{replace=false}={}){
 }
 window.addEventListener('beforeunload',event=>{if(trackEditorActive&&trackEditor.draft?.dirty){event.preventDefault();event.returnValue='';}});
 function render(focus=false) {
+ const creatorPanelWasOpen=document.querySelector('[data-creator-panel]')?.open===true;
  document.querySelector('[data-coaching-help-dialog]')?.close();
  currentUser=auth.getSession().user;
  if(currentUser&&!adminStore.accountIsActive(currentUser.user_id)){auth.signOut();currentUser=null;history.replaceState({},'','/auth');return render(focus);}
@@ -581,6 +583,7 @@ function render(focus=false) {
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  mountTrackEditorMap({draft:trackEditor.draft,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
+ if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;}
  showCoachingHistoryWarning();
  showCoachingPreparationWarning();
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
@@ -771,7 +774,8 @@ document.addEventListener('click',event=>{
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
   try{
-   if(action==='undo')editorChange(undoTrackEdit(trackEditor.draft),{selectedPointId:null});
+   if(action==='remove-last-segment')editorChange(removeLastTrackSegment(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});
+   else if(action==='undo')editorChange(undoTrackEdit(trackEditor.draft),{selectedPointId:null});
    else if(action==='remove-point')editorChange(removeTrackPoint(trackEditor.draft,trackEditor.selectedPointId),{selectedPointId:null});
    else if(action==='clear')ConfirmationDialog({title:'Effacer tout le tracé ?',description:'Tous les points du brouillon seront retirés. Cette action peut être annulée avec Undo.',onConfirm:()=>{try{editorChange(clearTrackDraft(trackEditor.draft),{selectedPointId:null});}catch(error){trackEditor={...trackEditor,error:error.message};render();}}});
    else if(action==='cancel'){if(trackEditor.draft.dirty)requestTrackEditorExit('/tracks');else{trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:''};history.pushState({},'','/tracks');render(true);}}
