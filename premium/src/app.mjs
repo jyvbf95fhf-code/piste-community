@@ -1,3 +1,5 @@
+import {createOperationalGpsController,canUseOperationalGps,ownsOperationalGps} from './operational-gps-controller.mjs';
+import {formatOperationalGpsClock,operationalGpsStatusText} from './operational-gps-screen.mjs';
 import {createDriverGpsController,canUseDriverGps,ownsDriverGps} from './coaching-driver-gps-controller.mjs';
 import {visibleGpsPoseForDriver,searchGpsActiveMs} from './coaching-driver-gps-model.mjs';
 import {createTracerGpsController,canUseTracerGps,ownsTracerGps} from './coaching-gps-controller.mjs';
@@ -126,6 +128,8 @@ function showCoachingHistoryWarning(){
 }
 
 let operationalStore=createOperationalMissionStore();
+let operationalGpsOwnerId=null;
+function restoreOperationalGpsForUser(){const ownerId=currentUser?.user_id||null;if(ownerId===operationalGpsOwnerId)return;opsGps.pause();operationalGpsOwnerId=ownerId;operationalStore=createOperationalMissionStore({storage,ownerId});operationalUI={mode:'',eventType:'Départ',note:''};}
 const adminStore=createAdminStore();
 let jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null});
 const adminController=createAdminController({store:adminStore,actor:()=>currentUser,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast,confirm:message=>window.confirm(message)});
@@ -322,16 +326,34 @@ let searchUI={};
 let debriefUI={tab:'summary'};
 function gpsContext(){return {draft:coachingDraft,preparation:preparationState,tracer:tracerState,search:searchState,user:currentUser,qa:qaInitialized};}
 function gpsFeedback(){
- if(!ownsTracerGps(gpsContext()))return;
+ if(globalThis.location?.pathname?.startsWith('/operational')||!ownsTracerGps(gpsContext()))return;
  const live=document.querySelector('[data-gps-live]'),status=tracerGps.view();
  if(live&&tracerState.gpsPose&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(tracerState.gpsPose,status);}
  else render();
 }
 const tracerGps=createTracerGpsController({getContext:gpsContext,setTracer:t=>{tracerState=t;},render:gpsFeedback});
-function driverGpsFeedback(){if(!ownsDriverGps(gpsContext()))return;const live=document.querySelector('[data-gps-kind="search"]'),status=driverGps.view();if(live&&searchState.gpsSearch&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(searchState.gpsSearch,status);const clock=document.querySelector('[data-gps-clock]');if(clock){const n=Math.floor(searchGpsActiveMs(searchState)/1000);clock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;}}else render();}
+function driverGpsFeedback(){if(globalThis.location?.pathname?.startsWith('/operational')||!ownsDriverGps(gpsContext()))return;const live=document.querySelector('[data-gps-kind="search"]'),status=driverGps.view();if(live&&searchState.gpsSearch&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(searchState.gpsSearch,status);const clock=document.querySelector('[data-gps-clock]');if(clock){const n=Math.floor(searchGpsActiveMs(searchState)/1000);clock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;}}else render();}
 const driverGps=createDriverGpsController({getContext:gpsContext,setSearch:s=>{searchState=s;},render:driverGpsFeedback});
 
-window.addEventListener('pagehide',()=>{tracerGps.pause();driverGps.pause();captureCoachingPreparation();});
+
+function operationalGpsContext(){const route=resolveOperationalRoute(location.pathname);return {user:currentUser,route,mission:route?.missionId?operationalStore.get(route.missionId):null};}
+function operationalGpsFeedback(){
+ const c=operationalGpsContext();if(!ownsOperationalGps(c))return;
+ const live=document.querySelector('[data-gps-kind="ops"]'),status=opsGps.view();
+ if(status.warning&&operationalUI.storageWarning!==status.warning)Toast(status.warning);operationalUI={...operationalUI,storageWarning:status.warning};
+ if(!live&&operationalUI.showDetails)return;
+ if(live&&live.dataset.gpsRunning===String(status.running)){
+  const distance=live.querySelector('[data-gps-distance]'),clock=live.querySelector('[data-operational-chrono]'),text=live.querySelector('[data-ops-gps-status]');
+  if(distance)distance.textContent=(c.mission.gpsTrack.distanceM/1000).toFixed(2).replace('.',',')+' km';
+  if(clock)clock.textContent=formatOperationalGpsClock(operationalStore.trackingElapsedMs(c.mission.id));
+  if(text)text.textContent=operationalGpsStatusText(status);
+  const warning=live.querySelector('[data-ops-storage-warning]');if(warning){warning.textContent=status.warning;warning.hidden=!status.warning;}
+  mountGpsMaps({livePose:c.mission.gpsTrack,lastFix:status.lastFix});
+ }else render();
+}
+const opsGps=createOperationalGpsController({getContext:operationalGpsContext,getStore:()=>operationalStore,render:operationalGpsFeedback});
+
+window.addEventListener('pagehide',()=>{opsGps.pause();tracerGps.pause();driverGps.pause();captureCoachingPreparation();});
 
 let qaMode='normal';
 let qaScenario='connected_traceur';
@@ -518,6 +540,7 @@ function render(focus=false) {
  if(scientificEntry!==requested)history.replaceState({},'',`${scientificEntry}${location.search}${location.hash}`);
  if(requested==='/olfactory-twin'){history.replaceState({},'','/jumolf');return render(focus);}
  const route=resolveMockRoute(scientificEntry,auth.getSession());
+ restoreOperationalGpsForUser();
  const operationalRoute=resolveOperationalRoute(route);
  const operationalMission=operationalRoute?.missionId?operationalStore.get(operationalRoute.missionId):null;
  const operationalView=operationalMission?operationalMissionView(operationalMission,{dogs:dogsStore.list()}):null;
@@ -530,6 +553,7 @@ function render(focus=false) {
  restoreCoachingPreparationForUser();
  tracerGps.reconcile();
  driverGps.reconcile();
+ opsGps.reconcile();
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
@@ -552,9 +576,9 @@ function render(focus=false) {
  const jumolfContent=jumolfRoute?JumolfShell(jumolfRoute,jumolfController.screen(`${jumolfRoute}${location.search}`)):null;
  const scientificScreen=scientificRoute?.startsWith('/scientific/corpus')?scientificCorpusController.screen(`${scientificRoute}${location.search}`):scientificRoute?scientificController.screen(`${scientificRoute}${location.search}`):null;
  const scientificContent=scientificRoute?ScientificShell(scientificRoute,scientificScreen,currentUser):null;
- const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
+ const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,gps:opsGps.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
- mountGpsMaps({livePose:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
+ mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  showCoachingHistoryWarning();
  showCoachingPreparationWarning();
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
@@ -562,12 +586,12 @@ function render(focus=false) {
  if(gpsChronoInterval)clearInterval(gpsChronoInterval);
  gpsChronoInterval=null;
  const gpsClock=document.querySelector('[data-gps-clock]');
- if(gpsClock&&(tracerState.gpsPose?.phase==='active'||searchState.gpsSearch?.phase==='active')){const update=()=>{const n=Math.floor((searchState.gpsSearch?.phase==='active'?searchGpsActiveMs(searchState):Math.max(0,Date.now()-tracerState.gpsPose.startedAt))/1000);gpsClock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;};update();gpsChronoInterval=setInterval(update,1000);}
+ if(gpsClock&&!gpsClock.closest('[data-gps-kind="ops"]')&&(tracerState.gpsPose?.phase==='active'||searchState.gpsSearch?.phase==='active')){const update=()=>{const n=Math.floor((searchState.gpsSearch?.phase==='active'?searchGpsActiveMs(searchState):Math.max(0,Date.now()-tracerState.gpsPose.startedAt))/1000);gpsClock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;};update();gpsChronoInterval=setInterval(update,1000);}
  if(coachingAgeInterval)clearInterval(coachingAgeInterval);
  coachingAgeInterval=null;
  if(operationalRoute?.type==='mission'&&operationalMission?.trackingState==='active'){
   const chrono=document.querySelector('[data-operational-chrono]');
-  if(chrono){const update=()=>{const seconds=Math.floor(operationalStore.trackingElapsedMs(operationalMission.id)/1000);chrono.textContent=`${String(Math.floor(seconds/3600)).padStart(2,'0')}:${String(Math.floor(seconds%3600/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;};update();operationalChronoInterval=setInterval(update,1000);}
+  if(chrono){const update=()=>{const seconds=Math.floor(operationalStore.trackingElapsedMs(operationalMission.id)/1000);chrono.textContent=operationalMission.gpsTrack?formatOperationalGpsClock(seconds*1000):`${String(Math.floor(seconds/3600)).padStart(2,'0')}:${String(Math.floor(seconds%3600/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;};update();operationalChronoInterval=setInterval(update,1000);}
  }
  const coachingAge=document.querySelector('[data-coaching-track-age]');
  if(coachingAge&&searchState.track_finished_at){
@@ -686,14 +710,20 @@ document.addEventListener('click',event=>{
  if(communityController.handleClick(event))return;
  const operationalMapMode=event.target.closest('[data-operational-map-mode]');
  if(operationalMapMode){const mode=operationalMapMode.dataset.operationalMapMode;const mission=operationalStore.get(resolveOperationalRoute(location.pathname)?.missionId);if(mode==='progress'&&mission?.trackingState!=='active'){Toast('La progression est indisponible pendant la pause.');return;}operationalUI={...operationalUI,mode:operationalUI.mode===mode?'':mode};render();return;}
+ const opsControl=event.target.closest('[data-ops]');
+ if(opsControl){const action=opsControl.dataset.ops;if(action==='events')operationalUI={...operationalUI,eventsOpen:true,notice:''};else if(action==='close-events')operationalUI={...operationalUI,eventsOpen:false};else if(action==='details')operationalUI={...operationalUI,showDetails:true};else if(action==='cockpit')operationalUI={...operationalUI,showDetails:false};render();return;}
  const operationalAction=event.target.closest('[data-operational-action]');
  if(operationalAction){
   const missionId=operationalAction.closest('[data-operational-status]')?.dataset.operationalMissionId||resolveOperationalRoute(location.pathname)?.missionId;
   try{
-   if(operationalAction.dataset.operationalAction==='start'){operationalStore.startTracking(missionId);const mission=operationalStore.get(missionId);communityLiveStore.notifySessionStarted('ops',missionId,{dogName:mission?.dog?.name||null});}
+   const target=operationalStore.get(missionId),context=operationalGpsContext();
+   if((target?.gpsTrack||operationalAction.dataset.operationalAction==='gps-enable')&&(context.route?.missionId!==missionId||context.mission?.ownerUserId!==context.user?.user_id))throw Error('Cette commande GPS ne correspond plus à votre mission.');
+   if(operationalAction.dataset.operationalAction==='gps-enable'){tracerGps.pause();driverGps.pause();opsGps.activate();operationalUI={...operationalUI,showDetails:false};}
+   else if(operationalAction.dataset.operationalAction==='gps-resume')opsGps.resume();
+   else if(operationalAction.dataset.operationalAction==='start'){operationalStore.startTracking(missionId);if(operationalStore.get(missionId)?.gpsTrack){opsGps.seed();operationalUI={...operationalUI,showDetails:false};}const mission=operationalStore.get(missionId);communityLiveStore.notifySessionStarted('ops',missionId,{dogName:mission?.dog?.name||null});}
    else if(operationalAction.dataset.operationalAction==='pause'){operationalStore.pauseTracking(missionId);operationalUI={...operationalUI,mode:''};}
    else if(operationalAction.dataset.operationalAction==='resume')operationalStore.resumeTracking(missionId);
-   else if(operationalAction.dataset.operationalAction==='stop'){operationalStore.stopTracking(missionId);operationalUI={...operationalUI,mode:'',terrainMissionId:null};}
+   else if(operationalAction.dataset.operationalAction==='stop'){operationalStore.stopTracking(missionId);opsGps.reconcile();operationalUI={...operationalUI,mode:'',terrainMissionId:null};}
    else if(operationalAction.dataset.operationalAction==='lock-screen'){operationalUI={...operationalUI,terrainMissionId:missionId};}
    else if(operationalAction.dataset.operationalAction==='complete')operationalStore.complete(missionId);
    else if(operationalAction.dataset.operationalAction==='archive')operationalStore.archive(missionId);
@@ -903,7 +933,7 @@ document.addEventListener('click',event=>{
   return;
  }
  const action=event.target.closest('[data-action]')?.dataset.action;
- if(action==='logout') {cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
+ if(action==='logout') {opsGps.pause();cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
  const photoReset=event.target.closest('[data-dog-photo-reset]');
  if(photoReset){const form=photoReset.closest('form[data-dog-form]');form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl='';form.querySelector('[data-dog-photo]').value='';photoReset.hidden=true;form.querySelector('.dog-photo-pick span').textContent='Ajouter une photo';form.querySelector('.dog-photo-feedback').textContent='';refreshDogPhotoPreview(form);return;}
  if(action==='notification') Toast(mock.notification);
@@ -1090,6 +1120,9 @@ window.addEventListener('resize',syncNavigationHeight);
 render();
 
 document.addEventListener('submit',event=>{
+ if(event.target.matches('[data-ops-event-form]')){event.preventDefault();const c=operationalGpsContext();try{if(!ownsOperationalGps(c))throw Error('Repère réservé à votre mission GPS.');const fix=opsGps.view().lastFix;operationalStore.addGpsEvent(c.mission.id,{type:event.target.elements.type.value,note:event.target.elements.note.value,position:fix?{timestamp:fix.timestamp,coords:fix}:null});operationalUI={...operationalUI,notice:'Repère enregistré.'};}catch(error){operationalUI={...operationalUI,notice:error.message};}render();return;}
+ if(event.target.matches('[data-ops-time-form]')){event.preventDefault();const c=operationalGpsContext();try{if(!ownsOperationalGps(c))throw Error('Mission GPS non autorisée.');const raw=event.target.elements.disappearanceAt.value,value=raw?new Date(raw).toISOString():null;operationalStore.updateDetails(c.mission.id,{disappearanceAt:value});render();}catch(error){Toast(error.message);}return;}
+
  if(event.target.matches('[data-reference-response]')){event.preventDefault();confirmCoachingReferenceResponse(event.target);return;}
  if(event.target.matches('[data-reference-assignment]')){event.preventDefault();confirmCoachingReferenceAssignment(event.target);return;}
  if(event.target.matches('[data-reference-delegation]')){event.preventDefault();confirmCoachingReferenceDelegation(event.target);return;}

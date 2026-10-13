@@ -3,7 +3,7 @@ import {createCorridorWeatherService} from './coaching-corridor-weather.mjs';
 let sharedWeather;
 function browserStorage(){try{return globalThis.localStorage;}catch{return null;}}
 function defaultWeather(){return sharedWeather??=createCorridorWeatherService({storage:browserStorage()});}
-const labels={hidden:'Couloir masqué dans ce mode aveugle.',off:'Couloir désactivé.', 'pose-unavailable':'Pose GPS autorisée indisponible · au moins deux points horodatés sont nécessaires.', 'weather-unavailable':'Vent indisponible · récupération automatique ou correction manuelle nécessaire.'};
+const labels={hidden:'Couloir masqué dans ce mode aveugle.',off:'Couloir désactivé.', 'age-unavailable':'Heure de disparition ou de dernier contact inconnue · renseignez-la dans Options terrain.', 'pose-unavailable':'Pose GPS autorisée indisponible · au moins deux points horodatés sont nécessaires.', 'weather-unavailable':'Vent indisponible · récupération automatique ou correction manuelle nécessaire.'};
 export function createGpsCorridorController({root,map,L,getSource,weatherService=defaultWeather(),automaticAuthorized=false,clock=Date.now,storage=browserStorage(),schedule=setInterval,cancel=clearInterval}={}){
  const sessionId=root?.dataset?.gpsSessionId||getSource()?.sessionId,key='piste-v2-corridor:'+sessionId;
  let enabled=true,manual=null,automatic=null,disposed=false,busy=false,generation=0;
@@ -17,7 +17,8 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
  const text=value=>{const target=root.querySelector?.('[data-corridor-status]');if(target)target.textContent=value;};
  function paint(){
   if(!alive())return;
-  const result=buildGpsCorridor({pose:getSource(),weather:manual||automatic,allowed:allowed(),enabled,now:clock()});layer.clearLayers();
+  const referenceAt=root.dataset.gpsCorridorReferenceAt||null,ops=root.dataset.gpsCorridorBasis==='ops-recorded-path',ageMissing=ops&&(!referenceAt||!Number.isFinite(Date.parse(referenceAt))||Date.parse(referenceAt)>clock());
+  const result=ageMissing&&allowed()&&enabled?{state:'age-unavailable',features:[],weather:null,confidence:null}:buildGpsCorridor({pose:getSource(),weather:manual||automatic,allowed:allowed(),enabled,now:clock(),referenceAt:ops?referenceAt:null});layer.clearLayers();
   if(result.state==='available')for(const feature of result.features){
    for(const [boundary,opacity] of [['outerBoundary',.09],['innerBoundary',.18]])L.polygon(feature[boundary].map(p=>[p.lat,p.lon]),{...(pane?{pane}:{}),color:'#bca7ef',weight:1,opacity:.45,fillColor:'#bca7ef',fillOpacity:opacity,interactive:false}).addTo(layer);
   }
@@ -27,7 +28,7 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
   if(result.state==='available'){
    const confidence={high:'élevée',medium:'moyenne',low:'faible'}[result.confidence];
    const hour=Number.isFinite(current.observedAt)?new Date(current.observedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'heure inconnue';
-   text(`Couloir estimé · confiance ${confidence}. ${current.source==='Correction manuelle'?'Correction manuelle':'Météo modélisée · Open-Meteo'} · ${hour}${result.weather.stale?' · donnée ancienne':''}. Vent venant de ${current.wind_direction_deg}° · ${current.wind_speed_kmh} km/h.`);
+   text(`Couloir estimé · confiance ${confidence}. ${current.source==='Correction manuelle'?'Correction manuelle':'Météo modélisée · Open-Meteo'} · ${hour}${result.weather.stale?' · donnée ancienne':''}. Vent venant de ${current.wind_direction_deg}° · ${current.wind_speed_kmh} km/h.${ops?' Calcul autour du trajet GPS du binôme ; trajectoire de la personne recherchée inconnue.':''}`);
   }else text(result.state==='weather-unavailable'&&!automaticAuthorized?'Météo automatique inactive · renseignez les conditions manuellement.':labels[result.state]);
   const f=form();if(f){f.hidden=!allowed();if(!f.contains?.(root.ownerDocument?.activeElement))for(const input of f.querySelectorAll?.('[data-corridor-field]')||[])input.value=current?.[input.name]??'';}
   return result;

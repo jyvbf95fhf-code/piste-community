@@ -1,0 +1,91 @@
+/* Visual-only cockpit polish: reserve label columns and override module gold. */
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-round{
+ flex:1 1 0;min-width:0;width:auto;height:auto;min-height:110px;
+ display:flex;flex-direction:column;justify-content:flex-start;gap:8px;
+ border:0;border-radius:0;background:none;color:#f3f7fb;box-shadow:none;padding:0;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-round svg{
+ flex:none;box-sizing:content-box;width:23px;height:23px;padding:16px;
+ border:1px solid #9dbad642;border-radius:50%;
+ background:linear-gradient(145deg,#19334f,#091729);
+ box-shadow:0 5px 18px #0005,inset 0 1px #ffffff24;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-action-label{
+ position:static;transform:none;width:100%;max-width:100%;
+ font-size:10px;line-height:1.3;white-space:normal;overflow-wrap:anywhere;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions :is(.gps-action-start,.gps-action-resume) svg{
+ background:linear-gradient(145deg,#36b989,#116343);border-color:#91e6bb80;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-action-finish svg{
+ background:linear-gradient(145deg,#ef6872,#ab2037);border-color:#ffb5bf80;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-action-pause svg{
+ background:linear-gradient(145deg,#efbf65,#a5681d);border-color:#ffe0a680;color:#201708;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions :is(.gps-action-start,.gps-action-finish) svg{
+ width:27px;height:27px;padding:22px;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-action-gps-resume{
+ flex:1 0 100%;min-height:44px;flex-direction:row;align-items:center;justify-content:center;
+ border:1px solid #9dbad642;border-radius:24px;background:#10253ee6;margin-bottom:6px;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-action-gps-resume svg{
+ width:20px;height:20px;padding:0;border:0;background:none;box-shadow:none;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-action-gps-resume .gps-action-label{
+ width:auto;font-size:12px;
+}
+[data-gps-kind="ops"]>.gps-tools{margin-top:0}
+@media(max-width:360px){
+ .app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions .gps-round svg{padding:13px}
+ .app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-actions :is(.gps-action-start,.gps-action-finish) svg{padding:18px}
+}
+
+/* Borderless terrain metrics, shared by Traceur and Conducteur. */
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-hud{
+ background:none;border:0;border-radius:0;box-shadow:none;
+ -webkit-backdrop-filter:none;backdrop-filter:none;padding:8px 0;
+ text-shadow:0 2px 5px #000,0 0 12px #0009;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-hud>div{
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;
+}
+.app-shell[data-module-theme="operational"] [data-gps-kind="ops"]>.gps-hud strong{
+ font-size:24px;font-weight:600;white-space:nowrap;overflow-wrap:normal;
+}
+[data-gps-kind="ops"] .gps-details[open]{
+ background:#0b1b2fed;border:1px solid #9dbad63d;border-radius:14px;
+ padding:6px 10px;text-shadow:none;
+}
+[data-gps-kind="ops"] .gps-corridor-picker{position:relative}
+[data-gps-kind="ops"] .gps-corridor-picker>.gps-map-control{color:#9fc1d2}
+[data-gps-kind="ops"] .gps-corridor-info{
+ position:absolute;right:60px;top:0;width:min(210px,calc(100vw - 105px));
+ box-sizing:border-box;padding:12px;border:1px solid #9dbad642;border-radius:14px;
+ background:#0c2030f5;box-shadow:0 6px 24px #0006;color:#eaf3f5;
+ font-size:12px;line-height:1.45;
+}
+[data-gps-kind="ops"] .gps-corridor-info strong{font-size:12px;color:#eaf3f5}
+[data-gps-kind="ops"] .gps-corridor-info p{margin:6px 0 0}
+[data-gps-kind="ops"] .gps-corridor-info small{display:block;color:#acd0df;margin-top:4px}
+
+/* Keep cockpit labels readable over the lighter aerial map. */
+[data-gps-kind="ops"]>.coaching-heading,[data-gps-kind="ops"]>.gps-tools>summary{text-shadow:0 2px 5px #000,0 0 10px #0009}
+
+/* Keep only distance and time on the terrain map. */
+[data-gps-kind="ops"]>.gps-hud>:is(.gps-recording,[data-gps-status],.gps-precision,.gps-details){display:none}
+[data-gps-kind="ops"] .gps-layer-options>.gps-map-status{
+ position:static;z-index:auto;inset:auto;width:auto;margin:2px 0;padding:8px;
+ border-radius:8px;background:#19374a;color:#dcecf5;
+ font-size:11px;line-height:1.4;text-shadow:none;
+}
+
+[data-gps-kind="ops"]{--gps-track:#62c6e5}
+[data-gps-kind="ops"]>.gps-actions .gps-action-events{order:2}
+[data-gps-kind="ops"]>.gps-tools>div{flex-direction:column;text-align:left}
+[data-gps-kind="ops"] .gps-tools label{display:block}
+[data-gps-kind="ops"] .gps-tools input{box-sizing:border-box;width:100%;min-height:44px;background:#10263b;color:#fff;border:1px solid #9dbad642;border-radius:10px;padding:8px;font:inherit}
+[data-gps-kind="ops"] .gps-tools button{min-height:44px;background:#132b42;color:#fff;border:1px solid #9dbad642;border-radius:10px;padding:8px}
+[data-gps-kind="ops"] .tracer-sheet label{display:block;margin:8px 0}
+[data-gps-kind="ops"] .tracer-sheet :is(input,select){box-sizing:border-box;width:100%;min-height:44px;background:#10263b;color:#fff;border:1px solid #9dbad642;border-radius:10px;padding:8px;font:inherit}

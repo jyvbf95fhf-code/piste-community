@@ -1,3 +1,4 @@
+import {GpsMapMarkup} from './coaching-gps-screen.mjs';
 import { MapShell } from './map-shell.mjs';
 
 function mapPoint(point) {
@@ -10,6 +11,7 @@ function mapPoint(point) {
 
 export function OperationalMap(view, { interactive = false } = {}) {
   if (!view || view.kind !== 'operational' && !view.id) return '';
+  if(view.gpsTrack)return GpsMapMarkup(view.gpsTrack,null,(view.events||[]).filter(event=>event.point?.space==='wgs84').map(event=>({id:event.id,type:event.type,point:event.point})));
   const progress = (view.progress || view.trace || []).map(mapPoint).filter(Boolean);
   const lastKnownPoint = mapPoint(view.lastKnownPoint);
   const events = (view.events || []).map(event => ({ ...event, point: mapPoint(event.point) }));

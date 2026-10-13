@@ -1,3 +1,4 @@
+import {createGpsPose,startGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,validGpsPose,normalizeGpsFix} from './coaching-gps-model.mjs';
 import { gpxFixtures } from './track-library.mjs';
 import { DOG_EVALUATION_CRITERIA, FIELD_EVALUATION_CRITERIA, OPERATIONAL_PAUSE_CLASSIFICATIONS, normalizeOperationalMission } from './operational-data.mjs';
 import { calculateTrackAge, resolveTrackAgeReference } from './operational-time.mjs';
@@ -94,9 +95,31 @@ function optionalText(value) {
 
 export function createOperationalMissionStore({
   idFactory = () => `operational-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-  clock = () => Date.now()
+  clock = () => Date.now(),
+  storage = null,
+  ownerId = null
 } = {}) {
   const records = new Map();
+  const persistenceKey=ownerId?'piste-v2-ops-gps:'+ownerId:null;
+  let lastSaved='',persistenceError='';
+  if(persistenceKey&&storage)try{
+    const saved=JSON.parse(storage.getItem(persistenceKey)||'null');
+    if(saved?.version===1&&saved.ownerId===ownerId&&Array.isArray(saved.missions))for(const row of saved.missions){
+      if(!row||row.kind!=='operational'||row.gpsOwnerId!==ownerId||row.ownerUserId!==ownerId||!OPERATIONAL_MISSION_STATUSES.includes(row.status)||!validGpsPose(row.gpsTrack,'ops:'+row.id,ownerId)||!Number.isFinite(row.trackingPausedMs)||row.trackingPausedMs<0)continue;
+      const phases={ready:'before',active:'active',paused:'active',stopped:'finished'};
+      if(phases[row.trackingState]!==row.gpsTrack.phase)continue;
+      const restored=normalizeOperationalMission(row);
+      if(['active','paused','ready'].includes(restored.trackingState)){restored.gpsTrack=gapGpsPose(restored.gpsTrack);restored.gpsNeedsResume=true;}
+      records.set(restored.id,restored);
+    }
+  }catch{persistenceError='La sauvegarde GPS locale n’a pas pu être restaurée.';}
+  function persist(){
+    if(!persistenceKey)return;
+    const missions=[...records.values()].filter(m=>m.gpsTrack&&m.gpsOwnerId===ownerId);
+    if(!missions.length)return;
+    try{if(!storage)throw Error('Stockage indisponible');const json=JSON.stringify({version:1,ownerId,missions});if(json!==lastSaved){storage.setItem(persistenceKey,json);lastSaved=json;}persistenceError='';}
+    catch{persistenceError='Sauvegarde locale indisponible · gardez cette page ouverte.';}
+  }
 
   const isoNow = () => new Date(clock()).toISOString();
 
@@ -114,7 +137,7 @@ export function createOperationalMissionStore({
       sequence,
       kind,
       elapsedMs,
-      timeLabel: mission.trackingStartedAt === null ? 'Avant départ · simulation' : formatSimulationTime(elapsedMs),
+      timeLabel: mission.gpsTrack ? isoNow() : mission.trackingStartedAt === null ? 'Avant départ · simulation' : formatSimulationTime(elapsedMs),
       ...(pointSequence === null ? {} : { pointSequence }),
       ...(eventId === null ? {} : { eventId })
     });
@@ -130,6 +153,7 @@ export function createOperationalMissionStore({
     mission.trackingState = 'active';
     mission.startedAt = new Date(trackingStartedAt).toISOString();
     mission.trackingStartedAt = trackingStartedAt;
+    if(mission.gpsTrack)mission.gpsTrack=startGpsPose(mission.gpsTrack,trackingStartedAt);
     mission.time.trackingStartedAt = trackingStartedAt;
     const ageReference = resolveTrackAgeReference(mission.time, trackingStartedAt);
     mission.time.trackAgeAtStart = ageReference
@@ -149,6 +173,7 @@ export function createOperationalMissionStore({
     const elapsedMs = trackingElapsedMs(mission, pausedAt);
     mission.trackingPausedAt = pausedAt;
     mission.trackingState = 'paused';
+    if(mission.gpsTrack)mission.gpsTrack=gapGpsPose(mission.gpsTrack);
     mission.pauseObservations.push({
       id: `${mission.id}-pause-${mission.pauseObservations.length + 1}`,
       classification: 'manual_pause', detectedAt: pausedAt, endedAt: null, duration: null,
@@ -170,6 +195,7 @@ export function createOperationalMissionStore({
     closeManualPause(mission, resumedAt);
     mission.trackingPausedAt = null;
     mission.trackingState = 'active';
+    if(mission.gpsTrack)mission.gpsTrack=gapGpsPose(mission.gpsTrack);
     appendJournal(mission, 'tracking_resumed', { elapsedMs });
     return snapshot(mission);
   }
@@ -187,6 +213,7 @@ export function createOperationalMissionStore({
     }
     mission.trackingStoppedAt = trackingStoppedAt;
     mission.trackingState = 'stopped';
+    if(mission.gpsTrack){mission.gpsTrack=finishGpsPose(mission.gpsTrack,trackingStoppedAt);mission.gpsNeedsResume=false;}
     mission.status = 'À compléter';
     mission.fieldClosedAt = isoNow();
     mission.time.trackingStoppedAt = trackingStoppedAt;
@@ -208,6 +235,7 @@ export function createOperationalMissionStore({
   }
 
   function snapshot(mission) {
+    persist();
     return mission ? { ...clone(mission), trackingElapsedMs: trackingElapsedMs(mission) } : null;
   }
 
@@ -260,6 +288,7 @@ export function createOperationalMissionStore({
       const mission = {
         id,
         kind: 'operational',
+        ownerUserId: ownerId,
         status: 'Brouillon',
         trackingState: 'ready',
         dogId: String(dog.id),
@@ -309,6 +338,44 @@ export function createOperationalMissionStore({
       records.set(id, normalized);
       return snapshot(normalized);
     },
+
+
+    enableGps(id,actorId){
+      const mission=getMutable(id);
+      requireStatus(mission,'Brouillon','Activer le GPS');
+      if(!ownerId||actorId!==ownerId)throw Error('Le GPS est réservé à votre mission et votre téléphone.');
+      if(mission.gpsTrack)throw Error('Le GPS est déjà activé pour cette mission.');
+      if(mission.trace.length)throw Error('Une trace simulée ne peut pas devenir une trace GPS réelle.');
+      mission.gpsOwnerId=actorId;mission.gpsTrack=createGpsPose('ops:'+id,actorId);mission.gpsNeedsResume=false;
+      mission.traceMetadata={sourceType:'phone_gps',sourceDevice:'geolocation',importType:null};mission.provenance.gpsTrack='phone_gps';
+      return snapshot(mission);
+    },
+    appendGpsPoint(id,position){
+      const mission=getMutable(id);
+      requireStatus(mission,'En cours','Enregistrer un point GPS');
+      if(!mission.gpsTrack||mission.gpsOwnerId!==ownerId)throw Error('Enregistrement GPS non autorisé.');
+      if(mission.trackingState==='paused')return snapshot(mission);
+      if(mission.trackingState!=='active')throw Error('Enregistrement GPS arrêté.');
+      mission.gpsTrack=appendGpsFix(mission.gpsTrack,position,clock());return snapshot(mission);
+    },
+    gapGpsTrack(id){
+      const mission=getMutable(id);
+      if(mission.gpsTrack&&['Brouillon','En cours'].includes(mission.status)){mission.gpsTrack=gapGpsPose(mission.gpsTrack);mission.gpsNeedsResume=true;}
+      return snapshot(mission);
+    },
+    resumeGps(id,actorId){
+      const mission=getMutable(id);
+      if(!mission.gpsTrack||mission.gpsOwnerId!==ownerId||actorId!==ownerId||!['Brouillon','En cours'].includes(mission.status))throw Error('Ce GPS ne peut pas être repris.');
+      mission.gpsTrack=gapGpsPose(mission.gpsTrack);mission.gpsNeedsResume=false;return snapshot(mission);
+    },
+    addGpsEvent(id,{type,note,position}={}){
+      const mission=getMutable(id);requireStatus(mission,'En cours','Ajouter un repère GPS');
+      if(!mission.gpsTrack||mission.gpsOwnerId!==ownerId||!['active','paused'].includes(mission.trackingState)||!OPERATIONAL_EVENT_TYPES.includes(type))throw Error('Repère GPS non autorisé.');
+      const at=clock(),fix=normalizeGpsFix(position,at),sequence=mission.events.length+1,reference=resolveTrackAgeReference(mission.time,at);
+      const event={id:mission.id+'-event-'+sequence,sequence,type,note:optionalText(note),point:fix?{...fix,space:'wgs84',provenance:'phone_gps'}:null,elapsedMs:trackingElapsedMs(mission),timeLabel:new Date(at).toISOString(),occurredAt:at,trackAge:reference?{...calculateTrackAge(reference.at,at,reference.source),provenance:'calculated'}:null};
+      mission.events.push(event);appendJournal(mission,'terrain_event',{eventId:event.id});return snapshot(mission);
+    },
+    persistenceWarning(){return persistenceError;},
 
     start: startTracking,
     startTracking,
@@ -399,6 +466,7 @@ export function createOperationalMissionStore({
 
     addProgressPoint(id, point) {
       const mission = getMutable(id);
+      if(mission.gpsTrack)throw Error('Les points simulés ne peuvent pas être ajoutés au suivi GPS réel.');
       requireEditable(mission);
       requireStatus(mission, 'En cours', 'Ajouter une progression');
       if (mission.trackingState !== 'active') throw new Error('La progression est suspendue pendant la pause.');
@@ -413,6 +481,7 @@ export function createOperationalMissionStore({
 
     addEvent(id, { type, note, point } = {}) {
       const mission = getMutable(id);
+      if(mission.gpsTrack)throw Error('Utilisez un repère GPS réel pour cette mission.');
       requireEditable(mission);
       requireStatus(mission, 'En cours', 'Ajouter un événement');
       if (!['active', 'paused'].includes(mission.trackingState)) throw new Error('Aucun événement ne peut être ajouté après l’arrêt du suivi.');

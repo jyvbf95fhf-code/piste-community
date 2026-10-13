@@ -56,6 +56,7 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
     trackingState,
     trackingLabel,
     trackingElapsedMs,
+    gpsTrack: mission.gpsTrack ? structuredClone(mission.gpsTrack) : null,
     readOnly: finalized,
     title: `Mission terrain · ${currentDog?.name || mission.dog?.name || unavailable}`,
     dogId: mission.dogId || null,
@@ -84,8 +85,8 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
     analysisContract: operationalAnalysisProjection(mission),
     gpxAttachment: mission.gpxAttachment ? structuredClone(mission.gpxAttachment) : null,
     weatherDemo: mission.weatherDemo ? structuredClone(mission.weatherDemo) : null,
-    distance: null,
-    duration: null,
+    distance: mission.gpsTrack?.distanceM ?? null,
+    duration: mission.gpsTrack ? mission.trackingElapsedMs ?? mission.time?.trackingActiveDurationMs ?? 0 : null,
     weatherLabel: mission.weatherDemo ? 'Démonstration · non mesuré' : unavailable,
     corridor: {
       enabled: corridorEnabled,
@@ -93,7 +94,7 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
     },
     weatherDemo: mission.weatherDemo ? structuredClone(mission.weatherDemo) : null,
     canStart: draft,
-    canAddProgress: active && trackingState === 'active',
+    canAddProgress: active && trackingState === 'active' && !mission.gpsTrack,
     canAddEvent: active && ['active', 'paused'].includes(trackingState),
     canPause: active && trackingState === 'active',
     canResume: active && trackingState === 'paused',
@@ -125,6 +126,7 @@ export function operationalReplayView(mission) {
     status: mission.status,
     trackingState: mission.trackingState || 'stopped',
     trackingElapsedMs: Number.isFinite(mission.trackingElapsedMs) ? mission.trackingElapsedMs : 0,
+    gpsTrack: mission.gpsTrack ? structuredClone(mission.gpsTrack) : null,
     readOnly: true,
     entryMode: mission.entryMode || 'quick',
     time: structuredClone(mission.time || {}),
@@ -147,8 +149,8 @@ export function operationalReplayView(mission) {
     journal,
     timeline,
     gpxAttachment: mission.gpxAttachment ? structuredClone(mission.gpxAttachment) : null,
-    distance: null,
-    duration: null,
+    distance: mission.gpsTrack?.distanceM ?? null,
+    duration: mission.gpsTrack ? mission.trackingElapsedMs ?? mission.time?.trackingActiveDurationMs ?? 0 : null,
     weather: mission.weatherDemo ? { ...structuredClone(mission.weatherDemo), label: 'Démonstration · non mesuré' } : null,
     olfactoryCorridor: corridorEnabled
       ? { enabled: true, label: 'ESTIMÉ · simulation', geometry: 'mock-overlay' }
@@ -176,8 +178,8 @@ export function operationalSessionRows(missions = []) {
       roleLabel: mission.handler?.name ? `Conducteur · ${mission.handler.name}` : 'Conducteur',
       date: mission.createdAt || unavailable,
       trackAge: mission.time?.trackAgeAtStart?.label || null,
-      distance: null,
-      duration: Number.isFinite(mission.time?.trackingActiveDurationMs) ? `${Math.floor(mission.time.trackingActiveDurationMs / 60_000)} min · simulation` : null,
+      distance: mission.gpsTrack?.distanceM ?? null,
+      duration: Number.isFinite(mission.time?.trackingActiveDurationMs) ? `${Math.floor(mission.time.trackingActiveDurationMs / 60_000)} min${mission.gpsTrack?'':' · simulation'}` : null,
       canResume: false,
       readOnly: finalized
     };

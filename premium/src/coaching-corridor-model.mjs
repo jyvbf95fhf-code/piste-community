@@ -19,14 +19,14 @@ export function applyWeatherCorrection(base,patch,now=Date.now()){
 export function corridorPoseSegments(pose,now=Date.now()){
  return (Array.isArray(pose?.segments)?pose.segments:[]).filter(segment=>Array.isArray(segment)&&segment.length>=2&&segment.every((p,i)=>numeric(p?.latitude,-90,90)&&numeric(p?.longitude,-180,180)&&typeof p.timestamp==='number'&&Number.isFinite(p.timestamp)&&p.timestamp>1e12&&p.timestamp<=now&&(i===0||p.timestamp>segment[i-1].timestamp))).map(segment=>segment.map(p=>({lat:p.latitude,lon:p.longitude,recorded_at:new Date(p.timestamp).toISOString(),...(numeric(p.accuracy,0,10000)?{accuracy_m:p.accuracy}:{})})));
 }
-export function buildGpsCorridor({pose,weather,now=Date.now(),allowed=false,enabled=true}={}){
+export function buildGpsCorridor({pose,weather,now=Date.now(),allowed=false,enabled=true,referenceAt=null}={}){
  const unavailable=state=>({state,features:[],weather:null,confidence:null});
  if(!allowed)return unavailable('hidden');if(!enabled)return unavailable('off');
  const segments=corridorPoseSegments(pose,now);if(!segments.length)return unavailable('pose-unavailable');
  const clean=cleanCorridorWeather(weather);
  if(!clean||!numeric(clean.wind_speed_kmh,0,150)||!numeric(clean.wind_direction_deg,0,360))return unavailable('weather-unavailable');
  const stale=clean.stale||!Number.isFinite(clean.observedAt)||now-clean.observedAt>7200000||clean.observedAt>now+300000;
- const features=segments.map(track=>computeScentCorridor({track,weather:clean,currentTime:new Date(now).toISOString(),trackStartedAt:track[0].recorded_at})).filter(r=>r.geometry);
+ const features=segments.map(track=>computeScentCorridor({track,weather:clean,currentTime:new Date(now).toISOString(),trackStartedAt:referenceAt||track[0].recorded_at})).filter(r=>r.geometry);
  const levels={low:0,medium:1,high:2};const confidence=stale?'low':features.reduce((level,r)=>levels[r.confidence.level]<levels[level]?r.confidence.level:level,'high');
  return {state:features.length?'available':'pose-unavailable',features,weather:{...clean,stale},confidence};
 }

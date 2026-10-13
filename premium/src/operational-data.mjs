@@ -157,6 +157,7 @@ export function operationalAnalysisProjection(input) {
     },
     places: clone(mission.places),
     trace: clone(mission.trace),
+    gpsTrack: clone(mission.gpsTrack ?? null),
     traceMetadata: clone(mission.traceMetadata),
     events: clone(mission.events),
     pauses: clone(mission.pauseObservations),
