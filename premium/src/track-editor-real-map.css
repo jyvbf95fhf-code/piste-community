@@ -47,3 +47,29 @@
 [data-track-cockpit] .leaflet-bottom{bottom:calc(155px + env(safe-area-inset-bottom,0px))}
 [data-track-cockpit] :is(button,summary):focus-visible{outline:2px solid #e5c17c;outline-offset:3px}
 @media(max-height:500px){[data-track-cockpit] .creator-heading h1{font-size:15px}[data-track-cockpit] .creator-map-controls{top:110px}[data-track-cockpit] .creator-instruction{display:none}}
+/* Creator menu shortcut and organized bottom sheet. */
+[data-track-cockpit] .creator-panel>summary.creator-menu-shortcut{display:flex;gap:8px;width:max-content;min-height:44px;margin:6px auto 0;padding:0 16px;border:1px solid #9dbad642;border-radius:24px;background:linear-gradient(145deg,#19334fe6,#091729e6);color:#e7f0f3;font-size:12px;box-shadow:0 4px 15px #0003;list-style:none}
+[data-track-cockpit] .creator-menu-shortcut::-webkit-details-marker{display:none}
+[data-track-cockpit] .creator-panel[open]{border:0;border-radius:0;background:none}
+[data-track-cockpit] .creator-panel-body{position:fixed;inset:0;z-index:600;max-height:none;overflow:visible;padding:0;text-shadow:none}
+[data-track-cockpit] .creator-menu-shade{position:absolute;inset:0;width:100%;height:100%;background:#030e1a70;border:0;border-radius:0;cursor:pointer}
+[data-track-cockpit] .creator-menu-sheet{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:min(100%,600px);max-height:80dvh;overflow:auto;box-sizing:border-box;padding:8px 16px calc(16px + env(safe-area-inset-bottom,0px));border:1px solid #b5cbd13d;border-bottom:0;border-radius:26px 26px 0 0;background:radial-gradient(ellipse at 100% 0,#e5c17c0c,transparent 55%),linear-gradient(150deg,#193344,#091a2b 85%);box-shadow:0 -12px 50px #0006;overscroll-behavior:contain}
+[data-track-cockpit] .creator-menu-handle{width:34px;height:3px;border-radius:4px;background:#bdd0d56b;margin:0 auto 14px}
+[data-track-cockpit] .creator-menu-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px 14px}
+[data-track-cockpit] .creator-menu-heading small{color:#d4c28e;font-size:9px;letter-spacing:1.4px}
+[data-track-cockpit] .creator-menu-heading h2{font-size:21px;line-height:1.25;margin:5px 0 0;color:#f2f5f7}
+[data-track-cockpit] .creator-menu-heading .creator-icon{width:44px;height:44px;background:#0b2037;box-shadow:none}
+[data-track-cockpit] .creator-menu-section{display:block;margin:0 0 10px;border:1px solid #9dbad62d;border-radius:16px;background:#10263a99;overflow:hidden;color:#f0f5f7}
+[data-track-cockpit] .creator-menu-section>summary{padding:14px;display:grid;gap:4px;list-style:none;min-height:60px;font-size:14px;font-weight:600;text-shadow:none}
+[data-track-cockpit] .creator-menu-section>summary::-webkit-details-marker{display:none}
+[data-track-cockpit] .creator-menu-section>summary small{font-size:11px;font-weight:400;color:#a9c1cd;line-height:1.4}
+[data-track-cockpit] .creator-menu-section[open]>summary{border-bottom:1px solid #9dbad620;color:#ebd39d}
+[data-track-cockpit] .creator-menu-content{padding:14px;display:grid;gap:10px}
+[data-track-cockpit] .creator-menu-content ol{padding-left:20px;margin:0;display:grid;gap:6px}
+[data-track-cockpit] .creator-gpx-placeholder button,[data-track-cockpit] .creator-library-link{display:flex;align-items:center;gap:12px;width:100%;min-height:74px;padding:14px;text-align:left;color:#e3edf2;font:inherit}
+[data-track-cockpit] .creator-gpx-placeholder button{border:0;background:none;opacity:.7;cursor:default}
+[data-track-cockpit] .creator-gpx-placeholder button>span,[data-track-cockpit] .creator-library-link>span{display:grid;gap:4px;flex:1;min-width:0}
+[data-track-cockpit] .creator-gpx-placeholder strong,[data-track-cockpit] .creator-library-link strong{font-size:14px;font-weight:600}
+[data-track-cockpit] .creator-gpx-placeholder small,[data-track-cockpit] .creator-library-link small{font-size:11px;line-height:1.4;color:#a9c1cd}
+[data-track-cockpit] .creator-gpx-placeholder b{font-size:9px;font-weight:500;color:#c9c7b5;padding:4px 7px;border:1px solid #bba76d4a;border-radius:8px}
+[data-track-cockpit] .creator-library-link b{font-size:22px;color:#d4c28e}

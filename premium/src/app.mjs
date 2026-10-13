@@ -542,6 +542,7 @@ window.addEventListener('beforeunload',event=>{if(trackEditorActive&&trackEditor
 function restoreTrackLibraryForUser(){const ownerId=currentUser?.user_id||null;if(ownerId===trackLibraryOwnerId)return;trackLibraryOwnerId=ownerId;trackLibrary=createTrackLibrary({storage,ownerId});trackLibraryWarningShown='';trackEditor={...trackEditor,draft:null,selectedPointId:null,routeKey:'',copySource:null};trackEditorActive=false;}
 function render(focus=false) {
  const creatorPanelWasOpen=document.querySelector('[data-creator-panel]')?.open===true;
+ const creatorSections=[...(document.querySelectorAll?.('[data-creator-section]')||[])].map(section=>[section.dataset.creatorSection,section.open]);
  document.querySelector('[data-coaching-help-dialog]')?.close();
  currentUser=auth.getSession().user;
  if(currentUser&&!adminStore.accountIsActive(currentUser.user_id)){auth.signOut();currentUser=null;history.replaceState({},'','/auth');return render(focus);}
@@ -592,7 +593,7 @@ function render(focus=false) {
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  mountTrackEditorMap({draft:trackEditor.draft,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  trackRouting.reconcile();
- if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;}
+ if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;for(const [id,open] of creatorSections){const section=document.querySelector(`[data-creator-section="${id}"]`);if(section)section.open=open;}}
  const trackWarning=trackLibrary.persistenceWarning?.();if(trackWarning&&trackWarning!==trackLibraryWarningShown){trackLibraryWarningShown=trackWarning;Toast(trackWarning);}
  showCoachingHistoryWarning();
  showCoachingPreparationWarning();
@@ -784,7 +785,8 @@ document.addEventListener('click',event=>{
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
   try{
-   if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
+   if(action==='close-menu'){const panel=document.querySelector('[data-creator-panel]');if(panel){panel.open=false;panel.querySelector('summary')?.focus();}}
+   else if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
    else if(action==='retry-routing')trackRouting.retry();
    else if(action==='remove-last-segment')editorChange(removeLastTrackSegment(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});
    else if(action==='undo')editorChange(undoTrackEdit(trackEditor.draft),{selectedPointId:null});
@@ -1324,3 +1326,5 @@ document.addEventListener('keydown',event=>{
  if(event.key==='Escape'){const finish=searchUI.confirmFinish;searchUI.confirmFinish=false;searchUI.devOpen=false;render();document.querySelector(finish?'[data-search="finish"]':'[data-search="dev"]')?.focus();}
  if(event.key==='Tab'){const ns=[...panel.querySelectorAll('button:not([disabled]),input,select')],first=ns[0],last=ns.at(-1);if(!panel.contains(document.activeElement)){event.preventDefault();(event.shiftKey?last:first)?.focus();}else if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
 });
+
+document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;const panel=document.querySelector('[data-creator-panel][open]');if(panel){event.preventDefault();panel.open=false;panel.querySelector('summary')?.focus();}});
