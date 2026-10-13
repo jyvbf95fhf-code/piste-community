@@ -10,7 +10,7 @@ if(kind==='layout'){
  document.body.innerHTML='<h1>Contrôle visuel · cadres 390 × 700</h1><p>Données fictives · aucun capteur ni sauvegarde.</p><iframe title="Conducteur" src="?cockpit=driver" width="390" height="700"></iframe><iframe title="Traceur" src="?cockpit=tracer" width="390" height="700"></iframe>';
 }else if(kind==='driver'||kind==='tracer'){
  const status={running:true,status:'fresh',lastFix:p.segments.at(-1).at(-1)};
- let screen=kind==='driver'?DriverGpsScreen({phase:'SEARCH_RUNNING',searchTrackingState:'active',gpsSearch:p,searchPauseIntervals:[],search_started_at:new Date().toISOString()},status):TracerGpsScreen({phase:'active',gpsPose:p},status);
+ let screen=kind==='driver'?DriverGpsScreen({phase:'SEARCH_RUNNING',searchTrackingState:'active',gpsSearch:p,searchPauseIntervals:[],searchTotalPausedMs:0,search_started_at:new Date().toISOString()},status):TracerGpsScreen({phase:'active',gpsPose:p},status);
  screen=screen.replace('</header>',SessionExitMenu({canInterrupt:true})+'</header>');
  document.body.innerHTML=`<div class="app-shell" data-module-theme="coaching"><header class="screen-header">En-tête masqué</header><main>${screen}</main><nav class="bottom-nav">Navigation masquée</nav></div>`;
  mountGpsMaps();
