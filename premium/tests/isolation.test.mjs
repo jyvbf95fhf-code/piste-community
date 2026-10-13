@@ -27,7 +27,8 @@ test('aucun moteur V1 ni transport réseau ; capteur GPS limité à son adaptate
  const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
  assert.match(html,/connect-src 'none'/);
  assert.match(html,/img-src 'self' data: https:\/\/tile\.openstreetmap\.org/);
- assert.doesNotMatch(html.replace('https://tile.openstreetmap.org',''),/https?:\/\//);
+ assert.doesNotMatch(html.replace('https://tile.openstreetmap.org','').replace('https://data.geopf.fr',''),/https?:\/\//);
+ assert.match(html,/img-src 'self' data: https:\/\/tile\.openstreetmap\.org https:\/\/data\.geopf\.fr;/);
  assert.match(html,/referrer" content="strict-origin-when-cross-origin/);
 });
 test('les chaînes de composants sont échappées',()=>assert.equal(escapeHTML('<script>"&'), '&lt;script&gt;&quot;&amp;'));
