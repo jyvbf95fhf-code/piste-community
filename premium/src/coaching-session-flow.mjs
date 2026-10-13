@@ -56,19 +56,24 @@ export function advanceSessionSearch(s,p,action,{now=Date.now}={}){
  if(action==='finish')result=emit(result,'DEBRIEF_ENTERED');
  return result;
 }
-// Optional post-session Driver note. Visit-scoped, independent of terrain data.
-export function saveDriverDebriefNote(s,p,command,{now=Date.now}={}){
+// Optional personal post-session notes. Separate records/revisions; terrain remains immutable.
+function savePersonalDebriefNote(s,p,command,key,role,{now=Date.now}={}){
  assertParticipation(p);
- if(s.phase!=='DEBRIEF'||!isSearchActor(p)||s.actorId!==p.session.roles.driver)throw Error('Seul le Conducteur désigné peut modifier sa note pendant le débrief.');
- const revision=s.driverDebriefNote?.revision??0;
- if(command?.sessionId!==p.session.id||command.expectedRevision!==revision||typeof command.text!=='string'||command.text.length>2000)throw Error('Note refusée : session, version ou longueur invalide.');
+ const authorised=role==='coach'?isSearchCoach(p):isSearchActor(p)&&s.actorId===p.session.roles.driver;
+ if(s.phase!=='DEBRIEF'||!authorised)throw Error(`Seul le ${role==='coach'?'Coach':'Conducteur'} désigné peut modifier sa note pendant le débrief.`);
+ const stored=s[key],revision=stored?.revision??0;
+ if(stored&&stored.authorParticipantId!==p.viewerId||command?.sessionId!==p.session.id||command.expectedRevision!==revision||typeof command.text!=='string'||command.text.length>2000)throw Error('Note refusée : auteur, session, version ou longueur invalide.');
  const author=p.team.find(person=>person.id===p.viewerId);
- return {...s,driverDebriefNote:{sessionId:p.session.id,authorParticipantId:p.viewerId,authorName:author.name,text:command.text.trim(),revision:revision+1,updatedAt:timestampFrom(now)}};
+ return {...s,[key]:{sessionId:p.session.id,authorParticipantId:p.viewerId,authorName:author.name,text:command.text.trim(),revision:revision+1,updatedAt:timestampFrom(now)}};
 }
+export function saveDriverDebriefNote(s,p,command,options){return savePersonalDebriefNote(s,p,command,'driverDebriefNote','driver',options);}
+export function saveCoachDebriefNote(s,p,command,options){return savePersonalDebriefNote(s,p,command,'coachDebriefNote','coach',options);}
 function driverNoteView(s,p){
- const postSession=['DEBRIEF','ARCHIVED'].includes(s.phase),stored=s.driverDebriefNote;
- const note=postSession&&stored?.sessionId===p.session.id?structuredClone(stored):null;
- return {note,items:note?.text?[`${note.authorName} · Conducteur : ${note.text}`]:[],persisted:false,canEdit:s.phase==='DEBRIEF'&&isSearchActor(p)&&s.actorId===p.session.roles.driver,revision:note?.revision??0,sessionId:p.session.id,authorParticipantId:p.viewerId};
+ const postSession=['DEBRIEF','ARCHIVED'].includes(s.phase);
+ const read=(key,participantId)=>postSession&&s[key]?.sessionId===p.session.id&&s[key].authorParticipantId===participantId?structuredClone(s[key]):null;
+ const driver=read('driverDebriefNote',p.session.roles.driver),coach=read('coachDebriefNote',p.session.roles.coach),role=isSearchCoach(p)?'coach':'driver',note=role==='coach'?coach:driver;
+ const eligible=role==='coach'?isSearchCoach(p):isSearchActor(p)&&s.actorId===p.session.roles.driver;
+ return {note,role,items:[...(driver?.text?[`${driver.authorName} · Conducteur : ${driver.text}`]:[]),...(coach?.text?[`${coach.authorName} · Coach : ${coach.text}`]:[])],persisted:false,canEdit:s.phase==='DEBRIEF'&&eligible&&canParticipate(p,p.viewerId),revision:note?.revision??0,sessionId:p.session.id,authorParticipantId:p.viewerId};
 }
 export function archivePermissionView(s,p){
  const v=preparationView(p),id=p.session.creatorParticipantId,member=p.team.some(a=>a.id===v.viewerId),creator=!!id&&member&&v.viewerId===id,authorization=s.archiveAuthorization;

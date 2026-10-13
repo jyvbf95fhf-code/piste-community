@@ -21,7 +21,7 @@ import * as tracer from './coaching-tracer.mjs';
 import {TracerScreen} from './coaching-tracer-screen.mjs';
 import * as search from './coaching-search.mjs';
 import {SearchScreen} from './coaching-search-screen.mjs';
-import {syncSession,advanceSessionSearch,markExternalTraceurInPlace,returnSelfTraceToStart,trackAgeSeconds,formatTrackAge,debriefView,archivePermissionView,setArchivePermission,saveDriverDebriefNote} from './coaching-session-flow.mjs';
+import {syncSession,advanceSessionSearch,markExternalTraceurInPlace,returnSelfTraceToStart,trackAgeSeconds,formatTrackAge,debriefView,archivePermissionView,setArchivePermission,saveDriverDebriefNote,saveCoachDebriefNote} from './coaching-session-flow.mjs';
 import {CoachScreen,ObserverScreen,SessionNotice} from './coaching-session-screen.mjs';
 import {DebriefScreen} from './coaching-debrief-screen.mjs';
 import {archiveSession} from './coaching-session-flow.mjs';
@@ -154,12 +154,12 @@ function confirmCoachingTracerReference(form){
   render();
  }});
 }
-function saveCoachingDriverDebriefNote(form){
+function saveCoachingDriverDebriefNote(form,role='driver'){
  try{
   if(!['/coaching/session','/qa/coaching'].includes(location.pathname)||!preparationState||form.dataset.sessionId!==preparationState.session.id||form.dataset.authorId!==preparationState.viewerId)throw Error('Note refusée : ce formulaire ne correspond plus à la session active.');
-  searchState=saveDriverDebriefNote(searchState,preparationState,{sessionId:form.dataset.sessionId,expectedRevision:Number(form.dataset.revision),text:form.elements.note.value});
+  searchState=(role==='coach'?saveCoachDebriefNote:saveDriverDebriefNote)(searchState,preparationState,{sessionId:form.dataset.sessionId,expectedRevision:Number(form.dataset.revision),text:form.elements.note.value});
   debriefUI={...debriefUI,noteDraft:undefined,notice:'Note enregistrée pour cette visite.'};
- }catch(error){debriefUI={...debriefUI,noteDraft:{sessionId:form.dataset.sessionId,authorId:form.dataset.authorId,text:form.elements.note.value},notice:error.message};}
+ }catch(error){debriefUI={...debriefUI,noteDraft:{sessionId:form.dataset.sessionId,authorId:form.dataset.authorId,role,text:form.elements.note.value},notice:error.message};}
  render();
 }
 function replyCoachingSearchMessage(text){
@@ -1066,6 +1066,7 @@ document.addEventListener('submit',event=>{
  if(jumolfController.handleSubmit(event))return;
  if(communityController.handleSubmit(event))return;
  if(event.target.matches('[data-tracer-reference]')){event.preventDefault();confirmCoachingTracerReference(event.target);return;}
+ if(event.target.matches('[data-coach-debrief-note]')){event.preventDefault();saveCoachingDriverDebriefNote(event.target,'coach');return;}
  if(event.target.matches('[data-driver-debrief-note]')){event.preventDefault();saveCoachingDriverDebriefNote(event.target);return;}
  if(event.target.matches('[data-coach-reply]')){event.preventDefault();handleCoachingCoachMessages({dataset:{...event.target.dataset,coachMessage:'reply'}},event.target.elements.reply.value);document.querySelector('#coach-reply')?.focus();return;}
  if(event.target.matches('[data-search-reply]')){event.preventDefault();replyCoachingSearchMessage(event.target.elements.reply.value);document.querySelector('#search-reply')?.focus();return;}
