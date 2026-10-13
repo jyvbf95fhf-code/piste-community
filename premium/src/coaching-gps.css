@@ -1,1 +1,33 @@
 .tracer-gps{display:grid;gap:14px}.gps-map{height:52vh;min-height:260px;max-height:600px;border:1px solid #415367;border-radius:16px;background:#101c29;isolation:isolate;color:#e7edf3}.gps-map-empty{padding:30px;text-align:center}.gps-hud{position:static!important;width:auto!important;margin:0!important}.gps-hud div{display:flex;justify-content:space-between;gap:15px}.gps-hud p{margin:8px 0}.gps-actions{display:flex;flex-wrap:wrap;gap:10px}.gps-actions .button{flex:1;min-width:135px}.gps-report{margin:16px 0}.gps-report .gps-map{height:340px}.leaflet-container{font-family:inherit}.leaflet-control-attribution{font-size:10px!important;max-width:calc(100vw - 90px)}.leaflet-control-attribution a{color:#164c68!important}.leaflet-control-zoom a{color:#183447!important}.gps-report p{margin:10px 0}[data-gps-live] header{position:relative;z-index:2}
+
+/* GPS terrain only: the map takes the remaining visible Safari viewport. */
+.app-shell:has([data-gps-live])>.screen-header,
+.app-shell:has([data-gps-live])>.bottom-nav,
+.app-shell:has([data-gps-live]) .prototype-note{display:none}
+[data-gps-live].tracer-gps{position:fixed;inset:0;z-index:40;box-sizing:border-box;height:100dvh;padding:calc(env(safe-area-inset-top,0px) + 8px) 10px calc(env(safe-area-inset-bottom,0px) + 6px);display:flex;flex-direction:column;gap:6px;overflow:auto;background:#091923}
+[data-gps-live]>.coaching-heading{flex:none;position:relative;margin:0;padding:0 90px 0 2px;min-height:46px}
+[data-gps-live]>.coaching-heading .eyebrow{font-size:9px;letter-spacing:1px}
+[data-gps-live]>.coaching-heading h1{font-size:18px;line-height:1.2;margin:3px 0}
+[data-gps-live]>.coaching-heading>p{font-size:10px;line-height:1.3;margin:0}
+[data-gps-live] .session-exit-menu{position:absolute;top:0;right:0;margin:0}
+[data-gps-live]>.session-notice{flex:none;margin:0;padding:6px 10px;font-size:11px;gap:2px}
+[data-gps-live]>.gps-map{flex:1 0 180px;height:auto;min-height:180px;max-height:none;width:100%;border-radius:12px}
+.app-shell [data-gps-live]>.gps-hud{flex:none;padding:8px 10px;border-radius:12px}
+.app-shell [data-gps-live]>.gps-hud>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.app-shell [data-gps-live]>.gps-hud strong{font-size:22px;padding:4px 8px;line-height:1.2;text-align:center}
+[data-gps-live] .gps-hud>[data-gps-status]{font-size:11px;margin:5px 0;line-height:1.3;text-align:left}
+[data-gps-live] .gps-details{font-size:11px;line-height:1.4;max-height:26dvh;overflow:auto}
+[data-gps-live] .gps-details p{margin:6px 0}
+[data-gps-live] summary{cursor:pointer;padding:6px 2px;color:#bcd5dc;min-height:28px}
+[data-gps-live] summary:focus-visible{outline:2px solid #80d4df;outline-offset:2px}
+[data-gps-live]>.gps-actions{flex:none;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+[data-gps-live]>.gps-actions .button{min-width:0;min-height:48px;padding:7px 8px;font-size:13px;line-height:1.3;white-space:normal}
+[data-gps-live]>.gps-actions :is([data-search="gps-resume"],[data-tracer="gps-resume"]){grid-column:1/-1}
+[data-gps-live]>.gps-actions [data-search="messages"]{grid-column:1/-1}
+[data-gps-live]>.gps-tools{flex:none;font-size:11px}
+[data-gps-live]>.gps-tools>summary{text-align:center}
+[data-gps-live]>.gps-tools>div{display:flex;flex-wrap:wrap;gap:6px;max-height:22dvh;overflow:auto;padding-bottom:4px}
+[data-gps-live]>.gps-tools .button{flex:1;min-width:130px;min-height:44px;padding:8px;font-size:12px}
+[data-gps-live]>.tracer-sheet{z-index:70}
+[data-gps-live]>.tracer-shade{z-index:60}
+@media(max-height:500px){[data-gps-live]>.gps-map{flex-basis:100px;min-height:100px}[data-gps-live]>.coaching-heading{min-height:34px}[data-gps-live]>.coaching-heading>p{display:none}.app-shell [data-gps-live]>.gps-hud strong{font-size:17px}}
