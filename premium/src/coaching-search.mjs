@@ -1,5 +1,6 @@
 import {assertParticipation,canParticipate,isCollectivelyClosed,closeSearchPause} from './coaching-session-control.mjs';
 // Conducteur prototype: phase, counters and coordinates live in memory only.
+import {startGpsPose,finishGpsPose} from './coaching-gps-model.mjs';
 import {preparationView} from './coaching-preparation.mjs';
 import {elapsedSeconds,formatElapsed,timestampFrom} from './coaching-time.mjs';
 export const searchPhases=Object.freeze({PREPARATION:'Session en attente',LAYING:'Traceur en pose',TRACK_FINISHED:'Pose terminée',LAYING_WAIT:'Traceur en place · attente',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',SEARCH_FINISHED:'Recherche terminée',DEBRIEF:'Débrief · lecture seule',ARCHIVED:'Session archivée · lecture seule',CANCELLED:'Session annulée',INTERRUPTED:'Session interrompue'});
@@ -21,8 +22,9 @@ export function advanceSearch(state,p,action,{now=Date.now}={}){
  assertParticipation(p);
  if(isCollectivelyClosed(state.phase)||state.recordingStoppedAt||!canParticipate(p,p.session.roles.driver)||p.traceurKind==='internal'&&!canParticipate(p,p.session.roles.traceur))throw Error('Suivi arrêté ou acteur requis absent.');
  if(!(isSearchActor(p)||['pause','resume'].includes(action)&&isSearchCoach(p))||state.actorId&&state.actorId!==p.session.roles.driver)throw Error('Seul le Conducteur actuellement désigné peut agir.');
+ if(state.gpsSearch&&['progress','record-pause'].includes(action))throw Error('Progression simulée indisponible pendant une recherche GPS.');
  const s=clone(state),v=preparationView(p),own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
- if(action==='start'&&s.phase==='SEARCH_READY'){s.phase='SEARCH_RUNNING';s.searchTrackingState='active';s.searchPausedAt=null;s.searchTotalPausedMs=0;s.searchPauseIntervals=[];s.actorId=v.viewerId;s.origin=available?{x:own.x,y:own.y}:null;if(available){s.segments=[[{...s.origin}]];s.segmentTrackingStates=[{trackingState:'active',pauseIntervalIndex:null}];}else s.gap=true;return s;}
+ if(action==='start'&&s.phase==='SEARCH_READY'){s.phase='SEARCH_RUNNING';s.searchTrackingState='active';s.searchPausedAt=null;s.searchTotalPausedMs=0;s.searchPauseIntervals=[];s.actorId=v.viewerId;if(s.gpsSearch){if(s.gpsSearch.sessionId!==p.session.id||s.gpsSearch.actorId!==v.viewerId)throw Error('Dossier GPS étranger.');s.gpsSearch=startGpsPose(s.gpsSearch,now());s.origin=null;s.gap=true;return s;}s.origin=available?{x:own.x,y:own.y}:null;if(available){s.segments=[[{...s.origin}]];s.segmentTrackingStates=[{trackingState:'active',pauseIntervalIndex:null}];}else s.gap=true;return s;}
  if(action==='pause'&&s.phase==='SEARCH_RUNNING'&&s.searchTrackingState==='active'){
   const at=timestampFrom(now);s.searchTrackingState='paused';s.searchPausedAt=at;s.searchPauseIntervals=[...(s.searchPauseIntervals||[]),{pausedAt:at,resumedAt:null,durationMs:null}];return s;
  }
@@ -49,6 +51,7 @@ export function advanceSearch(state,p,action,{now=Date.now}={}){
  }
  if(action==='finish'&&s.phase==='SEARCH_RUNNING'){
   if(s.searchTrackingState==='paused')Object.assign(s,closeSearchPause(s,timestampFrom(now)));
+  if(s.gpsSearch)s.gpsSearch=finishGpsPose(s.gpsSearch,now());
   s.phase='SEARCH_FINISHED';s.searchTrackingState='stopped';s.searchPausedAt=null;return s;
  }
  if(action==='debrief'&&s.phase==='SEARCH_FINISHED'){s.phase='DEBRIEF';return s;}

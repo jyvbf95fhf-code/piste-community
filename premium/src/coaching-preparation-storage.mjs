@@ -1,4 +1,5 @@
 import {isExitClosure,validSessionControl} from './coaching-session-control.mjs';
+import {validGpsSearch} from './coaching-driver-gps-model.mjs';
 import {validGpsTracer,gapGpsPose} from './coaching-gps-model.mjs';
 // Device-local Coaching recovery. Never an authenticated remote session.
 import {validateDraft} from './coaching.mjs';
@@ -20,7 +21,7 @@ function validContext(ownerId,snapshot){
  try{
   const {draft,preparationState:p,referenceAssignment:entry,terrainOpen}=snapshot;
   const session=draft.session,identity=draft.identityContext,creation=draft.sessionCreation;
-  if(!validGpsTracer(snapshot.tracerState,p,snapshot.searchState.phase))return false;
+  if(!validGpsSearch(snapshot.searchState,p)||!validGpsTracer(snapshot.tracerState,p,snapshot.searchState.phase))return false;
   if(identity?.userId!==ownerId||identity.source!=='mock-auth'||identity.assurance!=='local-simulation'||identity.participantId!=='self'||creation?.creatorUserId!==ownerId||creation.creatorParticipantId!==identity.participantId||creation.sessionId!==session?.id||!/^mock-coaching-[1-9]\d*(?:-.+)?$/.test(session.id)||session.creatorParticipantId!==identity.participantId||validateDraft(draft).length)return false;
   if(!validSessionControl(session,snapshot.searchState.phase))return false;
   if(!same(session,p.session)||!same(session.roles,draft.roles)||session.mode!==draft.mode||session.traceType!==draft.traceType||session.scenario!==draft.trackingScenario||session.creatorRole!==draft.creatorRole||!same(session.preparation,draft.preparationTrack)||typeof terrainOpen!=='boolean')return false;
@@ -139,6 +140,7 @@ function createSnapshotStorage(storage,validate,terrainRecovery=false){
     snapshot.preparationState.gps='acquiring';
     // Preserve every recorded point and mark the unobserved interval as a gap.
     if(terrainRecovery&&snapshot.tracerState.phase==='active'){snapshot.tracerState.gap=true;snapshot.tracerState.resumed=false;}
+    if(snapshot.searchState.gpsSearch)snapshot.searchState.gpsSearch=gapGpsPose(snapshot.searchState.gpsSearch);
     if(snapshot.tracerState.gpsPose)snapshot.tracerState.gpsPose=gapGpsPose(snapshot.tracerState.gpsPose);
     if(terrainRecovery&&snapshot.searchState.phase==='SEARCH_RUNNING'){snapshot.searchState.gap=true;snapshot.searchState.resumed=false;}
     return {ok:true,snapshot};

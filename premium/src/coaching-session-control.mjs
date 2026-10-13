@@ -28,6 +28,7 @@ export function applySessionControl(r,actor,c){
   if((collective||actor.participantId===poser)&&next.tracerState.phase==='active')next.tracerState={...next.tracerState,recordingStoppedAt:c.occurredAt,gap:true,resumed:false};
   if((collective||actor.participantId===next.session.roles.driver)&&['active','paused'].includes(next.searchState.searchTrackingState))next.searchState={...closeSearchPause(next.searchState,c.occurredAt),searchTrackingState:'stopped',recordingStoppedAt:c.occurredAt,gap:true,resumed:false};
  }
+ if(next.searchState.gpsSearch&&(c.type!=='leave'||actor.participantId===next.searchState.gpsSearch.actorId))next.searchState.gpsSearch=finishGpsPose(next.searchState.gpsSearch,Date.parse(c.occurredAt),'stopped');
  if(c.type==='leave')next.preparationState.missingActors=[...new Set([...(next.preparationState.missingActors||[]),actor.participantId])];
  if(next.tracerState.gpsPose&&(c.type!=='leave'||actor.participantId===next.tracerState.gpsPose.actorId))next.tracerState.gpsPose=finishGpsPose(next.tracerState.gpsPose,Date.parse(c.occurredAt),'stopped');
  next.session={...next.session,control:journal};next.preparationState.session=clone(next.session);if(next.draft)next.draft.session=clone(next.session);

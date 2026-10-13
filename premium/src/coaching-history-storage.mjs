@@ -1,4 +1,5 @@
 import {isExitClosure,validSessionControl} from './coaching-session-control.mjs';
+import {validGpsSearch} from './coaching-driver-gps-model.mjs';
 import {validGpsTracer} from './coaching-gps-model.mjs';
 import {coachingClosureView} from './coaching-closure-view.mjs';
 // Device-local completed Coaching reports. No credentials, remote writes or live recovery.
@@ -10,7 +11,7 @@ const keyFor=id=>`piste.v2.coaching-history.v1:${encodeURIComponent(id)}`;
 function validRecord(record){
  try{
   const {session,searchState,preparationState,tracerState}=record;
-  if(!validGpsTracer(tracerState,preparationState,searchState.phase))return false;
+  if(!validGpsSearch(searchState,preparationState)||!validGpsTracer(tracerState,preparationState,searchState.phase))return false;
   if(!session?.prototype||!/^mock-coaching-[1-9]\d*(?:-.+)?$/.test(session.id)||!terminal(record)||preparationState?.session?.id!==session.id||JSON.stringify(preparationState.session)!==JSON.stringify(session)||!tracerState)return false;
   if(!['normal','simple_blind','full_blind'].includes(session.mode)||!['connected_traceur','self_trace','external_traceur','external_driver_recorded'].includes(session.scenario))return false;
   if(!Array.isArray(session.participants)||!Array.isArray(preparationState.team)||!(Array.isArray(searchState.events)||searchState.phase==='CANCELLED'&&searchState.events===undefined)||!Array.isArray(searchState.segments)||!Array.isArray(tracerState.segments))return false;

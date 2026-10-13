@@ -1,3 +1,5 @@
+import {createDriverGpsController,canUseDriverGps,ownsDriverGps} from './coaching-driver-gps-controller.mjs';
+import {visibleGpsPoseForDriver,searchGpsActiveMs} from './coaching-driver-gps-model.mjs';
 import {createTracerGpsController,canUseTracerGps,ownsTracerGps} from './coaching-gps-controller.mjs';
 import {mountGpsMaps,refreshGpsScreen,centerGpsMap,GpsPoseReport} from './coaching-gps-screen.mjs';
 import {openCoachingHelp} from './coaching-help.mjs';
@@ -320,12 +322,16 @@ let searchUI={};
 let debriefUI={tab:'summary'};
 function gpsContext(){return {draft:coachingDraft,preparation:preparationState,tracer:tracerState,search:searchState,user:currentUser,qa:qaInitialized};}
 function gpsFeedback(){
+ if(!ownsTracerGps(gpsContext()))return;
  const live=document.querySelector('[data-gps-live]'),status=tracerGps.view();
  if(live&&tracerState.gpsPose&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(tracerState.gpsPose,status);}
  else render();
 }
 const tracerGps=createTracerGpsController({getContext:gpsContext,setTracer:t=>{tracerState=t;},render:gpsFeedback});
-window.addEventListener('pagehide',()=>{tracerGps.pause();captureCoachingPreparation();});
+function driverGpsFeedback(){if(!ownsDriverGps(gpsContext()))return;const live=document.querySelector('[data-gps-kind="search"]'),status=driverGps.view();if(live&&searchState.gpsSearch&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(searchState.gpsSearch,status);const clock=document.querySelector('[data-gps-clock]');if(clock){const n=Math.floor(searchGpsActiveMs(searchState)/1000);clock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;}}else render();}
+const driverGps=createDriverGpsController({getContext:gpsContext,setSearch:s=>{searchState=s;},render:driverGpsFeedback});
+
+window.addEventListener('pagehide',()=>{tracerGps.pause();driverGps.pause();captureCoachingPreparation();});
 
 let qaMode='normal';
 let qaScenario='connected_traceur';
@@ -468,7 +474,7 @@ function parseJumolfPath(path){
 function jumolfRawSources(){
  const sessions=[];
  for(const record of sessionCatalog.list()){
-  if(record.tracerState?.gpsPose||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))continue;
+  if(record.tracerState?.gpsPose||record.searchState?.gpsSearch||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))continue;
   const report=debriefView(record.searchState,record.preparationState,record.tracerState);
   if(!report?.map)continue;
   const paths=report.map.paths||[],searchPaths=paths.filter(path=>path.kind==='search').map(path=>parseJumolfPath(path.d)).filter(Boolean),reference=paths.filter(path=>path.kind==='reference').flatMap(path=>parseJumolfPath(path.d)||[]);
@@ -523,6 +529,7 @@ function render(focus=false) {
  restoreCoachingHistoryForUser();
  restoreCoachingPreparationForUser();
  tracerGps.reconcile();
+ driverGps.reconcile();
  if(scientificActor!==currentUser){scientificActor=currentUser;scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
@@ -547,7 +554,7 @@ function render(focus=false) {
  const scientificContent=scientificRoute?ScientificShell(scientificRoute,scientificScreen,currentUser):null;
  const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission)):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content,route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
- mountGpsMaps({livePose:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
+ mountGpsMaps({livePose:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  showCoachingHistoryWarning();
  showCoachingPreparationWarning();
  if(operationalChronoInterval)clearInterval(operationalChronoInterval);
@@ -555,7 +562,7 @@ function render(focus=false) {
  if(gpsChronoInterval)clearInterval(gpsChronoInterval);
  gpsChronoInterval=null;
  const gpsClock=document.querySelector('[data-gps-clock]');
- if(gpsClock&&tracerState.gpsPose?.phase==='active'){const update=()=>{const n=Math.floor(Math.max(0,Date.now()-tracerState.gpsPose.startedAt)/1000);gpsClock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;};update();gpsChronoInterval=setInterval(update,1000);}
+ if(gpsClock&&(tracerState.gpsPose?.phase==='active'||searchState.gpsSearch?.phase==='active')){const update=()=>{const n=Math.floor((searchState.gpsSearch?.phase==='active'?searchGpsActiveMs(searchState):Math.max(0,Date.now()-tracerState.gpsPose.startedAt))/1000);gpsClock.textContent=`${String(Math.floor(n/60)).padStart(2,'0')}:${String(n%60).padStart(2,'0')}`;};update();gpsChronoInterval=setInterval(update,1000);}
  if(coachingAgeInterval)clearInterval(coachingAgeInterval);
  coachingAgeInterval=null;
  if(operationalRoute?.type==='mission'&&operationalMission?.trackingState==='active'){
@@ -586,7 +593,7 @@ function refreshDogPhotoPreview(form) {
  form.querySelector('[data-dog-photo-preview]').innerHTML=DogPhotoMarkup(dog,'dog-form-photo-preview-frame');
 }
 function resetCoachingQa(mode=qaMode,scenario=qaScenario){
- tracerGps.pause();
+ tracerGps.pause();driverGps.pause();
  if(!qaInitialized)normalCoachingBeforeQa=structuredClone({draft:coachingDraft,preparationState,tracerState,searchState,terrainOpen,referenceAssignment:coachingReferenceAssignment,tracerUI,searchUI,preparationUI,exitSavePending});
  cleanupCoachingExit();
  coachingReferenceAssignment=null;
@@ -624,7 +631,7 @@ function renderSessionDebrief(id){
  if(!record||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase))return SessionDetailScreen(null);
  return DebriefScreen(record.searchState,record.preparationState,record.tracerState,debriefUI,{readOnly:true});
 }
-function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational));return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
+function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose||record?.searchState?.gpsSearch){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational));return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
 function renderTracks(){return TrackListScreen(trackListView(trackLibrary.list(),sessionCatalog.list()),completedSessionHistoryView(sessionCatalog,{currentSessionId:coachingDraft.session?.id}));}
 function renderTrackDetail(id){return TrackDetailScreen(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list()),id));}
 function renderLive(route){
@@ -655,7 +662,7 @@ function renderPreparationContent(){
  if(['DEBRIEF','ARCHIVED'].includes(searchState.phase))return DebriefScreen(searchState,preparationState,tracerState,debriefUI);
  if(v?.role==='coach')return CoachScreen(searchState,preparationState,tracerState,preparationUI);
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
- if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,messages:tracer.sessionMessages(tracerState,preparationState).messages,unreadCount:tracer.sessionMessages(tracerState,preparationState).unread});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
+ if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,gps:driverGps.view(),allowGps:canUseDriverGps(gpsContext()),pose:searchState.gpsSearch?visibleGpsPoseForDriver(preparationState,tracerState):null,messages:tracer.sessionMessages(tracerState,preparationState).messages,unreadCount:tracer.sessionMessages(tracerState,preparationState).unread});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
  if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,{...tracerUI,allowGps:canUseTracerGps(gpsContext()),gps:tracerGps.view()}).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
  return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceChoices:preparation.sessionReferenceChoices(preparationState,preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list(),{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]}),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
@@ -778,7 +785,10 @@ document.addEventListener('click',event=>{
  if(searchControl&&preparationState){
   const action=searchControl.dataset.search;
   try{
-   if(action==='dev'){searchUI.devOpen=true;searchUI.confirmFinish=false;}
+   if(action==='gps-enable'){driverGps.activate();}
+   else if(action==='gps-resume'){driverGps.resume();}
+   else if(action==='gps-center'){centerGpsMap();return;}
+   else if(action==='dev'){searchUI.devOpen=true;searchUI.confirmFinish=false;}
    else if(action==='close-dev')searchUI.devOpen=false;
    else if(action==='return')searchUI.showPreparation=false;
    else if(action==='preparation'){searchUI.showPreparation=true;searchUI.devOpen=false;}
@@ -794,7 +804,7 @@ document.addEventListener('click',event=>{
    else if(action==='cancel-finish')searchUI.confirmFinish=false;
    else if(action==='confirm-finish'){if(!searchUI.confirmFinish)throw Error('Confirmation requise.');searchState=advanceSessionSearch(searchState,preparationState,'finish');searchUI.confirmFinish=false;}
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState);searchState=syncSession(searchState,preparationState,tracerState);}
-   else if(['start','progress','debrief'].includes(action))searchState=advanceSessionSearch(searchState,preparationState,action);
+   else if(['start','progress','debrief'].includes(action)){searchState=advanceSessionSearch(searchState,preparationState,action);if(action==='start'&&searchState.gpsSearch)driverGps.seed();}
    else if(action==='layers')searchUI.layersOpen=!searchUI.layersOpen;
    else if(action==='center'){const point=search.searchView(searchState,preparationState).markers.find(m=>m.id===preparationState.viewerId);if(point)searchUI.center={x:point.x,y:point.y};searchUI.notice=point?'Carte recentrée sur votre position mock.':'Aucune position disponible pour recentrer.';}
   }catch(error){searchUI.notice=error.message;}

@@ -20,6 +20,8 @@ function exitFingerprint(snapshot){
  const value=structuredClone(snapshot),gps=value.tracerState?.gpsPose;
  // Recording keeps running while the modal is open. Bind policy/phase/identity,
  // then close the latest trace rather than demanding identical point samples.
+ const searchGps=value.searchState?.gpsSearch;
+ if(searchGps?.phase==='active')value.searchState.gpsSearch={...searchGps,segments:[],distanceM:0,elapsedMs:0,gap:true};
  if(gps?.phase==='active')value.tracerState.gpsPose={...gps,segments:[],distanceM:0,elapsedMs:0,gap:true};
  return JSON.stringify(value);
 }
