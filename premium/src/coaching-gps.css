@@ -108,3 +108,31 @@
  .app-shell[data-module-theme="coaching"] [data-gps-live]>.gps-actions .gps-round svg{padding:13px}
  .app-shell[data-module-theme="coaching"] [data-gps-live]>.gps-actions :is(.gps-action-start,.gps-action-finish) svg{padding:18px}
 }
+
+/* Borderless terrain metrics, shared by Traceur and Conducteur. */
+.app-shell[data-module-theme="coaching"] [data-gps-live]>.gps-hud{
+ background:none;border:0;border-radius:0;box-shadow:none;
+ -webkit-backdrop-filter:none;backdrop-filter:none;padding:8px 0;
+ text-shadow:0 2px 5px #000,0 0 12px #0009;
+}
+.app-shell[data-module-theme="coaching"] [data-gps-live]>.gps-hud>div{
+ grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;
+}
+.app-shell[data-module-theme="coaching"] [data-gps-live]>.gps-hud strong{
+ font-size:24px;font-weight:600;white-space:nowrap;overflow-wrap:normal;
+}
+[data-gps-live] .gps-details[open]{
+ background:#0b1b2fed;border:1px solid #9dbad63d;border-radius:14px;
+ padding:6px 10px;text-shadow:none;
+}
+[data-gps-live] .gps-corridor-picker{position:relative}
+[data-gps-live] .gps-corridor-picker>.gps-map-control{color:#9fc1d2}
+[data-gps-live] .gps-corridor-info{
+ position:absolute;right:60px;top:0;width:min(210px,calc(100vw - 105px));
+ box-sizing:border-box;padding:12px;border:1px solid #9dbad642;border-radius:14px;
+ background:#0c2030f5;box-shadow:0 6px 24px #0006;color:#eaf3f5;
+ font-size:12px;line-height:1.45;
+}
+[data-gps-live] .gps-corridor-info strong{font-size:12px;color:#eaf3f5}
+[data-gps-live] .gps-corridor-info p{margin:6px 0 0}
+[data-gps-live] .gps-corridor-info small{display:block;color:#acd0df;margin-top:4px}
