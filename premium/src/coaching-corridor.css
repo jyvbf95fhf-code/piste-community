@@ -1,0 +1,12 @@
+/* Scoped to the existing olfactory popover; validated cockpit stays unchanged. */
+[data-gps-live] .gps-corridor-info{width:min(290px,calc(100vw - 105px));max-height:45dvh;overflow:auto;overscroll-behavior:contain}
+[data-gps-live] [data-corridor-summary][data-active="true"]{color:#c5b6ff;border-color:#bba6ef99}
+[data-gps-live] .gps-corridor-info button{width:100%;min-height:40px;padding:8px;margin-top:8px;border:1px solid #9dbad652;border-radius:10px;background:#18334b;color:#f0f5fa;font:inherit;cursor:pointer}
+[data-gps-live] .gps-corridor-info button:disabled{opacity:.5;cursor:default}
+[data-gps-live] .gps-corridor-info form{margin:10px 0 0}
+[data-gps-live] .gps-corridor-info form[hidden]{display:none}
+[data-gps-live] .gps-corridor-info summary{font-size:11px;color:#dbe7f0}
+[data-gps-live] .gps-corridor-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+[data-gps-live] .gps-corridor-fields label{display:block;min-width:0;font-size:10px;color:#c8d7e4}
+[data-gps-live] .gps-corridor-fields input{box-sizing:border-box;width:100%;min-width:0;min-height:38px;padding:6px;border:1px solid #9dbad642;border-radius:8px;background:#071726;color:#fff;font:inherit;font-size:16px}
+[data-gps-live] .gps-corridor-info a{color:#b5d6eb}
