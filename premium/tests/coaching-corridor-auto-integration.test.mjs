@@ -1,0 +1,12 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {mountGpsMaps,destroyGpsMaps} from '../src/coaching-gps-screen.mjs';
+test('authorized cockpit retrieves automatic weather, draws corridor and preserves cached updates',async()=>{
+ const now=Date.now(),pose={sessionId:'authorized-session',segments:[[{latitude:48.29427,longitude:7.38745,timestamp:now-10000,accuracy:5},{latitude:48.29428,longitude:7.38765,timestamp:now-5000,accuracy:5}]]};
+ const shapes=[],status={textContent:''},root={dataset:{gpsKind:'pose',gpsCorridorAllowed:'true',gpsSessionId:pose.sessionId},isConnected:true,querySelector:s=>s==='[data-corridor-status]'?status:null,querySelectorAll:()=>[],addEventListener(){},removeEventListener(){}};
+ const el={dataset:{gpsPose:JSON.stringify(pose)},closest:()=>root,textContent:''},map={setView(){return this;},remove(){},removeLayer(){},getZoom(){return 17;}};
+ const group=()=>{const entries=[];return {addTo(){return this;},clearLayers(){for(const s of entries){const i=shapes.indexOf(s);if(i>=0)shapes.splice(i,1);}entries.length=0;},remove(){this.clearLayers();},add(s){entries.push(s);shapes.push(s);}};};
+ const line=(points,options)=>({addTo(g){g.add({points,options});}}),L={map:()=>map,tileLayer:()=>({addTo(){return this;},on(){return this;}}),layerGroup:group,polygon:line,polyline:line,circle:line,circleMarker:line};
+ const doc={querySelectorAll:()=>[el]},original=globalThis.fetch;let calls=0,request;
+ globalThis.fetch=async url=>{calls++;request=new URL(url);return {ok:true,json:async()=>({current:{time:Math.floor(now/1000),wind_speed_10m:5,wind_direction_10m:270,temperature_2m:16,relative_humidity_2m:60,wind_gusts_10m:8,precipitation:0}})};};
+ try{mountGpsMaps({document:doc,L,ResizeObserver:null});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls,1);assert.equal(request.hostname,'api.open-meteo.com');assert.equal(request.searchParams.get('latitude'),'48.29');assert.equal(shapes.filter(s=>s.options.fillColor==='#bca7ef').length,2);assert.match(status.textContent,/Open-Meteo/);mountGpsMaps({document:doc,L,ResizeObserver:null});await new Promise(resolve=>setImmediate(resolve));assert.equal(calls,1);root.dataset.gpsCorridorAllowed='false';mountGpsMaps({document:doc,L,ResizeObserver:null});assert.equal(shapes.filter(s=>s.options.fillColor==='#bca7ef').length,0);}finally{destroyGpsMaps();globalThis.fetch=original;}
+});

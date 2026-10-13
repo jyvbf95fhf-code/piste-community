@@ -17,7 +17,7 @@ Raccorder le moteur scent-corridor-engine@1.0 existant aux cockpits GPS Coaching
 - Correction manuelle explicite, bornée, locale à la session ; retour à la météo automatique disponible.
 - Les valeurs absentes restent absentes. Sans vitesse/direction du vent ou pose exploitable : estimation indisponible.
 - Couloir par défaut actif quand les entrées sont disponibles, ON/OFF dans le menu existant ; géométries translucides, sans recentrage automatique.
-- Activation automatique du réseau en attente d’une autorisation explicite de transmettre la cellule GPS arrondie au fournisseur Open-Meteo ; automaticAuthorized=false dans cette Preview. Les tests réseau utilisent des réponses injectées, sans transfert réel.
+- Envoi de la cellule GPS arrondie à Open-Meteo explicitement autorisé par l’utilisateur le 13/10/2026. Activation au montage du cockpit autorisé ; contrôleur générique fermé par défaut. Aucun envoi d’identité ni du tracé complet.
 - Météo ancienne : état explicite et confiance réduite. La confiance décrit la qualité des entrées, pas une probabilité d’odeur.
 
 ## Limites de ce bloc
