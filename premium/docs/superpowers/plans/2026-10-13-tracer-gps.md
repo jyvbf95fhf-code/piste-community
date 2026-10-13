@@ -41,8 +41,8 @@ Callbacks d'une ancienne session ; clôture suivie d'un rechargement ; mauvaise 
 ### 4. Livraison
 
 - [x] Revue indépendante de la branche, corrections ciblées si nécessaire.
-- [ ] Vérification GitHub de l'arbre puis déploiement Preview protégé autorisé.
-- [ ] Parcours navigateur, refus GPS, fond réel et conservation/reprise. Rapport et lien iPhone ; précision matérielle à valider sur l'iPhone utilisateur.
+- [x] Vérification GitHub de l'arbre puis déploiement Preview protégé autorisé.
+- [x] Parcours navigateur, refus GPS, fond réel et conservation/reprise. Rapport et lien iPhone ; précision matérielle à valider sur l'iPhone utilisateur.
 
 ## Rulings / progression
 
