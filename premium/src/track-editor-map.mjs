@@ -14,6 +14,7 @@ const routePath=(points,index)=>{
 const pointName=(point,index)=>point.kind==='start'?'Départ':point.kind==='arrival'?'Arrivée':`Point intermédiaire ${index}`;
 
 export function TrackEditorMap(draft,{selectedPointId=null}={}){
+ if(draft.coordinateSpace==='wgs84')return `<div class="track-editor-map-wrap"><div class="track-geographic-map" data-editor-real-map ${draft.readOnly?`data-readonly="true" data-route="${e(JSON.stringify(draft))}"`:''} aria-label="Carte réelle du parcours préparé"></div><p data-editor-map-status role="status"></p></div>`;
  const basemap=['standard','topographic','satellite'].includes(draft.basemap)?draft.basemap:'standard';
  const points=draft.points||[];
  const segments=points.slice(1).map((point,index)=>point.breakBefore?'':`<path class="track-editor-segment ${point.incomingMode==='follow'?'is-follow':'is-free'}" data-editor-segment="${index+1}" data-mode="${e(point.incomingMode||'free')}" d="${e(routePath(points,index+1))}" fill="none"><title>${point.incomingMode==='follow'?'Rues / chemins · simulation':'Libre'} · segment ${index+1}</title></path>`).join('');

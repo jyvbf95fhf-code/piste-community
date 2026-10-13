@@ -115,9 +115,9 @@ export function selectPreparation(draft,track,action=null) {
  if(!['prepared','gpx'].includes(draft.traceType))throw Error('Cette méthode ne demande pas de préparation.');
  if(preparation(draft)==='delegated')throw Error('Votre visibilité ne permet pas de sélectionner la piste.');
  if(!track?.id||!track.name||(draft.traceType==='gpx'&&track.source!=='gpx'))throw Error('Choisissez un tracé compatible.');
- const {id,name,source,ownerId=null,fileName,start}=track;
+ const {id,name,source,ownerId=null,fileName,start,geometry}=track;
  const next=retainPreparationAction(draft,action,'reference-selection',{referenceId:id,beneficiaryParticipantId:null});
- return {...next,preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{})},knownPeople:[...new Set([...draft.knownPeople,'self',...(ownerId?[ownerId]:[])])],session:null};
+ return {...next,preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{}),...(geometry?.points?.every(p=>p.space==='wgs84')?{geometry:structuredClone(geometry)}:{})},knownPeople:[...new Set([...draft.knownPeople,'self',...(ownerId?[ownerId]:[])])],session:null};
 }
 export function syncPreparation(draft,items) {
  if(draft.session||draft.traceType!=='prepared'||!draft.preparationTrack)return draft;
@@ -190,8 +190,8 @@ export function mockInvitation(session) {
 }
 
 export function draftFromTrack(user,dogs,track,action=null) {
- const {id,name,source,ownerId=null,fileName,start}=track;
+ const {id,name,source,ownerId=null,fileName,start,geometry}=track;
  if(!id||!name)throw Error('Choisissez un tracé.');
  const next=retainPreparationAction(createDraft(user,dogs),action,'reference-selection',{referenceId:id,beneficiaryParticipantId:null});
- return {...next,traceType:'prepared',preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{})},knownPeople:[...new Set(['self',...(ownerId?[ownerId]:[])])]};
+ return {...next,traceType:'prepared',preparationTrack:{id,name,source,ownerId,...(fileName?{fileName}:{}),...(start?{start:structuredClone(start)}:{}),...(geometry?.points?.every(p=>p.space==='wgs84')?{geometry:structuredClone(geometry)}:{})},knownPeople:[...new Set(['self',...(ownerId?[ownerId]:[])])]};
 }

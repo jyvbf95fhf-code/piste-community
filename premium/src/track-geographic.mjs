@@ -1,0 +1,3 @@
+export function geographicCoordinates({x,y}){if(typeof x!=='number'||typeof y!=='number'||!Number.isFinite(x)||!Number.isFinite(y)||Math.abs(x)>180||Math.abs(y)>90)throw Error('Coordonnées géographiques invalides.');return {x,y,space:'wgs84'};}
+export function geographicDistance(a,b){const rad=v=>v*Math.PI/180,dy=rad(b.y-a.y),dx=rad(b.x-a.x),h=Math.sin(dy/2)**2+Math.cos(rad(a.y))*Math.cos(rad(b.y))*Math.sin(dx/2)**2;return 6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));}
+export const trackDeparture=p=>p.space==='wgs84'?{longitude:p.x,latitude:p.y,space:'wgs84'}:{x:p.x,y:p.y,space:'mock-map'};

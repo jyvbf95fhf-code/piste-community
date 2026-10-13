@@ -1,6 +1,8 @@
+import {TrackEditorMap} from './track-editor-map.mjs';
 import {escapeHTML as e} from './components.mjs';
 // Fixed fictional viewport. Hidden actors/paths are omitted, never concealed by CSS.
 export function MapShell(view,{viewBox='0 0 360 300',postSession=false,operational=null}={}){
+ if(Object.hasOwn(view,'geographicRoute'))return TrackEditorMap({coordinateSpace:'wgs84',points:view.geographicRoute,readOnly:true});
  const contours=Array.from({length:9},(_,i)=>`<path d="M${-60+i*25} 320 C${155+i*9} 235 ${-15+i*25} 120 ${110+i*38} -25"/>`).join('');
  const showStart=view.showStart!==false;
  const operationalMarkup=operational?operationalLayers(operational):'';

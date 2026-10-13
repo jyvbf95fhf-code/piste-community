@@ -1,0 +1,12 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {mountTrackEditorMap,disposeTrackEditorMap,centerTrackEditorMap} from '../src/track-editor-real-map.mjs';
+function fixture(){const maps=[],markers=[],tiles=[],status={textContent:''},element={dataset:{},parentElement:{querySelector:()=>status}},doc={querySelector:()=>element};
+ const make=()=>({events:{},on(k,v){this.events[k]=v;return this;},addTo(target){target.items?.push(this);return this;}});
+ const L={map:()=>{const m={...make(),setView(c,z){this.c=c;this.z=z;return this;},getCenter(){return {lat:this.c[0],lng:this.c[1]};},getZoom(){return this.z;},fitBounds(){return this;},remove(){this.removed=true;},removeLayer(){},invalidateSize(){}};maps.push(m);return m;},layerGroup:()=>({...make(),items:[],eachLayer(fn){this.items.forEach(fn);}}),tileLayer:(url)=>{const t={...make(),url};tiles.push(t);return t;},polyline:()=>make(),divIcon:o=>o,marker:(latlng,options)=>{const m={...make(),latlng,options,getLatLng(){return {lat:this.latlng[0],lng:this.latlng[1]};}};markers.push(m);return m;}};
+ return {L,doc,element,maps,markers,tiles,status};}
+test('real map clicks and drags use lat/lon and late callbacks are disposed',()=>{const f=fixture(),added=[],moved=[],views=[];mountTrackEditorMap({document:f.doc,L:f.L,ResizeObserver:null,draft:{points:[{id:'d',x:7,y:48,space:'wgs84',kind:'start'}]},onAdd:p=>added.push(p),onMove:(id,p)=>moved.push({id,p}),onView:v=>views.push(v)});
+ f.maps[0].events.click({latlng:{lat:48.1,lng:7.1}});assert.deepEqual(added,[{x:7.1,y:48.1}]);
+ f.markers[0].latlng=[48.2,7.2];f.markers[0].events.dragend();assert.deepEqual(moved,[{id:'d',p:{x:7.2,y:48.2}}]);assert.ok(views.length);
+ disposeTrackEditorMap();f.maps[0].events.click({latlng:{lat:49,lng:8}});assert.equal(added.length,1);assert.equal(f.maps[0].removed,true);
+});
+test('aerial falls back to Plan, and read-only maps do not modify points',()=>{const f=fixture();f.element.dataset={readonly:'true',route:JSON.stringify({basemap:'satellite',points:[{x:7,y:48,kind:'start'}]})};mountTrackEditorMap({document:f.doc,L:f.L,ResizeObserver:null});assert.equal(f.markers[0].options.draggable,false);assert.equal(f.maps[0].events.click,undefined);f.tiles[0].events.tileerror();assert.match(f.tiles[1].url,/openstreetmap/);assert.match(f.status.textContent,/fond Plan/);assert.throws(()=>centerTrackEditorMap(91,7));disposeTrackEditorMap();});

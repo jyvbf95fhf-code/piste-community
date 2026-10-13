@@ -1,3 +1,4 @@
+import {geographicCoordinates,trackDeparture} from './track-geographic.mjs';
 // Reusable track metadata lives only in this page's memory. No real route is drawn.
 // Normalized reference departure in drawing units; no GPX parsing or real coordinates.
 const mockStart=()=>({x:70,y:242,space:'mock-map'});
@@ -13,11 +14,12 @@ const seed=[
 const validName=value=>{const name=String(value || '').trim();if(!name || name.length>80)throw Error('Choisissez un nom de 1 à 80 caractères.');return name;};
 const validPoints=value=>{
  if(!Array.isArray(value)||value.length<2)throw Error('Un tracé modifiable doit contenir au moins deux points.');
+ const geo=value.every(p=>p.space==='wgs84');if(!geo&&value.some(p=>p.space==='wgs84'))throw Error('Espaces de coordonnées incompatibles.');
  return value.map((point,index)=>{
   const x=Number(point.x),y=Number(point.y);
-  if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>360||y<0||y>300)throw Error('Coordonnée de tracé invalide.');
+  if(!geo&&(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>360||y<0||y>300))throw Error('Coordonnée de tracé invalide.');
   const breakBefore=index>0&&Boolean(point.breakBefore);
-  return {id:String(point.id||`saved-point-${index+1}`),x,y,kind:index===0?'start':point.kind==='arrival'&&index===value.length-1?'arrival':'via',breakBefore,incomingMode:index===0||breakBefore?null:['free','follow'].includes(point.incomingMode)?point.incomingMode:'free'};
+  return {id:String(point.id||`saved-point-${index+1}`),...(geo?geographicCoordinates({x,y}):{x,y}),kind:index===0?'start':point.kind==='arrival'&&index===value.length-1?'arrival':'via',breakBefore,incomingMode:index===0||breakBefore?null:['free','follow'].includes(point.incomingMode)?point.incomingMode:'free'};
  });
 };
 const optionalText=(value,max=240)=>String(value??'').trim().slice(0,max);
@@ -34,7 +36,7 @@ export function createTrackLibrary() {
   createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',geometry,copiedFrom}={}) {
    if(!['draw','gpx'].includes(source))throw Error('Provenance source inconnue.');
    const points=validPoints(geometry?.points);
-   return insert({name:validName(name),source,provenance,...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),geometry:{points},start:{x:points[0].x,y:points[0].y,space:'mock-map'}});
+   return insert({name:validName(name),source,provenance,...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),geometry:{points},start:trackDeparture(points[0])});
   },
   updatePrepared(id,patch={}) {
    const current=find(id);
@@ -42,7 +44,7 @@ export function createTrackLibrary() {
    const next={...current};
    for(const key of ['name','description','category','difficulty','dogId','notes'])if(Object.hasOwn(patch,key))next[key]=key==='name'?validName(patch[key]):optionalText(patch[key],key==='notes'?1000:key==='description'?240:80);
    if(Object.hasOwn(patch,'geometry'))next.geometry={points:validPoints(patch.geometry?.points)};
-   if(next.geometry?.points?.length)next.start={x:next.geometry.points[0].x,y:next.geometry.points[0].y,space:'mock-map'};
+   if(next.geometry?.points?.length)next.start=trackDeparture(next.geometry.points[0]);
    items=items.map(item=>item.id===id?next:item);return copy(next);
   },
   duplicatePrepared(id,{name}={}) {
