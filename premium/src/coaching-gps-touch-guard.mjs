@@ -8,16 +8,25 @@ export function createGpsTouchGuard({onLock=()=>{},onUnlock=()=>{},setTimeout=gl
 
 // Keep the hold owned by the button instead of Safari's text/callout gestures.
 export function bindGpsTouchUnlock(button,guard){
- let pointerId=null;
+ let pointerId=null,touchId=null;
+ const cancel=()=>{
+  const id=pointerId;pointerId=null;touchId=null;guard.release();
+  delete button.dataset.holdActive;
+  try{if(id!==null&&button.hasPointerCapture?.(id))button.releasePointerCapture(id);}catch{}
+ };
+ const outside=point=>{
+  const r=button.getBoundingClientRect();
+  return point.clientX<r.left||point.clientX>r.right||point.clientY<r.top||point.clientY>r.bottom;
+ };
  const release=event=>{
   if(pointerId===null||event.pointerId!==pointerId)return;
-  const id=pointerId;pointerId=null;guard.release();
-  try{if(button.hasPointerCapture?.(id))button.releasePointerCapture(id);}catch{}
+  cancel();
  };
  button.addEventListener('pointerdown',event=>{
-  if(event.isPrimary===false||event.button!==0||pointerId!==null)return;
+  if(event.pointerType==='touch'||touchId!==null||event.isPrimary===false||event.button!==0||pointerId!==null)return;
   event.preventDefault();pointerId=event.pointerId;
   try{button.setPointerCapture?.(pointerId);}catch{}
+  button.dataset.holdActive='true';
   guard.press();
  });
  for(const name of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(name,release);
@@ -26,8 +35,24 @@ export function bindGpsTouchUnlock(button,guard){
  });
  button.addEventListener('pointermove',event=>{
   if(event.pointerId!==pointerId)return;
-  const r=button.getBoundingClientRect();
-  if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)release(event);
+  if(outside(event))release(event);
  });
+ // Touch Events are handled directly in iPhone web views as well as Safari.
+ button.addEventListener('touchstart',event=>{
+  event.preventDefault();
+  if(touchId!==null||pointerId!==null)return;
+  if(event.touches.length!==1)return;
+  touchId=event.touches[0].identifier;button.dataset.holdActive='true';guard.press();
+ },{passive:false});
+ button.addEventListener('touchmove',event=>{
+  if(touchId===null)return;event.preventDefault();
+  const touch=[...event.touches].find(point=>point.identifier===touchId);
+  if(!touch||event.touches.length!==1||outside(touch))cancel();
+ },{passive:false});
+ button.addEventListener('touchend',event=>{
+  if(touchId!==null&&[...event.changedTouches].some(point=>point.identifier===touchId))cancel();
+ });
+ button.addEventListener('touchcancel',()=>{if(touchId!==null)cancel();});
  button.addEventListener('contextmenu',event=>event.preventDefault());
+ return cancel;
 }

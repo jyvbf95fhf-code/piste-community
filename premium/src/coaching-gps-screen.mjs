@@ -24,9 +24,9 @@ function setBase(row,id){if(row.base===id)return;const def=GPS_BASE_LAYERS[id],o
 export function selectGpsBaseLayer(id){if(!Object.hasOwn(GPS_BASE_LAYERS,id))return false;preferredBase=id;for(const row of mounted)if(row.root)setBase(row,id);return true;}
 function bindMapControls(root){if(!root||boundControls.has(root))return;boundControls.add(root);syncBaseControls(root,preferredBase);
  const panel=root.querySelector?.('.gps-touch-lock-panel'),unlockButton=root.querySelector?.('[data-gps-touch-unlock]'),keyboard=root.querySelector?.('[data-gps-touch-keyboard]');
- let inert=[];
- const guard=panel?createGpsTouchGuard({onLock:()=>{inert=[...root.children].filter(el=>el!==panel).map(el=>[el,el.inert]);for(const [el] of inert)el.inert=true;panel.hidden=false;unlockButton.focus();},onUnlock:()=>{panel.hidden=true;for(const [el,value] of inert)el.inert=value;root.querySelector('[data-gps="touch-lock"]')?.focus();}}):null;
- if(guard){touchGuards.set(root,guard);bindGpsTouchUnlock(unlockButton,guard);keyboard.addEventListener('click',event=>{if(event.detail===0)guard.unlock();});}
+ let inert=[],cancelHold=()=>{};
+ const guard=panel?createGpsTouchGuard({onLock:()=>{inert=[...root.children].filter(el=>el!==panel).map(el=>[el,el.inert]);for(const [el] of inert)el.inert=true;panel.hidden=false;unlockButton.focus();},onUnlock:()=>{cancelHold();panel.hidden=true;for(const [el,value] of inert)el.inert=value;root.querySelector('[data-gps="touch-lock"]')?.focus();}}):null;
+ if(guard){touchGuards.set(root,guard);cancelHold=bindGpsTouchUnlock(unlockButton,guard);keyboard.addEventListener('click',event=>{if(event.detail===0)guard.unlock();});}
  root.addEventListener?.('click',event=>{const center=event.target.closest?.('[data-gps-center]'),choice=event.target.closest?.('[data-gps-layer]'),lock=event.target.closest?.('[data-gps="touch-lock"]');if(lock){guard?.lock();return;}if(center){centerGpsMap();return;}if(choice){selectGpsBaseLayer(choice.dataset.gpsLayer);syncBaseControls(root,preferredBase);const picker=choice.closest('.gps-layer-picker');if(picker)picker.open=false;}});
 }
 export function destroyGpsMaps(){for(const guard of touchGuards.values())guard.dispose();touchGuards.clear();for(const row of mounted){row.corridor?.dispose();row.resizeObserver?.disconnect();row.map.remove();}mounted=[];}

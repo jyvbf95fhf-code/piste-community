@@ -148,3 +148,7 @@
  border-radius:8px;background:#19374a;color:#dcecf5;
  font-size:11px;line-height:1.4;text-shadow:none;
 }
+
+[data-gps-live] .gps-touch-lock-panel [data-gps-touch-unlock]{position:relative;overflow:hidden;isolation:isolate}
+[data-gps-live] [data-gps-touch-unlock]::before{content:"";position:absolute;z-index:-1;inset:0;background:#5aafbc55;transform:scaleX(0);transform-origin:left}
+[data-gps-live] [data-gps-touch-unlock][data-hold-active]::before{transform:scaleX(1);transition:transform 2s linear}

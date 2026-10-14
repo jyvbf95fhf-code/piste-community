@@ -24,10 +24,26 @@ test('Safari context menu is suppressed without cancelling the held touch',()=>{
  const f=fixture();f.send('pointerdown');assert.equal(f.send('contextmenu'),true);assert.equal(f.pending.size,1);
  [...f.pending.values()][0]();assert.equal(f.unlocks(),1);
 });
+test('iPhone native touch holds for two seconds without requiring pointer events',()=>{
+ const f=fixture(),touch={identifier:7,clientX:30,clientY:30};
+ assert.equal(f.send('touchstart',{touches:[touch]}),true);
+ assert.equal(f.button.dataset.holdActive,'true');assert.equal(f.pending.size,1);
+ f.send('pointerdown',{pointerType:'touch'});assert.equal(f.pending.size,1);
+ [...f.pending.values()][0]();assert.equal(f.unlocks(),1);
+ f.send('touchend',{changedTouches:[touch]});assert.equal(f.button.dataset.holdActive,undefined);
+});
+test('native touch short press, leaving the target and cancellation stay locked',()=>{
+ const touch={identifier:7,clientX:30,clientY:30};
+ for(const end of ['touchend','touchmove','touchcancel']){
+  const f=fixture();f.send('touchstart',{touches:[touch]});
+  f.send(end,{touches:[{...touch,clientX:250}],changedTouches:[touch]});
+  assert.equal(f.pending.size,0);assert.equal(f.unlocks(),0);assert.equal(f.button.dataset.holdActive,undefined);
+ }
+});
 test('mounted GPS cockpit unlocks after two seconds and restores controls without GPS mutation',t=>{
  t.mock.timers.enable({apis:['setTimeout']});
  const listeners={},panel={hidden:true},child={inert:false},keyboard={addEventListener(){}};
- const button={addEventListener:(name,fn)=>listeners[name]=fn,focus(){},setPointerCapture(){},hasPointerCapture:()=>false};
+ const button={dataset:{},addEventListener:(name,fn)=>listeners[name]=fn,focus(){},setPointerCapture(){},hasPointerCapture:()=>false};
  let click;
  const root={children:[child,panel],dataset:{},querySelector:selector=>selector==='.gps-touch-lock-panel'?panel:selector==='[data-gps-touch-unlock]'?button:selector==='[data-gps-touch-keyboard]'?keyboard:null,querySelectorAll:()=>[],addEventListener:(name,fn)=>{if(name==='click')click=fn;}};
  const gps={segments:[],distanceM:0,elapsedMs:0},before=JSON.stringify(gps);
@@ -36,7 +52,7 @@ test('mounted GPS cockpit unlocks after two seconds and restores controls withou
   mountGpsMaps({document:{querySelectorAll:()=>[element]},L:null,livePose:gps});
   click({target:{closest:selector=>selector==='[data-gps="touch-lock"]'?{}:null}});
   assert.equal(panel.hidden,false);assert.equal(child.inert,true);
-  listeners.pointerdown({pointerId:1,button:0,isPrimary:true,preventDefault(){}});
+  listeners.touchstart({touches:[{identifier:7}],preventDefault(){}});
   t.mock.timers.tick(1999);assert.equal(panel.hidden,false);
   t.mock.timers.tick(1);assert.equal(panel.hidden,true);assert.equal(child.inert,false);
   assert.equal(JSON.stringify(gps),before);
