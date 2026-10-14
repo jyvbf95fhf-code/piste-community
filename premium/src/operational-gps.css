@@ -109,3 +109,12 @@
 
 /* The ready mission start is below the map, rather than at the page footer. */
 .operational-mission[data-operational-tracking-state="ready"]>.operational-field-actions{padding-bottom:8px}
+
+.operational-intake-form>.operational-place-options{border:1px solid #9dbad642;border-radius:14px;padding:12px}
+.operational-place-options>summary{min-height:44px;display:flex;align-items:center;gap:6px;cursor:pointer;list-style:none;color:#c5dce7;font-weight:600}
+.operational-place-options>summary::-webkit-details-marker{display:none}
+.operational-place-options>summary span{font-weight:400;color:#b8c9d3}
+.operational-place-options>summary::after{content:"⌄";margin-left:auto}
+.operational-place-options[open]>summary::after{transform:rotate(180deg)}
+.operational-place-options>div{display:grid;gap:14px;padding-top:12px}
+.app-shell[data-module-theme="operational"] .operational-intake-form>.operational-create-mission{background:linear-gradient(145deg,#19334f,#091729);border:1px solid #9dbad65c;color:#f3f7fb;box-shadow:0 5px 18px #0003,inset 0 1px #ffffff24}
