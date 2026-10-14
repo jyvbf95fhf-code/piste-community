@@ -62,6 +62,7 @@
 [data-gps-live]>.gps-touch-lock-panel{position:absolute;inset:0;z-index:90;background:#07151ff5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:30px;text-align:center}
 [data-gps-live]>.gps-touch-lock-panel[hidden]{display:none}
 [data-gps-live] .gps-touch-lock-panel button{min-height:56px;border:1px solid #8dd2df88;border-radius:18px;background:#142f3e;color:#eaf3f5;padding:15px;font:inherit;touch-action:none}
+[data-gps-live] .gps-touch-lock-panel [data-gps-touch-unlock]{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 [data-gps-live] .gps-touch-lock-panel [data-gps-touch-keyboard]{position:absolute;left:-9999px}
 [data-gps-live] .gps-touch-lock-panel [data-gps-touch-keyboard]:focus{position:static}
 

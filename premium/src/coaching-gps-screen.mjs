@@ -1,6 +1,6 @@
 import {drawRouteEndpointMarkers} from './route-endpoint-markers.mjs';
 import {createGpsCorridorController} from './coaching-corridor-controller.mjs';
-import {createGpsTouchGuard} from './coaching-gps-touch-guard.mjs';
+import {createGpsTouchGuard,bindGpsTouchUnlock} from './coaching-gps-touch-guard.mjs';
 import {GpsButton,GpsMapStage,GpsTouchLockMarkup} from './coaching-gps-ui.mjs';
 import {escapeHTML as e} from './components.mjs';
 const labels={idle:'GPS à activer',acquiring:'Acquisition GPS en cours',fresh:'Position GPS reçue',poor:'Point exclu · précision ou date insuffisante',stale:'GPS sans position récente · coupure conservée',hidden:'GPS suspendu · reprendre explicitement',denied:'Localisation refusée · autorisez Safari puis réessayez',unsupported:'Localisation non disponible dans ce navigateur',unavailable:'GPS indisponible · réessayez'};
@@ -26,7 +26,7 @@ function bindMapControls(root){if(!root||boundControls.has(root))return;boundCon
  const panel=root.querySelector?.('.gps-touch-lock-panel'),unlockButton=root.querySelector?.('[data-gps-touch-unlock]'),keyboard=root.querySelector?.('[data-gps-touch-keyboard]');
  let inert=[];
  const guard=panel?createGpsTouchGuard({onLock:()=>{inert=[...root.children].filter(el=>el!==panel).map(el=>[el,el.inert]);for(const [el] of inert)el.inert=true;panel.hidden=false;unlockButton.focus();},onUnlock:()=>{panel.hidden=true;for(const [el,value] of inert)el.inert=value;root.querySelector('[data-gps="touch-lock"]')?.focus();}}):null;
- if(guard){touchGuards.set(root,guard);unlockButton.addEventListener('pointerdown',()=>guard.press());for(const name of ['pointerup','pointercancel','pointerleave'])unlockButton.addEventListener(name,()=>guard.release());keyboard.addEventListener('click',event=>{if(event.detail===0)guard.unlock();});}
+ if(guard){touchGuards.set(root,guard);bindGpsTouchUnlock(unlockButton,guard);keyboard.addEventListener('click',event=>{if(event.detail===0)guard.unlock();});}
  root.addEventListener?.('click',event=>{const center=event.target.closest?.('[data-gps-center]'),choice=event.target.closest?.('[data-gps-layer]'),lock=event.target.closest?.('[data-gps="touch-lock"]');if(lock){guard?.lock();return;}if(center){centerGpsMap();return;}if(choice){selectGpsBaseLayer(choice.dataset.gpsLayer);syncBaseControls(root,preferredBase);const picker=choice.closest('.gps-layer-picker');if(picker)picker.open=false;}});
 }
 export function destroyGpsMaps(){for(const guard of touchGuards.values())guard.dispose();touchGuards.clear();for(const row of mounted){row.corridor?.dispose();row.resizeObserver?.disconnect();row.map.remove();}mounted=[];}
