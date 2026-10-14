@@ -8,7 +8,7 @@ export function TrackPreview() {
  return `<div class="track-preview" role="img" aria-label="Illustration d’un parcours fictif, sans carte ni coordonnées"><svg viewBox="0 0 320 150" fill="none" aria-hidden="true"><path d="M0 30h320M0 70h320M0 110h320M40 0v150M100 0v150M160 0v150M220 0v150M280 0v150" class="track-preview-grid"/><path d="M45 113c-10-48 105 12 117-32s56-40 104-44" class="track-preview-line"/><circle cx="45" cy="113" r="6"/><circle cx="266" cy="37" r="6"/></svg><span>APERÇU FICTIF · DESSIN À VENIR</span></div>`;
 }
 export function TrackBuilderScreen(state,items) {
- if(state?.editorDraft)return TrackEditorScreen({draft:state.editorDraft,tracks:items,dogs:state.dogs||[],results:state.results||[],fixtures:state.fixtures||[],selectedPointId:state.selectedPointId||null,nextPointKind:state.nextPointKind||'via',notice:state.notice||'',error:state.error||'',metadataOpen:state.metadataOpen!==false});
+ if(state?.editorDraft)return TrackEditorScreen({draft:state.editorDraft,tracks:items,dogs:state.dogs||[],results:state.results||[],fixtures:state.fixtures||[],selectedPointId:state.selectedPointId||null,nextPointKind:state.nextPointKind||'via',notice:state.notice||'',error:state.error||'',smartState:state.smartState,premiumAccess:state.premiumAccess,metadataOpen:state.metadataOpen!==false});
  const selected=items.find(t=>t.id===state.selectedId);
  const editor=['new','import','edit'].includes(state.view);
  const file=gpxFixtures.find(f=>f.id===state.fileId);

@@ -77,3 +77,22 @@
 [data-track-cockpit] [data-editor-gpx-file]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
 [data-track-cockpit] .creator-gpx-placeholder button:not(:disabled){opacity:1;cursor:pointer}
 [data-track-cockpit] .creator-gpx-placeholder button:not(:disabled):hover{background:#1b3a50}
+
+[data-track-cockpit] .smart-premium-badge{display:inline-block;font-size:9px;letter-spacing:.08em;border:1px solid #d4b57470;color:#e5c17c;border-radius:6px;padding:3px 6px;margin-left:6px;vertical-align:middle}
+[data-track-cockpit] .creator-smart>summary{background:linear-gradient(110deg,#9c713922,#152c42)}
+[data-track-cockpit] .creator-smart form,[data-track-cockpit] .smart-criteria{display:grid;gap:12px;margin:0}
+[data-track-cockpit] .creator-smart label{display:grid;gap:6px;font-size:13px}
+[data-track-cockpit] .creator-smart input,[data-track-cockpit] .creator-smart select{width:100%;min-width:0;box-sizing:border-box;padding:12px;border:1px solid #8ba8bd50;border-radius:10px;background:#081b2e;color:#f1f5f7;font:inherit;font-size:16px}
+[data-track-cockpit] .creator-smart p{font-size:13px;line-height:1.5;margin:0}
+[data-track-cockpit] .creator-smart small{font-size:11px;line-height:1.5;color:#b4cad4}
+[data-track-cockpit] .smart-communes,[data-track-cockpit] .smart-proposals{display:grid;gap:10px}
+[data-track-cockpit] .smart-communes button{display:grid;gap:4px;text-align:left;padding:12px;border:1px solid #d4b57450;border-radius:12px;background:#18334b;color:#f1f5f7;font:inherit;cursor:pointer}
+[data-track-cockpit] .smart-selected{color:#ebd39d}
+[data-track-cockpit] .smart-proposal{display:grid;gap:8px;padding:12px;border:1px solid #bba76d45;border-radius:14px;background:#091e31}
+[data-track-cockpit] .smart-proposal h3{font-size:15px;display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin:0}
+[data-track-cockpit] .smart-miniature{height:72px;width:100%;background:#102a3e;border-radius:8px}
+[data-track-cockpit] .smart-miniature path{fill:none;stroke:#e5c17c;stroke-width:2}
+[data-track-cockpit] .smart-miniature circle{fill:#62c6c7;stroke:#f1dfb4;stroke-width:1}
+[data-track-cockpit] .smart-partial{color:#f1c984}
+[data-track-cockpit] .smart-note{border-top:1px solid #a8bdca30;padding-top:10px}
+[data-track-cockpit] .smart-feedback{padding:10px;border-radius:10px;background:#214059}

@@ -1,0 +1,16 @@
+import {validateSmartOptions} from './track-smart-engine.mjs';
+const finiteCenter=c=>Array.isArray(c)&&c.length===2&&Number.isFinite(c[0])&&Math.abs(c[0])<=180&&Number.isFinite(c[1])&&Math.abs(c[1])<=90;
+export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,timeoutMs=35000}={}){
+ const cache=new Map();
+ async function request(url,{signal}={}){const controller=new AbortController(),abort=()=>controller.abort();if(signal?.aborted)abort();signal?.addEventListener('abort',abort,{once:true});const timer=setTimeout(abort,timeoutMs);
+  try{const response=await fetch(url,{signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer',headers:{Accept:'application/json'}});if(!response.ok)throw Error('Service cartographique indisponible. Réessayez plus tard.');if(Number(response.headers?.get('content-length'))>10000000)throw Error('Zone trop dense. Réduisez la distance.');return await response.json();}
+  catch(error){if(error.name==='AbortError')throw Error('Recherche interrompue ou trop longue.');throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
+ }
+ return {
+  async searchCommunes(query,{signal}={}){const q=String(query||'').trim();if(q.length<2||q.length>80)throw Error('Renseignez un nom de commune ou un code postal.');const params=new URLSearchParams({fields:'nom,code,centre,codesPostaux,departement',limit:'8',boost:'population',...(/^\d{5}$/.test(q)?{codePostal:q}:{nom:q})});const data=await request('https://geo.api.gouv.fr/communes?'+params,{signal});if(!Array.isArray(data))throw Error('Réponse commune invalide.');return data.slice(0,8).filter(c=>typeof c.nom==='string'&&/^(?:\d{5}|2[AB]\d{3})$/.test(c.code)&&finiteCenter(c.centre?.coordinates)).map(c=>({code:c.code,name:c.nom,center:c.centre.coordinates,department:c.departement?.nom||c.code.slice(0,2)}));},
+  async loadNetwork(commune,distanceKm,{signal}={}){const options=validateSmartOptions({commune,distanceKm,terrain:'mixed',transitions:'any'}),radius=Math.round(Math.min(6000,Math.max(1200,options.distanceKm*700+1000))),key=JSON.stringify([commune.code,commune.center,radius]),saved=cache.get(key);if(saved&&clock()-saved.at<900000)return saved.data;
+   const [lon,lat]=commune.center,query=`[out:json][timeout:25][maxsize:10000000];way(around:${radius},${lat},${lon})[highway~"^(residential|living_street|pedestrian|service|unclassified|tertiary|tertiary_link|footway|path|track|cycleway|steps)$"];out body;>;out body qt;`;
+   const data=await request('https://overpass-api.de/api/interpreter?'+new URLSearchParams({data:query}),{signal});if(!Array.isArray(data?.elements)||data.elements.length>150000||data.remark)throw Error('Données cartographiques incomplètes. Réessayez plus tard.');if(signal?.aborted)throw Error('Recherche interrompue.');cache.set(key,{at:clock(),data});while(cache.size>2)cache.delete(cache.keys().next().value);return data;
+  }
+ };
+}
