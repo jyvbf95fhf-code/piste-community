@@ -16,7 +16,7 @@ export function advanceTracer(state,prep,action,{now=Date.now}={}){
   if(s.gpsPose.phase==='before'&&action==='approach'&&['before','approaching'].includes(s.phase)&&v.knownStart){s.phase='approaching';return s;}
   if(s.gpsPose.phase==='before'&&action==='arrive'&&s.phase==='approaching'){s.phase='arrived';return s;}
   if(s.gpsPose.phase==='before'&&action==='ready'&&s.phase==='arrived'&&prep.phase==='ready'){s.phase='before';return s;}
-  if(action==='start'&&s.phase==='before'&&prep.phase==='ready'&&!needsSessionReference(prep)){s.phase='active';s.origin=null;s.originSource=null;s.originCursor=null;s.startPointMissing=true;s.gap=true;s.gpsPose=startGpsPose(s.gpsPose,now());return s;}
+  if(action==='start'&&s.phase==='before'&&(prep.productScenario==='external_driver_recorded'?prep.phase==='created':prep.phase==='ready')&&!needsSessionReference(prep)){s.phase='active';s.origin=null;s.originSource=null;s.originCursor=null;s.startPointMissing=true;s.gap=true;s.gpsPose=startGpsPose(s.gpsPose,now());return s;}
   if(action==='finish'&&s.phase==='active'){s.phase='finished';s.gpsPose=finishGpsPose(s.gpsPose,now());return s;}
   if(action==='in-place'&&s.phase==='finished'){s.phase='in_place';return s;}
   throw Error('Commande simulée indisponible pendant une pose GPS réelle.');
