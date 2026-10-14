@@ -1,0 +1,5 @@
+import {segmentCoordinates,trackHasPendingRoutes} from './track-route-segments.mjs';
+const valid=p=>p?.space==='wgs84'&&Number.isFinite(p.x)&&Math.abs(p.x)<=180&&Number.isFinite(p.y)&&Math.abs(p.y)<=90;
+export function hasGeographicReference(session){const points=session?.preparation?.geometry?.points;return ['prepared','gpx'].includes(session?.traceType)&&Array.isArray(points)&&points.length>=2&&points.every(valid)&&!trackHasPendingRoutes(points);}
+export const gpsReferenceEligible=session=>['direct','none'].includes(session?.traceType)&&!session.preparation||hasGeographicReference(session);
+export function preparedReferenceGeometry(points){if(!Array.isArray(points)||!points.length||!points.every(valid)||trackHasPendingRoutes(points))return null;const fix=p=>({latitude:p.y,longitude:p.x});const segments=[[fix(points[0])]];for(let i=1;i<points.length;i++){const coords=segmentCoordinates(points[i-1],points[i]);if(!coords.length)segments.push([fix(points[i])]);else segments.at(-1).push(...coords.slice(1).map(([longitude,latitude])=>({latitude,longitude})));}return {provenance:'prepared-geographic',phase:points.length>1?'finished':'before',segments};}

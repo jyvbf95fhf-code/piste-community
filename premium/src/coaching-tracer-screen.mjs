@@ -1,3 +1,5 @@
+import {hasGeographicReference,preparedReferenceGeometry} from './coaching-geographic-reference.mjs';
+import {createGpsPose,gpsDistance} from './coaching-gps-model.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {MapShell} from './map-shell.mjs';
 import {TracerGpsScreen} from './coaching-gps-screen.mjs';
@@ -6,6 +8,16 @@ const control=(id,label,extra='')=>`<button type="button" data-tracer="${id}" ${
 const time=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 export function TracerScreen(s,p,ui={}){
  const v=tracerView(s,p),status={approaching:'Approche du départ',arrived:'Arrivé au départ',before:'Prêt à démarrer',active:'Pose active',finished:'Pose terminée',in_place:'En place'}[v.phase],externalRecorder=p.productScenario==='external_driver_recorded',selfTrace=p.productScenario==='self_trace';
+ if(hasGeographicReference(p.session)){
+  const approach=['approaching','arrived'].includes(s.phase),fake=!s.gpsPose;
+  let html=TracerGpsScreen({...s,gpsPose:s.gpsPose||createGpsPose(p.session.id,p.viewerId)},ui.gps,{...ui,reference:preparedReferenceGeometry(p.session.preparation.geometry.points),ready:p.phase==='ready',selfTrace,messages:v.messages,unread:v.unread});
+  if(fake)html=html.replace('data-tracer="gps-resume"','data-tracer="gps-enable"'+(ui.allowGps?'':' disabled')).replace(/<button[^>]*data-tracer="start"[\s\S]*?<\/button>/,'');
+  if(approach){const fix=ui.gps?.lastFix,distance=fix?Math.round(gpsDistance(fix,v.start)):null;
+   html=html.replace('data-gps-live','data-gps-live data-gps-approach="true"').replace('data-gps-corridor-allowed="true"','data-gps-corridor-allowed="false"').replace('Pose GPS réelle','Rejoindre le départ').replace(/<strong data-gps-distance>[\s\S]*?<\/strong><strong data-gps-clock>[\s\S]*?<\/strong>/,`<strong>${distance===null?'Départ sur la carte':distance+' m du départ'}</strong><strong>Pose non démarrée</strong>`).replace(/<button[^>]*data-tracer="start"[\s\S]*?<\/button>/,'');
+   html=html.replace('<div class="gps-actions">',`<div class="gps-actions">${control(s.phase==='approaching'?'arrive':'ready',s.phase==='approaching'?'Arrivé au départ':'Me déclarer prêt à tracer')}`);
+  }
+  return html;
+ }
  if(s.gpsPose)return TracerGpsScreen(s,ui.gps,{...ui,ready:p.phase==='ready',selfTrace,messages:v.messages,unread:v.unread});
  const gps={fresh:'GPS précis · mock',acquiring:'Acquisition en cours',stale:'Position ancienne',unavailable:'GPS indisponible'}[v.gps];
  const view={...v,markers:ui.team===false?v.markers.filter(m=>m.id===v.viewerId):v.markers,paths:[...v.paths,...(ui.trace===false?[]:v.segments.filter(seg=>seg.length>1).map((seg,i)=>({kind:'pose',label:'Segment '+(i+1)+' · mock',d:seg.map((pt,n)=>(n?'L':'M')+pt.x+' '+pt.y).join(' ')})))]};

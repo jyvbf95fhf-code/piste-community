@@ -1,4 +1,5 @@
 import {preparationView} from './coaching-preparation.mjs';
+import {visiblePreparedReference} from './coaching-driver-gps-model.mjs';
 import {DriverGpsScreen} from './coaching-driver-gps-screen.mjs';
 import {escapeHTML as e,StatusBadge} from './components.mjs';
 import {PremiumPictogram as P} from './coaching-pictograms.mjs';
@@ -21,7 +22,7 @@ export function SearchScreen(s,p,ui={}){
  const v=searchView(s,p,{now:ui.now??Date.now()}),running=v.phase==='SEARCH_RUNNING',final=['SEARCH_FINISHED','DEBRIEF'].includes(v.phase);
  const unread=Number.isInteger(ui.unreadCount)?ui.unreadCount:0,canMessage=canDriverMessage(p,s)&&!ui.locked;
  if(running&&ui.locked)return `<section class="search-terrain search-screen-locked" data-search-phase="${v.phase}" data-screen-locked="true" aria-label="Écran terrain verrouillé"><div class="search-lock-panel"><span class="eyebrow">COACHING · PROTECTION LOCALE</span><h1>Écran verrouillé</h1><p>L’interface est masquée. Le suivi continue selon son état actuel.</p>${unread?`<span class="search-lock-unread" aria-label="${unread} message(s) non lu(s)">${unread} message${unread===1?'':'s'} non lu${unread===1?'':'s'}</span>`:''}<button type="button" class="search-unlock-control" data-search-unlock aria-label="Maintenir 2 secondes pour déverrouiller"><span>Maintenir 2 secondes pour déverrouiller</span><i aria-hidden="true"></i></button><small class="search-unlock-feedback" aria-live="polite"></small><button type="button" class="search-unlock-keyboard" data-search="unlock" aria-label="Déverrouiller au clavier">Déverrouiller</button></div></section>`;
- if(s.gpsSearch&&isSearchActor(p)&&s.gpsSearch.actorId===p.viewerId)return DriverGpsScreen(s,ui.gps,{...ui,pose:preparationView(p).referenceHidden?null:ui.pose,corridorAllowed:!preparationView(p).referenceHidden});
+ if(s.gpsSearch&&isSearchActor(p)&&s.gpsSearch.actorId===p.viewerId)return DriverGpsScreen(s,ui.gps,{...ui,plannedReference:visiblePreparedReference(p),pose:preparationView(p).referenceHidden?null:ui.pose,corridorAllowed:!preparationView(p).referenceHidden});
  const metrics=`<div class="search-metrics"><strong>${v.distance===null?'Distance indisponible':(v.distance/1000).toFixed(2).replace('.',',')+' km'}</strong><strong>${v.seconds===null?'Chrono indisponible':time(v.seconds)}</strong><span>${e(v.accuracy||v.gpsLabel)}</span></div>`;
  const cockpitMetrics=`<div class="search-cockpit-metrics"><div><small>DISTANCE</small><strong>${v.distance===null?'—':(v.distance/1000).toFixed(2).replace('.',',')+' km'}</strong></div><div><small>CHRONO</small><strong>${v.seconds===null?'—':time(v.seconds)}</strong></div><div><small>PRÉCISION</small><strong>${e(v.accuracy||v.gpsLabel||'MOCK')}</strong></div></div>`;
  const action=v.action?button(v.action[0],v.action[1],'class="search-primary"'):p.productScenario==='external_traceur'&&v.phase==='PREPARATION'?button('external-ready','Le traceur est en place','class="search-primary"'):'';

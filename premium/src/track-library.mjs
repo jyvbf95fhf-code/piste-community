@@ -88,3 +88,5 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
   remove(id) {find(id);commit(items.filter(t=>t.id!==id));}
  };
 }
+
+export const gpxReferenceChoices=items=>[...items.filter(t=>t.source==='gpx'),...gpxFixtures.filter(t=>!items.some(i=>i.id===t.id))];

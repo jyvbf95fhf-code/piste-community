@@ -1,9 +1,10 @@
+import {gpsReferenceEligible} from './coaching-geographic-reference.mjs';
 import {createGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,normalizeGpsFix} from './coaching-gps-model.mjs';
 import {appendSearchGpsFix} from './coaching-driver-gps-model.mjs';
 import {createGpsSensor} from './coaching-gps-sensor.mjs';
 import {canParticipate,isCollectivelyClosed} from './coaching-session-control.mjs';
 export function ownsDriverGps(c){const {draft:d,preparation:p,user,qa}=c||{},id=d?.identityContext?.participantId;return !qa&&!!user?.user_id&&d?.identityContext?.userId===user.user_id&&d.identityContext.source==='mock-auth'&&d.identityContext.assurance==='local-simulation'&&d.sessionCreation?.creatorUserId===user.user_id&&d.sessionCreation?.sessionId===p?.session?.id&&d.session?.id===p?.session?.id&&p?.session?.roles.driver===id&&p.viewerId===id&&p.team?.some(m=>m.id===id&&m.activeFunction==='driver'&&m.functions.includes('driver'));}
-export function canUseDriverGps(c){return ownsDriverGps(c)&&canParticipate(c.preparation,c.preparation.viewerId)&&!isCollectivelyClosed(c.search?.phase)&&['SEARCH_READY','SEARCH_RUNNING'].includes(c.search?.phase)&&['direct','none'].includes(c.preparation.session.traceType)&&!c.preparation.session.preparation;}
+export function canUseDriverGps(c){return ownsDriverGps(c)&&canParticipate(c.preparation,c.preparation.viewerId)&&!isCollectivelyClosed(c.search?.phase)&&['SEARCH_READY','SEARCH_RUNNING'].includes(c.search?.phase)&&gpsReferenceEligible(c.preparation.session);}
 export function createDriverGpsController({getContext,setSearch,render=()=>{},navigator=globalThis.navigator,document=globalThis.document,clock=Date.now}={}){
  let bound=null,lastFix=null,lastReceived=null,timer=null,status='idle',wake='unavailable';
  const context=()=>getContext(),same=c=>bound&&canUseDriverGps(c)&&c.preparation.session.id===bound.sessionId&&c.preparation.viewerId===bound.actorId&&c.search.gpsSearch?.sessionId===bound.sessionId&&!c.search.recordingStoppedAt&&['SEARCH_READY','SEARCH_RUNNING'].includes(c.search.phase);

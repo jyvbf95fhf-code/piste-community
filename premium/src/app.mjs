@@ -26,7 +26,7 @@ import { themeForRoute } from './theme.mjs';
 import * as coaching from './coaching.mjs';
 import {createReferenceAssignmentState,applyReferenceAssignmentAction,getReferenceAssignment} from './coaching-reference-assignment.mjs';
 import { CoachingScreen } from './coaching-screen.mjs';
-import { createTrackLibrary, gpxFixtures } from './track-library.mjs';
+import { createTrackLibrary, gpxFixtures, gpxReferenceChoices } from './track-library.mjs';
 import { TrackBuilderScreen } from './track-builder-screen.mjs';
 import * as preparation from './coaching-preparation.mjs';
 import { PreparationScreen } from './coaching-preparation-screen.mjs';
@@ -158,7 +158,7 @@ let preparationState=null;
 let coachingReferenceAssignment=null;
 function confirmCoachingTracerReference(form){
  const request={sessionId:form.dataset.sessionId,authorId:form.dataset.authorId,phase:form.dataset.phase,referenceId:form.elements.reference.value};
- const candidate=()=>{if(!preparationState||(qaInitialized?location.pathname!=='/qa/coaching':location.pathname!=='/coaching/session'||coachingDraft.session?.id!==request.sessionId||JSON.stringify(preparationState.session)!==JSON.stringify(coachingDraft.session))||preparationState.session.id!==request.sessionId||preparationState.viewerId!==request.authorId||preparationState.phase!==request.phase||!preparation.canChooseSessionReference(preparationState)||searchState.phase!=='PREPARATION'||searchState.layingSegments.some(segment=>segment.length)||tracerState.phase!=='before'||tracerState.segments.some(segment=>segment.length))throw Error('Choix refusé : la session ou la préparation a changé.');const items=preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list();const track=items.find(item=>item.id===request.referenceId);if(!track)throw Error('Cette référence n’est plus disponible.');return track;};
+ const candidate=()=>{if(!preparationState||(qaInitialized?location.pathname!=='/qa/coaching':location.pathname!=='/coaching/session'||coachingDraft.session?.id!==request.sessionId||JSON.stringify(preparationState.session)!==JSON.stringify(coachingDraft.session))||preparationState.session.id!==request.sessionId||preparationState.viewerId!==request.authorId||preparationState.phase!==request.phase||!preparation.canChooseSessionReference(preparationState)||searchState.phase!=='PREPARATION'||searchState.layingSegments.some(segment=>segment.length)||tracerState.phase!=='before'||tracerState.segments.some(segment=>segment.length))throw Error('Choix refusé : la session ou la préparation a changé.');const items=preparationState.session.traceType==='gpx'?gpxReferenceChoices(trackLibrary.list()):trackLibrary.list();const track=items.find(item=>item.id===request.referenceId);if(!track)throw Error('Cette référence n’est plus disponible.');return track;};
  let initial;
  try{initial=candidate();}catch(error){preparationUI.feedback=error.message;render();return;}
  const fingerprint=JSON.stringify(initial);
@@ -336,7 +336,7 @@ function gpsContext(){return {draft:coachingDraft,preparation:preparationState,t
 function gpsFeedback(){
  if(globalThis.location?.pathname?.startsWith('/operational')||!ownsTracerGps(gpsContext()))return;
  const live=document.querySelector('[data-gps-live]'),status=tracerGps.view();
- if(live&&tracerState.gpsPose&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(tracerState.gpsPose,status);}
+ if(live&&!live.dataset.gpsApproach&&tracerState.gpsPose&&live.dataset.gpsRunning===String(status.running)){captureCoachingPreparation();showCoachingPreparationWarning();refreshGpsScreen(tracerState.gpsPose,status);}
  else render();
 }
 const tracerGps=createTracerGpsController({getContext:gpsContext,setTracer:t=>{tracerState=t;},render:gpsFeedback});
@@ -706,7 +706,7 @@ function renderPreparationContent(){
  if(v?.role==='observer')return ObserverScreen(searchState,preparationState,tracerState);
  if(v?.role==='driver'&&!searchUI.showPreparation&&!(terrainOpen&&preparationState.productScenario==='external_driver_recorded')&&(preparationState.productScenario!=='external_driver_recorded'||searchState.phase!=='PREPARATION')){const screen=SearchScreen(searchState,preparationState,{...searchUI,gps:driverGps.view(),allowGps:canUseDriverGps(gpsContext()),pose:searchState.gpsSearch?visibleGpsPoseForDriver(preparationState,tracerState):null,messages:tracer.sessionMessages(tracerState,preparationState).messages,unreadCount:tracer.sessionMessages(tracerState,preparationState).unread});return searchState.phase==='SEARCH_RUNNING'||searchUI.locked?screen:screen.replace('</header>','</header>'+SessionNotice(searchState,preparationState,tracerState));}
  if(terrainOpen&&((v?.role==='traceur'&&preparationState.traceurKind==='internal')||(v?.role==='driver'&&preparationState.productScenario==='external_driver_recorded')))return TracerScreen(tracerState,preparationState,{...tracerUI,allowGps:canUseTracerGps(gpsContext()),gps:tracerGps.view()}).replace('<section class="tracer-hud"',SessionNotice(searchState,preparationState,tracerState)+'<section class="tracer-hud"');
- return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceChoices:preparation.sessionReferenceChoices(preparationState,preparationState.session.traceType==='gpx'?gpxFixtures:trackLibrary.list(),{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]}),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
+ return PreparationScreen(preparationState,{...preparationUI,referenceResponse:coachingReferenceResponseView(),referenceChoices:preparation.sessionReferenceChoices(preparationState,preparationState.session.traceType==='gpx'?gpxReferenceChoices(trackLibrary.list()):trackLibrary.list(),{knownPeople:qaInitialized?[]:coachingDraft.knownPeople||[]}),referenceResponseTest:!qaInitialized&&coachingReferenceAssignment?.state.sessionId===preparationState.session.id&&v?.role==='traceur'&&preparationState.viewerId===coachingDraft.session?.roles.traceur&&preparationState.scenario==='session'})+(v?.role==='driver'&&searchUI.showPreparation?'<button class="button button-dark" data-search="return">Ouvrir le cockpit Conducteur (DEV)</button>':'');
 }
 function filterSessions() {
  const query=(document.querySelector('input[type=search]')?.value || '').toLocaleLowerCase('fr');
@@ -913,7 +913,7 @@ document.addEventListener('click',event=>{
  const choice=event.target.closest('[data-coaching-choice]');
  if(choice) {
   if(choice.dataset.coachingChoice==='preparation') {
-   const items=coachingDraft.traceType==='gpx'?gpxFixtures:trackLibrary.list();
+   const items=coachingDraft.traceType==='gpx'?gpxReferenceChoices(trackLibrary.list()):trackLibrary.list();
    coachingDraft=coaching.selectPreparation(coachingDraft,items.find(t=>t.id===choice.dataset.value),coachingActionContext('reference-selection',{referenceId:choice.dataset.value,origin:coachingDraft.traceType==='gpx'?'simulation:gpx-fixture-selection':'simulation:track-library-selection'}));
   } else if(choice.dataset.coachingChoice==='trackingScenario')coachingDraft=coaching.setTrackingScenario(coachingDraft,choice.dataset.value);
   else coachingDraft=coaching.updateDraft(coachingDraft,{[choice.dataset.coachingChoice]:choice.dataset.value});

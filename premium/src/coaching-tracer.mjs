@@ -13,14 +13,18 @@ export function advanceTracer(state,prep,action,{now=Date.now}={}){
  const v=authorised(prep),s=structuredClone(state);const own=v.markers.find(m=>m.id===v.viewerId),available=v.gps==='fresh'&&validPoint(own);
  if(s.gpsPose){
   if(s.gpsPose.sessionId!==prep.session.id||s.gpsPose.actorId!==v.viewerId)throw Error('Pose GPS liée à un autre acteur ou une autre session.');
+  if(s.gpsPose.phase==='before'&&action==='approach'&&['before','approaching'].includes(s.phase)&&v.knownStart){s.phase='approaching';return s;}
+  if(s.gpsPose.phase==='before'&&action==='arrive'&&s.phase==='approaching'){s.phase='arrived';return s;}
+  if(s.gpsPose.phase==='before'&&action==='ready'&&s.phase==='arrived'&&prep.phase==='ready'){s.phase='before';return s;}
   if(action==='start'&&s.phase==='before'&&prep.phase==='ready'&&!needsSessionReference(prep)){s.phase='active';s.origin=null;s.originSource=null;s.originCursor=null;s.startPointMissing=true;s.gap=true;s.gpsPose=startGpsPose(s.gpsPose,now());return s;}
   if(action==='finish'&&s.phase==='active'){s.phase='finished';s.gpsPose=finishGpsPose(s.gpsPose,now());return s;}
   if(action==='in-place'&&s.phase==='finished'){s.phase='in_place';return s;}
   throw Error('Commande simulée indisponible pendant une pose GPS réelle.');
  }
  if(action==='approach'&&['before','approaching'].includes(s.phase)&&v.knownStart){s.phase='approaching';return s;}
- if(action==='arrive'&&s.phase==='approaching'){s.phase='arrived';s.arrivalPoint=available?{...v.start}:null;return s;}
+ if(action==='arrive'&&s.phase==='approaching'){s.phase='arrived';s.arrivalPoint=v.start?.space==='wgs84'?null:available?{...v.start}:null;return s;}
  if(action==='ready'&&s.phase==='arrived'&&prep.phase==='ready'){s.phase='before';return s;}
+ if(action==='start'&&v.start?.space==='wgs84')throw Error('Activez le GPS avant la pose de cette référence réelle.');
  if(action==='start'&&needsSessionReference(prep))throw Error('La référence requise doit être choisie avant la pose.');
  if(action==='start'&&s.phase==='before'){if(prep.productScenario==='external_driver_recorded'?prep.phase!=='created':prep.phase!=='ready')throw Error('Déclarez-vous prêt à tracer avant la pose.');s.phase='active';s.origin=available?{x:own.x,y:own.y}:null;s.originSource=available?'mock-position':null;s.originCursor=available?0:null;s.startPointMissing=!available;s.segments=available?[[{...s.origin}]]:[];s.gap=!available;s.resumed=false;return s;}
  if(action==='progress'&&s.phase==='active'){

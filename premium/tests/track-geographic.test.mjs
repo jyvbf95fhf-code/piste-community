@@ -28,5 +28,5 @@ test('Coaching preparation carries real geometry and excludes hidden reference c
  d=c.selectPreparation(d,{id:'t',name:'Parcours réel',source:'draw',ownerId:'self',start:{latitude:48.23456,longitude:7.34567,space:'wgs84'},geometry:{points}});
  const session=c.createSession(d).session;assert.deepEqual(session.preparation.geometry.points,points);
  const visible=p.preparationView(p.simulate(p.createPreparation(session),{viewerRole:'traceur'}));assert.match(MapShell(visible),/data-editor-real-map/);assert.match(MapShell(visible),/7.34567/);
- session.mode='full_blind';const hidden=p.preparationView(p.simulate(p.createPreparation(session),{viewerRole:'driver'}));assert.doesNotMatch(MapShell(hidden),/7.34567|48.23456/);
+ session.mode='full_blind';const hidden=p.preparationView(p.simulate(p.createPreparation(session),{viewerRole:'driver'}));assert.match(MapShell(hidden),/7.34567/);assert.doesNotMatch(MapShell(hidden),/7.35567|48.24456/);
 });

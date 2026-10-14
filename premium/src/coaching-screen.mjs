@@ -1,7 +1,7 @@
 import {CoachingHelpButton} from './coaching-help.mjs';
 import {escapeHTML as e,StatusBadge} from './components.mjs';
 import {PremiumPictogram as P} from './coaching-pictograms.mjs';
-import {gpxFixtures} from './track-library.mjs';
+import {gpxFixtures,gpxReferenceChoices} from './track-library.mjs';
 import {modes,traceTypes,roleTypes,trackingScenarios,steps,canSeeReference,preparation,validateDraft,referenceLabel} from './coaching.mjs';
 const action=(label,value,style='button-gold',extra='')=>`<button class="button ${style}" data-coaching="${value}" ${extra}>${label}</button>`;
 const name=(d,id)=>d.participants.find(p=>p.id===id)?.name || 'Non attribué';
@@ -20,7 +20,7 @@ function visibility(d) {
 }
 function preparationScreen(d,items) {
  if(preparation(d)==='delegated')return `<article class="card coaching-delegated"><span class="coaching-intro-symbol">${P('roleTracer')}</span><h2>Le Traceur fait le choix.</h2><p>Votre fonction ne permet pas de connaître la piste dans ce mode. Le Traceur choisira ${d.traceType==='gpx'?'le fichier GPX':'le tracé préparé'}. Les noms et aperçus restent masqués.</p>${StatusBadge('PRÉPARATION DÉLÉGUÉE')}<p class="coaching-local-note">Vous pourrez ajuster votre fonction à l’étape Participants / rôles.</p></article>`;
- const options=d.traceType==='gpx'?gpxFixtures:items;
+ const options=d.traceType==='gpx'?gpxReferenceChoices(items):items;
  return `<p class="coaching-local-note">${d.traceType==='gpx'?'Choisissez un fichier de démonstration. Aucun fichier lu, aucun parsing GPX.':'Les tracés du Créateur de tracé sont partagés en mémoire avec ce parcours.'}</p><div class="coaching-choices" role="group" aria-label="${d.traceType==='gpx'?'Sélection GPX mock':'Tracé existant'}">${options.map(t=>choice({...t,title:d.traceType==='gpx'?t.fileName:t.name,description:d.traceType==='gpx'?t.name:(t.source==='gpx'?'GPX mock réutilisable':'Tracé mock préparé'),icon:d.traceType==='gpx'?'gpxImport':'trackPrepared'},d.preparationTrack?.id,'preparation')).join('') || '<p class="coaching-local-note">Aucun tracé disponible. Créez un parcours pour le proposer ici.</p>'}</div>${d.traceType==='prepared'?'<a class="button button-dark coaching-builder-link" href="/track-builder">Ouvrir le Créateur de tracé</a>':''}`;
 }
 function roleCards(d,contacts=[]) {
