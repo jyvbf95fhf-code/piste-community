@@ -50,7 +50,7 @@ test('la météo mock est explicitement démonstrative et peut être retirée sa
   assert.equal(store.complete(mission.id).status, 'Terminée');
 });
 
-test('la fiche facultative est éditable avant finalisation; GPX et météo n’acceptent aucun fichier réel', () => {
+test('la fiche et la météo du lieu restent éditables avant finalisation; aucun fichier externe n’est requis', () => {
   const { store, mission } = awaitingMission();
   const html = OperationalScreen({ route: { type: 'mission', missionId: mission.id }, view: operationalMissionView(mission) });
 
@@ -58,8 +58,9 @@ test('la fiche facultative est éditable avant finalisation; GPX et météo n’
   assert.match(html, /Personne recherchée/);
   assert.match(html, /Observations/);
   assert.match(html, /data-operational-gpx-choice/);
-  assert.match(html, /data-operational-weather-toggle/);
-  assert.match(html, /Démonstration · non mesuré/);
+  assert.match(html, /data-ops-weather-form/);
+  assert.match(html, /MÉTÉO DU LIEU/);
+  assert.doesNotMatch(html, /data-operational-weather-toggle|MÉTÉO · DÉMONSTRATION/);
   assert.doesNotMatch(html, /type="file"/);
   assert.doesNotMatch(html, /required[^>]*name="searchedPerson"|name="searchedPerson"[^>]*required/);
 });
