@@ -1060,7 +1060,7 @@ document.addEventListener('pointerup',event=>{
 });
 document.addEventListener('change',event=>{
  const field=event.target;
- if(field.matches('[data-smart-option]')){trackSmart.setOptions({[field.dataset.smartOption]:field.value});render();return;}
+ if(field.matches('[data-smart-option]')){const busy=trackSmart.view().busy;trackSmart.setOptions({[field.dataset.smartOption]:field.value});if(busy)render();else{document.querySelector('.smart-proposals')?.replaceChildren();document.querySelector('.smart-feedback')?.remove();}return;}
  if(field.matches('[data-editor-gpx-file]')){const file=field.files?.[0];field.value='';if(file)void importEditorGpx(file);return;}
  if(profileController.handleChange(event))return;
  if(scientificContributionController.handleChange(event))return;

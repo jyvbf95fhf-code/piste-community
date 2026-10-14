@@ -99,6 +99,11 @@
 
 [data-track-cockpit] .creator-smart-shortcut{display:flex;align-items:center;gap:7px;max-width:100%;min-height:44px;margin-top:10px;padding:8px 10px;border:1px solid #d4b57480;border-radius:14px;background:#0b2037ed;color:#eef4f7;cursor:pointer;font:inherit;text-shadow:none}
 [data-track-cockpit] .creator-smart-shortcut svg{width:18px;height:18px;flex:none;color:#e5c17c}
-[data-track-cockpit] .creator-heading .creator-smart-shortcut span{font-size:11px;letter-spacing:0;color:#f0f5f7;font-weight:600;line-height:1.3}
+[data-track-cockpit] .creator-smart-shortcut span{font-size:11px;letter-spacing:0;color:#f0f5f7;font-weight:600;line-height:1.3}
 [data-track-cockpit] .creator-smart-shortcut b{font-size:8px;letter-spacing:.04em;text-transform:uppercase;font-weight:600;color:#e5c17c}
 [data-track-cockpit] .creator-smart-shortcut:focus-visible{outline:2px solid #62c6c7;outline-offset:3px}
+
+[data-track-cockpit] .creator-menu-row{display:flex;justify-content:center;align-items:center;gap:8px;margin-top:6px;min-width:0}
+[data-track-cockpit] .creator-menu-row .creator-smart-shortcut{margin:0;min-width:0;max-width:calc(100% - 94px)}
+[data-track-cockpit] .creator-menu-row .creator-panel>summary.creator-menu-shortcut{margin:0}
+[data-track-cockpit] .creator-menu-row .creator-panel{flex:none}
