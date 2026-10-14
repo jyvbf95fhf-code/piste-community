@@ -16,8 +16,9 @@ const render = (mission, ui = {}) => OperationalScreen({ route: { type: 'mission
 
 test('l’écran prêt propose Commencer le pistage sans fermer prématurément la mission', () => {
   const { draft } = setup();
-  const html = render(draft);
-  assert.match(html, /data-operational-action="start"[^>]*>Commencer le pistage/);
+  const html = render(draft, {allowGps:true});
+  assert.match(html, /class="button operational-gps-entry"[^>]*data-operational-action="gps-enable"[^>]*>Commencer le pistage/);
+  assert.doesNotMatch(html, /data-operational-action="start"|Utiliser le GPS de cet iPhone/);
   assert.match(html, /data-operational-tracking-state="ready"/);
   assert.doesNotMatch(html, /data-operational-action="close-field"/);
 });
@@ -149,4 +150,10 @@ test('un maintien complet de 2 secondes déverrouille exactement une fois', () =
   assert.equal(progress.at(-1), 1);
   controller.release();
   assert.equal(unlocked, 1);
+});
+
+test('le démarrage sans autorisation GPS ne propose jamais le suivi simulé',()=>{
+ const {draft}=setup();const html=render(draft,{allowGps:false});
+ assert.match(html,/data-operational-action="gps-enable" disabled/);
+ assert.doesNotMatch(html,/data-operational-action="start"/);
 });

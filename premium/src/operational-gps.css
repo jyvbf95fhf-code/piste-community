@@ -92,3 +92,10 @@
 [data-gps-kind="ops"] .gps-tools button{min-height:44px;background:#132b42;color:#fff;border:1px solid #9dbad642;border-radius:10px;padding:8px}
 [data-gps-kind="ops"] .tracer-sheet label{display:block;margin:8px 0}
 [data-gps-kind="ops"] .tracer-sheet :is(input,select){box-sizing:border-box;width:100%;min-height:44px;background:#10263b;color:#fff;border:1px solid #9dbad642;border-radius:10px;padding:8px;font:inherit}
+
+.operational-field-actions .operational-gps-entry{
+ background:linear-gradient(145deg,#36b989,#116343);
+ border:1px solid #91e6bb80;color:#fff;
+ box-shadow:0 5px 18px #0003,inset 0 1px #ffffff24;
+}
+.operational-field-actions .operational-gps-entry:disabled{opacity:.5;cursor:not-allowed}

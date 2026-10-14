@@ -35,7 +35,7 @@ function OperationalMission({ view, ui = {}, livePolicy = {} } = {}) {
   const ageOfTrack = view.time?.trackAgeAtStart?.label || view.time?.trackAgePreview?.label || 'non renseigné';
   const ageLabel = view.trackingState === 'ready' ? 'Âge de la piste actuellement' : 'Âge de la piste au départ';
   const actions = view.gpsTrack&&['active','paused'].includes(view.trackingState)?'<button type="button" class="button button-dark" data-ops="cockpit">Retour à la carte GPS</button>':view.canStart
-    ? `<button class="button button-gold" type="button" data-operational-action="start">Commencer le pistage</button>${ui.allowGps&&!view.gpsTrack?'<button class="button button-dark" type="button" data-operational-action="gps-enable">Utiliser le GPS de cet iPhone</button>':''}`
+    ? `<button class="button operational-gps-entry" type="button" data-operational-action="${view.gpsTrack?'start':'gps-enable'}"${!view.gpsTrack&&!ui.allowGps?' disabled':''}>Commencer le pistage</button>`
     : view.canPause
       ? `<button class="button button-gold" type="button" data-operational-action="pause">Pause</button><button class="button button-dark" type="button" data-operational-action="stop">Arrêter le pistage</button><button class="button button-dark" type="button" data-operational-action="lock-screen">Verrouiller l’écran</button>`
       : view.canResume
