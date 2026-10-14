@@ -34,14 +34,14 @@ test('le bouton du couloir est indépendant et reste visible comme ESTIMÉ · si
   assert.equal(store.setCorridorEnabled(active.id, false).status, 'En cours');
 });
 
-test('le replay restitue la carte et le couloir seulement si celui-ci était activé', () => {
+test('le replay utilise le fond réel et conserve les données du scénario hors de la géographie', () => {
   const { mission: enabled } = createFinalMission({ corridor: true });
   const replayView = operationalReplayView(enabled);
   const html = OperationalReplayScreen(replayView);
 
   assert.match(html, /data-operational-replay="mission-1"/);
-  assert.match(html, /data-operational-progress/);
-  assert.match(html, /data-operational-event="Indice"/);
+  assert.match(html, /data-gps-map/);assert.doesNotMatch(html, /data-operational-progress/);
+  assert.doesNotMatch(html, /data-operational-event="Indice"/);
   assert.match(html, /ESTIMÉ · simulation/);
   assert.match(html, /Démonstration · non mesuré/);
   assert.match(html, /Lecture seule/);

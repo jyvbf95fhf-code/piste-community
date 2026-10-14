@@ -19,8 +19,8 @@ test('Leaflet places accessible badges at recorded endpoint coordinates',()=>{
  assert.deepEqual(drawn.map(x=>x.options.title),['Départ','Arrivée']);
  assert.ok(drawn.every(x=>x.layer===layer&&x.options.icon.iconSize[0]===30));
 });
-test('creator retains selectable endpoint targets and Premium letters',async()=>{
- const {TrackEditorMap}=await import('../src/track-editor-map.mjs');
+test('drawing test fixture retains selectable endpoint targets and Premium letters',async()=>{
+ const {TrackEditorMap}=await import('./fixtures/track-editor-map.mjs');
  const html=TrackEditorMap({points:[{id:'d',kind:'start',x:30,y:40},{id:'a',kind:'arrival',x:100,y:150}]},{selectedPointId:'d'});
  assert.match(html,/data-editor-point-id="d"/);assert.match(html,/data-editor-point-id="a"/);
  assert.match(html,/>D<\/text>/);assert.match(html,/>A<\/text>/);assert.match(html,/data-selected="true"/);

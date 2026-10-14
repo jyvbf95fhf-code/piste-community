@@ -27,9 +27,9 @@ test('Double aveugle conserve le départ connu du Conducteur sans dévoiler la r
   assert.equal(view.knownStart,canReadStart,role);
   assert.deepEqual(view.start,canReadStart?{x:selectedStart.x,y:selectedStart.y}:null,role);
   assert.equal(view.preparation,null,role);
-  assert.equal(html.includes('data-map-start'),canReadStart,role);
+  assert.equal(html.includes('data-map-start'),false,'Drawing departure is never a geographic marker');
   assert.equal(html.includes('départ logistique'),false,role);
-  assert.equal(MapShell(projected).includes('data-map-start'),canReadStart,role+' Conducteur projection');
+  assert.equal(MapShell(projected).includes('data-map-start'),false,'No drawing marker on real map');
   assert.deepEqual(projected.start,view.start,role+' projection respecte la visibilité du départ');
   assert.equal(view.paths.length,0,role);
   if(role==='driver')assert.ok(!SearchScreen(createSearch(),state).includes('départ logistique'));

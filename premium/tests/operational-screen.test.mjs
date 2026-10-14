@@ -49,7 +49,7 @@ test('le cockpit actif superpose ses commandes terrain et son HUD à la carte', 
   const cockpit = html.match(/<div class="operational-cockpit-stage"[\s\S]*?<\/div><\/section>/)?.[0] || '';
 
   assert.ok(cockpit, 'active tracking should render a cockpit map stage');
-  assert.match(cockpit, /class="prep-map operational-map/);
+  assert.match(cockpit, /data-real-map-reader/);
   assert.match(cockpit, /data-operational-overlay-controls/);
   assert.match(cockpit, /data-operational-corridor-toggle/);
   assert.match(cockpit, /data-operational-map-mode="progress"/);

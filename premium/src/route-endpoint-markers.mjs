@@ -1,8 +1,8 @@
 export function routeEndpointMarkers(track){
  const points=(track?.segments||[]).flat();
  if(!points.length)return [];
- const markers=[{letter:'D',point:points[0]}];
- if(['finished','stopped'].includes(track.phase))markers.push({letter:'A',point:points.at(-1)});
+ const markers=track.showStart===false?[]:[{letter:'D',point:points[0]}];
+ if(['finished','stopped'].includes(track.phase)&&track.showArrival!==false)markers.push({letter:'A',point:points.at(-1)});
  return markers;
 }
 export function endpointBadge(letter){

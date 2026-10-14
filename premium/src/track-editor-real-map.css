@@ -107,3 +107,11 @@
 [data-track-cockpit] .creator-menu-row .creator-smart-shortcut{margin:0;min-width:0;max-width:calc(100% - 94px)}
 [data-track-cockpit] .creator-menu-row .creator-panel>summary.creator-menu-shortcut{margin:0}
 [data-track-cockpit] .creator-menu-row .creator-panel{flex:none}
+
+.real-map-reader .gps-map-stage{position:relative;min-height:320px;height:48dvh;max-height:600px;overflow:hidden;border-radius:16px;background:#102438}
+.real-map-reader .gps-map{position:absolute;inset:0;width:100%;height:100%;min-height:0}
+.real-map-reader .gps-map-controls{position:absolute;right:12px;top:12px;z-index:500}
+.real-map-reader .real-map-availability{font-size:12px;line-height:1.5;margin:8px 0;color:#b8cdd5}
+.tracer-map .real-map-reader,.search-map .real-map-reader{height:100%}
+.tracer-map .real-map-reader .gps-map-stage,.search-map .real-map-reader .gps-map-stage{height:100%;max-height:none;min-height:0}
+.tracer-map .real-map-reader .real-map-availability,.search-map .real-map-reader .real-map-availability{position:absolute;bottom:8px;left:12px;right:70px;z-index:400;text-shadow:0 2px 5px #000;pointer-events:none}

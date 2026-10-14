@@ -9,7 +9,7 @@ export function createJumolfMapProjection(source={},layerState={}){
  const corridorGeometry=source.corridor?.geometry||null;
  const provenance=source.provenance||{};
  return {
-  sourceId:source.id||null,
+  sourceId:source.id||null,synthetic:Boolean(source.synthetic||source.demo),
   layers:{
    referenceTrace:layer(reference,provenance.referenceTrace||'unknown','Trace de référence',layerState.referenceTrace!==false,Boolean(reference)),
    trace:layer(trace,provenance.trace||'unknown','Trace source',layerState.trace!==false,Boolean(trace)),
@@ -25,3 +25,4 @@ export function createJumolfMapProjection(source={},layerState={}){
   limitation:'Le couloir et les zones estimées ne constituent pas une mesure. La trace reste une couche distincte.'
  };
 }
+

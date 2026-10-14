@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MapShell } from '../src/map-shell.mjs';
-import { OperationalMap } from '../src/operational-map.mjs';
+import { MapShell } from './fixtures/map-shell.mjs';
+import { OperationalMap } from './fixtures/operational-map.mjs';
 
 const missionView = {
   id: 'mission-1',
@@ -24,7 +24,7 @@ const coachingView = {
   arrival: null
 };
 
-test('la carte opérationnelle montre départ, progression, événements et le couloir uniquement quand il est activé', () => {
+test('fixture de dessin · la carte opérationnelle montre départ, progression, événements et le couloir uniquement quand il est activé', () => {
   const markup = OperationalMap(missionView, { interactive: true });
 
   assert.match(markup, /data-operational-map="mission-1"/);
@@ -36,7 +36,7 @@ test('la carte opérationnelle montre départ, progression, événements et le c
   assert.match(markup, /Aucune donnée GPS réelle/);
 });
 
-test('la trace mock matérialise son premier point comme départ et son dernier comme fin de suivi', () => {
+test('fixture de dessin · la trace mock matérialise son premier point comme départ et son dernier comme fin de suivi', () => {
   const markup = OperationalMap({
     ...missionView,
     lastKnownPoint: null,
@@ -56,7 +56,7 @@ test('la trace mock matérialise son premier point comme départ et son dernier 
   assert.match(markup, /data-operational-event="Fin de piste"/);
 });
 
-test('la carte de mission ne fabrique pas de trajet absent et masque la couche si OFF', () => {
+test('fixture de dessin · la carte de mission ne fabrique pas de trajet absent et masque la couche si OFF', () => {
   const markup = OperationalMap({ ...missionView, lastKnownPoint: null, progress: [], events: [], corridor: { enabled: false } });
   assert.doesNotMatch(markup, /data-operational-start/);
   assert.doesNotMatch(markup, /data-operational-progress/);
@@ -64,7 +64,7 @@ test('la carte de mission ne fabrique pas de trajet absent et masque la couche s
   assert.doesNotMatch(markup, /ESTIMÉ · simulation/);
 });
 
-test('les appels Coaching à MapShell gardent leur markup historique sans couches opérationnelles', () => {
+test('fixture de dessin · les appels Coaching à MapShell gardent leur markup historique sans couches opérationnelles', () => {
   const baseline = MapShell(coachingView);
   const afterExtension = MapShell(coachingView, { postSession: false });
   assert.equal(afterExtension, baseline);
@@ -73,7 +73,7 @@ test('les appels Coaching à MapShell gardent leur markup historique sans couche
   assert.doesNotMatch(baseline, /data-operational/);
 });
 
-test('MapShell n’ajoute ses couches que quand elles sont explicitement fournies', () => {
+test('fixture de dessin · MapShell n’ajoute ses couches que quand elles sont explicitement fournies', () => {
   const view = { ...coachingView, progress: [{ x: 40, y: 50 }, { x: 80, y: 100 }], events: [], corridorEnabled: true };
   const markup = MapShell(view, { operational: { interactive: true, progress: view.progress, events: view.events, corridor: { enabled: true, label: 'ESTIMÉ · simulation' } } });
   assert.match(markup, /data-operational-progress/);
