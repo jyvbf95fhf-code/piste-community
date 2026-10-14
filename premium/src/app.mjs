@@ -462,6 +462,7 @@ function renderSessionExitMenu(){return SessionExitMenu(sessionControlView(exitS
 const newTrackUI=()=>({view:'list',selectedId:null,fileId:null,name:'',notice:'',error:''});
 let trackUI=newTrackUI();
 let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:'',copySource:null};
+let smartEntryOpenedKey=null;
 let trackEditorActive=false,trackEditorHref='/track-builder',trackEditorDrag=null,trackEditorExitDialog=false,trackEditorIgnoreMapClickUntil=0;
 const smartTrackFingerprint=()=>JSON.stringify([trackEditor.draft?.id,trackEditor.draft?.points,trackEditor.draft?.name,trackEditor.draft?.description,trackEditor.draft?.category,trackEditor.draft?.difficulty,trackEditor.draft?.dogId,trackEditor.draft?.notes,trackEditor.draft?.activeMode]);
 const trackSmart=createSmartTrackController({service:createSmartTrackService(),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?{ownerId:currentUser?.user_id,key:trackEditor.routeKey,fingerprint:smartTrackFingerprint(),access:jumolfAccess()}:null,onChange:()=>{if(location.pathname==='/track-builder')render();}});
@@ -538,6 +539,14 @@ const scientificContributionController=createScientificContributionController({s
 let scientificActor=null;
 let scientificController=createScientificController({actor:currentUser,dataset:scientificDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});
 let scientificCorpusController=createScientificCorpusController({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])})),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
+function restoreSmartTrackEntry(){
+ if(location.pathname!=='/track-builder'){smartEntryOpenedKey=null;return;}
+ if(new URLSearchParams(location.search).get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;openSmartTrackMenu();}
+}
+function openSmartTrackMenu(){
+ const panel=document.querySelector('[data-creator-panel]'),section=document.querySelector('[data-creator-section="smart"]');
+ if(panel)panel.open=true;if(section){section.open=true;section.querySelector('[data-smart-query],a')?.focus({preventScroll:true});}
+}
 function selectSmartProposal(id){
  try{const {proposal,commune}=trackSmart.proposal(id),ownerId=currentUser?.user_id,key=trackEditor.routeKey,fingerprint=smartTrackFingerprint();
   const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();const draft=smartTrackDraft(proposal,commune);trackSmart.dispose();editorChange(draft,{selectedPointId:null,copySource:null,nextPointKind:'via',notice:'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=false;}catch(error){Toast(error.message);}};
@@ -609,6 +618,7 @@ function render(focus=false) {
  mountTrackEditorMap({draft:trackEditor.draft,selectedPointId:trackEditor.selectedPointId,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  trackRouting.reconcile();
  if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;for(const [id,open] of creatorSections){const section=document.querySelector(`[data-creator-section="${id}"]`);if(section)section.open=open;}}
+ restoreSmartTrackEntry();
  const trackWarning=trackLibrary.persistenceWarning?.();if(trackWarning&&trackWarning!==trackLibraryWarningShown){trackLibraryWarningShown=trackWarning;Toast(trackWarning);}
  showCoachingHistoryWarning();
  showCoachingPreparationWarning();
@@ -803,7 +813,8 @@ document.addEventListener('click',event=>{
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
   try{
-   if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
+   if(action==='open-smart')openSmartTrackMenu();
+   else if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
    else if(action==='close-menu'){const panel=document.querySelector('[data-creator-panel]');if(panel){panel.open=false;panel.querySelector('summary')?.focus();}}
    else if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
    else if(action==='retry-routing')trackRouting.retry();

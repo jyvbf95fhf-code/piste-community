@@ -116,7 +116,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     else if(action==='deactivate')controller.deactivate();
     else if(action==='go-activate')navigate('/jumolf/activate');
     else if(action==='discover-premium'){formMessage='';navigate('/jumolf/premium');}
-    else if(action==='simulate-premium'){store.applyDemoProfile('PREMIUM_NON_ACTIVE');formMessage='';navigate('/jumolf/activate');}
+    else if(action==='simulate-premium'){store.applyDemoProfile('PREMIUM_NON_ACTIVE');formMessage='';navigate(new URLSearchParams(location.search).get('from')==='smart-track'?'/track-builder?tool=smart':'/jumolf/activate');}
     else if(action==='demo-profile'){store.applyDemoProfile(node.dataset.jumolfProfile);formMessage='';navigate(store.snapshot().jumolf_enabled?'/jumolf/dashboard':'/jumolf');}
     else if(action==='analyze'||action==='recalculate'){const id=node.dataset.jumolfSession;action==='analyze'?analyze(id):controller.recalculate(id);render();}
     else if(action==='feedback'){store.setFeedback(node.dataset.jumolfAnalysis,node.dataset.jumolfFeedback);render();}
@@ -159,3 +159,4 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
  };
  return Object.freeze(controller);
 }
+
