@@ -1,6 +1,6 @@
 const SESSION_TYPES=new Set(['coaching','ops']);
 const clone=value=>structuredClone(value);
-const projectionDefaults=()=>({showDog:false,showHandler:false,showEvents:false,showTrackAge:false,showCorridor:false});
+const projectionDefaults=type=>({showDog:type==='ops',showHandler:type==='ops',showEvents:type==='ops',showTrackAge:type==='ops',showCorridor:type==='ops'});
 
 export function createCommunityLiveStore({communityStore,viewerId=communityStore?.viewerId||'self',notifications=communityStore?.getNotificationStore?.()}={}){
  if(!communityStore)throw new Error('Le store Communauté est requis pour les règles Live.');
@@ -10,7 +10,7 @@ export function createCommunityLiveStore({communityStore,viewerId=communityStore
   const value=String(id||'');if(!value)throw new Error('Identifiant de session requis.');
   return `${type}:${value}`;
  };
- const defaults=(type,id)=>({sessionType:type,sessionId:String(id),ownerUserId:viewerId,share_live:false,notify_observers:true,projectionOptions:projectionDefaults()});
+ const defaults=(type,id)=>({sessionType:type,sessionId:String(id),ownerUserId:viewerId,share_live:false,notify_observers:true,projectionOptions:projectionDefaults(type)});
  function getSessionPolicy(type,id){const k=key(type,id);return clone(policies.get(k)||defaults(type,id));}
  function setSessionPolicy({sessionType,sessionId,ownerUserId=viewerId,patch={}}={}){
   const k=key(sessionType,sessionId);if(ownerUserId!==viewerId)throw new Error('Seul le propriétaire de la session peut modifier son partage Live.');

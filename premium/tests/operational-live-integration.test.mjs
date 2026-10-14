@@ -5,6 +5,8 @@ import {createCommunityLiveStore} from '../src/community-live-store.mjs';
 import {createOperationalMissionStore} from '../src/operational-missions.mjs';
 import {operationalMissionView} from '../src/operational-views.mjs';
 import {OperationalScreen} from '../src/operational-screen.mjs';
+import {readFileSync} from 'node:fs';
+import {createContext,runInContext} from 'node:vm';
 
 const setup=()=>{
  const communityStore=createCommunityStore({profiles:[{id:'self',displayName:'Sébastien'},{id:'alex',displayName:'Alex'}],contacts:[{userIds:['self','alex'],live_access_authorized:true}],posts:[],contactRequests:[],follows:[],notifications:[]});
@@ -50,7 +52,7 @@ test('OPS sharing controls are explicit, disabled by default, and options are co
  const mission=missions.createDraft({dog:{id:'nox',name:'Nox'},handler:{id:'self',name:'Moi'}});
  const view=operationalMissionView(mission);
  const html=OperationalScreen({route:{type:'mission'},view,livePolicy:{share_live:false,notify_observers:true,projectionOptions:{showDog:false,showHandler:false,showEvents:false,showTrackAge:false,showCorridor:false}}});
- assert.match(html,/Partager le suivi OPS en Live/);
+ assert.match(html,/Partager le suivi Live OPS/);
  assert.match(html,/Prévenir mes observateurs autorisés/);
  assert.match(html,/Afficher le nom du chien/);
  assert.match(html,/Afficher le nom du conducteur/);
@@ -59,4 +61,38 @@ test('OPS sharing controls are explicit, disabled by default, and options are co
  assert.match(html,/Afficher le couloir olfactif estimé/);
  assert.doesNotMatch(html,/data-live-policy="share_live"[^>]*checked/);
  assert.doesNotMatch(html,/data-live-option="showDog"[^>]*checked/);
+});
+
+test('OPS presets select all five options and notifications, while sharing remains off and explicit choices persist',()=>{
+ const {live}=setup(),policy=live.getSessionPolicy('ops','new');
+ assert.equal(policy.share_live,false);assert.equal(policy.notify_observers,true);
+ assert.deepEqual(Object.values(policy.projectionOptions),[true,true,true,true,true]);
+ assert.deepEqual(Object.values(live.getSessionPolicy('coaching','new').projectionOptions),[false,false,false,false,false]);
+ live.setSessionPolicy({sessionType:'ops',sessionId:'new',patch:{projectionOptions:{showDog:false},notify_observers:false}});
+ live.setSessionPolicy({sessionType:'ops',sessionId:'new',patch:{share_live:true}});
+ assert.equal(live.getSessionPolicy('ops','new').projectionOptions.showDog,false);
+ assert.equal(live.getSessionPolicy('ops','new').notify_observers,false);
+});
+test('green start follows the map, and only the sharing checkbox precedes the closed options menu',()=>{
+ const missions=createOperationalMissionStore({idFactory:()=> 'layout'});
+ const mission=missions.createDraft({dog:{id:'nox',name:'Nox'},handler:{id:'self',name:'Moi'}});
+ const {live}=setup();const html=OperationalScreen({route:{type:'mission'},view:operationalMissionView(mission),ui:{allowGps:true},livePolicy:live.getSessionPolicy('ops',mission.id)});
+ assert.ok(html.indexOf('data-operational-action="gps-enable"')>html.indexOf('data-real-map-reader'));
+ assert.ok(html.indexOf('data-operational-action="gps-enable"')<html.indexOf('data-live-policy-session'));
+ assert.equal((html.match(/>Commencer le pistage</g)||[]).length,1);
+ assert.match(html,/<details[^>]*data-operational-live-options>/);
+ assert.doesNotMatch(html,/<details[^>]*data-operational-live-options[^>]*open/);
+ assert.ok(html.indexOf('data-live-policy="share_live"')<html.indexOf('data-operational-live-options'));
+ assert.ok(html.indexOf('data-live-policy="notify_observers"')>html.indexOf('data-operational-live-options'));
+ for(const name of ['showDog','showHandler','showEvents','showTrackAge','showCorridor'])assert.match(html,new RegExp('data-live-option="'+name+'"[^>]*checked'));
+});
+test('changing OPS options updates policy without rerendering and closing the user menu',()=>{
+ const {live}=setup();let renders=0;
+ const source=readFileSync(new URL('../src/app.mjs',import.meta.url),'utf8');
+ const start=source.indexOf(" if(field.matches('[data-live-policy]'))"),end=source.indexOf('\n',source.indexOf(" if(field.matches('[data-live-option]'))",start));
+ const context=createContext({communityLiveStore:live,render:()=>renders++,Toast:message=>{throw Error(message);}});
+ runInContext('function change(field){'+source.slice(start,end)+'}',context);
+ context.change({matches:selector=>selector==='[data-live-option]',dataset:{sessionId:'new',liveOption:'showCorridor'},checked:false});
+ context.change({matches:selector=>selector==='[data-live-policy]',dataset:{sessionId:'new',sessionType:'ops',livePolicy:'notify_observers'},checked:false});
+ assert.equal(renders,0);assert.equal(live.getSessionPolicy('ops','new').projectionOptions.showCorridor,false);assert.equal(live.getSessionPolicy('ops','new').notify_observers,false);
 });
