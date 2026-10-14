@@ -2,13 +2,14 @@ import {hasGeographicReference,preparedReferenceGeometry} from './coaching-geogr
 import {createGpsPose,gpsDistance} from './coaching-gps-model.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {MapShell} from './map-shell.mjs';
+import {GpsButton} from './coaching-gps-ui.mjs';
 import {TracerGpsScreen} from './coaching-gps-screen.mjs';
 import {tracerView} from './coaching-tracer.mjs';
 const control=(id,label,extra='')=>`<button type="button" data-tracer="${id}" ${extra}>${label}</button>`;
 const time=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 export function TracerScreen(s,p,ui={}){
  const v=tracerView(s,p),status={approaching:'Approche du départ',arrived:'Arrivé au départ',before:'Prêt à démarrer',active:'Pose active',finished:'Pose terminée',in_place:'En place'}[v.phase],externalRecorder=p.productScenario==='external_driver_recorded',selfTrace=p.productScenario==='self_trace';
- const poseScreen=html=>{if(!externalRecorder)return html;html=html.replace('COACHING · TRACEUR','COACHING · CONDUCTEUR · POSE').replace('Pose GPS réelle','Pose GPS · Traceur externe');return s.phase==='in_place'?html.replace('<p>✓ Vous êtes en place · pose GPS figée.</p>',control('external-ready','Le traceur est en place')):html;};
+ const poseScreen=html=>{if(!externalRecorder)return html;html=html.replace('COACHING · TRACEUR','COACHING · CONDUCTEUR · POSE').replace('Pose GPS réelle','Pose GPS · Traceur externe');return s.phase==='in_place'?html.replace('<p>✓ Vous êtes en place · pose GPS figée.</p>',GpsButton('tracer','external-ready','Le traceur est en place')):html;};
  if(hasGeographicReference(p.session)){
   const approach=['approaching','arrived'].includes(s.phase),fake=!s.gpsPose;
   let html=TracerGpsScreen({...s,gpsPose:s.gpsPose||createGpsPose(p.session.id,p.viewerId)},ui.gps,{...ui,reference:preparedReferenceGeometry(p.session.preparation.geometry.points),ready:externalRecorder?p.phase==='created':p.phase==='ready',selfTrace,messages:v.messages,unread:v.unread});
