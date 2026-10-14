@@ -885,6 +885,7 @@ document.addEventListener('click',event=>{
    else if(action==='cancel-finish')searchUI.confirmFinish=false;
    else if(action==='confirm-finish'){if(!searchUI.confirmFinish)throw Error('Confirmation requise.');searchState=advanceSessionSearch(searchState,preparationState,'finish');searchUI.confirmFinish=false;}
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState);searchState=syncSession(searchState,preparationState,tracerState);}
+   else if(action==='start'&&canUseDriverGps(gpsContext())){driverGps.start(()=>{searchState=advanceSessionSearch(searchState,preparationState,'start');render();});}
    else if(['start','progress','debrief'].includes(action)){searchState=advanceSessionSearch(searchState,preparationState,action);if(action==='start'&&searchState.gpsSearch)driverGps.seed();}
    else if(action==='layers')searchUI.layersOpen=!searchUI.layersOpen;
    else if(action==='center'){const point=search.searchView(searchState,preparationState).markers.find(m=>m.id===preparationState.viewerId);if(point)searchUI.center={x:point.x,y:point.y};searchUI.notice=point?'Carte recentrée sur votre position mock.':'Aucune position disponible pour recentrer.';}
@@ -911,6 +912,7 @@ document.addEventListener('click',event=>{
    else if(action==='ready'){const next=preparation.transition(preparationState,'ready');const t=tracer.advanceTracer(tracerState,next,'ready');preparationState=next;tracerState=t;}
    else if(action==='return-start'){tracerState=returnSelfTraceToStart(tracerState,preparationState);preparationState=preparation.simulate(preparationState,{viewerFunction:'driver'});terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState,tracerState);terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
+   else if(action==='start'&&canUseTracerGps(gpsContext())){tracerGps.start(()=>{tracerState=tracer.advanceTracer(tracerState,preparationState,'start');searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);render();});}
    else if(['start','progress','finish','in-place'].includes(action)){tracerState=tracer.advanceTracer(tracerState,preparationState,action);if(action==='start'&&tracerState.gpsPose)tracerGps.seed();searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(action==='resume'){preparationState=preparation.simulate(preparationState,{gps:'fresh'});if(tracerState.phase==='active')tracerState=tracer.advanceTracer(tracerState,preparationState,'progress');}
    else if(action==='messages'){tracerState=tracer.readMessages(tracerState,preparationState);tracerUI={...tracerUI,messagesOpen:true,devOpen:false};}
