@@ -1,9 +1,11 @@
+import {OperationalWeatherMarkup} from './operational-weather.mjs';
+import {formatOperationalGpsClock} from './operational-gps-screen.mjs';
 import { escapeHTML as e, EmptyState, StatusBadge } from './components.mjs';
 import { OperationalMap } from './operational-map.mjs';
 import { operationalJournalMarkup } from './operational-screen.mjs';
 import { OperationalNavigation } from './operational-intake.mjs';
 
-export function OperationalReplayScreen(view) {
+export function OperationalReplayScreen(view,{weather:placeWeather}={}) {
   if (!view?.readOnly || view.kind !== 'operational') {
     return `<section class="operational-replay-page">${EmptyState('Replay indisponible','Le replay est accessible après la clôture et la finalisation de la mission.','navLive')}<a class="button button-dark" href="/sessions">Retour aux sessions</a></section>`;
   }
@@ -14,6 +16,7 @@ export function OperationalReplayScreen(view) {
   const confirmedStart=typeof view.places?.confirmedTrackStart==='object'?view.places.confirmedTrackStart?.description:view.places?.confirmedTrackStart;
   const detailRows = [
     ['Chien', view.dog?.name],
+    ...(view.gpsTrack?[['Distance GPS',(view.distance/1000).toFixed(2).replace('.',',')+' km'],['Temps actif',formatOperationalGpsClock(view.trackingElapsedMs)],['Temps en pause',Math.round((view.time?.pauseDurationMs||0)/1000)+' s']]:[]),
     ['Conducteur', view.handler?.name],
     ['Adresse d’intervention', view.places?.interventionAddress],
     ['Commune', view.places?.interventionCommune],
@@ -34,11 +37,13 @@ export function OperationalReplayScreen(view) {
     if(!available.length&&!values?.comment)return '';
     return `<section class="card operational-replay-details"><h2>Évaluation · ${label}</h2>${available.length?`<dl>${available.map(([key,value])=>`<div><dt>${e(key)}</dt><dd>${e(value)} / 5</dd></div>`).join('')}</dl>`:'<p>Aucune note standardisée disponible.</p>'}${values?.comment?`<p>${e(values.comment)}</p>`:''}</section>`;
   }).join('');
-  const pauseRows=(view.pauseObservations||[]).map(item=>`<li><strong>${e(item.classification)}</strong><span>${item.duration===null?'Durée indisponible':`${Math.round(item.duration/1000)} s · simulation`} · ${e(item.confirmationState||'état indisponible')}</span>${item.note?`<p>${e(item.note)}</p>`:''}</li>`).join('');
+  const pauseRows=(view.pauseObservations||[]).map(item=>`<li><strong>${e(item.classification)}</strong><span>${item.duration===null?'Durée indisponible':`${Math.round(item.duration/1000)} s${view.gpsTrack?'':' · simulation'}`} · ${e(item.confirmationState||'état indisponible')}</span>${item.note?`<p>${e(item.note)}</p>`:''}</li>`).join('');
   const corridor = view.olfactoryCorridor
     ? `<aside class="operational-corridor-note"><strong>${e(view.olfactoryCorridor.label)}</strong><span>Couche indicative conservée de la mission mock.</span></aside>`
     : '';
-  const weather = view.weather
+  const weather = view.gpsTrack
+    ? `<section class="card operational-weather-panel">${OperationalWeatherMarkup({...placeWeather,readOnly:true})}</section>`
+    : view.weather
     ? `<section class="card operational-weather-panel"><span class="eyebrow">MÉTÉO · DÉMONSTRATION</span><h2>Vent et conditions</h2><span class="operational-mock-label">Démonstration · non mesuré</span><p>${e(view.weather.wind)}</p><p>${e(view.weather.speed)} · ${e(view.weather.temperature)}</p></section>`
     : '<section class="card operational-weather-panel"><span class="eyebrow">MÉTÉO</span><h2>Conditions indisponibles</h2><p>Aucune donnée météo enregistrée pour cette mission.</p></section>';
   const gpx = view.gpxAttachment
@@ -46,3 +51,4 @@ export function OperationalReplayScreen(view) {
     : '';
   return `<section class="operational-page operational-replay-page" data-operational-replay="${e(view.id)}"><a class="back-link" href="/sessions">← Sessions</a><header class="operational-heading"><span class="eyebrow">REPLAY DE MISSION · LECTURE SEULE</span><h1>${e(view.title)}</h1><p>${StatusBadge(view.status,view.status==='Archivée'?'neutral':'gold')} <span>Lecture seule</span></p>${OperationalNavigation(view.places?.interventionAddress)}</header><section class="operational-map-panel operational-replay-map-panel"><div class="operational-map-heading"><div><span class="eyebrow">CARTE APRÈS MISSION</span><h2>Progression enregistrée</h2></div><span class="operational-mock-label">${view.gpsTrack?'GPS RÉEL · LECTURE SEULE':'MOCK · AUCUN GPS RÉEL'}</span></div><div class="operational-replay-legend"><span>Départ</span><span>${view.gpsTrack?'Progression GPS':'Progression mock'}</span><span>Fin du suivi</span><span>Événements</span></div>${OperationalMap(view,{interactive:false})}<p class="operational-replay-trace-status">${e(traceMessage)}</p>${corridor}</section><section class="card operational-replay-details"><h2>Synthèse de mission</h2>${detailRows.length?`<dl>${detailRows.map(([label,value])=>`<div><dt>${e(label)}</dt><dd>${e(value)}</dd></div>`).join('')}</dl>`:EmptyState('Informations indisponibles','Aucune information facultative n’a été renseignée.','navLive')}</section><section class="card operational-events-panel"><h2>Journal terrain${view.gpsTrack?' · GPS réel':' · simulation'}</h2>${eventContent}</section>${pauseRows?`<section class="card operational-replay-details"><h2>Pauses et immobilités annotées</h2><ul>${pauseRows}</ul><p>Les annotations non confirmées ne sont pas comptées comme pauses actives.</p></section>`:''}${evaluations}${weather}${gpx}<p class="operational-readonly-note">La mission est consultable en lecture seule. Aucune donnée absente n’est reconstruite.</p><a class="button button-dark" href="/sessions">Retour aux sessions</a></section>`;
 }
+

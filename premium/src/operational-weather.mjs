@@ -109,5 +109,20 @@ export function createOperationalWeatherController({getContext,document=globalTh
   }
   void load();
  }
- return {view,load,select,correct,automatic,mount};
+ function snapshot(mission){
+  const c=getContext(),key=contextKey({user:c?.user,route:{type:'mission',missionId:mission?.id},mission});
+  const address=addressOf(mission),empty={state:'unavailable',weather:null,location:null,candidates:[],readOnly:true};
+  if(!key)return empty;
+  const existing=records.get(JSON.stringify([key,address,false]))||records.get(JSON.stringify([key,address,true]));
+  if(existing?.weather)return structuredClone({...empty,state:'available',location:existing.location,weather:existing.weather});
+  try{
+   const saved=JSON.parse(storage?.getItem(storageKey(key))||'null');
+   if(saved?.version===1&&saved.address===address&&Number.isFinite(saved.weather?.observedAt)&&saved.weather.observedAt<=clock()+300000){
+    const p=saved.location,location=p&&Number.isFinite(p.latitude)&&Math.abs(p.latitude)<=90&&Number.isFinite(p.longitude)&&Math.abs(p.longitude)<=180&&typeof p.label==='string'?{...p,label:p.label.slice(0,300)}:null;
+    return {...empty,state:'available',location,weather:cleanCorridorWeather(saved.weather)};
+   }
+  }catch{}
+  return empty;
+ }
+ return {view,load,select,correct,automatic,mount,snapshot};
 }
