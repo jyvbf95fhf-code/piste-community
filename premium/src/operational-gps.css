@@ -106,3 +106,6 @@
 .operational-live-policy>[data-operational-live-options]>summary::after{content:"⌄";margin-left:auto}
 .operational-live-policy>[data-operational-live-options][open]>summary::after{transform:rotate(180deg)}
 .operational-live-policy>[data-operational-live-options]>div{display:grid;gap:12px;padding-top:8px}
+
+/* The ready mission start is below the map, rather than at the page footer. */
+.operational-mission[data-operational-tracking-state="ready"]>.operational-field-actions{padding-bottom:8px}
