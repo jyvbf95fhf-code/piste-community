@@ -1,0 +1,10 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs/promises';import {createClient} from '@supabase/supabase-js';import WebSocket from 'ws';import {HttpsProxyAgent} from 'https-proxy-agent';import {COACHING_REMOTE as c} from '../../src/coaching-remote-config.mjs';
+const {accounts}=JSON.parse(await fs.readFile(new URL('../../../.private/qa.json',import.meta.url),'utf8'));
+const agent=process.env.HTTPS_PROXY?new HttpsProxyAgent(process.env.HTTPS_PROXY):undefined;
+class TestSocket extends WebSocket{constructor(url,protocols){super(url,protocols,{agent});}}
+const client=createClient(c.url,c.publishableKey,{auth:{persistSession:false,autoRefreshToken:false},realtime:{transport:TestSocket}});
+test('real private Realtime accepts own destination and refuses another participant destination',async()=>{let channel;try{const {data,error}=await client.auth.signInWithPassword(accounts[0]);assert.equal(error,null);const token=data.session.access_token;async function call(body){const r=await fetch(c.endpoint,{method:'POST',headers:{apikey:c.publishableKey,Authorization:'Bearer '+token},body:JSON.stringify(body)});const value=await r.json();assert.equal(r.status,200,JSON.stringify(value));return value;}
+const sessionId=crypto.randomUUID();await call({operation:'create',sessionId,commandId:crypto.randomUUID(),payload:{role:'traceur',mode:'normal',dogName:'Realtime QA'}});await client.realtime.setAuth(token);
+async function subscribe(topic){channel=client.channel(topic,{config:{private:true}});return new Promise(resolve=>{const timeout=setTimeout(()=>resolve('TEST_TIMEOUT'),20000);channel.subscribe(status=>{if(['SUBSCRIBED','CHANNEL_ERROR','TIMED_OUT'].includes(status)){clearTimeout(timeout);resolve(status);}});});}
+assert.equal(await subscribe(`coaching:${sessionId}:${data.user.id}`),'SUBSCRIBED');await client.removeChannel(channel);assert.equal(await subscribe(`coaching:${sessionId}:${crypto.randomUUID()}`),'CHANNEL_ERROR');
+}finally{await client.removeAllChannels();client.auth.stopAutoRefresh();client.realtime.disconnect();agent?.destroy();}});

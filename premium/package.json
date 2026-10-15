@@ -1,1 +1,12 @@
-{"name":"piste-premium-prototype","private":true,"type":"module","scripts":{"dev":"node server.mjs","test":"node --test tests/*.test.mjs"}}
+{
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.64.1",
+    "@sparticuz/chromium": "153.0.0",
+    "esbuild": "0.28.2",
+    "https-proxy-agent": "9.1.0",
+    "ws": "8.22.0"
+  }
+}
