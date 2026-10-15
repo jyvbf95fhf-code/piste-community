@@ -24,7 +24,11 @@ import {CoachingClosureScreen} from './coaching-closure-screen.mjs';
 import { AppShell, Toast, ConfirmationDialog, SessionCard, EmptyState, escapeHTML } from './components.mjs';
 import { HomeScreen, PlaceholderScreen, AuthScreen, routes } from './screens.mjs';
 import { mock } from './data.mjs';
-import { createMockAuth, resolveMockRoute } from './mock-auth.mjs';
+import {createClient} from './vendor/supabase-client.mjs';
+import {COACHING_REMOTE as accountConfig} from './coaching-remote-config.mjs';
+import {createPisteAccount} from './piste-account-auth.mjs';
+import {createCoachingRemoteTransport} from './coaching-remote-transport.mjs';
+const resolveAccountRoute=(route,session)=>!session.authenticated&&!route.startsWith('/auth')?'/auth':route;
 import { debugSnapshot } from './config.mjs';
 import { themeForRoute } from './theme.mjs';
 import * as coaching from './coaching.mjs';
@@ -100,7 +104,12 @@ import {adminCurrentVersion} from './admin-deployments.mjs';
 let segment='Toutes';
 let storage;
 try { storage=window.localStorage; } catch {}
-const auth=createMockAuth(storage);
+document.querySelector('#app').textContent='Vérification de votre connexion PISTE…';
+const accountClient=createClient(accountConfig.url,accountConfig.publishableKey);
+const accountApi=createCoachingRemoteTransport({client:accountClient});
+let authNotice='';
+const auth=createPisteAccount({client:accountClient,storage,loadProfile:()=>accountApi.call({operation:'profile'}),onInvalidated:()=>{if(!location.pathname.startsWith('/auth'))location.replace('/auth/login');}});
+try{await auth.initialize();if(auth.getSession().access==='pending')authNotice='Votre compte est connecté. L’accès au Coaching V2 attend une autorisation.';}catch(error){authNotice=error.message;}
 let currentUser=auth.getSession().user;
 const newCoachingDraft=()=>coaching.createDraft(currentUser,[{id:'nox',...mock.dog}]);
 let coachingDraft=newCoachingDraft();
@@ -570,12 +579,12 @@ function render(focus=false) {
  const creatorSections=[...(document.querySelectorAll?.('[data-creator-section]')||[])].map(section=>[section.dataset.creatorSection,section.open]);
  document.querySelector('[data-coaching-help-dialog]')?.close();
  currentUser=auth.getSession().user;
- if(currentUser&&!adminStore.accountIsActive(currentUser.user_id)){auth.signOut();currentUser=null;history.replaceState({},'','/auth');return render(focus);}
+ if(currentUser&&auth.assurance!=='supabase-auth'&&!adminStore.accountIsActive(currentUser.user_id)){auth.signOut();currentUser=null;history.replaceState({},'','/auth');return render(focus);}
  const requested=location.pathname.replace(/\/$/,'') || '/';
  const scientificEntry=canonicalScientificPath(requested);
  if(scientificEntry!==requested)history.replaceState({},'',`${scientificEntry}${location.search}${location.hash}`);
  if(requested==='/olfactory-twin'){history.replaceState({},'','/jumolf');return render(focus);}
- const route=resolveMockRoute(scientificEntry,auth.getSession());
+ const route=resolveAccountRoute(scientificEntry,auth.getSession());
  restoreTrackLibraryForUser();
  restoreOperationalGpsForUser();
  const operationalRoute=resolveOperationalRoute(route);
@@ -614,7 +623,7 @@ function render(focus=false) {
  const scientificScreen=scientificRoute?.startsWith('/scientific/corpus')?scientificCorpusController.screen(`${scientificRoute}${location.search}`):scientificRoute?scientificController.screen(`${scientificRoute}${location.search}`):null;
  const scientificContent=scientificRoute?ScientificShell(scientificRoute,scientificScreen,currentUser):null;
  const content=adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||scientificContributionController.screen(route):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?operationalRoute.type==='replay'?OperationalReplayScreen(operationalReplayView(operationalMission),{weather:opsWeather.snapshot(operationalMission)}):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,gps:opsGps.view(),weather:opsWeather.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?NotificationsScreen(communityStore.getNotificationStore().list(communityStore.viewerId),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)):route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id}),jumolfAccess(),adminStore.accessFor(currentUser).allowed):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
- document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route) : AppShell(content+(route==='/'?'<section class="card"><h2>Coaching entre téléphones</h2><p>Pilote privé · terrain direct · comptes autorisés.</p><a class="button button-dark" href="/coaching-shared.html">Ouvrir le Coaching partagé</a></section>':''),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
+ document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell(content+(route==='/'?'<section class="card"><h2>Coaching entre téléphones</h2><p>Pilote privé · terrain direct · comptes autorisés.</p><a class="button button-dark" href="/coaching-shared.html">Ouvrir le Coaching partagé</a></section>':''),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId));
  trackSmart.reconcile();
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  opsWeather.mount();
@@ -740,7 +749,7 @@ function filterSessions() {
  const rows=sessionListView(sessionCatalog,{filter:segment,query,dogId,currentSessionId:coachingDraft.session?.id,operationalMissions:operationalStore.list()});
  document.querySelector('#session-results').innerHTML=SessionListResults(rows);
 }
-document.addEventListener('click',event=>{
+document.addEventListener('click',async event=>{
  const help=event.target.closest('[data-coaching-help]');if(help){openCoachingHelp(document,help.dataset.coachingHelp,help);return;}
  if(profileController.handleClick(event))return;
  if(scientificContributionController.handleClick(event))return;
@@ -750,7 +759,7 @@ document.addEventListener('click',event=>{
  const notificationOpen=event.target.closest('[data-notification-open]');
  if(notificationOpen)communityStore.markNotificationRead(notificationOpen.dataset.notificationOpen);
  const link=event.target.closest('a');
- if(link && link.origin===location.origin && !link.hash && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button===0) { event.preventDefault();const destination=link.pathname+link.search;if(trackEditorActive&&trackEditor.draft?.dirty&&destination!==trackEditorHref){requestTrackEditorExit(destination);return;}if(destination!==location.pathname+location.search){if(destination!=='/track-builder'&&!destination.startsWith('/track-builder?'))trackEditorActive=false;history.pushState({},'',destination);}render(true); return; }
+ if(link && link.origin===location.origin && !link.pathname.endsWith('.html') && !link.hash && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button===0) { event.preventDefault();const destination=link.pathname+link.search;if(trackEditorActive&&trackEditor.draft?.dirty&&destination!==trackEditorHref){requestTrackEditorExit(destination);return;}if(destination!==location.pathname+location.search){if(destination!=='/track-builder'&&!destination.startsWith('/track-builder?'))trackEditorActive=false;history.pushState({},'',destination);}render(true); return; }
  if(communityController.handleClick(event))return;
  const operationalMapMode=event.target.closest('[data-operational-map-mode]');
  if(operationalMapMode){const mode=operationalMapMode.dataset.operationalMapMode;const mission=operationalStore.get(resolveOperationalRoute(location.pathname)?.missionId);if(mode==='progress'&&mission?.trackingState!=='active'){Toast('La progression est indisponible pendant la pause.');return;}operationalUI={...operationalUI,mode:operationalUI.mode===mode?'':mode};render();return;}
@@ -986,7 +995,7 @@ document.addEventListener('click',event=>{
   return;
  }
  const action=event.target.closest('[data-action]')?.dataset.action;
- if(action==='logout') {opsGps.pause();cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
+ if(action==='logout') {opsGps.pause();cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; await auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
  const photoReset=event.target.closest('[data-dog-photo-reset]');
  if(photoReset){const form=photoReset.closest('form[data-dog-form]');form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl='';form.querySelector('[data-dog-photo]').value='';photoReset.hidden=true;form.querySelector('.dog-photo-pick span').textContent='Ajouter une photo';form.querySelector('.dog-photo-feedback').textContent='';refreshDogPhotoPreview(form);return;}
  if(action==='notification') Toast(mock.notification);
@@ -1175,7 +1184,7 @@ function syncNavigationHeight() {
 window.addEventListener('resize',syncNavigationHeight);
 render();
 
-document.addEventListener('submit',event=>{
+document.addEventListener('submit',async event=>{
  if(event.target.matches('[data-ops-event-form]')){event.preventDefault();const c=operationalGpsContext();try{if(!ownsOperationalGps(c))throw Error('Repère réservé à votre mission GPS.');const fix=opsGps.view().lastFix;operationalStore.addGpsEvent(c.mission.id,{type:event.target.elements.type.value,note:event.target.elements.note.value,position:fix?{timestamp:fix.timestamp,coords:fix}:null});operationalUI={...operationalUI,notice:'Repère enregistré.'};}catch(error){operationalUI={...operationalUI,notice:error.message};}render();return;}
  if(event.target.matches('[data-ops-time-form]')){event.preventDefault();const c=operationalGpsContext();try{if(!ownsOperationalGps(c))throw Error('Mission GPS non autorisée.');const raw=event.target.elements.disappearanceAt.value,value=raw?new Date(raw).toISOString():null;operationalStore.updateDetails(c.mission.id,{disappearanceAt:value});render();}catch(error){Toast(error.message);}return;}
 
@@ -1314,24 +1323,27 @@ document.addEventListener('submit',event=>{
  event.preventDefault();
  let invalid;
  for(const input of form.querySelectorAll('input')) {
-  let message=input.validity.valueMissing?'Ce champ est requis.':input.validity.typeMismatch?'Saisissez un email valide.':input.type==='password'&&input.value.length<8?'Utilisez au moins 8 caractères.':'';
+  let message=input.validity.valueMissing?'Ce champ est requis.':input.validity.typeMismatch?'Saisissez un email valide.':form.dataset.auth==='signup'&&input.type==='password'&&input.value.length<12?'Utilisez au moins 12 caractères.':'';
   if(input.name==='confirmPassword'&&input.value!==form.elements.password.value)message='Les mots de passe ne correspondent pas.';
   input.setAttribute('aria-invalid',String(!!message));
   document.getElementById(`${input.name}-error`).textContent=message;
   if(message&&!invalid)invalid=input;
  }
  if(invalid){invalid.focus();return;}
- if(form.dataset.auth==='forgot') {
-  form.querySelector('.auth-result').textContent='Simulation terminée. Aucun email envoyé.';
-  return;
- }
- const signup=form.dataset.auth==='signup';
- if(signup) auth.signUp({firstName:form.elements.firstName.value});
- else auth.signIn();
- form.reset();
- currentUser=auth.getSession().user;jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null});jumolfController=makeJumolfController();coachingDraft=newCoachingDraft();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();trackUI=newTrackUI();
- history.pushState({},'','/');render(true);
- Toast(signup?'Compte simulé · aucune inscription réelle.':'Connexion simulée · profil Sébastien.');
+ const button=form.querySelector('button[type="submit"]'),feedback=form.querySelector('.auth-result');
+ if(button.disabled)return;button.disabled=true;feedback.textContent='Vérification…';authNotice='';
+ try{
+  if(form.dataset.auth==='forgot'){const result=await auth.forgot(form.elements.email.value);feedback.textContent=result.message;return;}
+  const signup=form.dataset.auth==='signup';
+  if(signup){const result=await auth.signUp(Object.fromEntries(new FormData(form)));form.reset();feedback.textContent=result.message;return;}
+  await auth.signIn({email:form.elements.email.value,password:form.elements.password.value});
+  if(!auth.getSession().authenticated){authNotice='Votre compte est connecté. L’accès au Coaching V2 attend une autorisation.';feedback.textContent=authNotice;form.elements.password.value='';return;}
+  form.reset();currentUser=auth.getSession().user;
+  jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:currentUser.user_id});jumolfController=makeJumolfController();coachingDraft=newCoachingDraft();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();trackUI=newTrackUI();
+  history.pushState({},'','/');render(true);Toast('Connecté à votre compte PISTE V2.');
+ }catch(error){feedback.textContent=error.message;for(const input of form.querySelectorAll('input[type="password"]'))input.value='';}
+ finally{button.disabled=false;}
+
 });
 
 async function copyMockValue(value,input,status) {
