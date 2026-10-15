@@ -17,6 +17,8 @@ Référence cachée absente des réponses ; rôle réel lié à Auth ; pose/rech
 - [x] Contrôle collectif et débrief : réutiliser `applySessionControl`, notes, permissions d’archive et `archiveSession`. Commandes Auth, acteur parti sans nouvelle géométrie, arrêt des capteurs et lots tardifs conservés. Tests rôles, clôture, notes et archive.
 - [x] Messages et autorité Coach : réutiliser les règles de messagerie existantes derrière le serveur ; contenus bornés, auteur serveur, lecture et compteurs par destinataire, masquage des auteurs et aucune coordonnée dans les notifications. Raccorder la préparation de référence/acceptation et les autorisations d’archivage déjà prévues, sans attribuer de rôle depuis une donnée client.
 - [x] Accès Premium : monter le composant partagé sur les routes usuelles de création/session/historique, conserver le créateur et les fonctions locales hors Coaching. Nettoyer listeners/capteur à la sortie ; ne pas recréer un contrôleur au moindre rendu. Tests d’intégration locale.
-- [ ] Vérification finale : tests unitaires globaux, vérifications serveur ciblées, robots des nouveaux raccords. Rapport des limites réelles, publication atomique GitHub avec lease, aucune Preview déclenchée manuellement.
+- [x] Vérification finale : tests unitaires globaux, vérifications serveur ciblées, robots des nouveaux raccords. Rapport des limites réelles, publication atomique GitHub avec lease, aucune Preview déclenchée manuellement.
 
 Chaque bloc suit RED → correctif ciblé → GREEN et fait l’objet d’un checkpoint. Les essais physiques supplémentaires restent différés conformément à la validation utilisateur.
+
+Recette finale quatre comptes autorisée explicitement le 15 octobre puis réussie en 2,3 minutes. Clôture du plan fonctionnel automatisé ; essais physiques multi-iPhone différés.
