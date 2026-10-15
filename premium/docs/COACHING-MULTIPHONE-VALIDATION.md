@@ -20,11 +20,11 @@ Depuis `premium/` : `npm ci`, `node scripts/build-remote-client.mjs`, `node --te
 
 ## Preuves
 
-- Tests ciblés locaux : 170 passent, dont régressions existantes, identité vérifiée, refus V1, persistance/isolation des files, lots scellés et retries stables, snapshots monotones, effacement après 403 ou déconnexion, fin interdite tant qu'un lot n'est pas acquitté, sérialisation des positions natives, restauration bfcache Safari.
+- Tests ciblés locaux : 171 passent, dont régressions existantes, identité vérifiée, refus V1, persistance/isolation des files, lots scellés et retries stables, snapshots monotones, effacement après 403 ou déconnexion, fin interdite tant qu'un lot n'est pas acquitté, sérialisation des positions natives, restauration bfcache Safari.
 - Backend réel : cycle complet dans les trois modes, refus d'usurpation et des non-participants, invitations à usage unique, idempotence, conflit de version, géométries masquées absentes des réponses, débrief commun figé ; 4 tests passent. Test supplémentaire : deux commandes simultanées, un succès et un 409, une seule version ajoutée ; passe.
 - Realtime réel : destination propre acceptée et destination d'un autre participant refusée ; passe.
 - Audit Supabase : sept notices INFO « RLS sans policy » correspondent au refus de tout accès brut voulu. Avertissement restant : détection des mots de passe compromis désactivée, inscriptions publiques fermées et comptes QA uniquement ; ne pas présenter ce pilote comme une ouverture publique. Documentation : https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
-- Robots navigateur : exécution en cours ; ne pas déclarer de validation écran avant les résultats.
+- Robots navigateur : trois scénarios complets passent (Normal, Simple aveugle, Double aveugle), chacun avec quatre navigateurs et comptes distincts. Normal inclut réseau coupé, persistance IndexedDB, reload, reprise explicite et acquittement des points avant fin. Coach pause/reprise et Observateur sans commande vérifiés.
 
 La revue de code a identifié le retour bfcache après `pagehide` : corrigé par recréation au `pageshow` persistant, avec test. Les points GPS restent dans IndexedDB, isolés par compte et session ; reprise explicite après reload. Le passage hors connexion n'invente aucune position et la fin attend l'acquittement des lots.
 
@@ -33,3 +33,5 @@ La revue de code a identifié le retour bfcache après `pagehide` : corrigé par
 Les positions des robots sont synthétiques et signalées QA. Deux véritables iPhones restent nécessaires pour valider les capteurs, Safari, autorisations, passage en arrière-plan, débits réseau et autonomie. Aucun redémarrage automatique du GPS après reload ou retour Safari. Aucun compte personnel V2 de Sébastien n'a encore été créé ; les profils de démonstration existants ne sont pas des comptes Auth. Prévoir une création privée avec choix du mot de passe par l'utilisateur, sans transmettre ce mot de passe dans le chat.
 
 Aucun service payant ajouté. Le pilote consomme les quotas gratuits Auth/Database/Realtime/Functions du nouveau projet ; Vercel reste l'hébergement Preview déjà autorisé.
+
+Contrôle complémentaire : les mises à jour de géolocalisation CDP ont produit des segments unitaires dans les captures ; ces robots prouvent le cycle, le transport et les masques, pas une mesure terrain continue. La distance non nulle est vérifiée séparément avec un lot continu sur le backend réel. Un défaut de raccord du premier segment a été détecté en étendant ce contrôle : segment de démarrage transmis par le capteur et conservé par le serveur, test RED/GREEN. Les trois parcours écran ont été exécutés avant cette dernière correction isolée ; celle-ci est couverte par les tests locaux et le test backend continu.
