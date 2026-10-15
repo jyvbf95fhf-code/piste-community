@@ -32,3 +32,11 @@ Task 5 : trois parcours quatre robots passent, Normal 2 min, Simple et Double av
 Régression navigateur connectée après extension : Normal 1/1 (quatre comptes et reprise réseau). Total des parcours navigateur de ce bloc : 5/5.
 
 15/10 — Bloc GPX partagé autorisé sans Preview. Type GPX pour Traceur connecté dans les trois modes ; import par le seul Traceur pendant la préparation ; départ explicite approche/arrivé/prêt ; aucune métrique GPS issue du fichier ou de l’approche. Parseur GPX/SAX existant réutilisé, coupures conservées. Référence compacte validée côté serveur (10 000 points, 180 ko), droits et projections filtrés, départ seul disponible au Conducteur aveugle conformément à la règle locale ; pose et référence distinctes. Edge coaching v7 du projet isolé, aucun SQL/RLS/Auth/V1. Tests : 224 unitaires, 5 serveur réels, 3 parcours quatre robots. Publication code seulement, sans lancement de Preview. Rapport : COACHING-GPX-SHARED-VALIDATION.md. Les références créées restent le bloc suivant.
+
+## 15 octobre — raccords finaux partagés
+
+Base db39f9d : références créées géographiques, solo Normal, sorties collectives/individuelles, notes personnelles, archivage autorisé au Coach, messages réels, propositions de référence avec acceptation et accès Premium raccordés. Voir `docs/COACHING-SHARED-COMPLETION.md`. Edge coaching v8 actif uniquement sur V2, aucune migration ni modification Auth/RLS.
+
+243 tests unitaires et 8 tests backend réels passent. Solo navigateur Premium jusqu’à archive passe. Revue indépendante : import GPX solo et initialisations asynchrones après destruction corrigés avec tests RED/GREEN. Formulaires préservés pendant les actualisations, reprises CAS bornées, révisions de note conservées pendant l’édition.
+
+La recette finale quatre comptes n’est pas déclarée verte : après corrections et relance, auto-review a refusé la poursuite du test contre Supabase au titre de l’interdiction initiale et de l’envoi de données QA authentifiées. Aucun contournement. Dernier test distant à autoriser explicitement sur le projet V2 de test. Publication du code autorisée sur la branche V2 ; aucune Preview lancée manuellement. Aucun changement main/V1/production. Les validations physiques multi-iPhone restent différées conformément au choix utilisateur.

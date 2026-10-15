@@ -33,3 +33,12 @@ test('a restored late pose batch stays local without blocking in-place after ser
  await t.sendCommand('in-place');assert.deepEqual(commands,['in-place']);
  assert.equal(disk.length,1);assert.equal(disk[0].points[0].sequence,34);
 });
+for(const phase of ['ARCHIVED','CANCELLED','INTERRUPTED','LEFT'])test(`late GPS stays durable without upload in ${phase}`,async()=>{
+ let disk=[],sent=0;const queue=createCoachingRemoteQueue({storage:{async update(k,fn){disk=fn(disk);return disk;}},userId:'u',sessionId:'s'});await queue.appendPoint('search',{sequence:1});const transport=createCoachingRemoteTransport({client,queue,sessionId:'s',request:async(url,req)=>{if(JSON.parse(req.body).type)sent++;return Response.json({projection:{id:'s',version:2,phase}});}});await transport.flush();assert.equal(sent,0);assert.equal(disk.length,1);
+});
+test('a concurrent message does not discard an otherwise valid command: one CAS retry with same identity',async()=>{
+ let version=1,attempts=[];const t=createCoachingRemoteTransport({client,sessionId:'s',request:async(url,req)=>{const b=JSON.parse(req.body);if(b.type){attempts.push(b);if(attempts.length===1){version=2;return Response.json({error:'conflict'},{status:409});}return Response.json({projection:{id:'s',version:3}});}return Response.json({projection:{id:'s',version}});}});await t.sendCommand('approach-start');assert.equal(attempts.length,2);assert.equal(attempts[0].commandId,attempts[1].commandId);assert.equal(attempts[1].expectedVersion,2);
+});
+test('disconnect during pending authentication prevents fresh request or realtime channel',async()=>{
+ let resolveSession,resolveUser,requests=0,channels=0;const authClient={auth:{getSession:()=>new Promise(r=>resolveSession=r),getUser:()=>new Promise(r=>resolveUser=r)},channel(){channels++;return {on(){return this;},subscribe(){}};}};const t=createCoachingRemoteTransport({client:authClient,request:async()=>{requests++;return Response.json({});}}),request=t.call({operation:'list'}),subscription=t.subscribe();t.disconnect();resolveSession({data:{session:{access_token:'test'}}});resolveUser({data:{user:{id:'u'}}});await assert.rejects(request,/fermée/);await assert.rejects(subscription,/fermée/);assert.equal(requests,0);assert.equal(channels,0);
+});

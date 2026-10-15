@@ -14,3 +14,6 @@ test('GPX preparation cannot request GPS before reference and approach are ready
  const controller=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(){watches++;return 1;},clearWatch(){}}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
  globalThis.fetch=async()=>Response.json({projection});try{await controller.connect('s');assert.throws(()=>controller.start('pose'));assert.equal(watches,0);}finally{controller.destroy();globalThis.fetch=original;}
 });
+test('destroy while authentication is pending prevents a late connection or polling',async()=>{
+ let resolveAuth,requests=0,subscriptions=0;const client={auth:{getUser:()=>new Promise(r=>resolveAuth=r),getSession:async()=>{requests++;return {data:{session:{access_token:'test'}}};}},channel(){subscriptions++;return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};const controller=createCoachingRemoteController({client,document:{addEventListener(){},removeEventListener(){}}});const pending=controller.connect('s');controller.destroy();resolveAuth({data:{user:{id:'u'}}});await assert.rejects(pending,/fermée|remplacée/);assert.equal(requests,0);assert.equal(subscriptions,0);assert.equal(controller.view().projection,null);
+});

@@ -1,5 +1,6 @@
 // Compact GPX geometry only. XML parsing stays in the existing browser importer.
 // This contract is checked again by the server; no GPS metrics are accepted.
+import {segmentCoordinates,trackHasPendingRoutes} from './track-route-segments.mjs';
 import {preparedReferenceGeometry} from './coaching-geographic-reference.mjs';
 const reject=message=>{throw Object.assign(Error(message),{status:400});};
 export const MAX_SHARED_REFERENCE_BYTES=180000;
@@ -15,14 +16,21 @@ export function normalizeRemoteGpx(input,id,ownerId){
  if(!linked)reject('Le GPX doit contenir au moins deux points liés.');
  return {id,name:input.name.trim(),source:'gpx',provenance:'gpx-import',ownerId,geometry:{points}};
 }
+export function normalizeRemotePrepared(input,id,ownerId){const r=normalizeRemoteGpx(input,id,ownerId);return {...r,source:'draw',provenance:'created-track'};}
+export function remotePreparedInput(track){
+ const points=track?.geometry?.points;if(!Array.isArray(points)||points.length<2||trackHasPendingRoutes(points))reject('Tracé géographique requis.');
+ const coordinates=[[points[0].x,points[0].y]];
+ for(let i=1;i<points.length;i++){const segment=segmentCoordinates(points[i-1],points[i]);if(!segment.length)coordinates.push([points[i].x,points[i].y,true]);else for(const p of segment.slice(1))coordinates.push([p[0],p[1]]);}
+ const input={name:track.name,coordinates};normalizeRemotePrepared(input,'validation','validation');return input;
+}
 export function remoteGpxInput(parsed){
  const input={name:parsed.name,coordinates:parsed.points.map(p=>p.breakBefore?[p.x,p.y,true]:[p.x,p.y])};
  normalizeRemoteGpx(input,'validation','validation');return input;
 }
 export function remoteReferenceView(session,{canRead,driver=false}={}){
- if(session.traceType!=='gpx')return {traceType:session.traceType||'direct',reference:null,referenceStart:null,referenceStatus:'none'};
+ if(!['gpx','prepared'].includes(session.traceType))return {traceType:session.traceType||'direct',reference:null,referenceStart:null,referenceStatus:'none'};
  const r=session.preparation;
- if(!r)return {traceType:'gpx',reference:null,referenceStart:null,referenceStatus:'required'};
+ if(!r)return {traceType:session.traceType,reference:null,referenceStart:null,referenceStatus:'required'};
  const first=r.geometry.points[0];
- return {traceType:'gpx',reference:canRead?{name:r.name,source:'gpx',geometry:preparedReferenceGeometry(r.geometry.points)}:null,referenceStart:driver?{latitude:first.y,longitude:first.x}:null,referenceStatus:canRead?'available':'hidden'};
+ return {traceType:session.traceType,reference:canRead?{name:r.name,source:r.source,geometry:preparedReferenceGeometry(r.geometry.points)}:null,referenceStart:driver?{latitude:first.y,longitude:first.x}:null,referenceStatus:canRead?'available':'hidden'};
 }
