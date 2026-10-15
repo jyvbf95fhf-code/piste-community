@@ -43,3 +43,19 @@ for(const [scenario,mode] of [['external_traceur','normal'],['external_traceur',
  for(const a of [driver,coach,observer]){const q=(await call(a,{operation:'read',sessionId:id})).projection;assert.equal(q.phase,'DEBRIEF');assert.ok(q.search);assert.equal(q.pose!==null,scenario==='external_driver_recorded');}
  await send(driver,'external-ready',{},400);
 });
+for(const mode of ['normal','simple_blind','full_blind'])test(`real GPX backend: ${mode}`,async()=>{
+ const id=crypto.randomUUID();let p=(await call(tracer,{operation:'create',sessionId:id,commandId:crypto.randomUUID(),payload:{role:'traceur',mode,traceType:'gpx',dogName:'GPX QA'}})).projection;
+ const send=async(a,type,payload={},expected=200)=>{const r=await call(a,{operation:'command',sessionId:id,commandId:crypto.randomUUID(),expectedVersion:p.version,type,payload},expected);if(r.projection)p=r.projection;};
+ for(const a of [driver,coach,observer]){const invite=await call(tracer,{operation:'invite',sessionId:id,role:a.role});p=(await call(a,{operation:'join',sessionId:id,token:invite.token,commandId:crypto.randomUUID()})).projection;}
+ const reference={name:'GPX SECRET QA',coordinates:[[7.777,48.271],[7.7787654,48.2723456],[7.78,48.28,true],[7.781,48.281]]};
+ const fix=()=>({timestamp:Date.now(),coords:{latitude:48.271,longitude:7.777,accuracy:5}});
+ await send(tracer,'start-pose',{fix:fix()},400);await send(driver,'set-gpx-reference',{reference},403);await send(coach,'set-gpx-reference',{reference},403);await send(observer,'set-gpx-reference',{reference},403);
+ await send(tracer,'set-gpx-reference',{reference});assert.equal(p.pose,null);
+ for(const a of accounts){const q=(await call(a,{operation:'read',sessionId:id})).projection,visible=mode==='normal'||a.role==='traceur'||mode==='simple_blind'&&a.role!=='driver';assert.equal(q.reference!==null,visible);if(!visible)assert.doesNotMatch(JSON.stringify(q),/48\.2723456|7\.7787654|GPX SECRET QA/);assert.equal(q.pose,null);}
+ const list=await call(driver,{operation:'list'});if(mode!=='normal')assert.doesNotMatch(JSON.stringify(list.sessions.find(s=>s.id===id)),/48\.2723456|7\.7787654|GPX SECRET QA/);
+ await send(tracer,'start-pose',{fix:fix()},400);await send(tracer,'arrive-start',{},400);
+ await send(tracer,'approach-start');await send(tracer,'arrive-start');await send(tracer,'ready-pose');assert.equal(p.pose,null);
+ await send(tracer,'start-pose',{fix:fix(),segmentId:'gpx-pose'});assert.equal(p.pose.segments.flat().length,1);assert.equal(p.pose.distanceM,0);
+ await send(tracer,'set-gpx-reference',{reference},400);await send(tracer,'finish-pose');await send(tracer,'in-place');await send(driver,'start-search',{fix:fix()});await send(driver,'finish-search');
+ for(const a of accounts){const q=(await call(a,{operation:'read',sessionId:id})).projection;assert.equal(q.phase,'DEBRIEF');assert.equal(q.reference.geometry.segments.length,2);assert.ok(q.pose);assert.ok(q.search);}
+});

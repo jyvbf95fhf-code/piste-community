@@ -47,3 +47,29 @@ for(const [scenario,mode] of [['external_traceur','normal'],['external_traceur',
   console.log(scenario+' '+mode+': debrief, permissions and visibility passed');
  }finally{for(const r of robots){await r.context.close().catch(()=>{});await r.instance?.close().catch(()=>{});}}
 });
+for(const mode of ['normal','simple_blind','full_blind'])test(`GPX robots: ${mode}`,async({browser})=>{
+ const robots=[];try{
+  for(const a of accounts)robots.push(await login(browser,a));const [t,d,c,o]=robots;
+  const form=t.page.locator('[data-remote-form=create]');await form.locator('[name=mode]').selectOption(mode);await form.locator('[name=traceType]').selectOption('gpx');await form.getByRole('button').click();await phase(t.page,'PREPARATION');
+  await expect(t.page.locator('[data-remote=start-pose]')).toHaveCount(0);
+  for(let i=1;i<robots.length;i++){
+   const f=t.page.locator('[data-remote-form=invite]');await f.locator('[name=role]').selectOption(accounts[i].role);await f.getByRole('button').click();await expect(t.page.locator('#remote-app')).toHaveAttribute('aria-busy','false');
+   const code=await t.page.locator('[data-remote-invitation]').inputValue(),join=robots[i].page.locator('[data-remote-form=join]');await join.locator('[name=invitation]').fill(code);await join.getByRole('button').click();await phase(robots[i].page,'PREPARATION');
+  }
+  const xml='<gpx version="1.1"><trk><name>GPX secret QA</name><trkseg><trkpt lat="48.271" lon="7.777"/><trkpt lat="48.2723456" lon="7.7787654"/></trkseg><trkseg><trkpt lat="48.273" lon="7.779"/><trkpt lat="48.274" lon="7.780"/></trkseg></trk></gpx>';
+  const upload=t.page.locator('[data-remote-form=gpx]');
+  await upload.locator('[type=file]').setInputFiles({name:'qa.gpx',mimeType:'application/gpx+xml',buffer:Buffer.from(xml)});await upload.getByRole('button',{name:'Importer le GPX',exact:true}).click();
+  await expect(t.page.locator('[data-remote-reference-status]')).toContainText('GPX secret QA');
+  for(const r of [d,c,o]){await act(r.page,'refresh');const hidden=mode==='full_blind'||mode==='simple_blind'&&r===d;
+   await expect(r.page.locator('[data-remote-form=gpx]')).toHaveCount(0);
+   if(hidden){await expect(r.page.locator('[data-remote-reference-status]')).toContainText('masquée');expect(await r.page.locator('[data-gps-map]').getAttribute('data-gps-planned')).not.toContain('48.2723456');expect(await r.page.content()).not.toContain('GPX secret QA');}else{await expect(r.page.locator('[data-remote-reference-status]')).toContainText('GPX secret QA');await expect(r.page.locator('[data-gps-map]')).toHaveAttribute('data-gps-planned',/48\.2723456/);}
+  }
+  await act(t.page,'approach-start');await act(t.page,'arrive-start');await act(t.page,'ready-pose');await expect(t.page.locator('[data-remote-pose-distance]')).toContainText('Pas encore enregistrée');
+  await t.context.setGeolocation({latitude:48.271,longitude:7.777,accuracy:5});await act(t.page,'start-pose');await phase(t.page,'LAYING');
+  await t.context.setGeolocation({latitude:48.2711,longitude:7.7771,accuracy:5});await expect.poll(async()=>{await act(t.page,'refresh');return t.page.locator('[data-gps-map]').getAttribute('data-gps-pose');}).toContain('48.2711');
+  await act(t.page,'finish-pose');await act(t.page,'in-place');await phase(d.page,'SEARCH_READY');
+  await d.context.setGeolocation({latitude:48.271,longitude:7.777,accuracy:5});await act(d.page,'start-search');await phase(d.page,'SEARCH_RUNNING');await act(c.page,'pause-search');await expect(d.page.locator('.remote-phase')).toContainText('En pause');await act(d.page,'resume-search');await act(d.page,'finish-search');
+  for(const r of robots){await phase(r.page,'DEBRIEF');await expect(r.page.locator('[data-gps-map]')).toHaveCount(1);await expect(r.page.locator('[data-remote-reference-status]')).toContainText('GPX secret QA');expect(await r.page.locator('[data-gps-map]').getAttribute('data-gps-planned')).toContain('48.2723456');}
+  console.log('GPX '+mode+': import, segments, approach, masking and debrief passed');
+ }finally{for(const r of robots){await r.context.close().catch(()=>{});await r.instance?.close().catch(()=>{});}}
+});

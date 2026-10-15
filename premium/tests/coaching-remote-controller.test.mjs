@@ -8,3 +8,9 @@ test('driver can explicitly record an external pose and resume its GPS after rel
  globalThis.fetch=async(url,req)=>{const b=JSON.parse(req.body);if(b.type==='start-pose'){projection.phase='LAYING';projection.version++;}return Response.json({projection});};
  try{await controller.connect('s');assert.equal(watches,0);controller.start('pose');watch({timestamp:Date.now(),coords:{latitude:48,longitude:7,accuracy:5}});await controller.flush();assert.equal(controller.view().projection.phase,'LAYING');await controller.connect('s');controller.resumeGps();assert.equal(watches,2);}finally{controller.destroy();globalThis.fetch=original;}
 });
+test('GPX preparation cannot request GPS before reference and approach are ready',async()=>{
+ const original=globalThis.fetch;let watches=0;const projection={id:'s',version:0,role:'traceur',poseRecorder:'traceur',phase:'PREPARATION',traceType:'gpx',referenceStatus:'required',approachPhase:null};
+ const client={auth:{getUser:async()=>({data:{user:{id:'t'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};
+ const controller=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(){watches++;return 1;},clearWatch(){}}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
+ globalThis.fetch=async()=>Response.json({projection});try{await controller.connect('s');assert.throws(()=>controller.start('pose'));assert.equal(watches,0);}finally{controller.destroy();globalThis.fetch=original;}
+});
