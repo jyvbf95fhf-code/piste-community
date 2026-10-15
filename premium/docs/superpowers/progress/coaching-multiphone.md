@@ -44,3 +44,9 @@ La recette finale quatre comptes n’est pas déclarée verte : après correctio
 ### Recette finale clôturée après autorisation
 
 L’utilisateur confirme « Oui j’autorise » pour le dernier scénario sur le seul Supabase V2 de test. Relance sans changement de code : quatre robots, références/messages/pose/recherche, notes Conducteur et Coach, autorisation d’archivage et archive commune passent en 2,3 minutes. Les quatre projections sont ARCHIVED. Le blocage précédent ne constitue plus une tâche en attente. Bilan : 243 unitaires, 8 backend réels, solo Premium navigateur et scénario quatre comptes passants. Aucune nouvelle Preview. Recette fonctionnelle automatisée terminée sur le périmètre partagé livré, essais physiques complémentaires différés.
+
+## 15 octobre — correction de la régression de présentation Premium
+
+Après la Preview c5f27eb, l’utilisateur signale l’apparition du formulaire technique à la place de l’assistant validé. Restauration par réutilisation de CoachingScreen et adaptateur de présentation vers le contrôleur partagé existant. Aucun faux participant ; invitations réelles après création ; références choisies/import GPX raccordés. Créateur Coach accepté par Edge v9 V2 uniquement, aucun changement SQL/RLS/Auth. Voir `docs/COACHING-PREMIUM-WIZARD-RESTORATION.md`.
+
+249 tests unitaires, deux tests backend réels et le parcours Premium solo complet passent. Captures locales Mode/récapitulatif inspectées. Publication et nouvelle Preview autorisées par « Fais le ! ». Aucun changement main, V1 ni production ; vérification finale de Preview par statut et commit, sans navigateur distant.

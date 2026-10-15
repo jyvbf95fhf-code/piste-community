@@ -6,3 +6,7 @@
 
 .remote-embedded{min-height:0;padding:0 0 100px}.remote-shell [data-remote-messages]{max-height:320px;overflow-y:auto;overflow-wrap:anywhere}.remote-shell .card .button{margin:6px 6px 6px 0}
 .app-shell:has(.remote-embedded)>.screen-header{display:flex}.app-shell:has(.remote-embedded)>.bottom-nav{display:grid}
+
+.coaching-wizard-busy{border:0;margin:0;padding:0;min-width:0}.remote-embedded>details.card{margin-top:28px;padding:20px}.remote-embedded>details form{display:grid;gap:12px;margin-top:18px}.remote-embedded>details textarea{width:100%;min-height:80px}.remote-embedded .coaching-flow [data-shared-gpx]{display:grid;gap:12px;margin-bottom:20px}.remote-embedded .coaching-flow [data-shared-gpx] input{display:block;max-width:100%;margin-top:10px}
+
+.app-shell:has(.remote-embedded) .prototype-note{display:none}
