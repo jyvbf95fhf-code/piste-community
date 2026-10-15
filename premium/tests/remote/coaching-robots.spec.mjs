@@ -17,3 +17,33 @@ for(const mode of ['normal','simple_blind','full_blind'])test(`four isolated bro
  console.log(mode+': shared debrief reached');await d.page.screenshot({path:`test-results/robots-${mode}.png`,fullPage:true});
  }catch(error){console.log('ROBOT ERROR',error.message);for(const r of robots){console.log('STATUS',await r.page.locator('[data-remote-status]').textContent({timeout:1000}).catch(()=>'(page closed)'));}throw error;}finally{for(const r of robots){await r.context.close().catch(()=>{});await r.instance?.close().catch(()=>{});}}
 });
+for(const [scenario,mode] of [['external_traceur','normal'],['external_traceur','simple_blind'],['external_traceur','full_blind'],['external_driver_recorded','normal']])test(`external robots: ${scenario} ${mode}`,async({browser})=>{
+ const robots=[];try{
+  for(const a of accounts.filter(a=>['driver','coach','observer'].includes(a.role)))robots.push(await login(browser,a));
+  const [d,c,o]=robots,recorded=scenario==='external_driver_recorded';
+  const form=d.page.locator('[data-remote-form=create]');
+  await form.locator('[name=mode]').selectOption(mode);await form.locator('[name=scenario]').selectOption(scenario);
+  await expect(form.locator('[name=role]')).toHaveValue('driver');await expect(form.locator('[name=role] option[value=traceur]')).toHaveJSProperty('disabled',true);
+  await form.getByRole('button').click();await phase(d.page,'PREPARATION');
+  await expect(d.page.locator('[data-remote-external]')).toContainText('aucune position GPS');
+  for(let i=1;i<robots.length;i++){
+   const f=d.page.locator('[data-remote-form=invite]');await expect(f.locator('[name=role] option[value=traceur]')).toHaveCount(0);
+   await f.locator('[name=role]').selectOption(accounts.filter(a=>['driver','coach','observer'].includes(a.role))[i].role);await f.getByRole('button').click();
+   await expect(d.page.locator('#remote-app')).toHaveAttribute('aria-busy','false');
+   const code=await d.page.locator('[data-remote-invitation]').inputValue(),join=robots[i].page.locator('[data-remote-form=join]');await join.locator('[name=invitation]').fill(code);await join.getByRole('button').click();await phase(robots[i].page,'PREPARATION');
+  }
+  for(const r of [c,o])await expect(r.page.locator('[data-remote=start-pose], [data-remote=external-ready]')).toHaveCount(0);
+  if(recorded){
+   await d.context.setGeolocation({latitude:48.271,longitude:7.777,accuracy:5});await act(d.page,'start-pose');await phase(d.page,'LAYING');
+   await d.context.setGeolocation({latitude:48.2711,longitude:7.777,accuracy:5});
+   await expect.poll(async()=>{await act(d.page,'refresh');return d.page.locator('[data-gps-map]').getAttribute('data-gps-pose');}).toContain('48.2711');
+   await act(d.page,'finish-pose');await phase(d.page,'TRACK_FINISHED');await act(d.page,'in-place');
+  }else{await expect(d.page.locator('[data-remote-pose-distance]')).toContainText('Tracé de pose indisponible');await act(d.page,'external-ready');}
+  await phase(d.page,'SEARCH_READY');await d.context.setGeolocation({latitude:48.271,longitude:7.777,accuracy:5});await act(d.page,'start-search');await phase(d.page,'SEARCH_RUNNING');
+  for(const r of [c,o]){await act(r.page,'refresh');await phase(r.page,'SEARCH_RUNNING');if(mode==='full_blind')await expect(r.page.locator('[data-remote-search-distance]')).toContainText('Masquée');else await expect(r.page.locator('[data-remote-search-distance]')).toContainText('km');}
+  await expect(o.page.locator('[data-remote=pause-search]')).toHaveCount(0);await act(c.page,'pause-search');await expect(d.page.locator('.remote-phase')).toContainText('En pause');await act(d.page,'resume-search');
+  await d.context.setGeolocation({latitude:48.27105,longitude:7.77704,accuracy:5});await act(d.page,'finish-search');
+  for(const r of robots){await phase(r.page,'DEBRIEF');await expect(r.page.locator('[data-gps-map]')).toHaveCount(1);await expect(r.page.locator('[data-remote-search-distance]')).toContainText('km');await expect(r.page.locator('[data-remote-pose-distance]')).toContainText(recorded?'km':'Tracé de pose indisponible');}
+  console.log(scenario+' '+mode+': debrief, permissions and visibility passed');
+ }finally{for(const r of robots){await r.context.close().catch(()=>{});await r.instance?.close().catch(()=>{});}}
+});
