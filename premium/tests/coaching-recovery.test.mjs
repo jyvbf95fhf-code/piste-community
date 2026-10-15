@@ -1,0 +1,16 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+const {createRecovery}=await import('../src/coaching-recovery.mjs').catch(()=>({}));
+function fixture(hash='#type=recovery&access_token=synthetic&refresh_token=synthetic'){
+ const calls=[];let verified=true,updateError=null;
+ const client={auth:{getSession:async()=>({data:{session:{user:{id:'test'}}}}),getUser:async()=>({data:{user:verified?{id:'test'}:null}}),updateUser:async data=>{calls.push(['update',data]);return {error:updateError};},signOut:async()=>{calls.push(['logout']);return {};},resetPasswordForEmail:async(...args)=>{calls.push(['email',...args]);return {};}}};
+ return {calls,client,hash,setVerified:v=>verified=v,setUpdateError:v=>updateError=v};
+}
+test('ordinary session cannot enable password change',async()=>{const f=fixture('');const r=createRecovery({client:f.client,hash:f.hash});assert.equal(await r.initialize(),false);await assert.rejects(r.update('long-test-password','long-test-password'));assert.equal(f.calls.length,0);});
+test('recovery requires server-verified identity',async()=>{const f=fixture();f.setVerified(false);const r=createRecovery({client:f.client,hash:f.hash});await assert.rejects(r.initialize());await assert.rejects(r.update('long-test-password','long-test-password'));assert.equal(f.calls.length,0);});
+test('mismatched passwords never reach Auth',async()=>{const f=fixture();const r=createRecovery({client:f.client,hash:f.hash});await r.initialize();await assert.rejects(r.update('long-test-password','different-password'));assert.equal(f.calls.length,0);});
+test('successful recovery changes password then signs out and disables reuse',async()=>{const f=fixture();const r=createRecovery({client:f.client,hash:f.hash});assert.equal(await r.initialize(),true);await r.update('long-test-password','long-test-password');assert.deepEqual(f.calls,[['update',{password:'long-test-password'}],['logout']]);await assert.rejects(r.update('long-test-password','long-test-password'));});
+test('Auth update failure is not reported as success',async()=>{const f=fixture();f.setUpdateError({message:'secret detail'});const r=createRecovery({client:f.client,hash:f.hash});await r.initialize();await assert.rejects(r.update('long-test-password','long-test-password'),/Réinitialisation refusée/);assert.equal(f.calls.length,1);});
+test('expired recovery callback cannot update',async()=>{const f=fixture('#error=access_denied&error_code=otp_expired');const r=createRecovery({client:f.client,hash:f.hash});await assert.rejects(r.initialize(),/expiré/);await assert.rejects(r.update('long-test-password','long-test-password'));});
+test('recovery request uses the exact HTTPS callback and never sends a password',async()=>{const f=fixture('');const r=createRecovery({client:f.client,hash:''});await r.request(' person@example.invalid ','https://piste-preview.vercel.app/coaching-recovery.html');assert.deepEqual(f.calls,[['email','person@example.invalid',{redirectTo:'https://piste-preview.vercel.app/coaching-recovery.html'}]]);});
+test('recovery request refuses unsafe callback addresses',async()=>{const f=fixture('');const r=createRecovery({client:f.client,hash:''});await assert.rejects(r.request('person@example.invalid','http://localhost:3000'));assert.equal(f.calls.length,0);});
