@@ -2,7 +2,7 @@
 
 Base consolidée : f32133df495f8e22ec56ca0402135e6f417f035d (Bloc 6 inclus).
 
-## Correctif préparé et testé, non appliqué à Supabase
+## Correctif approuvé et appliqué à Supabase V2
 
 `01-owner-gifts.proposed.sql` remplace deux fonctions privées existantes (`command`, `snapshot`) et ajoute un calculateur privé `gift_record`. Aucune table supprimée ou modifiée, aucune politique RLS changée, aucun compte, consentement ou abonnement existant modifié à l'application du script. Les futures actions confirmées de l'administrateur continuent de modifier les métadonnées d'accès protégées dans `auth.users` et le journal privé existant.
 
@@ -17,8 +17,10 @@ Base consolidée : f32133df495f8e22ec56ca0402135e6f417f035d (Bloc 6 inclus).
 
 L'interface réutilise les écrans Admin et ajoute les cadeaux, leurs dates/provenance/statut, la recherche interne et les informations d'activité. Elle garde les mutations désactivées tant que le backend ne confirme pas `member_management_version: 2`.
 
-## Autorisation demandée
+## Activation validée
 
-Appliquer ce script uniquement sur Supabase V2 `shnwqdkiapgcftbnhilh`, puis déployer les fichiers Edge `coaching` correspondant à cette branche (en conservant ses fichiers existants) et effectuer les contrôles ciblés en transaction annulée. Cette activation est suspendue à l'accord du propriétaire, conformément à l'interdiction de modifier du SQL/Auth sensible sans validation préalable. Aucune Preview ni publication de production incluse.
+Activation autorisée uniquement sur Supabase V2 `shnwqdkiapgcftbnhilh`, puis déployer les fichiers Edge `coaching` correspondant à cette branche (en conservant ses fichiers existants) et effectuer les contrôles ciblés en transaction annulée. Accord explicite du propriétaire reçu, puis migration 20261016195512_v2_owner_member_premium_gifts appliquée le 16/10/2026 et Edge coaching déployée en version 13. Les 28 fichiers existants ont été conservés, seuls les trois modules serveur prévus ont été actualisés. Aucune Preview ni publication de production incluse.
 
-Tests locaux : projection des droits, SQL PostgreSQL isolé (PGlite), limites calendaires dont années bissextiles, propriétaire/administrateur/membre, confirmations, idempotence, conservation du payé, retrait, réactivation sans données supprimées ; robot mobile complet interface → HTTP → proposition SQL. Aucune écriture réelle Supabase effectuée dans ce chantier.
+Tests locaux : projection des droits, SQL PostgreSQL isolé (PGlite), limites calendaires dont années bissextiles, propriétaire/administrateur/membre, confirmations, idempotence, conservation du payé, retrait, réactivation sans données supprimées ; robot mobile complet interface → HTTP → proposition SQL. Les essais SQL sur QA Supabase réels ont été exécutés dans une transaction annulée : cadeau, conservation du payé, idempotence, retrait, Science indépendante, refus membre et protection propriétaire. Aucun résidu QA, un seul propriétaire et droits publics des fonctions toujours refusés. Aucune attribution réelle n’a été effectuée sur un membre.
+
+Le frontend est sauvegardé sur la branche protégée mais reste non publié : son utilisation sur iPhone nécessite une Preview autorisée séparément. Présence en ligne non disponible et historique limité aux 200 dernières opérations, comme indiqué dans les écrans.
