@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import * as api from '../src/ops-live-contract.mjs';
+import {mission,policy,at} from './helpers/ops-live-fixture.mjs';
+const project=(m=mission(),p=policy)=>{assert.equal(typeof api.projectOpsGpsLive,'function','GPS Live projection is required');return api.projectOpsGpsLive(m,p,{now:at+3000});};
+test('GPS projection uses measured distance and preserves interruptions without private dossier',()=>{const m=mission(),before=structuredClone(m),p=project(m);assert.equal(p.distance,m.gpsTrack.distanceM);assert.equal(p.trackingSeconds,2);assert.equal(p.gpsTrack.segments.length,2);assert.equal(p.gpsTrack.segments.flat().length,3);assert.equal(p.interruptions,1);assert.equal(p.lastPositionAt,at+2000);assert.equal(p.events[0].point.latitude,49);assert.doesNotMatch(JSON.stringify(p),/SECRET|ownerUserId|actorId|sessionId.*ops:/);assert.deepEqual(m,before);p.gpsTrack.segments[0][0].latitude=1;assert.equal(m.gpsTrack.segments[0][0].latitude,48);});
+test('sharing off returns no projection',()=>assert.equal(project(mission(),{...policy,share_live:false}),null));
+test('projection options omit disabled fields and never invent corridor geometry',()=>{const p=project(mission(),{...policy,projectionOptions:{}});assert.equal(p.dogName,null);assert.equal(p.handlerName,null);assert.deepEqual(p.events,[]);assert.equal(p.trackAge,null);assert.equal(p.corridor,null);});
+test('invalid geographic source fails closed instead of using mock points',()=>{const m=mission();m.gpsTrack.segments[0][0].latitude=999;assert.throws(()=>project(m),/GPS/);delete m.gpsTrack;assert.equal(project(m).gpsTrack,null);});
+test('freshness follows last captured position, not last HTTP reply',()=>{assert.equal(typeof api.opsLiveFreshness,'function');const p=project();assert.equal(api.opsLiveFreshness(p,at+5000).position,'fresh');assert.equal(api.opsLiveFreshness(p,at+40000).position,'stale');assert.equal(api.opsLiveFreshness({...p,state:'Fin de piste'},at+40000).position,'ended');assert.equal(api.opsLiveFreshness({...p,lastPositionAt:null},at+40000).position,'unavailable');});
