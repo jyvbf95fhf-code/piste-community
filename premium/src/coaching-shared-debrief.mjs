@@ -1,3 +1,4 @@
+import {DataExportsPanel} from './data-exports-client.mjs';
 import {formatElapsed} from './coaching-time.mjs';
 import {DebriefScreen} from './coaching-debrief-screen.mjs';
 import {escapeHTML as e} from './components.mjs';
@@ -19,5 +20,5 @@ export function SharedCoachingDebrief(p,{tab='summary',profile={},drafts={},busy
  const action=(id,label)=>`<button type="button" class="button button-${id==='archive'?'gold debrief-archive':'dark'}" data-remote="${id}" ${busy?'disabled':''}>${label}</button>`;
  const permission=p.archivePermission||{};
  const archive=p.phase==='DEBRIEF'?(permission.canManageArchive?action(permission.status==='active'?'revoke-archive':'grant-archive',permission.status==='active'?'Retirer l’autorisation d’archiver au Coach':'Autoriser le Coach à archiver'):'')+(permission.canArchive?action('archive','Archiver la session'):''):'';
- return html+`<div class="coaching-shared-debrief-actions">${archive}${action('home','Retour aux sessions')}</div>`;
+ return html+DataExportsPanel({user:{user_id:profile?.id},domain:'coaching'})+`<div class="coaching-shared-debrief-actions">${archive}${action('home','Retour aux sessions')}</div>`;
 }

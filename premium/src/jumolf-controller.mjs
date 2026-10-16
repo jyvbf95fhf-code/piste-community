@@ -1,3 +1,4 @@
+import {applyJumolfSourceConsents} from './jumolf-consent.mjs';
 import {buildJumolfSources} from './jumolf-adapter.mjs';
 import {analyzeJumolfSnapshot} from './jumolf-analysis-engine.mjs';
 import {compareJumolfSessions} from './jumolf-comparison.mjs';
@@ -31,15 +32,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='';
  const learningJournal=createJumolfLearningStore({clock}),targetedPlans=[];
  for(const finding of isDemo()?syntheticDiscoveries:[])learningJournal.append({type:'discovery_detected',discovery_id:finding.id,priority:finding.priority});
- const consentedSources=()=>{
-  const state=store.snapshot(),sources=buildJumolfSources(getRawSources());
-  if(!state.consents.dog_history){sources.dogs=[];for(const item of [...sources.sessions,...sources.tracks,...sources.operational]){item.dog=null;item.dogId=null;}}
-  for(const source of [...sources.sessions,...sources.tracks,...sources.operational]){
-   if(!state.consents.gps){source.trace=null;source.referenceTrace=null;source.corridor=null;source.metrics=null;source.probableZones=null;source.uncertaintyZones=null;source.events=(source.events||[]).map(({point,...event})=>event);}
-   if(!state.consents.weather){source.weather=null;source.wind=null;}
-  }
-  return sources;
- };
+ const consentedSources=()=>applyJumolfSourceConsents(buildJumolfSources(getRawSources()),store.snapshot().consents);
  const sourceById=id=>[...consentedSources().sessions,...consentedSources().tracks,...consentedSources().operational].find(item=>item.id===id)||null;
  const latestFor=(id,consents=store.snapshot().consents)=>{
   const row=store.snapshot().analysis_runs.filter(item=>item.source_snapshot_id===id).at(-1);if(!row)return null;

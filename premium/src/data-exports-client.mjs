@@ -1,0 +1,16 @@
+import {escapeHTML as e} from './components.mjs';
+export function DataExportsPanel({user,domain=null}={}){
+ if(!user?.user_id)return '';
+ const domains=[['coaching','Coaching terminé'],['ops','OPS terminé'],['track','Tracés préparés'],...(user.permissions?.research?[['science','Science']]:[]),...(['premium','admin_grant','access_code'].includes(user.jumolf_entitlement?.entitlement)?[['jumolf','JUMOLF']]:[]),['backup','Sauvegarde personnelle JSON']].filter(([id])=>!domain||id===domain);
+ if(!domains.length)return '';
+ return `<details class="card" data-data-exports><summary>Exporter mes données sauvegardées</summary><p>Les exports relisent Supabase V2. Sauvegardez d’abord vos modifications locales dans Profil → Sauvegardes. Coaching et OPS : dossiers terminés uniquement ; les données masquées par vos droits restent exclues. Le fichier téléchargé peut contenir des positions GPS et des informations OPS personnelles.</p><form data-data-export-form><label>Données<select name="domain">${domains.map(([id,label])=>`<option value="${e(id)}">${e(label)}</option>`).join('')}</select></label><label>Format<select name="format"><option value="json">JSON · données et provenance</option><option value="csv">CSV · métriques</option><option value="gpx">GPX · tracés disponibles</option></select></label><p>La sauvegarde personnelle utilise uniquement JSON. JUMOLF respecte vos consentements actuels. Les estimations météo et olfactives conservent leur provenance.</p><button type="submit" class="button button-dark">Télécharger l’export</button><p data-export-status role="status"></p></form></details>`;
+}
+export function createDataExportController({call,getUser,getConsents=()=>({}),document:doc=globalThis.document,URL:url=globalThis.URL,Blob:BlobType=globalThis.Blob}={}){
+ let pending=false;
+ return {handleSubmit(event){const form=event.target.closest?.('[data-data-export-form]');if(!form)return false;event.preventDefault();if(pending)return true;
+ const user=getUser(),id=user?.user_id,status=form.querySelector('[data-export-status]'),button=form.querySelector('button');if(!id){status.textContent='Connexion requise.';return true;}
+ const domain=form.elements.domain.value,format=form.elements.format.value;if(domain==='backup'&&format!=='json'){status.textContent='Choisissez JSON pour la sauvegarde personnelle.';return true;}
+ pending=true;button.disabled=true;status.textContent='Préparation des données sauvegardées…';
+ void (async()=>{try{const file=await call({operation:'export-data',domain,format,...(domain==='jumolf'?{consents:getConsents()}:{} )});if(getUser()?.user_id!==id)throw Error('Le compte a changé : export annulé.');if(typeof file.content!=='string'||file.content.length>15000000||!/^piste-[a-z]+\.(json|csv|gpx)$/.test(file.filename))throw Error('Réponse d’export invalide.');const objectUrl=url.createObjectURL(new BlobType([file.content],{type:file.mime})),a=doc.createElement('a');a.href=objectUrl;a.download=file.filename;doc.body.appendChild(a);a.click();a.remove();setTimeout(()=>url.revokeObjectURL(objectUrl),60000);status.textContent='Export téléchargé · données sauvegardées uniquement.';}catch(error){status.textContent=error.message||'Export indisponible.';}finally{pending=false;button.disabled=false;}})();return true;
+ }};
+}

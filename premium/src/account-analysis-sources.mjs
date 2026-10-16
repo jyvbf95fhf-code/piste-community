@@ -14,7 +14,7 @@ function weatherProjection(snapshot){
 }
 const events=items=>(items||[]).map(item=>({type:String(item.type||item.label||'Événement'),timestamp:iso(item.timestamp??item.at),...(item.point?.space==='wgs84'?{point:{space:'wgs84',x:item.point.x,y:item.point.y}}:{})}));
 const empty=()=>({dogs:[],sessions:[],tracks:[],operational:[]});
-export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,dogs=[],coachingRecords=[],sharedSessions=[],dogIds={},operationalMissions=[],tracks=[],weatherForMission=null}={}){
+export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,tracksOwnerId,dogs=[],coachingRecords=[],sharedSessions=[],dogIds={},operationalMissions=[],tracks=[],weatherForMission=null}={}){
  if(!ownerId)return empty();
  const safeDogs=dogs.filter(d=>!d.isDemonstration&&!d.demo&&!d.synthetic&&(!d.ownerId||d.ownerId===ownerId)),dogById=new Map(safeDogs.map(d=>[d.id,d]));
  const linked=(id,name)=>dogById.has(id)?{id,name:dogById.get(id).name,breed:dogById.get(id).breed}:name?{name}:null;
@@ -33,14 +33,14 @@ export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,
  const operational=[];
  for(const m of operationalMissions){
   if(m.ownerUserId!==ownerId||!['Terminée','Archivée'].includes(m.status)||m.demo||m.synthetic)continue;
-  const trace=points(m.gpsTrack),dog=linked(m.dog?.id,m.dog?.name),weather=weatherProjection(m.weatherSnapshot||weatherForMission?.(m));
+  const trace=points(m.gpsTrack),dog=linked(m.dogId||m.dog?.id,m.dog?.name),weather=weatherProjection(m.weatherSnapshot||weatherForMission?.(m));
   const rawWeather=(m.weatherSnapshot||weatherForMission?.(m))?.weather;
   const end=m.gpsTrack?.endedAt||m.finishedAt;
   const corridor=m.olfactoryCorridorEnabled&&m.referenceGpsPose&&rawWeather&&Number.isFinite(end)?buildGpsCorridor({pose:m.referenceGpsPose,weather:rawWeather,now:end,allowed:true}):null;
   const geometry=corridor?.features?.flatMap(f=>(f.geometry?.outerBoundary||[]).map(p=>({space:'wgs84',x:p.lon,y:p.lat})))||[];
   operational.push({id:'ops:'+m.id,kind:'operational',status:m.status,dog,dogId:dog?.id||null,trace:trace.length?trace:null,trackingStartedAt:iso(m.gpsTrack?.startedAt||m.trackingStartedAt),finishedAt:iso(end),trackingElapsedMs:number(m.trackingElapsedMs),distanceM:trace.length?number(m.gpsTrack.distanceM):null,time:{trackAgeAtStart:m.time?.trackAgeAtStart?{seconds:number(m.time.trackAgeAtStart.seconds),label:m.time.trackAgeAtStart.label}:null},context:{environment:m.context?.environmentType||m.context?.environment||m.context?.terrain||null},events:events(m.events).map(e=>({...e,shareable:true})),weather,wind:weather?.wind||null,corridor:geometry.length?{geometry,provenance:'estimated'}:null,provenance:{trace:trace.length?'phone_gps':null,distance:trace.length?'calculated':null,weather:weather?.provenance||null}});
  }
- return {dogs:safeDogs,sessions:[...sessions.values()],operational,tracks:tracks.filter(t=>(!t.ownerId||t.ownerId===ownerId)&&!t.demo&&!t.synthetic&&t.points?.every(p=>p.space==='wgs84')).map(t=>({...t,geometry:t.points,provenance:t.source==='gpx'?'gpx_import':'manual'}))};
+ return {dogs:safeDogs,sessions:[...sessions.values()],operational,tracks:tracks.filter(t=>(t.ownerId===ownerId||t.ownerId==='self'&&tracksOwnerId===ownerId)&&!t.demo&&!t.synthetic&&(t.geometry?.points||t.points)?.every(p=>p.space==='wgs84')).map(t=>({...t,geometry:t.geometry?.points||t.points,provenance:t.source==='gpx'?'gpx_import':'manual'}))};
 }
 export function buildAccountScientificDataset(sources={},ownerId){
  const sessions=[...(sources.sessions||[]),...(sources.operational||[])].map(s=>{

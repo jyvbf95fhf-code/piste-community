@@ -1,3 +1,4 @@
+import {exportAccountData} from './data-exports-service.mjs';
 import {projectAdminSnapshot} from './admin-service.mjs';
 import {projectVerifiedCapabilities} from './account-capabilities.mjs';
 import {createRemoteSession,joinRemoteSession,reduceRemoteSession,projectRemoteSession} from './coaching-service.mjs';
@@ -15,6 +16,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now}={}){
  const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];if(!token)error('Connexion requise.',401);const result=await authClient.auth.getUser(token);if(result.error||!result.data?.user)error('Connexion expirée.',401);const uid=result.data.user.id;
  const profile=assertResult(await admin.from('coaching_remote_users').select('id,display_name,qa,enabled').eq('id',uid).eq('enabled',true).maybeSingle());if(!profile)error('Compte non autorisé pour ce pilote.',403);
  const capabilities=projectVerifiedCapabilities(result.data.user,profile,clock());
+ if(body.operation==='export-data')return respond(await exportAccountData({admin,uid,capabilities,body,clock}));
  if(body.operation==='authorize-feature'){
   const allowed={premium:capabilities.permissions.premium,science:capabilities.permissions.research,jumolf:capabilities.jumolf_entitlement.entitlement!=='none'}[body.feature];
   if(!allowed)error('Accès non autorisé.',403);return respond({authorized:true,...capabilities});
