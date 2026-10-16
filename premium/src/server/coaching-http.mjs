@@ -22,7 +22,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now}={}){
   if(!allowed)error('Accès non autorisé.',403);return respond({authorized:true,...capabilities});
  }
  if(['admin-snapshot','admin-command'].includes(body.operation)){
-  if(!capabilities.permissions.admin)error('Accès administrateur requis.',403);
+  if(capabilities.admin_role!=='owner_admin')error('Accès propriétaire requis.',403);
   if(body.operation==='admin-snapshot')return respond(projectAdminSnapshot(assertResult(await admin.rpc('v2_admin_snapshot',{p_actor:uid})),clock()));
   if(!uuid(body.targetId)||typeof body.action!=='string'||!body.payload||typeof body.payload!=='object'||Array.isArray(body.payload))error('Commande Admin invalide.');
   return respond(assertResult(await admin.rpc('v2_admin_command',{p_actor:uid,p_action:body.action,p_target:body.targetId,p_payload:body.payload})));

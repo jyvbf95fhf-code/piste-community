@@ -35,7 +35,8 @@
       "feature/v2-premium-science-jumolf-block4": false,
       "feature/v2-premium-science-jumolf-rights": false,
       "feature/v2-premium-admin-block5": false,
-      "feature/v2-premium-data-exports-block6": false
+      "feature/v2-premium-data-exports-block6": false,
+      "feature/v2-premium-member-gifts": false
     }
   }
 }
