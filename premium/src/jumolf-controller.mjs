@@ -26,15 +26,16 @@ const syntheticTemporalLearning=buildJumolfTemporalLearning(syntheticDataset.ses
 const clone=value=>structuredClone(value);
 const routePath=()=>location.pathname+location.search;
 
-export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString()}={}){
+export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true}={}){
+ const isDemo=()=>typeof demoMode==='function'?demoMode():demoMode;
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='';
  const learningJournal=createJumolfLearningStore({clock}),targetedPlans=[];
- for(const finding of syntheticDiscoveries)learningJournal.append({type:'discovery_detected',discovery_id:finding.id,priority:finding.priority});
+ for(const finding of isDemo()?syntheticDiscoveries:[])learningJournal.append({type:'discovery_detected',discovery_id:finding.id,priority:finding.priority});
  const consentedSources=()=>{
   const state=store.snapshot(),sources=buildJumolfSources(getRawSources());
   if(!state.consents.dog_history){sources.dogs=[];for(const item of [...sources.sessions,...sources.tracks,...sources.operational]){item.dog=null;item.dogId=null;}}
   for(const source of [...sources.sessions,...sources.tracks,...sources.operational]){
-   if(!state.consents.gps){source.trace=null;source.referenceTrace=null;source.corridor=null;source.metrics=null;}
+   if(!state.consents.gps){source.trace=null;source.referenceTrace=null;source.corridor=null;source.metrics=null;source.probableZones=null;source.uncertaintyZones=null;source.events=(source.events||[]).map(({point,...event})=>event);}
    if(!state.consents.weather){source.weather=null;source.wind=null;}
   }
   return sources;
@@ -58,15 +59,15 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   if(!currentAccess.jumolf_enabled)throw new Error('Activez JUMOLF avant de lancer une analyse.');
   const source=sourceById(id);if(!source)throw new Error('Source indisponible ou non autorisée.');
   const previous=store.snapshot().analysis_runs.filter(item=>item.source_snapshot_id===id);
-  const run=analyzeJumolfSnapshot(source,{consents:store.snapshot().consents,generatedAt:clock(),analysisId:`jumolf-analysis-${id}-${previous.length+1}`,analysisVersion:recalculate?`analysis-mock-${previous.length+1}`:undefined});
+  const run=analyzeJumolfSnapshot(source,{consents:{...store.snapshot().consents,...(!isDemo()?{ai_analysis:false}:{})},generatedAt:clock(),analysisId:`jumolf-analysis-${id}-${previous.length+1}`,analysisVersion:!isDemo()?`account-analysis-${previous.length+1}`:recalculate?`analysis-mock-${previous.length+1}`:undefined});
   store.addAnalysis(run);return run;
  };
  const compare=ids=>{
   const currentAccess=access();if(!currentAccess.entitlement_valid||!currentAccess.jumolf_enabled)throw new Error('Un accès JUMOLF actif est nécessaire pour comparer des sessions.');
   if(!store.snapshot().consents.session_comparison)throw new Error('Le consentement à la comparaison est désactivé.');
-  const sources=consentedSources(),sessions=ids.map(id=>sources.sessions.find(item=>item.id===id)).filter(Boolean);
+  const sources=consentedSources(),sessions=ids.map(id=>[...sources.sessions,...sources.operational].find(item=>item.id===id)).filter(Boolean);
   if(sessions.length<2)throw new Error('Sélectionnez au moins deux sessions disponibles.');
-  comparison=compareJumolfSessions(sessions);return comparison;
+  comparison=compareJumolfSessions(sessions.map(source=>({...source,metrics:analyzeJumolfSnapshot(source,{consents:{ai_analysis:false}}).metrics})));return comparison;
  };
  const controller={
   activate,completeOnboarding,
@@ -85,18 +86,19 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='premium'||route.type==='access-code'||!currentAccess.entitlement_valid||(!currentAccess.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'))return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage});
    if(!state.jumolf_onboarding_completed&&route.type!=='onboarding'&&!route.replay&&route.type!=='activate')return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage});
    const sources=consentedSources();
+   if(!isDemo()){const ids=new Set([...sources.sessions,...sources.tracks,...sources.operational].map(s=>s.id));state.analysis_runs=state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)).map(r=>latestFor(r.source_snapshot_id,state.consents)).filter(Boolean);if(comparison&&!comparison.demo){if(!state.consents.session_comparison)comparison=null;else try{compare(comparison.sessions.map(s=>s.id));}catch{comparison=null;}}}
    if(route.type==='onboarding'&&state.jumolf_onboarding_completed&&!route.replay)route.type='entry';
    let source=null,analysis=null,map=null,timeline=null,dogProfile=null;
    if(route.type==='session'){
-    source=getJumolfDemoSource(route.id)||getJumolfSyntheticSession(route.id,syntheticDataset.sessions)||[...sources.sessions,...sources.tracks,...sources.operational].find(item=>item.id===route.id)||null;
+    source=[...sources.sessions,...sources.tracks,...sources.operational].find(item=>item.id===route.id)||(isDemo()||route.demo?getJumolfDemoSource(route.id)||getJumolfSyntheticSession(route.id,syntheticDataset.sessions):null)||null;
     analysis=source?.synthetic?analyzeJumolfSyntheticSession(source):source?.demo?buildJumolfDemoAnalysis(route.id):latestFor(route.id,state.consents);
     if(source){map=createJumolfMapProjection(source,state.map_layers);timeline=jumolfTimelineAt(source,timelineIndex);}
    }
    if(route.type==='dog'&&!state.consents.dog_history){dogProfile={dog:null};}
-   else if(route.type==='dog'&&route.id===JUMOLF_DEMO_DOG_ID){dogProfile=buildJumolfSyntheticDogProfile(syntheticDataset.sessions);dogProfile.anomalyCount=syntheticAnomalies.length;}
+   else if(route.type==='dog'&&route.id===JUMOLF_DEMO_DOG_ID&&(isDemo()||route.demo)){dogProfile=buildJumolfSyntheticDogProfile(syntheticDataset.sessions);dogProfile.anomalyCount=syntheticAnomalies.length;}
    else if(route.type==='dog'){
     const dog=sources.dogs.find(item=>item.id===route.id)||null;
-    dogProfile=buildJumolfDogProfile(route.id,state.analysis_runs,dog);
+    const ids=new Set([...sources.sessions,...sources.operational].map(s=>s.id));dogProfile=buildJumolfDogProfile(route.id,state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)&&state.consents.gps),dog);
    }
    if(route.type==='compare'&&route.demo)comparison=buildJumolfDemoComparison();
    if(route.type==='dataset'){
@@ -104,12 +106,13 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     const filtered=filterJumolfSyntheticSessions(syntheticDataset.sessions,filters);
     return JumolfScreen({route,state,access:currentAccess,sources,syntheticDataset:{sessions:filtered,analytics:syntheticAnalytics,anomalies:syntheticAnomalies,filters,page:Number(query.get('page'))||1,comparisonDimension:query.get('compare')||'kind',comparisonFirst:query.get('a')||'training',comparisonSecond:query.get('b')||'operational'}});
    }
-   return JumolfScreen({route,state,access:currentAccess,sources,source,analysis,map,timeline,dogProfile,comparison,onboardingStep,timelineIndex,syntheticSummary:syntheticAnalytics,learning:{discoveries:syntheticDiscoveries,temporal:syntheticTemporalLearning,journal:learningJournal.snapshot(),plans:targetedPlans}});
+   return JumolfScreen({route,state,access:currentAccess,sources,source,analysis,map,timeline,dogProfile,comparison,onboardingStep,timelineIndex,realMode:!isDemo(),syntheticSummary:syntheticAnalytics,learning:{discoveries:isDemo()?syntheticDiscoveries:[],temporal:isDemo()?syntheticTemporalLearning:null,journal:isDemo()?learningJournal.snapshot():[],plans:isDemo()?targetedPlans:[]}});
   },
   handleClick(event){
    const node=event.target.closest?.('[data-jumolf-action]');if(!node)return false;
    const action=node.dataset.jumolfAction;
    try{
+    if(!isDemo()&&['create-targeted','create-verification','ignore-targeted','mark-targeted-completed'].includes(action))throw new Error('Cette action appartient au mode démonstration.');
     if(action==='activate')activate();
     else if(action==='onboarding-next'){onboardingStep=Math.min(3,onboardingStep+1);render();}
     else if(action==='complete-onboarding')completeOnboarding();
@@ -145,6 +148,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     else if(form.dataset.jumolfForm==='compare'){const ids=[...form.querySelectorAll('[data-jumolf-compare]:checked')].map(input=>input.value);comparison=controller.compare(ids);}
     else if(form.dataset.jumolfForm==='annotation'){const text=new FormData(form).get('annotation');store.addAnnotation({id:`jumolf-annotation-${clock()}`,analysis_id:form.dataset.jumolfAnalysis,text});safeToast('Annotation enregistrée en mémoire.');}
     else if(form.dataset.jumolfForm==='targeted-plan'){
+     if(!isDemo())throw new Error('Cette action appartient au mode démonstration.');
      const finding=syntheticDiscoveries.find(item=>item.id===form.dataset.jumolfId);if(!finding)throw new Error('Découverte indisponible.');
      const data=new FormData(form),parameters={distance_km:Number(data.get('distance_km')),environment:String(data.get('environment')),track_age_minutes:Number(data.get('track_age_minutes')),difficulty:String(data.get('difficulty')),left_turns:Number(data.get('left_turns')),right_turns:Number(data.get('right_turns')),surface_changes:Number(data.get('surface_changes')),pollution:String(data.get('pollution')),target_area_type:String(data.get('area_type')||'Commune'),target_area:String(data.get('target_area')||'')};
      if(!Number.isFinite(parameters.distance_km)||parameters.distance_km<.5||parameters.distance_km>10)throw new Error('La distance doit être comprise entre 0,5 et 10 km.');

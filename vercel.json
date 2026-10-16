@@ -1,1 +1,1 @@
-{"cleanUrls":true,"buildCommand":"node scripts/generate-version.js","outputDirectory":".","git":{"deploymentEnabled":{"feature/v2-premium-ops-live-3a":false,"feature/v2-premium-ops-live-3bc":false}}}
+{"cleanUrls":true,"buildCommand":"node scripts/generate-version.js","outputDirectory":".","git":{"deploymentEnabled":{"feature/v2-premium-ops-live-3a":false,"feature/v2-premium-ops-live-3bc":false,"feature/v2-premium-science-jumolf-block4":false}}}

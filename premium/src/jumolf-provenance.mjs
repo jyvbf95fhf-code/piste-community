@@ -7,6 +7,7 @@ export function summarizeProvenance(input={}){
  const wind=source.wind||input.wind?.provenance||null;
  const referenceTrace=source.referenceTrace||input.referenceProvenance||(input.referenceTrace?'manual':null);
  const out={};for(const [key,value]of Object.entries({trace,weather,wind,referenceTrace}))if(categories.includes(value))out[key]=value;
+ for(const key of ['distance','distanceToReference','averageLateralOffset','maxLateralOffset','timeInCorridor','timeOutsideCorridor','resumptionDelay','referenceRatio','investigationZones','trackAge'])if(categories.includes(source[key]))out[key]=source[key];
  if(input.corridor)out.corridor='estimated';
  return out;
 }

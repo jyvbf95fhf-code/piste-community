@@ -1,7 +1,7 @@
 const valueAt=(session,key)=>({kind:session.kind,type:session.type,environment:session.environment?.primary,substrate:session.surface,pollution:session.scentPollution?.level,quality:session.quality?.level,result:session.result,ruptures:session.ruptures,resumptions:session.resumptions,ageBand:session.trackAge?.band,benchmark:session.benchmark_session,blind:session.blind_analysis_available,reference:Boolean(session.referenceTrace),difficulty:session.difficulty?.level,rain:session.weather?.rain,windDirection:session.weather?.windDirection})[key];
 export function filterScientificSessions(sessions=[],filters={}){
  const anomalyIds=new Set(filters.anomalyIds||[]);
- return sessions.filter(row=>row.synthetic===true).filter(row=>{
+ return sessions.filter(row=>(row.synthetic===true||row.source==='account')).filter(row=>{
   const f=filters,started=Date.parse(row.startedAt),age=row.trackAge?.seconds===null?null:(row.trackAge?.seconds??null)/60;
   const checks=[['kind',f.kind],['environment',f.environment],['substrate',f.substrate],['pollution',f.pollution],['quality',f.quality],['result',f.result],['ageBand',f.ageBand],['kind',f.type]];
   if(checks.some(([key,want])=>want&&want!=='all'&&valueAt(row,key)!==want))return false;

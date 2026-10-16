@@ -1,5 +1,6 @@
 const get=(value,path)=>String(path).split('.').reduce((current,key)=>current?.[key],value);
 export function scientificProvenance(session,field){
+ if(session?.source==='account'){const value=get(session,field),origin=get(session.provenance||{},field)||session.provenance?.[field.split('.')[0]]||((field==='weather'||field==='wind')?session[field]?.provenance:null);return{status:value==null?'Indisponible':'Disponible',source:origin||'unknown',method:field==='corridor'?'Modèle de couloir olfactif · estimation':field.startsWith('metrics.')?'Calcul sur données de session':'Dossier autorisé du compte',timestamp:session.weather?.observedAt||session.finishedAt||null,quality:session.quality?.level||'insufficient',value:value==null?null:structuredClone(value),synthetic:false};}
  if(!session||session.synthetic!==true)return{status:'Indisponible',synthetic:false};
  const value=get(session,field),origin=get(session.provenance||{},field);
  if(value===null||value===undefined||origin==='unknown')return{status:'Indisponible',source:origin||'unknown',timestamp:null,synthetic:true};
