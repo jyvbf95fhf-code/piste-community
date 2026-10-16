@@ -10,3 +10,13 @@
 .coaching-wizard-busy{border:0;margin:0;padding:0;min-width:0}.remote-embedded>details.card{margin-top:28px;padding:20px}.remote-embedded>details form{display:grid;gap:12px;margin-top:18px}.remote-embedded>details textarea{width:100%;min-height:80px}.remote-embedded .coaching-flow [data-shared-gpx]{display:grid;gap:12px;margin-bottom:20px}.remote-embedded .coaching-flow [data-shared-gpx] input{display:block;max-width:100%;margin-top:10px}
 
 .app-shell:has(.remote-embedded) .prototype-note{display:none}
+
+/* Embedded shared terrain uses the validated Premium GPS cockpit unchanged. */
+.app-shell:has(.shared-terrain)>.screen-header,.app-shell:has(.shared-terrain)>.bottom-nav{display:none}
+.shared-terrain>.coaching-heading .remote-phase{font-size:11px;font-weight:600;color:#e4f1f5;margin:5px 0}
+.shared-terrain .shared-session-menu{position:absolute;right:0;top:0;padding:10px 12px;min-height:44px;border-radius:24px;background:#0b202aeb;color:#eff6f8;border:1px solid #9dbad642;font:inherit;font-size:12px}
+.shared-terrain>.shared-session-sheet{position:absolute;inset:12px 10px;max-width:none;min-height:0;box-sizing:border-box;overflow:auto;z-index:75;padding:18px 14px 30px;background:#0b1b2ff7;border:1px solid #64798c;border-radius:22px}
+.shared-terrain>.shared-session-sheet[hidden],.shared-terrain>.tracer-shade[hidden]{display:none}
+.shared-terrain .shared-close{position:sticky;top:0;z-index:2;float:right;background:#203c50}
+.shared-terrain>.gps-actions{padding-bottom:8px}
+.shared-terrain [data-corridor-toggle]{min-height:44px}
