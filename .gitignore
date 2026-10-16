@@ -8,3 +8,6 @@ package.json
 www/
 supabase/.temp/
 .worktrees/
+
+# Generated V1 maintenance bundle
+.v1-maintenance/
