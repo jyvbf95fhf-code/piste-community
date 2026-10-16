@@ -1,3 +1,4 @@
+import {validatePersistenceRecord} from './persistence-contract.mjs';
 import {normalizeTrackRoute} from './track-route-segments.mjs';
 import {geographicCoordinates,trackDeparture} from './track-geographic.mjs';
 // Prepared tracks use owner-scoped local persistence when storage is supplied.
@@ -32,7 +33,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
   if(raw){const snapshot=JSON.parse(raw);
    if(snapshot.version!==1||snapshot.ownerId!==ownerId||!Array.isArray(snapshot.items)||snapshot.items.length>1000)throw Error('Sauvegarde incompatible');
    const ids=new Set();const restored=snapshot.items.map(item=>{
-    if(!item||item.ownerId!=='self'||!/^track-local-[1-9][0-9]*$/.test(item.id)||!Number.isSafeInteger(Number(item.id.slice(12)))||ids.has(item.id)||!['draw','gpx'].includes(item.source))throw Error('Tracé invalide');
+    if(!item||item.ownerId!=='self'||!(/^(track-local-[1-9][0-9]*|track-cloud-[0-9a-f-]{36})$/.test(item.id))||item.id.startsWith('track-local-')&&!Number.isSafeInteger(Number(item.id.slice(12)))||ids.has(item.id)||!['draw','gpx'].includes(item.source))throw Error('Tracé invalide');
     ids.add(item.id);const normalized={id:item.id,ownerId:'self',source:item.source,name:validName(item.name),provenance:optionalText(item.provenance,80),description:optionalText(item.description),category:optionalText(item.category,80),difficulty:optionalText(item.difficulty,80),dogId:optionalText(item.dogId,80),notes:optionalText(item.notes,1000)};
     if(item.fileName)normalized.fileName=optionalText(item.fileName,240);
     if(item.copiedFrom?.id&&['prepared','pose','search','reference'].includes(item.copiedFrom.kind))normalized.copiedFrom={id:optionalText(item.copiedFrom.id,240),kind:item.copiedFrom.kind};
@@ -40,7 +41,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
     else normalized.start=mockStart();
     return normalized;
    });
-   items=[...items,...restored];nextId=1+Math.max(0,...restored.map(item=>Number(item.id.slice(12))));
+   items=[...items,...restored];nextId=1+Math.max(0,...restored.filter(item=>item.id.startsWith('track-local-')).map(item=>Number(item.id.slice(12))));
   }
  }catch{blocked=true;warning='Sauvegarde des tracés non restaurée. Les données existantes sont conservées sans être écrasées.';}}
  if(key&&!storage)warning='Sauvegarde locale indisponible dans ce navigateur.';
@@ -59,6 +60,9 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
   list,
   get,
   persistenceWarning:()=>warning,
+  restoreCloud(record,localId='track-cloud-'+record.id){
+   const r=validatePersistenceRecord(record);if(r.kind!=='track'||r.deletedAt)throw Error('Tracé distant indisponible.');const normalized=createTrackLibrary().createPrepared(r.payload);const restored={...normalized,id:localId,ownerId:'self'};commit([...items.filter(item=>item.id!==localId),restored]);return copy(restored);
+  },
   create(name) {return insert({name:validName(name),source:'draw',start:mockStart(),description:'Votre tracé mock'});},
   createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',fileName,geometry,copiedFrom}={}) {
    if(!['draw','gpx'].includes(source))throw Error('Provenance source inconnue.');

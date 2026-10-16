@@ -88,7 +88,7 @@ function disciplineSection(dog) {
 function historySection(dog) {
   const sessions = Array.isArray(dog.sessions) ? dog.sessions : [];
   const content = sessions.length
-    ? `<ol class="dog-history-list">${sessions.map(session => `<li class="dog-history-entry"><div class="dog-history-symbol">${Icon('route')}</div><div class="dog-history-copy"><strong>${e(session.title || 'Session sans intitulé')}</strong><span>${e(session.date || 'Date indisponible')}</span><span>${e(session.distance || 'Distance indisponible')} · ${e(session.duration || 'Durée indisponible')}</span></div><div class="dog-history-status">${StatusBadge(session.status || 'Statut indisponible', session.status ? 'gold' : 'neutral')}<a href="/sessions">Consulter</a></div></li>`).join('')}</ol>`
+    ? `<ol class="dog-history-list">${sessions.map(session => `<li class="dog-history-entry"><div class="dog-history-symbol">${Icon('route')}</div><div class="dog-history-copy"><strong>${e(session.title || 'Session sans intitulé')}</strong><span>${e(session.date || 'Date indisponible')}</span><span>${e(session.distance || 'Distance indisponible')} · ${e(session.duration || 'Durée indisponible')}</span></div><div class="dog-history-status">${StatusBadge(session.status || 'Statut indisponible', session.status ? 'gold' : 'neutral')}<a href="${e(session.href||'/sessions')}">Consulter</a></div></li>`).join('')}</ol>`
     : EmptyState('Aucune session associée','L’historique de ce chien ne contient pas encore de session de démonstration.','route');
   return `<section class="dog-section dog-history"><div class="dog-section-heading"><span class="eyebrow">ACTIVITÉ</span><h2>Sessions récentes</h2></div>${content}</section>`;
 }

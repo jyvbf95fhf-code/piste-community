@@ -23,7 +23,7 @@ export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[]}={}
   const sequence=steps(d),index=sequence.indexOf(d.step);
   if(action==='next'){if(d.step==='mode'&&!d.mode||d.step==='trace'&&!d.traceType||d.step==='dog'&&!d.dogId)throw Error('Complétez cette étape.');d={...d,step:d.editing?'review':sequence[Math.min(index+1,sequence.length-1)],editing:false};}
   if(action==='back')d={...d,step:sequence[Math.max(0,index-1)],editing:false};
-  if(action==='create'){if(errors().length)throw Error(errors()[0].message);return {type:'create',payload:{role:d.creatorRole,mode:d.mode,scenario:d.trackingScenario,traceType:d.traceType==='none'?'direct':d.traceType,dogName:d.dogs.find(dog=>dog.id===d.dogId).name},reference:reference?structuredClone(reference):null};}
+  if(action==='create'){if(errors().length)throw Error(errors()[0].message);return {type:'create',dogId:d.dogId,payload:{role:d.creatorRole,mode:d.mode,scenario:d.trackingScenario,traceType:d.traceType==='none'?'direct':d.traceType,dogName:d.dogs.find(dog=>dog.id===d.dogId).name},reference:reference?structuredClone(reference):null};}
   return {type:'render'};
  },
  setGpx(parsed){if(!canPrepare())throw Error('Préparation réservée au Traceur.');reference=remoteGpxInput(parsed);d={...d,preparationTrack:{id:'uploaded-gpx',source:'gpx',name:parsed.name,fileName:parsed.name,geometry:{points:parsed.points}}};},

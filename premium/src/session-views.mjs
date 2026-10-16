@@ -1,3 +1,4 @@
+import {sharedSessionRows,sharedTrackRows} from './consolidated-session-index.mjs';
 import {isExitClosure,isCollectivelyClosed,canParticipate} from './coaching-session-control.mjs';
 import {coachingClosureView} from './coaching-closure-view.mjs';
 import {mock} from './data.mjs';
@@ -51,9 +52,10 @@ function demoRows(){
  }));
 }
 
-export function sessionListView(catalog,{filter='Toutes',query='',dogId='',currentSessionId='',demoRows:includeDemoRows=true,operationalMissions=[]}={}){
+export function sessionListView(catalog,{filter='Toutes',query='',dogId='',currentSessionId='',demoRows:includeDemoRows=true,operationalMissions=[],sharedSessions=[],dogIds={}}={}){
  const records=catalog.list().map(record=>liveRow(record,currentSessionId));
- const rows=[...records,...operationalSessionRows(operationalMissions),...(includeDemoRows?demoRows():[])];
+ const combined=[...records,...sharedSessionRows(sharedSessions,dogIds),...operationalSessionRows(operationalMissions),...(includeDemoRows?demoRows():[])];
+ const rows=[...new Map(combined.map(row=>[row.kind+':'+row.id,row])).values()];
  const normalized=String(query).trim().toLocaleLowerCase('fr');
  return rows.filter(row=>{
   const active=['Brouillon','En cours','En préparation','En pause','À reprendre','À compléter'].includes(row.status);
@@ -64,7 +66,8 @@ export function sessionListView(catalog,{filter='Toutes',query='',dogId='',curre
  });
 }
 
-export function homeActiveSessionView(catalog,fallbackRows=[] ,{currentSessionId=''}={}){
+export function homeActiveSessionView(catalog,fallbackRows=[] ,{currentSessionId='',sharedSessions,operationalMissions=[],dogIds={},includeDemoRows=true}={}){
+ if(sharedSessions!==undefined)return sessionListView(catalog,{demoRows:includeDemoRows,currentSessionId,sharedSessions,operationalMissions,dogIds}).filter(row=>['En cours','En pause','En préparation','Brouillon','À reprendre','À compléter'].includes(row.status));
  const records=catalog.list();
  if(!records.length)return [...fallbackRows];
  return records.map(record=>liveRow(record,currentSessionId))
@@ -76,10 +79,10 @@ export function homeActiveSessionView(catalog,fallbackRows=[] ,{currentSessionId
   }));
 }
 
-export function completedSessionHistoryView(catalog,{currentSessionId='',includeDemoRows=true}={}){
- return sessionListView(catalog,{currentSessionId,demoRows:includeDemoRows})
+export function completedSessionHistoryView(catalog,{currentSessionId='',includeDemoRows=true,sharedSessions=[],operationalMissions=[],dogIds={}}={}){
+ return sessionListView(catalog,{currentSessionId,demoRows:includeDemoRows,sharedSessions,operationalMissions,dogIds})
   .filter(row=>isFinished(row.status))
-  .map(row=>({...row,replayHref:row.kind==='coaching'?`/sessions/${encode(row.id)}/replay`:null}));
+  .map(row=>({...row,replayHref:row.source==='shared'?row.href+'&tab=map':row.kind==='coaching'?`/sessions/${encode(row.id)}/replay`:null}));
 }
 
 export function resolveConsultationRoute(pathname){
@@ -120,7 +123,7 @@ export function sessionReplayView(record){
  return {id:record.session.id,title:record.session.title||`Session ${record.session.code||record.session.id}`,status:statusFor(record.searchState.phase),mode:report.modeLabel,map:report.map,temporal:report.temporal,events:report.events.filter(event=>['SEARCH_PAUSED','SEARCH_RESUMED'].includes(event.type)),poseAvailable:!!report.map?.paths?.some(path=>path.kind==='pose'),searchAvailable:!!report.map?.paths?.some(path=>path.kind==='search'),readOnly:true};
 }
 
-export function trackListView(libraryItems=[],sessionRecords=[]){
+export function trackListView(libraryItems=[],sessionRecords=[],sharedSessions=[]){
  const prepared=(libraryItems||[]).map(item=>({
   id:`prepared:${item.id}`,libraryId:item.id,name:item.name,kind:item.source==='gpx'?'gpx':'prepared',
   realGpx:item.provenance==='gpx-import'||Boolean(item.fileName&&item.geometry?.points?.every(p=>p.space==='wgs84')),provenance:item.provenance==='gpx-import'?'Import GPX · fichier réel':item.provenance==='copy'?`Copie d’un tracé · ${item.copiedFrom?.kind||'source'}`:item.source==='gpx'?'Import GPX · démonstration':'Préparé manuellement',
@@ -149,7 +152,7 @@ export function trackListView(libraryItems=[],sessionRecords=[]){
    });
   }
  }
- return [...prepared,...derived].map(row=>({...row,href:`/tracks/${encode(row.id)}`}));
+ return [...prepared,...derived,...sharedTrackRows(sharedSessions)].map(row=>({...row,href:`/tracks/${encode(row.id)}`}));
 }
 
 export function trackDetailView(rows,id){return (rows||[]).find(row=>row.id===id)||null;}

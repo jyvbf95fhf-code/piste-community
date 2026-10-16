@@ -1,0 +1,2 @@
+import {build} from 'esbuild';
+await build({stdin:{contents:"export {createPersonalDataHandler} from './src/server/personal-data-http.mjs';export {createPersonalDataRepository} from './src/server/personal-data-repository.mjs';",resolveDir:new URL('..',import.meta.url).pathname},bundle:true,format:'esm',platform:'neutral',outfile:new URL('../supabase/functions/personal-data/handler.mjs',import.meta.url).pathname});

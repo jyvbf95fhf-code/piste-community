@@ -1,3 +1,4 @@
+import {validatePersistenceRecord} from './persistence-contract.mjs';
 import {createGpsPose,startGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,validGpsPose,normalizeGpsFix} from './coaching-gps-model.mjs';
 import { gpxFixtures } from './track-library.mjs';
 import { DOG_EVALUATION_CRITERIA, FIELD_EVALUATION_CRITERIA, OPERATIONAL_PAUSE_CLASSIFICATIONS, normalizeOperationalMission } from './operational-data.mjs';
@@ -57,6 +58,7 @@ function requireText(value, label) {
 function requireMission(records, id) {
   const mission = records.get(id);
   if (!mission) throw new Error('Mission opérationnelle introuvable.');
+  if(mission.cloudReadOnly)throw new Error('Sauvegarde OPS en lecture seule.');
   return mission;
 }
 
@@ -101,7 +103,10 @@ export function createOperationalMissionStore({
 } = {}) {
   const records = new Map();
   const persistenceKey=ownerId?'piste-v2-ops-gps:'+ownerId:null;
-  let lastSaved='',persistenceError='';
+  let lastSaved='',persistenceError='',cloudBlocked=false;
+  const cloudKey=ownerId?'piste-v2-ops-cloud:'+ownerId:null;
+  if(cloudKey&&storage)try{const raw=storage.getItem(cloudKey);if(raw){const saved=JSON.parse(raw);if(saved.version!==1||saved.ownerId!==ownerId||!Array.isArray(saved.missions))throw Error();for(const row of saved.missions){if(row.cloudReadOnly!==true||row.ownerUserId!==ownerId||row.kind!=='operational')throw Error();records.set(row.id,normalizeOperationalMission(row));}}}catch{cloudBlocked=true;persistenceError='Sauvegardes OPS distantes illisibles : originaux conservés.';}
+
   if(persistenceKey&&storage)try{
     const saved=JSON.parse(storage.getItem(persistenceKey)||'null');
     if(saved?.version===1&&saved.ownerId===ownerId&&Array.isArray(saved.missions))for(const row of saved.missions){
@@ -115,7 +120,7 @@ export function createOperationalMissionStore({
   }catch{persistenceError='La sauvegarde GPS locale n’a pas pu être restaurée.';}
   function persist(){
     if(!persistenceKey)return;
-    const missions=[...records.values()].filter(m=>m.gpsTrack&&m.gpsOwnerId===ownerId);
+    const missions=[...records.values()].filter(m=>!m.cloudReadOnly&&m.gpsTrack&&m.gpsOwnerId===ownerId);
     if(!missions.length)return;
     try{if(!storage)throw Error('Stockage indisponible');const json=JSON.stringify({version:1,ownerId,missions});if(json!==lastSaved){storage.setItem(persistenceKey,json);lastSaved=json;}persistenceError='';}
     catch{persistenceError='Sauvegarde locale indisponible · gardez cette page ouverte.';}
@@ -236,7 +241,7 @@ export function createOperationalMissionStore({
 
   function snapshot(mission) {
     persist();
-    return mission ? { ...clone(mission), trackingElapsedMs: trackingElapsedMs(mission) } : null;
+    return mission ? { ...clone(mission), trackingElapsedMs: mission.cloudReadOnly?(Number.isFinite(mission.trackingElapsedMs)?mission.trackingElapsedMs:null):trackingElapsedMs(mission) } : null;
   }
 
   function getMutable(id) {
@@ -279,6 +284,12 @@ export function createOperationalMissionStore({
       return snapshot(records.get(id));
     },
 
+    restoreCloud(record){
+      const r=validatePersistenceRecord(record);if(r.kind!=='ops'||r.deletedAt||!ownerId)throw Error('Dossier distant indisponible.');if(cloudBlocked)throw Error(persistenceError);
+      const mission=normalizeOperationalMission({...r.payload,id:'cloud-'+r.id,cloudReadOnly:true,cloudId:r.id,cloudRevision:r.revision,ownerUserId:ownerId,gpsNeedsResume:true});
+      if(!OPERATIONAL_MISSION_STATUSES.includes(mission.status))throw Error('Dossier OPS invalide.');const next=[...records.values()].filter(m=>m.cloudReadOnly&&m.id!==mission.id);next.push(mission);
+      if(!storage)throw Error('Stockage local indisponible.');storage.setItem(cloudKey,JSON.stringify({version:1,ownerId,missions:next}));records.set(mission.id,mission);return snapshot(mission);
+    },
     createDraft({ dog, handler, entryMode = 'quick', details = {}, person = {}, time = {}, places = {}, context = {} } = {}) {
       if (!dog?.id) throw new Error('Un chien est requis pour démarrer une mission.');
       if (!handler?.id) throw new Error('Un conducteur mock est requis pour démarrer une mission.');

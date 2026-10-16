@@ -109,7 +109,7 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
 }
 
 export function operationalReplayView(mission) {
-  if (!mission || mission.kind !== 'operational' || !terminal(mission.status)) return null;
+  if (!mission || mission.kind !== 'operational' || !terminal(mission.status)&&!mission.cloudReadOnly) return null;
   const corridorEnabled = mission.olfactoryCorridorEnabled === true;
   const trace = structuredClone(mission.trace || []);
   const events = structuredClone(mission.events || []);

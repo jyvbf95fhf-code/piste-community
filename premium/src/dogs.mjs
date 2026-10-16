@@ -1,3 +1,4 @@
+import {validatePersistenceRecord} from './persistence-contract.mjs';
 import { mock } from './data.mjs';
 
 export const DOG_STATUSES = Object.freeze([
@@ -113,8 +114,11 @@ function validateDog(dog) {
   if (!DOG_STATUSES.some(status => status.id === dog.status)) throw new Error('Statut de chien invalide.');
 }
 
-export function createDogsStore({ dogs = demoDogs } = {}) {
-  const records = clone(dogs);
+export function createDogsStore({ dogs = demoDogs, ownerId = null, storage = null, idFactory = null } = {}) {
+  let records = clone(dogs), unreadable = false;
+  const key=ownerId?`piste-v2-dogs:${encodeURIComponent(ownerId)}`:null;
+  try{const raw=key&&storage?.getItem(key);if(raw){const saved=JSON.parse(raw);if(saved.version!==1||saved.ownerId!==ownerId||!Array.isArray(saved.dogs)||saved.dogs.length>1000)throw Error();const ids=new Set();for(const dog of saved.dogs){validateDog(dog);if(typeof dog.id!=='string'||ids.has(dog.id))throw Error();ids.add(dog.id);}records=clone(saved.dogs);}}catch{unreadable=true;}
+  const persist=next=>{if(!key||!storage)return;if(unreadable)throw Error('Sauvegarde des chiens illisible : aucune donnée existante remplacée.');try{storage.setItem(key,JSON.stringify({version:1,ownerId,dogs:next}));}catch{throw Error('Profil chien non enregistré : stockage local indisponible.');}};
   let nextId = 1;
 
   function snapshot(dog) {
@@ -128,9 +132,14 @@ export function createDogsStore({ dogs = demoDogs } = {}) {
     get(id) {
       return snapshot(records.find(dog => dog.id === id));
     },
+    restoreCloud(record,localId=record.id){
+      const r=validatePersistenceRecord(record);if(r.kind!=='dog'||r.deletedAt)throw Error('Profil distant indisponible.');
+      const check=createDogsStore({dogs:[{portrait:'silhouette',status:'active',...r.payload,id:localId}]});const dog=check.update(localId,{});dog.isDemonstration=false;dog.cloudId=r.id;dog.cloudRevision=r.revision;
+      const next=records.filter(d=>d.id!==localId);next.push(dog);persist(next);records=next;return snapshot(dog);
+    },
     create(values = {}) {
       const dog = {
-        id: `dog-${nextId++}`,
+        id: `dog-${idFactory?idFactory():ownerId?crypto.randomUUID():nextId++}`,
         name: String(values.name || '').trim(),
         officialName: String(values.officialName || '').trim() || null,
         breed: String(values.breed || '').trim(),
@@ -150,6 +159,8 @@ export function createDogsStore({ dogs = demoDogs } = {}) {
       };
       if (!DOG_PORTRAITS.some(portrait => portrait.id === dog.portrait)) throw new Error('Portrait mock invalide.');
       validateDog(dog);
+      if(records.some(row=>row.id===dog.id))throw Error('Identifiant de chien déjà utilisé.');
+      persist([...records,dog]);
       records.push(dog);
       return snapshot(dog);
     },
@@ -168,6 +179,7 @@ export function createDogsStore({ dogs = demoDogs } = {}) {
       if (typeof next.notes === 'string') next.notes = next.notes.trim() || null;
       validateDog(next);
       if (!DOG_PORTRAITS.some(portrait => portrait.id === next.portrait)) throw new Error('Portrait mock invalide.');
+      persist(records.map(row=>row.id===id?next:row));
       Object.assign(dog, next);
       return snapshot(dog);
     },

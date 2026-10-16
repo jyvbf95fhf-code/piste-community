@@ -1,5 +1,5 @@
 const TYPES=Object.freeze({
- '/profile':'home','/profile/account':'account','/profile/dogs':'dogs','/profile/premium':'premium',
+ '/profile':'home','/profile/sync':'sync','/profile/account':'account','/profile/dogs':'dogs','/profile/premium':'premium',
  '/profile/access':'access','/profile/notifications':'notifications','/profile/preferences':'preferences','/profile/about':'about'
 });
 export function resolveProfileRoute(path){
