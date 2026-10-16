@@ -1,12 +1,22 @@
+import {COACHING_REMOTE as config} from '../src/coaching-remote-config.mjs';
 const UPSTREAM='https://overpass-api.de/api/interpreter';
 const retainedTags=['highway','surface','access','foot','barrier','construction','area','oneway:foot'];
-export function createTrackNetworkHandler({fetch=globalThis.fetch,timeoutMs=30000}={}){
+export function createTrackNetworkHandler({fetch=globalThis.fetch,timeoutMs=30000,authorize=null}={}){
  return async function handler(req,res){
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'Méthode non autorisée.'});}
   const params=new URL(req.url,'https://piste.invalid').searchParams,keys=[...params.keys()];
   const read=k=>{const value=params.get(k);return value?.trim()?Number(value):NaN;},lon=read('lon'),lat=read('lat'),km=read('distanceKm');
   if(keys.some(k=>!['lon','lat','distanceKm'].includes(k)&&!['_vercel_share','_vercel_protection_bypass'].includes(k))||['lon','lat','distanceKm'].some(k=>params.getAll(k).length!==1)||!Number.isFinite(lon)||Math.abs(lon)>180||!Number.isFinite(lat)||Math.abs(lat)>90||!Number.isFinite(km)||km<.5||km>10)return res.status(400).json({error:'Zone ou distance de recherche invalide.'});
+  try{
+   if(authorize){if(!await authorize(req))return res.status(403).json({error:'Accès Premium requis.'});}
+   else {
+    const token=req.headers?.authorization;if(typeof token!=='string'||!/^Bearer .+$/i.test(token))return res.status(401).json({error:'Connexion requise.'});
+    const check=await fetch(config.endpoint,{method:'POST',headers:{apikey:config.publishableKey,authorization:token,'Content-Type':'application/json'},body:JSON.stringify({operation:'authorize-feature',feature:'premium'}),signal:AbortSignal.timeout(10000),redirect:'error'});
+    if(!check.ok)return res.status([401,403].includes(check.status)?check.status:503).json({error:'Accès Premium non confirmé.'});
+    const value=await check.json();if(value.authorized!==true||value.permissions?.premium!==true)return res.status(403).json({error:'Accès Premium requis.'});
+   }
+  }catch{return res.status(503).json({error:'Vérification Premium indisponible.'});}
   const radius=Math.round(Math.min(6000,Math.max(1200,km*700+1000))),query=`[out:json][timeout:25][maxsize:10000000];way(around:${radius},${lat},${lon})[highway~"^(residential|living_street|pedestrian|service|unclassified|tertiary|tertiary_link|footway|path|track|cycleway|steps)$"];out body;>;out body qt;`;
   const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),timeoutMs),cancel=()=>abort.abort();req.on?.('aborted',cancel);
   try{

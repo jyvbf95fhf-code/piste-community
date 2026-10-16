@@ -1,9 +1,9 @@
 import {validateSmartOptions} from './track-smart-engine.mjs';
 const finiteCenter=c=>Array.isArray(c)&&c.length===2&&Number.isFinite(c[0])&&Math.abs(c[0])<=180&&Number.isFinite(c[1])&&Math.abs(c[1])<=90;
-export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,timeoutMs=35000}={}){
+export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,timeoutMs=35000,getAuthorization=async()=>null}={}){
  const cache=new Map();
  async function request(url,{signal}={}){const controller=new AbortController(),abort=()=>controller.abort();if(signal?.aborted)abort();signal?.addEventListener('abort',abort,{once:true});const timer=setTimeout(abort,timeoutMs);
-  try{const response=await fetch(url,{signal:controller.signal,credentials:url.startsWith('/')?'same-origin':'omit',referrerPolicy:'no-referrer',headers:{Accept:'application/json'}});if(!response.ok){let detail=null;try{detail=await response.json();}catch{}throw Error(typeof detail?.error==='string'?detail.error.slice(0,200):'Service cartographique indisponible. Réessayez plus tard.');}if(Number(response.headers?.get('content-length'))>10000000)throw Error('Zone trop dense. Réduisez la distance.');return await response.json();}
+  try{const response=await fetch(url,{signal:controller.signal,credentials:url.startsWith('/')?'same-origin':'omit',referrerPolicy:'no-referrer',headers:{Accept:'application/json',...(url.startsWith('/')?await getAuthorization():{})}});if(!response.ok){let detail=null;try{detail=await response.json();}catch{}throw Error(typeof detail?.error==='string'?detail.error.slice(0,200):'Service cartographique indisponible. Réessayez plus tard.');}if(Number(response.headers?.get('content-length'))>10000000)throw Error('Zone trop dense. Réduisez la distance.');return await response.json();}
   catch(error){if(error.name==='AbortError')throw Error('Recherche interrompue ou trop longue.');if(error instanceof TypeError||error.message==='Load failed')throw Error('Connexion au service cartographique impossible. Réessayez dans un instant.');throw error;}finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
  }
  return {

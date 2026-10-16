@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {projectVerifiedCapabilities} from '../src/server/account-capabilities.mjs';
+const id='11111111-1111-4111-8111-111111111111',profile={id,enabled:true},now=Date.parse('2026-10-16T12:00:00Z');
+const record={entitlement:'premium',source:'admin_grant',granted_at:'2026-10-15T12:00:00Z',expires_at:null,revoked_at:null};
+const caps=meta=>projectVerifiedCapabilities({id,app_metadata:meta},profile,now);
+test('owner has permanent complete access without subscription',()=>{const c=caps({admin_role:'owner_admin'});assert.equal(c.permissions.admin,true);assert.equal(c.permissions.research,true);assert.equal(c.permissions.premium,true);assert.equal(c.jumolf_entitlement.entitlement,'premium');assert.equal(c.subscription.payment_enabled,false);});
+test('premium includes JUMOLF but never science or administration',()=>{const c=caps({premium_entitlement:record});assert.equal(c.permissions.premium,true);assert.equal(c.jumolf_entitlement.entitlement,'premium');assert.equal(c.permissions.research,false);assert.equal(c.permissions.admin,false);});
+test('free can receive independent Science authorization',()=>{const c=caps({permissions:{research:true}});assert.equal(c.permissions.research,true);assert.equal(c.permissions.premium,false);assert.equal(c.jumolf_entitlement.entitlement,'none');});
+test('expired/revoked/future premium cannot grant access',()=>{for(const r of [{...record,expires_at:'2026-01-01'},{...record,revoked_at:'2026-01-01'},{...record,granted_at:'2099-01-01'}])assert.equal(caps({premium_entitlement:r}).permissions.premium,false);});
+test('untrusted role and disabled owner cannot authorize',()=>{assert.equal(caps({admin_role:'owner'}).permissions.admin,false);assert.equal(projectVerifiedCapabilities({id,app_metadata:{admin_role:'owner_admin'}},{...profile,enabled:false},now).permissions.research,false);});

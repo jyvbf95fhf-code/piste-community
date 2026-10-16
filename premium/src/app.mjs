@@ -1,3 +1,4 @@
+import {createRemoteAdminStore} from './admin-remote-store.mjs';
 import {buildAccountAnalysisSources,buildAccountScientificDataset} from './account-analysis-sources.mjs';
 import {buildJumolfSources} from './jumolf-adapter.mjs';
 import {createPersonalCloudController} from './personal-cloud-controller.mjs';
@@ -166,7 +167,7 @@ function showCoachingHistoryWarning(){
 let operationalStore=createOperationalMissionStore();
 let operationalGpsOwnerId=null;
 function restoreOperationalGpsForUser(){const ownerId=currentUser?.user_id||null;if(ownerId===operationalGpsOwnerId)return;opsGps.pause();operationalGpsOwnerId=ownerId;operationalStore=createOperationalMissionStore({storage,ownerId});operationalUI={mode:'',eventType:'Départ',note:''};}
-const adminStore=createAdminStore();
+const adminStore=auth.assurance==='supabase-auth'?createRemoteAdminStore({actor:()=>currentUser,call:body=>accountApi.call(body),onChange:()=>render()}):createAdminStore();
 function accountJumolfStore(){const record=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null;return createJumolfStore({entitlement:record?.entitlement||'none',entitlementRecord:record,accessCodeCatalog:auth.assurance==='supabase-auth'?null:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null});}
 let jumolfStore=accountJumolfStore();
 let jumolfVerifiedOwnerId=currentUser?.user_id||null;
@@ -542,7 +543,7 @@ let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],
 let smartEntryOpenedKey=null;
 let trackEditorActive=false,trackEditorHref='/track-builder',trackEditorDrag=null,trackEditorExitDialog=false,trackEditorIgnoreMapClickUntil=0;
 const smartTrackFingerprint=()=>JSON.stringify([trackEditor.draft?.id,trackEditor.draft?.points,trackEditor.draft?.name,trackEditor.draft?.description,trackEditor.draft?.category,trackEditor.draft?.difficulty,trackEditor.draft?.dogId,trackEditor.draft?.notes,trackEditor.draft?.activeMode]);
-const trackSmart=createSmartTrackController({service:createSmartTrackService(),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?{ownerId:currentUser?.user_id,key:trackEditor.routeKey,fingerprint:smartTrackFingerprint(),access:jumolfAccess()}:null,onChange:()=>{if(location.pathname==='/track-builder')render();}});
+const trackSmart=createSmartTrackController({service:createSmartTrackService({getAuthorization:async()=>{const {data}=await accountClient.auth.getSession();return data?.session?{Authorization:`Bearer ${data.session.access_token}`}:{}}}),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?{ownerId:currentUser?.user_id,key:trackEditor.routeKey,fingerprint:smartTrackFingerprint(),access:jumolfAccess()}:null,onChange:()=>{if(location.pathname==='/track-builder')render();}});
 const trackRouting=createTrackRoutingController({service:createTrackRoutingService(),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?.coordinateSpace==='wgs84'?{id:trackEditor.routeKey,ownerId:currentUser?.user_id,draft:trackEditor.draft}:null,onResult:(id,route)=>{trackEditor={...trackEditor,draft:applyTrackRoute(trackEditor.draft,id,route)};render();},onStatus:notice=>{if(trackEditor.notice===notice)return;trackEditor={...trackEditor,notice};render();}});
 const trackPlaces=[{name:'Forêt de Fontainebleau',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Sentier des crêtes',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Place du village',subtitle:'Adresse fictive · démonstration',center:{x:180,y:150}}];
 function ensureTrackEditor(){
@@ -853,6 +854,7 @@ document.addEventListener('click',async event=>{
  if(profileController.handleClick(event))return;
  if(scientificContributionController.handleClick(event))return;
  if(scientificCorpusController.handleClick(event))return;
+ if(event.target.closest('[data-scientific-action],[data-jumolf-action]')&&auth.assurance==='supabase-auth'){event.preventDefault();try{await accountApi.call({operation:'authorize-feature',feature:event.target.closest('[data-scientific-action]')?'science':'jumolf'});}catch(error){Toast(error.message);return;}}
  if(scientificController.handleClick(event))return;
  if(jumolfController.handleClick(event))return;
  const notificationOpen=event.target.closest('[data-notification-open]');
@@ -1300,6 +1302,7 @@ document.addEventListener('submit',async event=>{
  if(profileController.handleSubmit(event))return;
  if(adminController.handleSubmit(event))return;
  if(scientificCorpusController.handleSubmit(event))return;
+ if(event.target.closest('[data-scientific-form],[data-jumolf-form]')&&auth.assurance==='supabase-auth'){event.preventDefault();try{await accountApi.call({operation:'authorize-feature',feature:event.target.closest('[data-scientific-form]')?'science':'jumolf'});}catch(error){Toast(error.message);return;}}
  if(scientificController.handleSubmit(event))return;
  if(jumolfController.handleSubmit(event))return;
  if(communityController.handleSubmit(event))return;

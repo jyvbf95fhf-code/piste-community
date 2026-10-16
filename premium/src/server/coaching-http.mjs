@@ -1,3 +1,4 @@
+import {projectAdminSnapshot} from './admin-service.mjs';
 import {projectVerifiedCapabilities} from './account-capabilities.mjs';
 import {createRemoteSession,joinRemoteSession,reduceRemoteSession,projectRemoteSession} from './coaching-service.mjs';
 const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');
@@ -13,6 +14,17 @@ export function createCoachingHandler({admin,authClient,clock=Date.now}={}){
  if(Number(request.headers.get('content-length')||0)>200000)error('Requête trop volumineuse.',413);const text=await request.text();if(text.length>200000)error('Requête trop volumineuse.',413);let body;try{body=JSON.parse(text);}catch{error('Requête invalide.');}
  const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];if(!token)error('Connexion requise.',401);const result=await authClient.auth.getUser(token);if(result.error||!result.data?.user)error('Connexion expirée.',401);const uid=result.data.user.id;
  const profile=assertResult(await admin.from('coaching_remote_users').select('id,display_name,qa,enabled').eq('id',uid).eq('enabled',true).maybeSingle());if(!profile)error('Compte non autorisé pour ce pilote.',403);
+ const capabilities=projectVerifiedCapabilities(result.data.user,profile,clock());
+ if(body.operation==='authorize-feature'){
+  const allowed={premium:capabilities.permissions.premium,science:capabilities.permissions.research,jumolf:capabilities.jumolf_entitlement.entitlement!=='none'}[body.feature];
+  if(!allowed)error('Accès non autorisé.',403);return respond({authorized:true,...capabilities});
+ }
+ if(['admin-snapshot','admin-command'].includes(body.operation)){
+  if(!capabilities.permissions.admin)error('Accès administrateur requis.',403);
+  if(body.operation==='admin-snapshot')return respond(projectAdminSnapshot(assertResult(await admin.rpc('v2_admin_snapshot',{p_actor:uid})),clock()));
+  if(!uuid(body.targetId)||typeof body.action!=='string'||!body.payload||typeof body.payload!=='object'||Array.isArray(body.payload))error('Commande Admin invalide.');
+  return respond(assertResult(await admin.rpc('v2_admin_command',{p_actor:uid,p_action:body.action,p_target:body.targetId,p_payload:body.payload})));
+ }
  if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...projectVerifiedCapabilities(result.data.user,profile,clock())});
  if(body.operation==='list'){const rows=assertResult(await admin.from('coaching_remote_sessions').select('id,state').contains('state',{members:[{id:uid}]}).order('updated_at',{ascending:false}).limit(30));return respond({sessions:rows.map(r=>projectRemoteSession(r.state,uid,clock()))});}
  const id=body.sessionId;if(!uuid(id))error('Identifiant de session invalide.');
