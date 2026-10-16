@@ -29,7 +29,7 @@ export function createPisteAccount({client,loadProfile,storage,clock=Date.now,on
    if(version!==generation)return session;
    if(p.id!==id)throw Error('Identité incohérente.');
    const name=typeof p.name==='string'&&p.name.trim()?p.name.trim():'Membre';
-   session={authenticated:true,access:'enabled',user:{user_id:id,name,initials:name.slice(0,1),role:'Conducteur',permissions:{research:false,admin:false},assurance:'supabase-auth',qa:p.qa===true}};
+   session={authenticated:true,access:'enabled',user:{user_id:id,name,initials:name.slice(0,1),role:'Conducteur',permissions:{research:p.permissions?.research===true,admin:false},jumolf_entitlement:p.jumolf_entitlement&&['premium','admin_grant','access_code'].includes(p.jumolf_entitlement.entitlement)?structuredClone(p.jumolf_entitlement):{entitlement:'none'},assurance:'supabase-auth',qa:p.qa===true}};
   }catch(error){if(version!==generation)return session;if(error.status===403){clear('pending');return session;}throw Error('Vérification de votre accès impossible. Réessayez.');}
   return structuredClone(session);
  }

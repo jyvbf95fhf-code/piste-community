@@ -167,9 +167,17 @@ let operationalStore=createOperationalMissionStore();
 let operationalGpsOwnerId=null;
 function restoreOperationalGpsForUser(){const ownerId=currentUser?.user_id||null;if(ownerId===operationalGpsOwnerId)return;opsGps.pause();operationalGpsOwnerId=ownerId;operationalStore=createOperationalMissionStore({storage,ownerId});operationalUI={mode:'',eventType:'Départ',note:''};}
 const adminStore=createAdminStore();
-let jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null});
+function accountJumolfStore(){const record=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null;return createJumolfStore({entitlement:record?.entitlement||'none',entitlementRecord:record,accessCodeCatalog:auth.assurance==='supabase-auth'?null:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null});}
+let jumolfStore=accountJumolfStore();
+let jumolfVerifiedOwnerId=currentUser?.user_id||null;
+function syncJumolfVerifiedEntitlement(){
+ if(auth.assurance!=='supabase-auth')return;
+ const id=currentUser?.user_id||null,record=currentUser?.jumolf_entitlement||{entitlement:'none'};
+ if(id!==jumolfVerifiedOwnerId){jumolfVerifiedOwnerId=id;jumolfStore=accountJumolfStore();jumolfController=makeJumolfController();}
+ else if(JSON.stringify(jumolfStore.snapshot().entitlement_record)!==JSON.stringify(record))jumolfStore.setEntitlementRecord(record);
+}
 const adminController=createAdminController({store:adminStore,actor:()=>currentUser,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast,confirm:message=>window.confirm(message)});
-const jumolfAccess=()=>resolveJumolfAccess(jumolfStore.snapshot());
+const jumolfAccess=()=>{const state=jumolfStore.snapshot(),r=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null;return resolveJumolfAccess(auth.assurance==='supabase-auth'?{...state,jumolf_entitlement:r?.entitlement||'none',entitlement_record:r||{entitlement:'none'}}:state);};
 let communityStore=createCommunityStore();
 let opsLiveRemote=null,opsLiveBindings=null,opsLiveRemoteOwner=null,opsLiveTickPending=false,opsLiveAttempt=0;
 const opsHabitualState=new Map();
@@ -603,7 +611,7 @@ function jumolfRawSources(){
 }
 function accountScientificDataset(){return buildAccountScientificDataset(buildJumolfSources(jumolfRawSources()),currentUser?.user_id);}
 function scienceDataset(){return auth.assurance==='supabase-auth'?accountScientificDataset():scientificDataset;}
-function makeJumolfController(){return createJumolfController({store:jumolfStore,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
+function makeJumolfController(){return createJumolfController({store:jumolfStore,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let jumolfController=makeJumolfController();
 const scientificDataset=generateJumolfSyntheticDataset();
 const scientificAnalytics=buildJumolfSyntheticAnalytics(scientificDataset.sessions);
@@ -655,7 +663,7 @@ function render(focus=false) {
  if(scientificEntry!==requested)history.replaceState({},'',`${scientificEntry}${location.search}${location.hash}`);
  if(requested==='/olfactory-twin'){history.replaceState({},'','/jumolf');return render(focus);}
  const route=resolveAccountRoute(scientificEntry,auth.getSession());
- currentUser=auth.getSession().user;reconcileSharedIdentity();restoreProfileForUser();refreshSharedCatalog();
+ currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();reconcileSharedIdentity();restoreProfileForUser();refreshSharedCatalog();
  restoreTrackLibraryForUser();
  restoreOperationalGpsForUser();
  reconcileOpsLive();void tickOpsLive();
@@ -1437,7 +1445,7 @@ document.addEventListener('submit',async event=>{
   await auth.signIn({email:form.elements.email.value,password:form.elements.password.value});
   if(!auth.getSession().authenticated){authNotice='Votre compte est connecté. L’accès au Coaching V2 attend une autorisation.';feedback.textContent=authNotice;form.elements.password.value='';return;}
   form.reset();currentUser=auth.getSession().user;
-  jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:currentUser.user_id});jumolfController=makeJumolfController();coachingDraft=newCoachingDraft();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();trackUI=newTrackUI();
+  jumolfStore=accountJumolfStore();jumolfController=makeJumolfController();coachingDraft=newCoachingDraft();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();trackUI=newTrackUI();
   history.pushState({},'','/');render(true);Toast('Connecté à votre compte PISTE V2.');
  }catch(error){feedback.textContent=error.message;for(const input of form.querySelectorAll('input[type="password"]'))input.value='';}
  finally{button.disabled=false;}

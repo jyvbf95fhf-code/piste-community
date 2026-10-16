@@ -26,7 +26,7 @@ const syntheticTemporalLearning=buildJumolfTemporalLearning(syntheticDataset.ses
 const clone=value=>structuredClone(value);
 const routePath=()=>location.pathname+location.search;
 
-export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true}={}){
+export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null}={}){
  const isDemo=()=>typeof demoMode==='function'?demoMode():demoMode;
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='';
  const learningJournal=createJumolfLearningStore({clock}),targetedPlans=[];
@@ -51,7 +51,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   return run;
  };
  const safeToast=message=>{formMessage=message;toast(message);};
- const access=()=>resolveJumolfAccess(store.snapshot(),clock());
+ const access=()=>{const state=store.snapshot(),record=getVerifiedEntitlement?.();return resolveJumolfAccess(getVerifiedEntitlement?{...state,jumolf_entitlement:record?.entitlement||'none',entitlement_record:record||{entitlement:'none'}}:state,clock());};
  const activate=()=>{try{if(store.snapshot().jumolf_onboarding_completed){store.activate();navigate('/jumolf');}else{store.beginActivation();onboardingStep=0;navigate('/jumolf/onboarding');}render();return true;}catch(error){safeToast(error.message);return false;}};
  const completeOnboarding=()=>{if(!store.snapshot().jumolf_enabled)store.activate();store.completeOnboarding();navigate('/jumolf');render();};
  const analyze=(id,{recalculate=false}={})=>{
@@ -76,10 +76,10 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   analyze,
   recalculate:id=>analyze(id,{recalculate:true}),
   compare,
-  redeemCode(code){const result=store.redeemCode(code);if(!result.ok){const messages={invalid:'Ce code n’est pas valide.',inactive:'Ce code n’est plus actif.',expired:'Ce code n’est plus valide.',revoked:'Ce code a été révoqué.',exhausted:'Ce code a atteint son nombre maximal d’utilisations.'};safeToast(messages[result.reason]||'Ce code n’est plus valide.');}else{formMessage='';navigate('/jumolf/activate');}return result;},
+  redeemCode(code){if(getVerifiedEntitlement)throw new Error('Un code réel doit être validé côté serveur.');const result=store.redeemCode(code);if(!result.ok){const messages={invalid:'Ce code n’est pas valide.',inactive:'Ce code n’est plus actif.',expired:'Ce code n’est plus valide.',revoked:'Ce code a été révoqué.',exhausted:'Ce code a atteint son nombre maximal d’utilisations.'};safeToast(messages[result.reason]||'Ce code n’est plus valide.');}else{formMessage='';navigate('/jumolf/activate');}return result;},
   deactivate(){store.deactivate();navigate('/jumolf');render();},
   screen(path=routePath()){
-   const route=resolveJumolfRoute(path)||{type:'entry'},state=store.snapshot(),currentAccess=resolveJumolfAccess(state,clock());
+   const route=resolveJumolfRoute(path)||{type:'entry'},state=store.snapshot(),currentAccess=access();
    const query=new URLSearchParams(String(path).split('?')[1]||'');
    route.replay=query.get('replay')==='1';
    route.demo=route.demo===true||query.get('demo')==='1';
@@ -112,6 +112,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    const node=event.target.closest?.('[data-jumolf-action]');if(!node)return false;
    const action=node.dataset.jumolfAction;
    try{
+    if(getVerifiedEntitlement&&['simulate-premium','demo-profile'].includes(action))throw new Error('Les accès réels sont vérifiés côté serveur.');
     if(!isDemo()&&['create-targeted','create-verification','ignore-targeted','mark-targeted-completed'].includes(action))throw new Error('Cette action appartient au mode démonstration.');
     if(action==='activate')activate();
     else if(action==='onboarding-next'){onboardingStep=Math.min(3,onboardingStep+1);render();}
