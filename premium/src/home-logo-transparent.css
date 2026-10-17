@@ -1,6 +1,6 @@
 /* A native transparent wordmark: no photographic rectangle, blend mode or SVG filter. */
 .home-shell .home-welcome-logo {
- background-image:url('/src/assets/piste-home-wordmark.svg');
+ background-image:url('/src/assets/brand/piste-community-horizontal.svg');
  background-size:contain;
  background-position:center;
  mix-blend-mode:normal;

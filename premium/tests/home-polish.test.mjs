@@ -6,7 +6,9 @@ import {readFile} from 'node:fs/promises';
 test('targeted hero CTA and shared premium dog identity',()=>{
  assert.match(HeroPanel(),/>Piste opérationnelle /);
  assert.match(ScreenHeader('Sébastien'),/premium-brand-dog/);
- assert.match(AuthScreen('/auth/login'),/premium-brand-dog/);
+ assert.match(AuthScreen('/auth/login'),/piste-community-complet\.svg/);
+ assert.doesNotMatch(AuthScreen('/auth/login'),/premium-brand-dog/);
+ assert.match(AuthScreen('/auth/signup'),/premium-brand-dog/);
  assert.doesNotMatch(AuthScreen('/auth'),/premium-brand-dog/);
  assert.equal((HomeScreen().match(/class="feature-tile/g)||[]).length,4);
  assert.match(HomeScreen(),/href="\/jumolf"/);

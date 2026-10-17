@@ -1,0 +1,4 @@
+/* Presentation only: preserve all form fields, validation and authentication handlers. */
+.auth-login-premium header .brand { display:flex; justify-content:center; width:100%; }
+.auth-login-premium .official-login-logo { display:block; width:min(100%,330px); height:auto; aspect-ratio:421/215; object-fit:contain; margin-inline:auto; }
+@media(max-width:360px) { .auth-login-premium .official-login-logo { width:min(100%,290px); } }
