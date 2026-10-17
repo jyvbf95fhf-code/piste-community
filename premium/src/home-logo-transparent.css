@@ -1,0 +1,10 @@
+/* A native transparent wordmark: no photographic rectangle, blend mode or SVG filter. */
+.home-shell .home-welcome-logo {
+ background-image:url('/src/assets/piste-home-wordmark.svg');
+ background-size:contain;
+ background-position:center;
+ mix-blend-mode:normal;
+ mask-image:none;
+ -webkit-mask-image:none;
+ filter:none;
+}
