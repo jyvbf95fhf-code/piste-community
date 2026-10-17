@@ -1,0 +1,29 @@
+/* A light Home-only harmony pass. No shell tokens, layout, photos or JUMOLF rules. */
+.home-shell :is(.feature-tile[href],.track-builder-entry,.active-sessions,.explore-section) {
+ background:radial-gradient(ellipse at 100% 0%,#78cbd512,transparent 65%),linear-gradient(145deg,#172f40,#0b1c2b);
+ border-color:#8bbac947;
+ box-shadow:0 12px 28px #00000030,inset 0 1px 0 #c4e8ef0d;
+}
+.home-shell .feature-tile::after { background:linear-gradient(180deg,#0b1c2b00 0%,#0b1c2b33 38%,#0b1c2bd9 73%,#0b1c2bf5 100%); }
+.home-shell .feature-tile[href] h3 { color:#f0f5f8; }
+.home-shell .feature-tile[href] p { color:#c0d0da; }
+.home-shell .feature-tile[href] .tile-icon { color:#ddc38a; }
+.home-shell .feature-tile[href] .tile-arrow { color:#9ccbd5; }
+.home-shell .feature-tile .feature-pictogram { opacity:.9; }
+.home-shell .feature-backdrop { color:#d4b97b; opacity:.8; }
+.home-shell .feature-backdrop .feature-cyan,.home-shell .feature-tile .pictogram-cyan { stroke:#93ccd7; }
+.home-shell .discovery-hero { border-color:#aec4bc59; box-shadow:0 12px 28px #00000030,inset 0 1px 0 #c4e8ef0d; }
+.home-shell .track-builder-entry>span:first-child { border-color:#8bbac947; background:#78cbd50a; }
+.home-shell .track-builder-entry small { color:#b6c9d6; }
+.home-shell .active-session-card { border-color:#8bbac936; background:linear-gradient(145deg,#1b3444,#102332); box-shadow:inset 0 1px 0 #c4e8ef0b; }
+.home-shell .explore-section { border-color:#8bbac947; }
+.home-shell .explore-section .section-title h2 { color:#eef5f8; }
+.home-shell .explore-section .list-item { border-color:#8bbac926; background:linear-gradient(90deg,#78cbd506,transparent 75%); }
+.home-shell .explore-section .list-item strong { color:#eef5f8; }
+.home-shell .explore-section .list-item small { color:#b6c9d6; }
+.home-shell .explore-section .list-item>.icon { color:#95cdd7; }
+.home-shell .explore-section .list-item[href='/admin']>.icon:first-child { color:#ddc38a; }
+.home-shell .bottom-nav { border-color:#8bbac947; background:linear-gradient(135deg,#112333fa,#0a1726fa); box-shadow:0 8px 28px #00000065,inset 0 1px 0 #c4e8ef0d; }
+.home-shell .bottom-nav a { color:#b9cbd7; }
+.home-shell .bottom-nav a[aria-current] { color:#e5c17c; background:linear-gradient(145deg,#78cbd512,#e5c17c0b); }
+.home-shell .bottom-nav a[aria-current]::before { background:#e5c17c; box-shadow:0 0 7px #e5c17c33; }
