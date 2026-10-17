@@ -27,3 +27,10 @@
 .home-shell .bottom-nav a { color:#b9cbd7; }
 .home-shell .bottom-nav a[aria-current] { color:#e5c17c; background:linear-gradient(145deg,#78cbd512,#e5c17c0b); }
 .home-shell .bottom-nav a[aria-current]::before { background:#e5c17c; box-shadow:0 0 7px #e5c17c33; }
+
+/* Home JUMOLF label only: reuse the shared gold badge without changing access. */
+.home-shell .twin-heading .jumolf-home-premium {
+ flex-shrink:0; margin-left:auto; margin-right:8px; padding:2px 7px;
+ font-size:9px; line-height:1.4; letter-spacing:.06em;
+ background:#e5c17c14;
+}
