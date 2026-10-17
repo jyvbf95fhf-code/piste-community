@@ -1,0 +1,73 @@
+/* Approved third Home proposal: charcoal, stone and champagne.
+   Every rule belongs to Home; the existing structure, assets and routes stay intact. */
+.home-shell {
+ --home-ivory:#fff5e3;
+ --home-champagne:#edc985;
+ --home-card-border:#e2cda278;
+ --home-card-shadow:0 12px 28px #17161150,inset 0 1px 0 #fff6df21;
+ --text-primary:#fff5e3;
+ --text-secondary:#d4d1c9;
+ --text-muted:#bfb9ac;
+ --premium-gold:#edc985;
+ --premium-goldSoft:#edc985;
+ background:radial-gradient(ellipse at 100% 36%,#a69679a6,transparent 48%),linear-gradient(165deg,#292d2e 10%,#57564c 43%,#8e8069 78%,#514d43);
+ color:var(--home-ivory);
+}
+.home-shell :is(h1,h2,h3,.home-tagline) {
+ font-family:Georgia,'Times New Roman',serif;
+ letter-spacing:-.025em;
+ color:var(--home-ivory);
+}
+.home-shell .home-intro h1 { position:relative; }
+.home-shell .home-intro h1::after { content:""; position:absolute; left:0; bottom:-10px; width:26px; height:1px; background:var(--home-champagne); box-shadow:0 0 8px #edc98525; }
+.home-shell .header-terrain {
+ background:linear-gradient(90deg,#292d2ee8 2%,#292d2e91 43%,#292d2e12 78%),linear-gradient(0deg,#57564c 0%,#292d2e08 45%,#292d2e55 100%),url('/src/assets/hero-malinois-mountain.png') 80% 44% / cover;
+}
+.home-shell .home-intro>.eyebrow { color:#c0c0b7; }
+.home-shell .home-tagline strong { font-weight:700; color:var(--home-champagne); }
+.home-shell .home-intro::after { content:""; position:absolute; pointer-events:none; width:58%; height:40px; right:-12px; bottom:0; background:url('/src/assets/home-champagne-contours.svg') right center / cover; opacity:.5; }
+.home-shell .discovery-hero { border-color:#f2d49ba8; }
+.home-shell .discovery-hero .hero-terrain::after {
+ background:linear-gradient(90deg,#202829d9,#252a2c60 60%,#302d2414),linear-gradient(0deg,#252a2c88,transparent 65%);
+}
+.home-shell .discovery-hero .hero-copy::after { content:""; position:absolute; inset:45% 0 0; background:url('/src/assets/home-champagne-contours.svg') center bottom / cover; pointer-events:none; opacity:.24; z-index:-1; }
+.home-shell .discovery-hero .hero-copy { isolation:isolate; }
+.home-shell .discovery-hero h2 em { color:var(--home-ivory); font-style:normal; }
+.home-shell .discovery-hero .eyebrow { color:#f1d18e; }
+.home-shell .discovery-cta {
+ font-family:Georgia,'Times New Roman',serif;
+ font-weight:700;
+ color:#292822;
+ border:1px solid #f9dfae;
+ background:linear-gradient(115deg,#dab57a,#f1d297);
+ box-shadow:0 5px 16px #17161144,inset 0 1px 0 #fff5dd66;
+}
+.home-shell .feature-tile[href] {
+ background:radial-gradient(ellipse at 100% 0%,#cbb58a60,transparent 72%),linear-gradient(130deg,#29363c,#4b4a43);
+ border-color:var(--home-card-border);
+ box-shadow:var(--home-card-shadow);
+}
+.home-shell .feature-tile[href='/community'] { background:radial-gradient(ellipse at 95% 0%,#cbb58a65,transparent 75%),linear-gradient(145deg,#645c4d,#393b37); }
+.home-shell .feature-tile[href='/statistics'] { background:radial-gradient(ellipse at 100% 0%,#cbb58a45,transparent 72%),linear-gradient(135deg,#3e4849,#263439); }
+.home-shell .feature-tile::before { content:""; position:absolute; inset:0; z-index:-2; background:url('/src/assets/home-champagne-contours.svg') center / cover; opacity:.22; pointer-events:none; }
+.home-shell .feature-tile::after { background:linear-gradient(180deg,#252d2f00 0%,#252d2f10 38%,#252d2f63 73%,#252d2f77 100%); }
+.home-shell .feature-tile[href] h3 { color:var(--home-ivory); }
+.home-shell .feature-tile[href] p { color:#d4d1c9; }
+.home-shell .feature-tile[href] :is(.tile-icon,.tile-arrow) { color:var(--home-champagne); }
+.home-shell .feature-tile .feature-pictogram { opacity:1; }
+.home-shell .feature-backdrop { color:#edc985; opacity:.9; }
+.home-shell .feature-backdrop .feature-cyan,.home-shell .feature-tile .pictogram-cyan { stroke:#e9d6af; }
+.home-shell .feature-pictogram [fill='#102434'] { fill:#3a4140; }
+.home-shell :is(.track-builder-entry,.active-sessions,.twin-card,.list-item) { border-color:var(--home-card-border); background:radial-gradient(ellipse at 100% 0%,#bca27426,transparent 70%),linear-gradient(135deg,#303a3d,#46453d); box-shadow:var(--home-card-shadow); }
+.home-shell .active-session-card { background:linear-gradient(145deg,#454c4a,#303a3c); }
+.home-shell :is(.track-builder-entry>span:first-child,.avatar,.icon-button) { color:var(--home-champagne); border-color:#d9c29855; background:#303838cc; }
+.home-shell :is(.text-link,.see-all,.eyebrow.cyan,.twin-heading>.icon) { color:var(--home-champagne); }
+.home-shell .bottom-nav { border-color:#e2cda28c; background:linear-gradient(120deg,#363a37f7,#2b2c2af7); box-shadow:0 10px 28px #201b155c,inset 0 1px 0 #fff6df21; }
+.home-shell .bottom-nav a { color:#d8ccba; }
+.home-shell .bottom-nav a[aria-current] { color:#f3ce88; background:linear-gradient(140deg,#c3a16638,#b8995d16); box-shadow:inset 0 0 0 1px #d5ba8424; }
+.home-shell .bottom-nav a[aria-current]::before { background:#f3ce88; box-shadow:0 0 8px #edc98577; }
+.home-shell :is(a,button):focus-visible { outline-color:var(--home-champagne); }
+.home-shell .home-intro h1 { text-wrap:balance; }
+.home-shell .discovery-cta { font-size:11px; }
+.home-shell .explore-section { background:linear-gradient(135deg,#3c4645,#49473e); }
+.home-shell :is(.session-meta,.session-date,.prototype-note) { color:#cec6b7; }
