@@ -1,0 +1,9 @@
+/* Keep the exact existing wordmark pixels and placement, clearing only the navy backdrop. */
+.home-shell .home-welcome-logo {
+ filter:url('/src/assets/home-logo-filter.svg#clear-background') drop-shadow(0 1px 2px #04101b99);
+ background-size:444.6px 790.4px;
+ background-position:-267px -19px;
+ mix-blend-mode:normal;
+ mask-image:none;
+ -webkit-mask-image:none;
+}

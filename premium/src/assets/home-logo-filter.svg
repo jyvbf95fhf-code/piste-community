@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg">
+ <filter id="clear-background" color-interpolation-filters="sRGB" x="0" y="0" width="100%" height="100%">
+  <!-- Alpha comes from luminance: dark navy becomes transparent; the original gold and ivory stay. -->
+  <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  .8504 2.8608 .2888 0 -.8"/>
+ </filter>
+</svg>
