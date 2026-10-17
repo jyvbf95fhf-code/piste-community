@@ -38,7 +38,8 @@
       "feature/v2-premium-data-exports-block6": false,
       "feature/v2-premium-member-gifts": false,
       "feature/v2-premium-home-harmony": false,
-      "feature/v2-premium-home-refinement": false
+      "feature/v2-premium-home-refinement": false,
+      "feature/v2-premium-home-photo-swap": false
     }
   }
 }

@@ -1,0 +1,10 @@
+/* Home only: exchange the two existing photos and gently lift the blue canvas. */
+.home-shell {
+ background:radial-gradient(ellipse at 50% 23%,#2d9bbe21,transparent 46%),radial-gradient(ellipse at 2% 58%,#2d70960e,transparent 42%),linear-gradient(180deg,#0b1b2c 0%,#10273b 42%,#17374b 72%,#10273b 100%);
+}
+.home-shell .header-terrain {
+ background:linear-gradient(90deg,#0b1b2cde 2%,#0b1b2c99 43%,#0b1b2c1f 82%),linear-gradient(0deg,#10273b 0%,#0b1b2c14 48%,#0b1b2c70 100%),url('/src/assets/hero-terrain-sunset.png') 65% 44% / cover;
+}
+.home-shell .discovery-hero .hero-terrain img { object-position:80% 44%; }
+/* Let the existing blended logo see the exchanged header photo. */
+.home-shell>.screen-header { z-index:auto; }
