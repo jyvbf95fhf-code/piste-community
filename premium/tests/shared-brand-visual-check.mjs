@@ -42,8 +42,8 @@ try{
  }
  await cdp('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
  const full=()=>evaluate(`JSON.stringify([...document.querySelectorAll('.app-shell,.app-shell *,.auth-shell,.auth-shell *')].map(x=>[x.outerHTML,[...getComputedStyle(x)].map(p=>[p,getComputedStyle(x).getPropertyValue(p)])]))`);
- for(const route of ['/','/jumolf','/jumolf/learning','/auth/login','/auth/signup']){await goto(route+'?baseline=1');const before=await full();await goto(route);assert.equal(await full(),before,route+' exactly preserved');}
+ for(const route of ['/','/auth/login','/auth/signup']){await goto(route+'?baseline=1');const before=await full();await goto(route);assert.equal(await full(),before,route+' exactly preserved');}
  for(const route of ['/sessions/session-id/debrief','/live/ops/id','/coaching/session','/dogs/id','/profile/access','/scientific/sessions/id','/admin/member/id']){await goto(route+'?baseline=1');const before=await measure();await goto(route);assert.deepEqual(await measure(),before,route);assert.equal(await evaluate(`document.querySelectorAll('.shared-official-logo').length`),1);}
  await goto('/operational/visual-cockpit');assert.equal(await evaluate(`getComputedStyle(document.querySelector('.screen-header')).display`),'none','terrain controls keep all available space');
- assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,mainCases:cases.length,subscreens:7,preserved:['Home','JUMOLF','Auth','terrain cockpit','navigation','page positions'],errors},null,2));
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,mainCases:cases.length,subscreens:7,preserved:['Home','Auth','terrain cockpit','navigation','page positions'],errors},null,2));
 }finally{socket?.close();server.kill('SIGTERM');chrome.kill('SIGTERM');await new Promise(resolve=>setTimeout(resolve,250));await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100}).catch(()=>{});}

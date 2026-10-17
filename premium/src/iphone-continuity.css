@@ -1,0 +1,74 @@
+/* One continuous Community night canvas; module cards retain their own palette. */
+body:has(.app-shell) { background:#14222f; }
+.app-shell.app-shell[data-module-theme] { background:#14222f; }
+.app-shell.app-shell[data-module-theme]>.screen-header {
+ background:transparent;
+ border-bottom:0;
+ box-shadow:none;
+}
+.app-shell.app-shell[data-module-theme]>main {
+ background:transparent;
+ border-radius:0;
+}
+/* Page-level halos formerly started below the header and outlined a separate panel. */
+.app-shell[data-module-theme] main :is(.coaching-flow,.debrief-flow) { background:none; }
+.app-shell[data-module-theme] main :is(.coaching-flow,.jumolf-shell)::before { background:none; }
+/* Dogs keeps its light dossier cards, with readable headings on the night canvas. */
+.app-shell[data-module-theme="dogs"]>main { color:var(--text-primary); }
+.app-shell.app-shell[data-module-theme="dogs"] .dogs-heading h1 { color:var(--text-primary); }
+.app-shell.app-shell[data-module-theme="dogs"] .dogs-heading>p { color:var(--text-secondary); }
+.app-shell[data-module-theme="dogs"]>main>.dogs-back-link { color:var(--premium-gold); }
+.app-shell[data-module-theme="dogs"]>main :is(.card,.dog-section,.dog-profile-hero,.dog-list-card) { color:var(--theme-text); }
+.app-shell[data-module-theme="dogs"]>main>.prototype-note { color:var(--text-muted); }
+.app-shell.app-shell[data-module-theme="dogs"] .dogs-heading>.eyebrow { color:var(--premium-gold); }
+/* Color treatment only: exact official SVG, unchanged geometry and JUMOLF emblems. */
+.app-shell[data-jumolf="true"]>.screen-header .shared-official-logo {
+ filter:hue-rotate(135deg) saturate(.8) brightness(1.1) drop-shadow(0 1px .5px #07111f66);
+}
+/* A single uncropped, edge-to-edge artwork; short screens scroll rather than crop. */
+.auth-shell.auth-welcome {
+ --welcome-safe-top:env(safe-area-inset-top,0px);
+ --welcome-safe-bottom:env(safe-area-inset-bottom,0px);
+ --welcome-safe-left:env(safe-area-inset-left,0px);
+ --welcome-safe-right:env(safe-area-inset-right,0px);
+ height:auto;
+ min-height:100svh;
+ min-height:100dvh;
+ overflow:visible;
+ background:#020e18;
+}
+.auth-shell.auth-welcome main {
+ display:flex;
+ flex-direction:column;
+ width:100%;
+ height:auto;
+ min-height:100svh;
+ min-height:100dvh;
+ overflow:visible;
+}
+.auth-welcome main::before { content:none; background:none; }
+.auth-welcome .auth-welcome-art {
+ position:relative;
+ inset:auto;
+ flex:0 0 auto;
+ width:100%;
+ padding-top:var(--welcome-safe-top);
+}
+.auth-welcome .auth-welcome-art img {
+ display:block;
+ width:100%;
+ height:auto;
+ object-fit:contain;
+ object-position:center;
+ /* Fade only empty edge pixels into the page, never the text or dog. */
+ -webkit-mask-image:linear-gradient(transparent 0%,#000 2%,#000 96%,transparent 100%);
+ mask-image:linear-gradient(transparent 0%,#000 2%,#000 96%,transparent 100%);
+}
+.auth-welcome .auth-welcome-actions {
+ position:relative;
+ inset:auto;
+ width:100%;
+ margin-top:auto;
+ padding:12px max(20px,var(--welcome-safe-right)) calc(8px + var(--welcome-safe-bottom)) max(20px,var(--welcome-safe-left));
+ background:none;
+}
