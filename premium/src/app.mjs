@@ -614,7 +614,7 @@ function jumolfRawSources(){
 }
 function accountScientificDataset(){return buildAccountScientificDataset(buildJumolfSources(jumolfRawSources()),currentUser?.user_id);}
 function scienceDataset(){return auth.assurance==='supabase-auth'?accountScientificDataset():scientificDataset;}
-function makeJumolfController(){return createJumolfController({store:jumolfStore,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
+function makeJumolfController(){return createJumolfController({store:jumolfStore,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let jumolfController=makeJumolfController();
 const scientificDataset=generateJumolfSyntheticDataset();
 const scientificAnalytics=buildJumolfSyntheticAnalytics(scientificDataset.sessions);
@@ -1312,7 +1312,7 @@ document.addEventListener('submit',async event=>{
  if(dataExportController.handleSubmit(event))return;
  if(adminController.handleSubmit(event))return;
  if(scientificCorpusController.handleSubmit(event))return;
- if(event.target.closest('[data-scientific-form],[data-jumolf-form]')&&auth.assurance==='supabase-auth'){event.preventDefault();try{await accountApi.call({operation:'authorize-feature',feature:event.target.closest('[data-scientific-form]')?'science':'jumolf'});}catch(error){Toast(error.message);return;}}
+ if(event.target.closest('[data-scientific-form],[data-jumolf-form]')&&!event.target.matches('[data-jumolf-form="code"]')&&auth.assurance==='supabase-auth'){event.preventDefault();try{await accountApi.call({operation:'authorize-feature',feature:event.target.closest('[data-scientific-form]')?'science':'jumolf'});}catch(error){Toast(error.message);return;}}
  if(scientificController.handleSubmit(event))return;
  if(jumolfController.handleSubmit(event))return;
  if(communityController.handleSubmit(event))return;

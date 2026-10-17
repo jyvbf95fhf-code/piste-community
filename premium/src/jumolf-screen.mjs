@@ -55,7 +55,7 @@ function settingsPage(state={},access={}){return `<section class="jumolf-setting
 export function JumolfScreen({route={type:'entry'},state={},access:resolvedAccess=null,codeFeedback='',sources={},source=null,analysis=null,map=null,timeline=null,dogProfile=null,comparison=null,onboardingStep=0,timelineIndex=0,syntheticSummary={},syntheticDataset=null,learning={},realMode=false}={}){
  const access=resolvedAccess||resolveJumolfAccess({...state,entitlement:state.jumolf_entitlement??'none'});
  if(route.type==='premium')return JumolfPremiumScreen();
- if(route.type==='access-code')return JumolfAccessCodeScreen({feedback:codeFeedback});
+ if(route.type==='access-code')return JumolfAccessCodeScreen({feedback:codeFeedback,realMode});
  if(!access.entitlement_valid)return JumolfAccessScreen({lockedReason:access.locked_reason,originLabel:access.origin_label,expiresAt:access.expires_at});
  if(!state.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'&&!route.replay)return activation(state);
  if(route.type==='activate')return activation(state);

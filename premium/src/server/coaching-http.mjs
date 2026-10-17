@@ -1,3 +1,4 @@
+import {loadPremiumCodeEntitlement,loadPremiumCodeCatalogue,redeemPremiumCode,managePremiumCode} from './premium-code-service.mjs';
 import {exportAccountData} from './data-exports-service.mjs';
 import {projectAdminSnapshot} from './admin-service.mjs';
 import {projectVerifiedCapabilities} from './account-capabilities.mjs';
@@ -6,7 +7,7 @@ const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',n
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 function error(message,status=400){throw Object.assign(Error(message),{status});}
 const assertResult=result=>{if(result.error){const code=result.error.code;error(code==='40001'?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',code==='40001'?409:code==='42501'?403:400);}return result.data;};
-export function createCoachingHandler({admin,authClient,clock=Date.now}={}){
+export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false}={}){
  return async request=>{
  const origin=request.headers.get('origin')||'',allowed=!origin||/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)||/^https:\/\/piste-community-v2-premium(?:-[a-z0-9-]+-mw2f59b8p2-4030s-projects)?\.vercel\.app$/.test(origin);const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin',...(allowed&&origin?{'Access-Control-Allow-Origin':origin}:{}),'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
@@ -15,7 +16,13 @@ export function createCoachingHandler({admin,authClient,clock=Date.now}={}){
  if(Number(request.headers.get('content-length')||0)>200000)error('Requête trop volumineuse.',413);const text=await request.text();if(text.length>200000)error('Requête trop volumineuse.',413);let body;try{body=JSON.parse(text);}catch{error('Requête invalide.');}
  const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];if(!token)error('Connexion requise.',401);const result=await authClient.auth.getUser(token);if(result.error||!result.data?.user)error('Connexion expirée.',401);const uid=result.data.user.id;
  const profile=assertResult(await admin.from('coaching_remote_users').select('id,display_name,qa,enabled').eq('id',uid).eq('enabled',true).maybeSingle());if(!profile)error('Compte non autorisé pour ce pilote.',403);
- const capabilities=projectVerifiedCapabilities(result.data.user,profile,clock());
+ const codeEntitlement=giftCodesEnabled&&['profile','authorize-feature','export-data','admin-snapshot'].includes(body.operation)?await loadPremiumCodeEntitlement(admin,uid):null;
+ const capabilities=projectVerifiedCapabilities(result.data.user,profile,clock(),codeEntitlement);
+ if(body.operation==='premium-code-redeem'){
+  if(!giftCodesEnabled)error('Les codes cadeaux sont en attente d’activation serveur.',503);
+  const redeemed=await redeemPremiumCode(admin,uid,body.code);
+  return respond({ok:true,...projectVerifiedCapabilities(result.data.user,profile,clock(),redeemed.entitlement)});
+ }
  if(body.operation==='export-data')return respond(await exportAccountData({admin,uid,capabilities,body,clock}));
  if(body.operation==='authorize-feature'){
   const allowed={premium:capabilities.permissions.premium,science:capabilities.permissions.research,jumolf:capabilities.jumolf_entitlement.entitlement!=='none'}[body.feature];
@@ -23,11 +30,17 @@ export function createCoachingHandler({admin,authClient,clock=Date.now}={}){
  }
  if(['admin-snapshot','admin-command'].includes(body.operation)){
   if(capabilities.admin_role!=='owner_admin')error('Accès propriétaire requis.',403);
-  if(body.operation==='admin-snapshot')return respond(projectAdminSnapshot(assertResult(await admin.rpc('v2_admin_snapshot',{p_actor:uid})),clock()));
+  if(body.operation==='admin-snapshot'){
+   const snapshot=assertResult(await admin.rpc('v2_admin_snapshot',{p_actor:uid}));
+   const codes=giftCodesEnabled?await loadPremiumCodeCatalogue(admin,uid,{page:body.codesPage,historyPage:body.codesHistoryPage}):null;
+   if(codes)snapshot.members=(snapshot.members||[]).map(m=>({...m,premium_code_entitlement:codes.member_grants?.[m.id]||null}));
+   return respond({...projectAdminSnapshot(snapshot,clock()),...(codes?{gift_codes_version:codes.gift_codes_version,codes:codes.codes,code_history:codes.history,code_pagination:{page:codes.page,history_page:codes.history_page,total:codes.total,history_total:codes.history_total}}:{})});
+  }
+  if(giftCodesEnabled&&['create-code','activate-code','deactivate-code'].includes(body.action))return respond(await managePremiumCode(admin,uid,body.action,body.payload,body.targetId));
   if(!uuid(body.targetId)||typeof body.action!=='string'||!body.payload||typeof body.payload!=='object'||Array.isArray(body.payload))error('Commande Admin invalide.');
   return respond(assertResult(await admin.rpc('v2_admin_command',{p_actor:uid,p_action:body.action,p_target:body.targetId,p_payload:body.payload})));
  }
- if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...projectVerifiedCapabilities(result.data.user,profile,clock())});
+ if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...capabilities});
  if(body.operation==='list'){const rows=assertResult(await admin.from('coaching_remote_sessions').select('id,state').contains('state',{members:[{id:uid}]}).order('updated_at',{ascending:false}).limit(30));return respond({sessions:rows.map(r=>projectRemoteSession(r.state,uid,clock()))});}
  const id=body.sessionId;if(!uuid(id))error('Identifiant de session invalide.');
  const load=async()=>assertResult(await admin.from('coaching_remote_sessions').select('state,version,owner_id').eq('id',id).maybeSingle());

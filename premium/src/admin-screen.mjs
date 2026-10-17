@@ -1,3 +1,4 @@
+import {RealPremiumCodesPage} from './admin-premium-codes.mjs';
 import {MemberGiftActions,MemberPremiumGrants} from './admin-member-gifts.mjs';
 import {escapeHTML} from './components.mjs';
 import {AdminShell} from './admin-shell.mjs';
@@ -50,7 +51,7 @@ export function AdminScreen({route,model}){
  const data=model.data||{};const pages={dashboard:dashboard(data),members:membersPage(data),member:memberPage(data,model.access.role),premium:premiumPage(data),codes:codesPage(data),scientific:scientificPage(data),services:servicesPage(data),deployments:deploymentsPage(data),errors:errorsPage(data),audit:auditPage(data),unknown:'<section class="admin-page"><h2>Page Admin introuvable</h2></section>'};
  let content=pages[route.type]||pages.unknown;
  if(data.real){
-  if(route.type==='codes')content='<section class="admin-page"><h2>Codes JUMOLF</h2><p>Les codes de démonstration sont désactivés pour les comptes réels. Utilisez une attribution individuelle dans la fiche membre.</p></section>';
+  if(route.type==='codes')content=RealPremiumCodesPage(data);
   if(route.type==='services')content=servicesPage(data).replace('État des services · démonstration','État des services').replace('Les indicateurs suivants restent simulés, sans vérification externe.','Aucune mesure de disponibilité externe connectée.');
   if(route.type==='scientific')content='<section class="admin-page"><h2>Autorisations Science individuelles</h2><p>Indépendantes de Premium. Gérez chaque autorisation dans la fiche membre. Aucun consentement de contribution n’est accordé par ces actions.</p>'+table(['Membre','Rôle','Accès'],data.scientific_roles.map(r=>`<tr><td><a href="/admin/member/${encodeURIComponent(r.user_id)}">${e(r.user_id)}</a></td><td>${e(r.role)}</td><td>${e(r.status)}</td></tr>`))+'</section>';
   if(route.type==='premium')content+='<p class="admin-note">Abonnements préparés : aucun fournisseur de paiement configuré, aucun paiement activé. Les attributions manuelles restent disponibles.</p>';
