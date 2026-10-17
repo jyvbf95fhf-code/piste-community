@@ -1,0 +1,32 @@
+/* Five Home cards and the existing logo only. No layout or inherited token changes. */
+.home-shell :is(.feature-tile[href],.track-builder-entry) {
+ background:radial-gradient(ellipse at 85% 0%,#8bcdd51a,transparent 68%),linear-gradient(145deg,#173244,#0c1e2e 85%);
+ border-color:#a0c3d04d;
+ box-shadow:0 6px 18px #00000024,inset 0 1px 0 #e4f5fa14,inset 0 -1px 0 #07111f55;
+}
+.home-shell .feature-tile::before { background:linear-gradient(90deg,transparent,#bbdce46b,transparent); }
+.home-shell .feature-tile::after { background:linear-gradient(180deg,#0c1e2e00 0%,#0c1e2e22 30%,#0c1e2eeb 66%,#0c1e2efa 100%); }
+.home-shell .feature-tile[href] h3 { color:#f4f8fa; text-shadow:0 1px 5px #07111f66; }
+.home-shell .feature-tile[href] p { color:#cad8e1; }
+.home-shell .feature-tile[href] .tile-icon { color:#e3cd9b; }
+.home-shell .feature-tile .feature-pictogram { opacity:1; stroke-width:1.6; }
+.home-shell .feature-tile .pictogram-cyan { stroke:#a3d5de; }
+.home-shell .feature-backdrop { opacity:.78; mask-image:linear-gradient(#000 0%,#000 43%,transparent 78%); -webkit-mask-image:linear-gradient(#000 0%,#000 43%,transparent 78%); }
+.home-shell .feature-backdrop .feature-glow { opacity:.12; }
+.home-shell .feature-backdrop .feature-cyan { stroke:#a3d5de; }
+.home-shell .feature-tile[href] .tile-arrow { color:#b3d5df; opacity:.9; }
+.home-shell .track-builder-entry>span:first-child { color:#e3cd9b; border-color:#a0c3d04d; background:linear-gradient(145deg,#8bcdd50f,#07111f33); box-shadow:inset 0 1px 0 #e4f5fa0d; }
+.home-shell .track-builder-entry .premium-pictogram { stroke-width:1.6; }
+.home-shell .track-builder-entry .pictogram-accent { stroke:#a3d5de; }
+.home-shell .track-builder-entry strong { color:#f4f8fa; }
+.home-shell .track-builder-entry small { color:#cad8e1; }
+.home-shell .track-builder-entry .track-entry-arrow { color:#b3d5df; }
+/* Blend the original cropped logo into the mountain, preserving its box and identity. */
+.home-shell .home-welcome-logo {
+ mix-blend-mode:lighten;
+ background-position:-285px -24px;
+ mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent),linear-gradient(transparent,#000 6%,#000 80%,transparent);
+ mask-composite:intersect;
+ -webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent),linear-gradient(transparent,#000 6%,#000 80%,transparent);
+ -webkit-mask-composite:source-in;
+}
