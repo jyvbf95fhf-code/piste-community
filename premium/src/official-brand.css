@@ -2,3 +2,9 @@
 .auth-login-premium header .brand { display:flex; justify-content:center; width:100%; }
 .auth-login-premium .official-login-logo { display:block; width:min(100%,330px); height:auto; aspect-ratio:421/215; object-fit:contain; margin-inline:auto; }
 @media(max-width:360px) { .auth-login-premium .official-login-logo { width:min(100%,290px); } }
+
+/* Shared signed-in header only; Home, Auth and the legacy JUMOLF header keep their render. */
+.app-shell>.screen-header .brand-official { position:relative; flex-shrink:0; }
+.app-shell>.screen-header .brand-official-sizing { display:flex; align-items:center; gap:var(--space-2); visibility:hidden; pointer-events:none; }
+.app-shell>.screen-header .brand-official-sizing>.premium-brand-dog { width:32px; height:36px; }
+.app-shell>.screen-header .shared-official-logo { position:absolute; inset:0; display:block; width:100%; height:100%; object-fit:contain; object-position:left center; filter:drop-shadow(0 1px .5px #07111f66); }

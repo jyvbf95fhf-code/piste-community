@@ -5,7 +5,8 @@ import {AuthScreen,HomeScreen} from '../src/screens.mjs';
 import {readFile} from 'node:fs/promises';
 test('targeted hero CTA and shared premium dog identity',()=>{
  assert.match(HeroPanel(),/>Piste opérationnelle /);
- assert.match(ScreenHeader('Sébastien'),/premium-brand-dog/);
+ assert.match(ScreenHeader('Sébastien'),/shared-official-logo/);
+ assert.match(ScreenHeader('Sébastien','S',false,0,false),/premium-brand-dog/);
  assert.match(AuthScreen('/auth/login'),/piste-community-complet\.svg/);
  assert.doesNotMatch(AuthScreen('/auth/login'),/premium-brand-dog/);
  assert.match(AuthScreen('/auth/signup'),/premium-brand-dog/);
