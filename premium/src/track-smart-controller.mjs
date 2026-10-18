@@ -11,6 +11,7 @@ export function createSmartTrackController({service,getContext,onChange=()=>{},g
  async function run(task){let r;try{r=begin();await task(r);}catch(error){if(!r||valid(r))state={...state,error:error.message};}finally{if(!r||request===r){request=null;state={...state,busy:false};onChange();}}}
  return {
   view:()=>structuredClone(state),
+  cancel(){stop();state={...state,error:'',notice:'Recherche annulée.'};onChange();},
   setQuery(query){stop();state={...state,query:String(query).slice(0,80),communes:[],commune:null,proposals:[],error:'',notice:''};},
   setOptions(patch){stop();const values={};for(const key of ['distanceKm','terrain','transitions'])if(Object.hasOwn(patch,key))values[key]=key==='distanceKm'?Number(String(patch[key]).replace(',','.')):patch[key];state={...state,...values,proposals:[],error:'',notice:''};},
   async search(){await run(async r=>{const communes=await service.searchCommunes(state.query,{signal:r.abort.signal});if(valid(r))state={...state,communes,commune:null,notice:communes.length?'Choisissez la commune dans les résultats.':'Aucune commune trouvée.'};});},

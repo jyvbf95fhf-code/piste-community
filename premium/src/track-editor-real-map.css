@@ -115,3 +115,12 @@
 .tracer-map .real-map-reader,.search-map .real-map-reader{height:100%}
 .tracer-map .real-map-reader .gps-map-stage,.search-map .real-map-reader .gps-map-stage{height:100%;max-height:none;min-height:0}
 .tracer-map .real-map-reader .real-map-availability,.search-map .real-map-reader .real-map-availability{position:absolute;bottom:8px;left:12px;right:70px;z-index:400;text-shadow:0 2px 5px #000;pointer-events:none}
+
+/* Dedicated intelligent creator: same existing sheet, outside the track menu. */
+[data-track-cockpit] .creator-smart-dialog{position:fixed;inset:0;width:100%;max-width:none;height:100dvh;max-height:none;margin:0;padding:0;border:0;background:transparent;color:inherit;overflow:hidden}
+[data-track-cockpit] .creator-smart-dialog::backdrop{background:#030e1a90}
+[data-track-cockpit] .creator-smart-dialog .creator-menu-sheet{max-height:90dvh;padding-top:20px}
+[data-track-cockpit] .creator-smart-dialog .creator-smart>summary{display:none}
+[data-track-cockpit] .creator-smart-dialog .creator-menu-heading h2{font-size:18px}
+[data-track-cockpit] .creator-smart-dialog:focus{outline:none}
+[data-track-cockpit] .creator-smart-dialog .creator-menu-heading{position:sticky;top:0;z-index:2;background:#193344}

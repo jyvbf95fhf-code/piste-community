@@ -1,7 +1,8 @@
 import {COACHING_REMOTE as config} from '../src/coaching-remote-config.mjs';
-const UPSTREAM='https://overpass-api.de/api/interpreter';
+// Fixed public Overpass mirrors; no member credentials leave the authorization check.
+const UPSTREAMS=['https://overpass-api.de/api/interpreter','https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
 const retainedTags=['highway','surface','access','foot','barrier','construction','area','oneway:foot'];
-export function createTrackNetworkHandler({fetch=globalThis.fetch,timeoutMs=30000,authorize=null}={}){
+export function createTrackNetworkHandler({fetch=globalThis.fetch,timeoutMs=35000,authorize=null}={}){
  return async function handler(req,res){
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('X-Content-Type-Options','nosniff');
   if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'Méthode non autorisée.'});}
@@ -18,17 +19,26 @@ export function createTrackNetworkHandler({fetch=globalThis.fetch,timeoutMs=3000
    }
   }catch{return res.status(503).json({error:'Vérification Premium indisponible.'});}
   const radius=Math.round(Math.min(6000,Math.max(1200,km*700+1000))),query=`[out:json][timeout:25][maxsize:10000000];way(around:${radius},${lat},${lon})[highway~"^(residential|living_street|pedestrian|service|unclassified|tertiary|tertiary_link|footway|path|track|cycleway|steps)$"];out body;>;out body qt;`;
-  const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),timeoutMs),cancel=()=>abort.abort();req.on?.('aborted',cancel);
+  const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),timeoutMs),cancel=()=>abort.abort();req.on?.('aborted',cancel);res.on?.('close',cancel);
   try{
-   const response=await fetch(UPSTREAM,{method:'POST',headers:{'User-Agent':'PISTECommunityV2/1.0','Accept':'application/json','Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({data:query}).toString(),signal:abort.signal,credentials:'omit',redirect:'error'});
-   if(!response.ok){console.warn('[track-network] upstream HTTP',response.status);return res.status(502).json({error:'Fournisseur cartographique momentanément indisponible. Réessayez dans un instant.'});}
-   if(Number(response.headers?.get('content-length'))>10000000)return res.status(413).json({error:'Zone trop dense. Réduisez la distance.'});
-   const data=await response.json();if(data.remark||!Array.isArray(data.elements)||data.elements.length>150000)return res.status(502).json({error:'Données cartographiques incomplètes. Réessayez plus tard.'});
-   const elements=data.elements.filter(e=>['node','way'].includes(e.type)).map(e=>{const tags=Object.fromEntries(retainedTags.filter(k=>typeof e.tags?.[k]==='string').map(k=>[k,e.tags[k]]));return e.type==='node'?{type:'node',id:e.id,lat:e.lat,lon:e.lon,...(Object.keys(tags).length?{tags}:{})}:{type:'way',id:e.id,nodes:e.nodes,tags};});
-   if(Buffer.byteLength(JSON.stringify({elements}))>4000000)return res.status(413).json({error:'Zone trop dense. Réduisez la distance.'});
-   return res.status(200).json({elements});
+   for(const [index,upstream] of UPSTREAMS.entries()){
+    const attempt=new AbortController(),relay=()=>attempt.abort();abort.signal.addEventListener('abort',relay,{once:true});
+    if(abort.signal.aborted)attempt.abort();
+    const attemptTimer=index===0?setTimeout(()=>attempt.abort(),Math.min(5000,timeoutMs)):null;
+    try{
+     const response=await fetch(index===0?upstream:upstream+'?'+new URLSearchParams({data:query}),{method:index===0?'POST':'GET',headers:{'User-Agent':'PISTECommunityV2/1.0','Accept':'application/json',...(index===0?{'Content-Type':'application/x-www-form-urlencoded'}:{})},...(index===0?{body:new URLSearchParams({data:query}).toString()}:{}),signal:attempt.signal,credentials:'omit',redirect:'error'});
+     if(!response.ok){console.warn('[track-network] upstream HTTP',response.status);if([406,429].includes(response.status)||response.status>=500)continue;return res.status(502).json({error:'Fournisseur cartographique momentanément indisponible. Réessayez dans un instant.'});}
+     if(Number(response.headers?.get('content-length'))>10000000)return res.status(413).json({error:'Zone trop dense. Réduisez la distance.'});
+     const data=await response.json();if(data.remark||!Array.isArray(data.elements)||data.elements.length>150000)continue;
+     const elements=data.elements.filter(e=>['node','way'].includes(e.type)).map(e=>{const tags=Object.fromEntries(retainedTags.filter(k=>typeof e.tags?.[k]==='string').map(k=>[k,e.tags[k]]));return e.type==='node'?{type:'node',id:e.id,lat:e.lat,lon:e.lon,...(Object.keys(tags).length?{tags}:{})}:{type:'way',id:e.id,nodes:e.nodes,tags};});
+     if(Buffer.byteLength(JSON.stringify({elements}))>4000000)return res.status(413).json({error:'Zone trop dense. Réduisez la distance.'});
+     return res.status(200).json({elements});
+    }catch(error){if(abort.signal.aborted)throw error;console.warn('[track-network] upstream request failed',error.name);}
+    finally{clearTimeout(attemptTimer);abort.signal.removeEventListener('abort',relay);}
+   }
+   return res.status(502).json({error:'Données cartographiques indisponibles ou incomplètes. Réessayez dans un instant.'});
   }catch(error){console.warn('[track-network] request failed',error.name);return res.status(abort.signal.aborted?504:502).json({error:abort.signal.aborted?'Recherche cartographique trop longue. Réessayez avec une distance plus courte.':'Connexion au fournisseur cartographique indisponible. Réessayez plus tard.'});}
-  finally{clearTimeout(timer);req.off?.('aborted',cancel);}
+  finally{clearTimeout(timer);req.off?.('aborted',cancel);res.off?.('close',cancel);}
  };
 }
 export default createTrackNetworkHandler();

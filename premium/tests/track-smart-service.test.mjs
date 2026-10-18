@@ -10,3 +10,7 @@ test('network request is bounded to pedestrian ways, carries no account and reus
 test('API failure and partial network data remain errors instead of fictitious proposals',async()=>{
  assert.equal(typeof api.createSmartTrackService,'function');await assert.rejects(api.createSmartTrackService({fetch:async()=>({ok:false,status:429})}).loadNetwork(commune,1),/indisponible/);await assert.rejects(api.createSmartTrackService({fetch:async()=>({ok:true,json:async()=>({remark:'timeout',elements:[]})})}).loadNetwork(commune,1),/incomplètes/);
 });
+test('deadline includes authorization lookup and never leaves a pending search',async()=>{
+ const service=api.createSmartTrackService({getAuthorization:()=>new Promise(()=>{}),timeoutMs:10});
+ await assert.rejects(Promise.race([service.loadNetwork(commune,2),new Promise((_,reject)=>setTimeout(()=>reject(Error('unbounded wait')),100))]),/interrompue|longue/);
+});

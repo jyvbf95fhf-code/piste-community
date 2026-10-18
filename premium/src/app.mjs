@@ -632,15 +632,18 @@ let scientificController=createScientificController({actor:currentUser,dataset:s
 let scientificCorpusController=createScientificCorpusController({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])})),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
 function restoreSmartTrackEntry(){
  if(location.pathname!=='/track-builder'){smartEntryOpenedKey=null;return;}
- if(new URLSearchParams(location.search).get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;openSmartTrackMenu();}
+ if(new URLSearchParams(location.search).get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;openSmartTrackPanel();}
 }
-function openSmartTrackMenu(){
- const panel=document.querySelector('[data-creator-panel]'),section=document.querySelector('[data-creator-section="smart"]');
- if(panel)panel.open=true;if(section){section.open=true;section.querySelector('[data-smart-query],a')?.focus({preventScroll:true});}
+function openSmartTrackPanel({focus=true}={}){
+ const panel=document.querySelector('[data-smart-panel]'),menu=document.querySelector('[data-creator-panel]');
+ if(!panel)return;
+ if(menu)menu.open=false;if(!panel.open)panel.showModal();
+ if(focus)panel.querySelector('[data-smart-query]')?.focus({preventScroll:true});
 }
+
 function selectSmartProposal(id){
  try{const {proposal,commune}=trackSmart.proposal(id),ownerId=currentUser?.user_id,key=trackEditor.routeKey,fingerprint=smartTrackFingerprint();
-  const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();const draft=smartTrackDraft(proposal,commune);trackSmart.dispose();editorChange(draft,{selectedPointId:null,copySource:null,nextPointKind:'via',notice:'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=false;}catch(error){Toast(error.message);}};
+  const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();const draft=smartTrackDraft(proposal,commune);trackSmart.dispose();editorChange(draft,{selectedPointId:null,copySource:null,nextPointKind:'via',notice:'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}};
   if(trackEditor.draft?.dirty)ConfirmationDialog({title:'Ouvrir cette proposition ?',description:'Elle remplacera les modifications non enregistrées du brouillon actuel. Le parcours proposé restera modifiable avant enregistrement.',onConfirm:apply});else apply();
  }catch(error){Toast(error.message);}
 }
@@ -662,6 +665,9 @@ function exportPanelForRoute(route){
 }
 function render(focus=false) {
  const exportPanel=document.querySelector('[data-data-exports]'),exportUi=exportPanel?{open:exportPanel.open,domain:exportPanel.querySelector('[name=domain]')?.value,format:exportPanel.querySelector('[name=format]')?.value}:null;
+ const smartPanelWasOpen=document.querySelector('[data-smart-panel]')?.open===true;
+ const smartPanelScroll=document.querySelector('[data-smart-panel] .creator-menu-sheet')?.scrollTop||0;
+ const smartWasBusy=!!document.querySelector('[data-smart-panel] [data-smart-cancel]');
  const creatorPanelWasOpen=document.querySelector('[data-creator-panel]')?.open===true;
  const creatorSections=[...(document.querySelectorAll?.('[data-creator-section]')||[])].map(section=>[section.dataset.creatorSection,section.open]);
  document.querySelector('[data-coaching-help-dialog]')?.close();
@@ -727,6 +733,7 @@ function render(focus=false) {
  mountTrackEditorMap({draft:trackEditor.draft,selectedPointId:trackEditor.selectedPointId,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  trackRouting.reconcile();
  if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;for(const [id,open] of creatorSections){const section=document.querySelector(`[data-creator-section="${id}"]`);if(section)section.open=open;}}
+ if(smartPanelWasOpen){openSmartTrackPanel({focus:false});const sheet=document.querySelector('[data-smart-panel] .creator-menu-sheet');if(sheet)sheet.scrollTop=smartPanelScroll;if(smartWasBusy&&!trackSmart.view().busy)document.querySelector('[data-smart-panel] .smart-feedback')?.scrollIntoView({block:'start'});}
  restoreSmartTrackEntry();
  const trackWarning=trackLibrary.persistenceWarning?.();if(trackWarning&&trackWarning!==trackLibraryWarningShown){trackLibraryWarningShown=trackWarning;Toast(trackWarning);}
  showCoachingHistoryWarning();
@@ -928,12 +935,13 @@ document.addEventListener('click',async event=>{
  }
  const smartCommune=event.target.closest('[data-smart-commune]');if(smartCommune&&location.pathname==='/track-builder'){try{trackSmart.chooseCommune(smartCommune.dataset.smartCommune);}catch(error){Toast(error.message);}return;}
  const smartProposal=event.target.closest('[data-smart-proposal]');if(smartProposal&&location.pathname==='/track-builder'){selectSmartProposal(smartProposal.dataset.smartProposal);return;}
- if(event.target.closest('[data-smart-cancel]')&&location.pathname==='/track-builder'){trackSmart.dispose();render();return;}
+ if(event.target.closest('[data-smart-cancel]')&&location.pathname==='/track-builder'){trackSmart.cancel();return;}
  const editorAction=event.target.closest('[data-editor-action]');
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
   try{
-   if(action==='open-smart')openSmartTrackMenu();
+   if(action==='open-smart')openSmartTrackPanel();
+   else if(action==='close-smart'){document.querySelector('[data-smart-panel]')?.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}
    else if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
    else if(action==='close-menu'){const panel=document.querySelector('[data-creator-panel]');if(panel){panel.open=false;panel.querySelector('summary')?.focus();}}
    else if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
@@ -1494,3 +1502,6 @@ document.addEventListener('keydown',event=>{
 });
 
 document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;const panel=document.querySelector('[data-creator-panel][open]');if(panel){event.preventDefault();panel.open=false;panel.querySelector('summary')?.focus();}});
+
+// Cancel only the intelligent search when its native dialog is dismissed (Escape).
+document.addEventListener('cancel',event=>{if(event.target.matches?.('[data-smart-panel]')){event.preventDefault();event.target.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}},true);
