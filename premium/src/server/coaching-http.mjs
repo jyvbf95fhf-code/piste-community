@@ -8,7 +8,7 @@ import {createRemoteSession,joinRemoteSession,reduceRemoteSession,projectRemoteS
 const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text)))].map(n=>n.toString(16).padStart(2,'0')).join('');
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 function error(message,status=400){throw Object.assign(Error(message),{status});}
-const assertResult=result=>{if(result.error){const code=result.error.code;error(code==='40001'?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',code==='40001'?409:code==='42501'?403:400);}return result.data;};
+const assertResult=result=>{if(result.error){const code=result.error.code;error(['40001','PT409'].includes(code)?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',['40001','PT409'].includes(code)?409:code==='42501'?403:400);}return result.data;};
 export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null,friendshipsEnabled=false}={}){
  const friendships=createCommunityFriendshipService(admin);
  return async request=>{

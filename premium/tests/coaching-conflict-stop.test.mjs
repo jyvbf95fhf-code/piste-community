@@ -1,0 +1,23 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {PGlite} from '@electric-sql/pglite';
+const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',c='33333333-3333-4333-8333-333333333333',s='44444444-4444-4444-8444-444444444444';
+async function setup(){const db=new PGlite();try{await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key);create function auth.uid() returns uuid language sql as $$select null::uuid$$;create schema realtime;create table realtime.messages(extension text);create function realtime.topic() returns text language sql as $$select ''::text$$;create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$select$$;grant usage on schema realtime to service_role;`);await db.exec(await readFile(new URL('../supabase/migrations/20261015054625_coaching_remote_core.sql',import.meta.url),'utf8'));await db.exec(await readFile(new URL('../docs/community-friendships/01-friendships-final.proposed.sql',import.meta.url),'utf8'));for(const id of [a,b,c]){await db.query('insert into auth.users values($1)',[id]);await db.query('insert into coaching_remote_users values($1,$2,true,true)',[id,id]);}return db;}catch(e){await db.close();throw e;}}
+import {createCoachingHandler} from '../src/server/coaching-http.mjs';
+const patch=()=>readFile(new URL('../docs/coaching-version-conflict/01-conflict-sqlstate.proposed.sql',import.meta.url),'utf8').catch(e=>{if(e.code==='ENOENT')return '';throw e;});
+const commit=(db,commandId,expected,state,fingerprint='qa')=>db.query('select public.coaching_commit($1,$2,$3,$4,$5,$6,null,null)',[s,a,commandId,fingerprint,expected,state]);
+test('optimistic conflicts return non-retryable PT409, keep state intact and preserve idempotence',async()=>{const db=await setup();try{
+ const initial={members:[{id:a,role:'driver'}],version:0};await commit(db,crypto.randomUUID(),-1,initial);
+ const sql=await patch();if(sql)await db.exec(sql);
+ const commandId=crypto.randomUUID(),updated={...initial,version:1};await commit(db,commandId,0,updated);await commit(db,commandId,0,updated);
+ await assert.rejects(commit(db,crypto.randomUUID(),0,{...initial,version:2}),e=>e.code==='PT409'&&e.message==='version_conflict');
+ await assert.rejects(commit(db,crypto.randomUUID(),-1,{...initial,notice:'different'}),e=>e.code==='PT409'&&e.message==='version_conflict');
+ assert.deepEqual((await db.query('select state from coaching_remote_sessions where id=$1',[s])).rows[0].state,updated);
+ assert.equal((await db.query('select count(*)::int n from coaching_remote_commands where session_id=$1',[s])).rows[0].n,2);
+ await assert.rejects(commit(db,commandId,1,updated,'other'),e=>e.code==='22023');
+ }finally{await db.close();}});
+test('new-session collision still refuses another state and mutation ACLs do not change',async()=>{const db=await setup();try{const sql=await patch();const before=(await db.query("select proacl::text acl from pg_proc where oid='public.coaching_commit(uuid,uuid,uuid,text,bigint,jsonb,text,jsonb)'::regprocedure")).rows[0].acl;if(sql)await db.exec(sql);
+ const initial={members:[{id:a}],version:0};await commit(db,crypto.randomUUID(),-1,initial);
+ await assert.rejects(commit(db,crypto.randomUUID(),-1,{...initial,notice:'collision'}),e=>e.code==='PT409'&&e.message==='session_exists');
+ assert.equal((await db.query("select proacl::text acl from pg_proc where oid='public.coaching_commit(uuid,uuid,uuid,text,bigint,jsonb,text,jsonb)'::regprocedure")).rows[0].acl,before);
+ assert.deepEqual((await db.query('select state from coaching_remote_sessions where id=$1',[s])).rows[0].state,initial);
+ }finally{await db.close();}});
+test('HTTP preserves conflict 409 for PT409 and legacy 40001 without accepting a stale write',async()=>{for(const code of ['PT409','40001']){const handler=createCoachingHandler({authClient:{auth:{getUser:async()=>({data:{user:{id:a}}})}},admin:{from(table){return {select(){return this;},eq(){return this;},maybeSingle:async()=>({data:table==='coaching_remote_users'?{id:a,display_name:'QA',qa:true,enabled:true}:null})};},rpc:async()=>({error:{code,message:'version_conflict'}})}});const response=await handler(new Request('https://qa.invalid',{method:'POST',headers:{Authorization:'Bearer local-qa'},body:JSON.stringify({operation:'create',sessionId:s,commandId:crypto.randomUUID(),payload:{role:'driver',mode:'normal',dogName:'QA'}})}));assert.equal(response.status,409);assert.match((await response.json()).error,/actualisez/);}});
