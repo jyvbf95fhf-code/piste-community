@@ -19,7 +19,8 @@ create index coaching_remote_invites_recipient on public.coaching_remote_invites
 create function private.coaching_keep_invite_recipient() returns trigger
  language plpgsql security invoker set search_path='' as $$
 begin
- if old.recipient_id is not null and new.recipient_id is distinct from old.recipient_id then
+ -- The recipient, including NULL for a legacy token, is fixed when the token is issued.
+ if new.recipient_id is distinct from old.recipient_id then
   raise exception 'invite_recipient_immutable' using errcode='42501';
  end if;
  return new;
@@ -174,7 +175,37 @@ begin
 end $$;
 create function private.community_check_pending_team() returns trigger
 language plpgsql security invoker set search_path='' as $$
-declare item jsonb;recipient uuid;begin
+declare item jsonb;prior_item jsonb;recipient uuid;position bigint;begin
+ -- Declarations are immutable after creation. Only a verified join may advance a status.
+ if tg_op='UPDATE' then
+  if not (old.state ? 'pendingTeam') then
+   if new.state ? 'pendingTeam' then raise exception 'pending_team_declarations_immutable' using errcode='42501';end if;
+   return new;
+  end if;
+  if new.owner_id is distinct from old.owner_id or not (new.state ? 'pendingTeam')
+   or jsonb_typeof(new.state->'pendingTeam') is distinct from 'array'
+   or jsonb_array_length(new.state->'pendingTeam')<>jsonb_array_length(old.state->'pendingTeam')
+  then raise exception 'pending_team_declarations_immutable' using errcode='42501';end if;
+  for prior_item,position in select value,ordinality from jsonb_array_elements(old.state->'pendingTeam') with ordinality loop
+   item:=new.state->'pendingTeam'->(position::integer-1);
+   recipient:=(prior_item->>'recipientId')::uuid;
+   if (item-'status') is distinct from (prior_item-'status') then raise exception 'pending_team_declarations_immutable' using errcode='42501';end if;
+   if prior_item->>'status'='pending' and item->>'status'='accepted' then
+    if old.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text))
+     or not (new.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text,'role',item->>'role')))
+     or not exists(select 1 from public.coaching_remote_invites i where i.session_id=new.id and i.recipient_id=recipient and i.role=item->>'role' and i.consumed_by=recipient)
+    then raise exception 'pending_team_acceptance_requires_invite' using errcode='42501';end if;
+    perform private.community_assert_coaching_contact(new.owner_id,recipient);
+   elsif item->>'status' is distinct from prior_item->>'status' then
+    raise exception 'pending_team_status_invalid' using errcode='42501';
+   end if;
+   if item->>'status'='pending' and new.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text))
+    or prior_item->>'status'='accepted' and not (old.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text))) and new.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text))
+    or new.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text)) and not (new.state->'members' @> jsonb_build_array(jsonb_build_object('id',recipient::text,'role',item->>'role')))
+   then raise exception 'pending_team_membership_invalid' using errcode='42501';end if;
+  end loop;
+  return new;
+ end if;
  if new.state ? 'pendingTeam' then
   if jsonb_typeof(new.state->'pendingTeam')<>'array' or jsonb_array_length(new.state->'pendingTeam')>32
    or jsonb_typeof(new.state->'members') is distinct from 'array' or jsonb_array_length(new.state->'members')<>1
@@ -188,7 +219,7 @@ declare item jsonb;recipient uuid;begin
  end if;
  return new;
 end $$;
-create trigger community_check_pending_team before insert on public.coaching_remote_sessions for each row execute function private.community_check_pending_team();
+create trigger community_check_pending_team before insert or update of state,owner_id on public.coaching_remote_sessions for each row execute function private.community_check_pending_team();
 create function private.community_check_targeted_invite() returns trigger
 language plpgsql security invoker set search_path='' as $$
 declare s public.coaching_remote_sessions;begin
