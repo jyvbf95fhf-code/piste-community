@@ -127,9 +127,14 @@ export function createCommunityStore(options={}){
  function markNotificationRead(id){return notificationStore.markRead(id,state.viewerId);}
  function getProfile(id){return snapshot(profile(id));}
  function listProfiles(){return state.profiles.map(snapshot);}
+ function replaceContactProjection({viewerId,profiles=[],contacts=[],contactRequests=[]}){
+  if(viewerId!==state.viewerId)throw Error('Projection liée à un autre compte.');
+  const merged=new Map(state.profiles.map(p=>[p.id,p]));for(const p of profiles){if(p.id===state.viewerId&&merged.has(p.id))continue;merged.set(p.id,{...merged.get(p.id),...clone(p)});}
+  state.profiles=[...merged.values()];state.contacts=clone(contacts);state.contactRequests=clone(contactRequests);
+ }
  function getState(){return snapshot({...state,notifications:notificationStore.listAll()});}
  return Object.freeze({
-  get viewerId(){return state.viewerId;},getState,getProfile,listProfiles,updateOwnProfile,updateProfile,
+  get viewerId(){return state.viewerId;},replaceContactProjection,getState,getProfile,listProfiles,updateOwnProfile,updateProfile,
   getFeed,getVisiblePost,getRelation,getContactRequests,getContacts,getContactPermissions,setContactPermission,searchContacts,getNotificationStore:()=>notificationStore,
   sendContactRequest,acceptContactRequest,refuseContactRequest,cancelContactRequest,removeContact,follow,unfollow,
   toggleLike,addComment,deleteOwnComment,createPost,deleteOwnPost,reportPost,hidePost,getNotifications,markNotificationRead

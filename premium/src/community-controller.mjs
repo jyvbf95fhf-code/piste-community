@@ -21,9 +21,11 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(description)description.textContent=`${text||'Contenu visuel ou piste sélectionnée'} · Visibilité : ${labels[visibility]||labels.private}. Vérifiez l’aperçu avant publication.`;
   if(!dialog.open)dialog.showModal();
  };
- const finish=(result,{refresh=true}={})=>{if(refresh)render();return result;};
+ const finish=(result,{refresh=true}={})=>{if(result?.then)return result.then(value=>{if(refresh)render();return value;});if(refresh)render();return result;};
  function dispatch(action,payload={}){
   const {userId,postId,commentId}=payload;
+  if(action==='refresh-contacts')return finish(store.refreshFriendships());
+  if(action==='recover-contact'){if(!confirmAction&&!globalThis.confirm||!(confirmAction||globalThis.confirm)('Vérifier ce profil et préparer une nouvelle demande ? Le destinataire devra l’accepter.'))return false;return finish(store.resolveProfile(userId));}
   if(action==='follow')return finish(store.follow(userId));
   if(action==='unfollow')return finish(store.unfollow(userId));
   if(action==='contact-request')return finish(store.sendContactRequest(userId));
@@ -66,7 +68,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
    const query=String(payload.query||'').trim();const path=query?`/community/search?q=${encodeURIComponent(query)}`:'/community/search';navigate(path);return path;
   }
   if(kind==='contact-search'){
-   const query=String(payload.query||'').trim();const path=query?`/community/contacts?q=${encodeURIComponent(query)}`:'/community/contacts';navigate(path);return path;
+   const query=String(payload.query||'').trim();const path=query?`/community/contacts?q=${encodeURIComponent(query)}`:'/community/contacts';navigate(path);if(store.resolveProfile&&/^[0-9a-f-]{36}$/i.test(query))return finish(store.resolveProfile(query));return path;
   }
   if(kind==='post-create'){
    let source=null;
@@ -105,7 +107,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
     if(confirm&&!confirm('Supprimer votre publication mock ?'))return true;
    }
    const payload={userId:button.dataset.userId,postId:button.dataset.postId,commentId:button.dataset.commentId,notificationId:button.dataset.notificationId};
-   const result=dispatch(action,payload);
+   const result=dispatch(action,payload);if(result?.then)void result.catch(error=>{toast(error.message);render();});
    if(action==='share-post'||action==='share-track')void deliverShare(result);
    return true;
   }catch(error){toast(error.message);return true;}
@@ -117,7 +119,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
    if(kind==='profile')submit('profile',{displayName:data.get('displayName')});
    else if(kind==='comment')submit('comment',{postId:form.dataset.postId,text:data.get('text')});
    else if(kind==='search')submit('search',{query:data.get('q')});
-   else if(kind==='contact-search')submit('contact-search',{query:data.get('q')});
+   else if(kind==='contact-search'){const result=submit('contact-search',{query:data.get('q')});if(result?.then)void result.catch(error=>toast(error.message));}
    else if(kind==='post-create')submit('post-create',{
     text:data.get('text'),visibility:data.get('visibility'),dogId:data.get('dogId'),photo:data.get('photo'),
     sourceType:form.dataset.sourceType,sourceId:form.dataset.sourceId,fields:data.getAll('shareFields')
@@ -128,7 +130,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
  function handleChange(event){
   const field=event.target;
   if(field.matches?.('[data-community-permission]')){
-   try{dispatch('set-contact-permission',{userId:field.dataset.userId,permission:field.dataset.communityPermission,enabled:field.checked});}catch(error){toast(error.message);render();}
+   try{const result=dispatch('set-contact-permission',{userId:field.dataset.userId,permission:field.dataset.communityPermission,enabled:field.checked});if(result?.then)void result.catch(error=>{toast(error.message);render();});}catch(error){toast(error.message);render();}
    return true;
   }
   if(field.matches?.('[data-community-source-picker]')){

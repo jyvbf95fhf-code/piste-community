@@ -1,3 +1,4 @@
+import {createCommunityFriendshipService} from './community-friendship-service.mjs';
 import {coachingTeamContacts} from '../coaching-team.mjs';
 import {loadPremiumCodeEntitlement,loadPremiumCodeCatalogue,redeemPremiumCode,managePremiumCode} from './premium-code-service.mjs';
 import {exportAccountData} from './data-exports-service.mjs';
@@ -8,7 +9,8 @@ const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',n
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 function error(message,status=400){throw Object.assign(Error(message),{status});}
 const assertResult=result=>{if(result.error){const code=result.error.code;error(code==='40001'?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',code==='40001'?409:code==='42501'?403:400);}return result.data;};
-export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null}={}){
+export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null,friendshipsEnabled=false}={}){
+ const friendships=createCommunityFriendshipService(admin);
  return async request=>{
  const origin=request.headers.get('origin')||'',allowed=!origin||/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)||/^https:\/\/piste-community-v2-premium(?:-[a-z0-9-]+-mw2f59b8p2-4030s-projects)?\.vercel\.app$/.test(origin);const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin',...(allowed&&origin?{'Access-Control-Allow-Origin':origin}:{}),'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
  const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
@@ -42,7 +44,25 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
   return respond(assertResult(await admin.rpc('v2_admin_command',{p_actor:uid,p_action:body.action,p_target:body.targetId,p_payload:body.payload})));
  }
  const teamContacts=async ownerId=>{if(typeof teamContactsProvider!=='function')error('Les amis réels sont en attente de raccordement serveur.',503);return coachingTeamContacts(await teamContactsProvider(ownerId),ownerId);};
- if(body.operation==='coaching-contacts')return respond({version:1,ownerId:uid,contacts:await teamContacts(uid)});
+ if(body.operation==='coaching-contacts'){
+  const contacts=await teamContacts(uid);
+  if(body.page===undefined)return respond({version:1,ownerId:uid,contacts});
+  if(!Number.isSafeInteger(body.page)||body.page<0)error('Page de contacts invalide.');
+  const catalogueId=await hash(JSON.stringify(contacts));
+  if(body.catalogueId!==undefined&&body.catalogueId!==catalogueId)error('Vos amis ont changé : actualisez le catalogue.',409);
+  const offset=body.page*200;return respond({version:1,ownerId:uid,contacts:contacts.slice(offset,offset+200),page:body.page,total:contacts.length,catalogueId,hasMore:offset+200<contacts.length});
+ }
+ if(['community-friendship-snapshot','community-friendship-command','community-friendship-profile'].includes(body.operation)){
+  if(!friendshipsEnabled)error('Amitiés en attente d’activation serveur.',503);
+  if(body.operation==='community-friendship-profile'){
+   if(!uuid(body.peerId))error('Identifiant de profil invalide.');
+   await friendships.snapshot(uid);
+   const peer=assertResult(await admin.from('coaching_remote_users').select('id,display_name').eq('id',body.peerId).eq('enabled',true).maybeSingle());
+   if(!peer)error('Profil indisponible.',404);
+   return respond({id:peer.id,displayName:peer.display_name});
+  }
+  return respond(await (body.operation==='community-friendship-snapshot'?friendships.snapshot(uid):friendships.command(uid,body)));
+ }
  if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...capabilities,coaching_team_version:typeof teamContactsProvider==='function'?1:0});
  if(body.operation==='list'){const rows=assertResult(await admin.from('coaching_remote_sessions').select('id,state').contains('state',{members:[{id:uid}]}).order('updated_at',{ascending:false}).limit(30));return respond({sessions:rows.map(r=>projectRemoteSession(r.state,uid,clock()))});}
  const id=body.sessionId;if(!uuid(id))error('Identifiant de session invalide.');

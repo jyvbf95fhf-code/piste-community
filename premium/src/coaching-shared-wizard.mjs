@@ -24,6 +24,7 @@ export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[],ini
  if(!sequence().includes(d.step))d={...d,step:'mode'};
  return {
  snapshot,
+ invalidateTeamCatalogue(){teamContacts=null;},
  setTeamCatalogue(catalogue){
   if(catalogue?.version!==1||catalogue.ownerId!==profile.id)throw Error('Catalogue de contacts non vérifié.');
   const contacts=coachingTeamContacts(catalogue.contacts,profile.id);teamContacts=contacts;

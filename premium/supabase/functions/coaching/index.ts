@@ -1,8 +1,11 @@
 import {createClient} from 'npm:@supabase/supabase-js@2.117.3';
+import {createCommunityFriendshipService} from './src/server/community-friendship-service.mjs';
 import {createCoachingHandler} from './src/server/coaching-http.mjs';
 const url=Deno.env.get('SUPABASE_URL')!;
 if(new URL(url).hostname!=='shnwqdkiapgcftbnhilh.supabase.co')throw Error('Projet V2 isolé requis.');
 const options={auth:{persistSession:false,autoRefreshToken:false}};
 const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,options);
 const authClient=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,options);
-Deno.serve(createCoachingHandler({admin,authClient,giftCodesEnabled:true}));
+const friendshipsEnabled=Deno.env.get('PISTE_COMMUNITY_FRIENDSHIPS')==='v1';
+const friendships=createCommunityFriendshipService(admin);
+Deno.serve(createCoachingHandler({admin,authClient,giftCodesEnabled:true,friendshipsEnabled,teamContactsProvider:friendshipsEnabled?id=>friendships.contacts(id):null}));

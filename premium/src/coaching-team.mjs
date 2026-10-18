@@ -3,7 +3,7 @@ import {roleTypes} from './coaching.mjs';
 const uuid=id=>typeof id==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
 const fail=message=>{throw Object.assign(Error(message),{status:400});};
 export function coachingTeamContacts(contacts,ownerId){
- if(!uuid(ownerId)||!Array.isArray(contacts)||contacts.length>200)fail('Catalogue de contacts indisponible.');
+ if(!uuid(ownerId)||!Array.isArray(contacts))fail('Catalogue de contacts indisponible.');
  const ids=new Set();return contacts.map(c=>{if(!uuid(c?.id)||c.id===ownerId||ids.has(c.id)||typeof c.name!=='string'||!c.name.trim()||c.name.length>80||c.quick_coaching_invite_authorized!==true)fail('Contact Coaching non autorisé.');ids.add(c.id);return {id:c.id,name:c.name.trim(),quick_coaching_invite_authorized:true};});
 }
 export function normalizeCoachingTeam({assignments,contacts,ownerId,creatorRole,scenario}){
@@ -15,3 +15,17 @@ export function normalizeCoachingTeam({assignments,contacts,ownerId,creatorRole,
  });
 }
 export function coachingDraftAssignments(d){return roleTypes.flatMap(r=>(r.id==='observer'?d.roles.observers:[d.roles[r.id]]).filter(id=>id&&id!=='self'&&!id.startsWith('pending-')).map(recipientId=>({recipientId,role:r.id})));}
+
+// Fetch all pages, rejecting incomplete or mixed-account catalogues.
+export async function loadCoachingTeamCatalogue(call){
+ let page=0,first=null,contacts=[];
+ for(;;){const value=await call({operation:'coaching-contacts',page,...(first?{catalogueId:first.catalogueId}:{})});
+  if(value?.version!==1||!uuid(value.ownerId)||!Array.isArray(value.contacts))fail('Catalogue de contacts non vérifié.');
+  if(!first)first=value;
+  if(value.ownerId!==first.ownerId||value.catalogueId!==first.catalogueId||value.total!==first.total||value.page!==page)fail('Le catalogue a changé : actualisez les amis.');
+  contacts.push(...value.contacts);
+  if(value.hasMore!==true){if(value.total!==undefined&&contacts.length!==value.total)fail('Catalogue de contacts incomplet.');break;}
+  if(value.contacts.length!==200||!Number.isSafeInteger(value.total)||contacts.length>=value.total)fail('Pagination des contacts invalide.');page++;
+ }
+ return {version:1,ownerId:first.ownerId,contacts:coachingTeamContacts(contacts,first.ownerId)};
+}
