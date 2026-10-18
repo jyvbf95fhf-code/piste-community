@@ -38,5 +38,19 @@ try{let target;await wait(async()=>{target=(await(await fetch('http://127.0.0.1:
  // Errors, cancellation and successive searches preserve the selected commune/criteria.
  await cdp('Page.navigate',{url:base+'/track-builder'});await wait(()=>evaluate('Boolean(window.__qa)'));await click('[data-editor-action="open-smart"]');await evaluate(`document.querySelector('[data-smart-query]').value='Epfig'`);await submit('[data-smart-commune-form]');await wait(()=>evaluate(`!!document.querySelector('[data-smart-commune]')`));await click('[data-smart-commune="67125"]');await evaluate(`__qa.mode('error')`);await submit('[data-smart-generate-form]');await wait(()=>evaluate('!__qa.view().busy'));assert.match(await evaluate('__qa.view().error'),/indisponible/);
  await evaluate(`__qa.mode('timeout')`);await submit('[data-smart-generate-form]');await wait(()=>evaluate('!__qa.view().busy'));assert.match(await evaluate('__qa.view().error'),/longue/);await submit('[data-smart-generate-form]');await click('[data-smart-cancel]');assert.equal(await evaluate('__qa.view().commune.code'),'67125');assert.equal(await evaluate('__qa.view().busy'),false);
- await evaluate(`__qa.mode('real')`);await submit('[data-smart-generate-form]');await wait(()=>evaluate('!__qa.view().busy'));assert.ok(await evaluate('__qa.view().proposals.length>0'));await evaluate(`__qa.access({entitlement_valid:false,entitlement:'none'})`);assert.equal(await evaluate(`document.querySelector('[data-editor-action="open-smart"]')`),null);assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,widths,realOsmData:true,apiCalls:calls,openAdaptSave:true,errorsTimeoutCancelRetry:true,freeDenied:true}));
+ await evaluate(`__qa.mode('real')`);await submit('[data-smart-generate-form]');await wait(()=>evaluate('!__qa.view().busy'));assert.ok(await evaluate('__qa.view().proposals.length>0'));const callsBeforeOffers=calls;
+ for(const width of widths){await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:width<768});
+  for(const state of ['free','expired']){
+   await evaluate(`__qa.access({entitlement_valid:false,entitlement:${JSON.stringify(state==='free'?'none':'premium')}})`);await click('[data-editor-action="open-smart"]');
+   assert.equal(await evaluate(`document.querySelector('[data-smart-panel]').open`),true);assert.equal(await evaluate(`document.querySelector('#smart-panel-title').textContent`),'Fonctionnalité Premium');
+   assert.match(await evaluate(`document.querySelector('[data-smart-panel]').textContent`),/Le Tracé intelligent est réservé aux membres Premium/);
+   assert.equal(await evaluate(`document.querySelectorAll('[data-smart-generate-form],[data-smart-commune-form]').length`),0);
+   assert.equal(await evaluate(`document.querySelector('[data-smart-discover]').getAttribute('href')`),'/jumolf/premium?from=smart-track');
+   assert.equal(await evaluate(`document.querySelector('.creator-smart-dialog .creator-menu-sheet').scrollWidth>document.querySelector('.creator-smart-dialog .creator-menu-sheet').clientWidth`),false);
+   if(width===390&&state==='free'){const shot=await cdp('Page.captureScreenshot',{format:'png'});await writeFile(path.join(root,'screenshots/track-smart/premium-offer-iphone.png'),Buffer.from(shot.result.data,'base64'));}
+   await click('[data-editor-action="close-smart"]');assert.equal(await evaluate(`document.querySelector('[data-smart-panel]').open`),false);
+  }
+ }
+ assert.equal(calls,callsBeforeOffers,'free and expired accounts never query the map API');
+ await click('[data-editor-action="open-smart"]');await click('[data-smart-discover]');await wait(()=>evaluate(`location.pathname==='/jumolf/premium'`));assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,widths,realOsmData:true,apiCalls:calls,openAdaptSave:true,errorsTimeoutCancelRetry:true,freeAndExpiredOffer:true,offerLinksToExistingPremium:true}));
 }finally{socket?.close();chrome.kill('SIGTERM');server.close();await delay(100);await rm(temp,{recursive:true,force:true,maxRetries:5,retryDelay:100});}

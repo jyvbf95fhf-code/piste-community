@@ -8,7 +8,7 @@ test('changing a criterion before tapping submit keeps the target and starts the
  if(connected){const a=source.indexOf(" if(event.target.matches('[data-smart-generate-form]'))"),b=source.indexOf(' const editorForm=',a);class FormData{entries(){return [['distanceKm','2.5'],['terrain','mixed'],['transitions','few']][Symbol.iterator]();}}runInNewContext(`(()=>{${source.slice(a,b)}})()`,{trackSmart:controller,event:{target:{matches:()=>true},preventDefault(){}},FormData});}
  await Promise.resolve();assert.equal(calls,1);assert.equal(controller.view().distanceKm,2.5);assert.ok(controller.view().proposals.length>0);assert.equal(Math.round(controller.view().proposals[0].distanceM),2500);
 });
-test('intelligent shortcut is beside Menu and only appears for an active Premium entitlement',()=>{
- const render=access=>GeographicTrackCockpit({draft:createTrackDraft({geographic:true}),premiumAccess:access});for(const access of [{entitlement:'none',entitlement_valid:false},{entitlement:'premium',entitlement_valid:false},{entitlement:'access_code',entitlement_valid:true}])assert.doesNotMatch(render(access),/data-editor-action="open-smart"/);
+test('intelligent shortcut stays beside Menu for free, active and expired accounts',()=>{
+ const render=access=>GeographicTrackCockpit({draft:createTrackDraft({geographic:true}),premiumAccess:access});for(const access of [{entitlement:'none',entitlement_valid:false},{entitlement:'premium',entitlement_valid:false},{entitlement:'access_code',entitlement_valid:true}])assert.match(render(access),/data-editor-action="open-smart"/);
  const h=render({entitlement:'premium',entitlement_valid:true});assert.doesNotMatch(h.slice(0,h.indexOf('</header>')),/data-editor-action="open-smart"/);assert.match(h,/class="creator-menu-row"/);const row=h.slice(h.indexOf('class="creator-menu-row"'));assert.match(row,/data-editor-action="open-smart"/);assert.match(row,/creator-menu-shortcut/);
 });

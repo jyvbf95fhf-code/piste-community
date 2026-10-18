@@ -638,7 +638,7 @@ function openSmartTrackPanel({focus=true}={}){
  const panel=document.querySelector('[data-smart-panel]'),menu=document.querySelector('[data-creator-panel]');
  if(!panel)return;
  if(menu)menu.open=false;if(!panel.open)panel.showModal();
- if(focus)panel.querySelector('[data-smart-query]')?.focus({preventScroll:true});
+ if(focus)panel.querySelector('[data-smart-query], [data-smart-discover]')?.focus({preventScroll:true});
 }
 
 function selectSmartProposal(id){

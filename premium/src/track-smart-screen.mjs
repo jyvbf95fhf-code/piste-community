@@ -9,6 +9,8 @@ export function SmartTrackSection(state={},access={},{open=false}={}){
 }
 
 export function SmartTrackPanel(state={},access={}){
- if(!canUseSmartTracks(access))return '';
- return `<dialog class="creator-smart-dialog" data-smart-panel aria-labelledby="smart-panel-title"><div class="creator-menu-sheet"><header class="creator-menu-heading"><div><small>VOTRE PARCOURS PREMIUM</small><h2 id="smart-panel-title">Tracé intelligent <b class="smart-premium-badge">PREMIUM</b></h2></div><button type="button" class="creator-icon" data-editor-action="close-smart" aria-label="Fermer le tracé intelligent">✕</button></header>${SmartTrackSection(state,access,{open:true})}</div></dialog>`;
+ const allowed=canUseSmartTracks(access);
+ const title=allowed?'Tracé intelligent <b class="smart-premium-badge">PREMIUM</b>':'Fonctionnalité Premium';
+ const content=allowed?SmartTrackSection(state,access,{open:true}):`<section class="creator-menu-section creator-smart"><div class="creator-menu-content"><p>Le Tracé intelligent est réservé aux membres Premium. Débloquez la génération de parcours selon vos distances, terrains et préférences.</p><a class="button button-gold" data-smart-discover href="/jumolf/premium?from=smart-track">Découvrir Premium</a></div></section>`;
+ return `<dialog class="creator-smart-dialog" data-smart-panel aria-labelledby="smart-panel-title"><div class="creator-menu-sheet"><header class="creator-menu-heading"><div><small>VOTRE PARCOURS PREMIUM</small><h2 id="smart-panel-title">${title}</h2></div><button type="button" class="creator-icon" data-editor-action="close-smart" aria-label="Fermer le tracé intelligent">✕</button></header>${content}</div></dialog>`;
 }

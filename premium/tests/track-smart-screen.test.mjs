@@ -6,3 +6,15 @@ test('generator requests commune distance terrain and surface transitions withou
 test('locked generator exposes membership link and never serializes proposals',()=>{assert.equal(typeof api.SmartTrackSection,'function');const html=api.SmartTrackSection({proposals:[{coordinates:[[7.123456,48.123456]]}]},{entitlement_valid:false,entitlement:'none'});assert.match(html,/href="\/jumolf\/premium\?from=smart-track"/);assert.doesNotMatch(html,/7.123456|data-smart-generate-form/);});
 test('unknown surfaces and unmet transition criteria stay explicit on a proposal',()=>{assert.equal(typeof api.SmartTrackSection,'function');const html=api.SmartTrackSection({communes:[],proposals:[{id:'p',title:'<unsafe>',distanceM:1500,transitions:0,knownSurfaceRatio:.25,surfaceDistances:{asphalt:375},coordinates:[[7,48],[7.01,48.01]],urbanRatio:.5,natureRatio:.5,transitionsSatisfied:false}],terrain:'mixed',transitions:'several',distanceKm:1.5},{entitlement_valid:true,entitlement:'premium'});assert.match(html,/75 %/);assert.match(html,/non confirmées/i);assert.match(html,/à vérifier/i);assert.doesNotMatch(html,/<unsafe>/);assert.match(html,/data-smart-proposal="p"/);});
 test('Premium offer includes JUMOLF and the intelligent generator without a second payment flow',async()=>{const {readFile}=await import('node:fs/promises');const source=await readFile(new URL('../src/jumolf-premium-screen.mjs',import.meta.url),'utf8');assert.match(source,/Créateur de tracé intelligent/);assert.doesNotMatch(source,/Futur créateur de tracé intelligent/);assert.match(source,/transitions de surface/);assert.match(source,/aucun paiement réel/);});
+
+test('free and expired accounts see the existing Premium offer instead of generation fields',()=>{
+ for(const access of [{entitlement_valid:false,entitlement:'none'},{entitlement_valid:false,entitlement:'premium'}]){
+  const html=api.SmartTrackPanel({proposals:[{coordinates:[[7.123456,48.123456]]}]},access);
+  assert.match(html,/Fonctionnalité Premium/);assert.match(html,/Le Tracé intelligent est réservé aux membres Premium\. Débloquez la génération de parcours selon vos distances, terrains et préférences\./);
+  assert.match(html,/Découvrir Premium/);assert.match(html,/href="\/jumolf\/premium\?from=smart-track"/);assert.match(html,/data-editor-action="close-smart"/);
+  assert.doesNotMatch(html,/data-smart-generate-form|data-smart-commune-form|7.123456/);
+ }
+});
+test('all active global Premium origins keep the same generation form',()=>{
+ for(const source of ['premium','gift','access_code','admin_grant'])assert.match(api.SmartTrackPanel({},{entitlement_valid:true,entitlement:'premium',entitlement_source:source}),/data-smart-generate-form/);
+});
