@@ -1,3 +1,5 @@
+> Mise à jour Bloc B : préparation applicative et SQL testée localement ; voir [BLOC-B-APPROVAL.md](BLOC-B-APPROVAL.md). Le catalogue d’amis réels reste à raccorder et aucun déploiement n’est autorisé. Les constats ci-dessous décrivent la base `eaafef6` avant cette préparation.
+
 # Création Coaching : raccordement Équipe à autoriser
 
 ## État livré sans changement serveur
