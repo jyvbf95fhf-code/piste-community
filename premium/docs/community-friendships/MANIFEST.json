@@ -1,0 +1,13 @@
+{
+  "project": "shnwqdkiapgcftbnhilh",
+  "base_commit": "0a40bb00f39227b8805cc51075e2c45df1cc96cf",
+  "applied_to_supabase": false,
+  "sha256": {
+    "01-friendships-final.proposed.sql": "e1b38d0f7e36b52d197acfef42001303355a9f2a2deaca32e83d5a1848632e8c",
+    "02-enable.proposed.sql": "f2674e7669dcdc577cca6d95a57e1b23104fa6ef01ee59232ccfc363d1481147",
+    "03-disable.proposed.sql": "5ac9a87828c865548ee1a53c003fa330cdc8ccd3ff7ddf1bd7cb07af4ee1bc40",
+    "edge-service.proposed.mjs": "231af7875f9dab595b3f2c46e52b9848e27fb6220b2121d8ecc0513d224af132",
+    "edge-wiring.proposed.patch": "0e07d66f1735e4c5531ff3382dd716b1761730a5e19b3b7e96623fab09ede159",
+    "local-recovery.proposed.mjs": "92d070a95beb9dd6825bcc13b02c84ba304155ead7b593672fb4d7e507852c43"
+  }
+}

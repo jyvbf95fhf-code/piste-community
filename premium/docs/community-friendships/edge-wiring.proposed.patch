@@ -1,0 +1,61 @@
+--- a/premium/src/server/coaching-http.mjs
++++ b/premium/src/server/coaching-http.mjs
+@@ -1,3 +1,4 @@
++import {createCommunityFriendshipService} from './community-friendship-service.mjs';
+ import {coachingTeamContacts} from '../coaching-team.mjs';
+ import {loadPremiumCodeEntitlement,loadPremiumCodeCatalogue,redeemPremiumCode,managePremiumCode} from './premium-code-service.mjs';
+ import {exportAccountData} from './data-exports-service.mjs';
+@@ -8,7 +9,8 @@
+ const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
+ function error(message,status=400){throw Object.assign(Error(message),{status});}
+ const assertResult=result=>{if(result.error){const code=result.error.code;error(code==='40001'?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',code==='40001'?409:code==='42501'?403:400);}return result.data;};
+-export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null}={}){
++export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null,friendshipsEnabled=false}={}){
++ const friendships=createCommunityFriendshipService(admin);
+  return async request=>{
+  const origin=request.headers.get('origin')||'',allowed=!origin||/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)||/^https:\/\/piste-community-v2-premium(?:-[a-z0-9-]+-mw2f59b8p2-4030s-projects)?\.vercel\.app$/.test(origin);const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin',...(allowed&&origin?{'Access-Control-Allow-Origin':origin}:{}),'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
+  const respond=(body,status=200)=>new Response(JSON.stringify(body),{status,headers});
+@@ -43,6 +45,10 @@
+  }
+  const teamContacts=async ownerId=>{if(typeof teamContactsProvider!=='function')error('Les amis réels sont en attente de raccordement serveur.',503);return coachingTeamContacts(await teamContactsProvider(ownerId),ownerId);};
+  if(body.operation==='coaching-contacts')return respond({version:1,ownerId:uid,contacts:await teamContacts(uid)});
++ if(['community-friendship-snapshot','community-friendship-command'].includes(body.operation)){
++  if(!friendshipsEnabled)error('Amitiés en attente d’activation serveur.',503);
++  return respond(await (body.operation==='community-friendship-snapshot'?friendships.snapshot(uid):friendships.command(uid,body)));
++ }
+  if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...capabilities,coaching_team_version:typeof teamContactsProvider==='function'?1:0});
+  if(body.operation==='list'){const rows=assertResult(await admin.from('coaching_remote_sessions').select('id,state').contains('state',{members:[{id:uid}]}).order('updated_at',{ascending:false}).limit(30));return respond({sessions:rows.map(r=>projectRemoteSession(r.state,uid,clock()))});}
+  const id=body.sessionId;if(!uuid(id))error('Identifiant de session invalide.');
+--- a/premium/supabase/functions/coaching/index.ts
++++ b/premium/supabase/functions/coaching/index.ts
+@@ -1,8 +1,11 @@
+ import {createClient} from 'npm:@supabase/supabase-js@2.117.3';
++import {createCommunityFriendshipService} from './src/server/community-friendship-service.mjs';
+ import {createCoachingHandler} from './src/server/coaching-http.mjs';
+ const url=Deno.env.get('SUPABASE_URL')!;
+ if(new URL(url).hostname!=='shnwqdkiapgcftbnhilh.supabase.co')throw Error('Projet V2 isolé requis.');
+ const options={auth:{persistSession:false,autoRefreshToken:false}};
+ const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,options);
+ const authClient=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,options);
+-Deno.serve(createCoachingHandler({admin,authClient,giftCodesEnabled:true}));
++const friendshipsEnabled=Deno.env.get('PISTE_COMMUNITY_FRIENDSHIPS')==='v1';
++const friendships=createCommunityFriendshipService(admin);
++Deno.serve(createCoachingHandler({admin,authClient,giftCodesEnabled:true,friendshipsEnabled,teamContactsProvider:friendshipsEnabled?id=>friendships.contacts(id):null}));
+--- /dev/null
++++ b/premium/src/server/community-friendship-service.mjs
+@@ -0,0 +1,15 @@
++// Proposed server-only adapter. Not imported by the deployed Edge entry point.
++// Invoke after existing getUser() and enabled-profile checks; actorId comes from that verified identity.
++const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(v);
++const fail=(message,status)=>{throw Object.assign(Error(message),{status});};
++async function rpc(admin,name,args){const {data,error}=await admin.rpc(name,args);if(error){const status=({'42501':403,'40001':409,'54000':429,'55000':503,'22023':400,'22P02':400,'23505':409})[error.code]||503;fail(({403:'Action non autorisée.',409:'Relation actualisée ailleurs : rechargez vos contacts.',429:'Trop de demandes : réessayez plus tard.',400:'Demande invalide.',503:'Amitiés en attente d’activation serveur.'})[status],status);}return data;}
++export function createCommunityFriendshipService(admin){return {
++ snapshot(actorId){if(!uuid(actorId))fail('Connexion requise.',401);return rpc(admin,'community_friendship_snapshot',{p_actor:actorId});},
++ contacts(actorId){if(!uuid(actorId))fail('Connexion requise.',401);return rpc(admin,'community_coaching_contacts',{p_actor:actorId});},
++ command(actorId,body){
++  if(!uuid(actorId))fail('Connexion requise.',401);
++  if(!uuid(body?.peerId)||!uuid(body.commandId)||!Number.isSafeInteger(body.expectedVersion)||body.expectedVersion< -1||!['contact-request','accept-contact','refuse-contact','cancel-contact','remove-contact','set-contact-permission'].includes(body.action))fail('Demande invalide.',400);
++  if(body.action==='set-contact-permission'&&(body.permission!=='quick_coaching_invite_authorized'||typeof body.enabled!=='boolean'))fail('Permission indisponible pour ce raccordement.',400);
++  return rpc(admin,'community_friendship_command',{p_actor:actorId,p_peer:body.peerId,p_action:body.action,p_command_id:body.commandId,p_expected:body.expectedVersion,p_enabled:body.action==='set-contact-permission'?body.enabled:null});
++ }
++};}
