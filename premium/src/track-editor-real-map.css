@@ -78,7 +78,7 @@
 [data-track-cockpit] .creator-gpx-placeholder button:not(:disabled){opacity:1;cursor:pointer}
 [data-track-cockpit] .creator-gpx-placeholder button:not(:disabled):hover{background:#1b3a50}
 
-[data-track-cockpit] .smart-premium-badge{display:inline-block;font-size:9px;letter-spacing:.08em;border:1px solid #d4b57470;color:#e5c17c;border-radius:6px;padding:3px 6px;margin-left:6px;vertical-align:middle}
+[data-track-cockpit] .smart-premium-badge,.home-shell .jumolf-home-premium{display:inline-block;font-size:9px;letter-spacing:.08em;border:1px solid #d4b57470;color:#e5c17c;border-radius:6px;padding:3px 6px;margin-left:6px;vertical-align:middle}
 [data-track-cockpit] .creator-smart>summary{background:linear-gradient(110deg,#9c713922,#152c42)}
 [data-track-cockpit] .creator-smart form,[data-track-cockpit] .smart-criteria{display:grid;gap:12px;margin:0}
 [data-track-cockpit] .creator-smart label{display:grid;gap:6px;font-size:13px}

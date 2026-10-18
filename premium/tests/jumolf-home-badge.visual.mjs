@@ -33,14 +33,24 @@ try{
 
 
  const checked=[];
- for(const width of [320,390,430,1280]){
-  await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:true});await goto('/');
-  const inspect=()=>evaluate(`(()=>{const c=document.querySelector('.twin-card'),b=c.querySelector('.jumolf-home-premium'),e=c.querySelector('.eyebrow'),a=c.querySelector('.twin-heading>.icon'),r=x=>{const b=x.getBoundingClientRect();return [b.x,b.y,b.width,b.height]};return {card:r(c),title:r(c.querySelector('h2')),arrow:r(a),badge:r(b),label:r(e),color:getComputedStyle(b).color,loaded:c.querySelector('img').complete,others:[...document.querySelectorAll('.feature-tile,.discovery-hero,.track-builder-entry,.explore-section')].map(x=>[r(x),x.outerHTML])}})()`);
-  if(width===390)await capture('jumolf-premium','.twin-card');
-  const withBadge=await inspect();assert.equal(withBadge.color,'rgb(229, 193, 124)');assert.ok(withBadge.loaded);assert.ok(withBadge.badge[0]>=withBadge.label[0]+withBadge.label[2],'no overlap with label');assert.ok(withBadge.badge[0]+withBadge.badge[2]<=withBadge.arrow[0],'no overlap with arrow');assert.ok(withBadge.badge[1]>=withBadge.card[1]&&withBadge.badge[1]+withBadge.badge[3]<=withBadge.title[1],'badge stays in header');
-  await evaluate(`document.querySelector('.jumolf-home-premium').remove()`);
-  const without=await evaluate(`(()=>{const r=x=>{const b=x.getBoundingClientRect();return [b.x,b.y,b.width,b.height]},c=document.querySelector('.twin-card');return {card:r(c),title:r(c.querySelector('h2')),arrow:r(c.querySelector('.twin-heading>.icon')),others:[...document.querySelectorAll('.feature-tile,.discovery-hero,.track-builder-entry,.explore-section')].map(x=>[r(x),x.outerHTML])}})()`);
-  for(const key of ['card','title','arrow','others'])assert.deepEqual(withBadge[key],without[key],key+' unchanged '+width);checked.push(width);
+ for(const width of [320,375,390,430,1280]){
+  await cdp('Emulation.setDeviceMetricsOverride',{width,height:844,deviceScaleFactor:1,mobile:width<768});await goto('/');
+  const unchanged=await evaluate(`[...document.querySelectorAll('.feature-tile,.discovery-hero,.track-builder-entry,.explore-section')].map(x=>x.outerHTML)`);
+  await evaluate(`(async()=>{const {SmartTrackSection}=await import('/src/track-smart-screen.mjs');const ref=document.createElement('section');ref.id='badge-reference';ref.setAttribute('data-track-cockpit','');ref.style.cssText='position:fixed;left:-1000px;top:0;width:400px';ref.innerHTML=SmartTrackSection();document.body.append(ref)})()`);
+  for(const access of [{entitlement_valid:false,jumolf_enabled:false},{entitlement_valid:true,jumolf_enabled:false},{entitlement_valid:true,jumolf_enabled:true}]){
+   await evaluate(`(async()=>{const {HomeScreen}=await import('/src/screens.mjs');const holder=document.createElement('div');holder.innerHTML=HomeScreen(undefined,undefined,${JSON.stringify(access)});document.querySelector('.twin-card').replaceWith(holder.querySelector('.twin-card'))})()`);
+   const result=await evaluate(`(()=>{const c=document.querySelector('.twin-card'),b=c.querySelector('.jumolf-home-premium'),h=c.querySelector('h2'),p=c.querySelector('.twin-content p'),r=x=>{const v=x.getBoundingClientRect();return {x:v.x,y:v.y,width:v.width,height:v.height,right:v.right,bottom:v.bottom}},range=document.createRange();range.selectNodeContents(h.firstChild);const props=['fontFamily','fontSize','fontWeight','lineHeight','letterSpacing','color','borderTopColor','borderTopWidth','borderRadius','paddingTop','paddingRight','paddingBottom','paddingLeft','backgroundColor','boxShadow'];const style=x=>Object.fromEntries(props.map(k=>[k,getComputedStyle(x)[k]]));return {badge:r(b),title:r({getBoundingClientRect:()=>[...range.getClientRects()].at(-1)}),heading:r(h),description:r(p),card:r(c),style:style(b),reference:style(document.querySelector('#badge-reference .smart-premium-badge')),inTitle:b.parentElement===h,headerBadges:c.querySelectorAll('.twin-heading .jumolf-home-premium').length,count:c.querySelectorAll('.jumolf-home-premium').length,loaded:c.querySelector('img').complete&&c.querySelector('img').naturalWidth>0,overflow:document.documentElement.scrollWidth>innerWidth}})()`);
+   assert.deepEqual(result.style,result.reference,'exact creator badge styling '+width);
+   assert.equal(result.inTitle,true);assert.equal(result.headerBadges,0);assert.equal(result.count,1);assert.ok(result.loaded);assert.equal(result.overflow,false);
+   const {badge:b,title:t,heading:h,description:p,card:c}=result;
+   assert.ok(b.x>=c.x&&b.right<=c.right,'badge contained '+width);
+   assert.ok(b.y>=h.y&&b.bottom<=p.y,'no description overlap '+width);
+   assert.ok(b.x>=t.right-1||b.y>=t.bottom-1,'no title overlap '+width);
+   if(t.width+b.width+6<=h.width+1)assert.ok(Math.abs((b.y+b.height/2)-(t.y+t.height/2))<6,'same line when space permits '+width+' '+JSON.stringify(result));
+   if(width===390&&access.entitlement_valid&&!access.jumolf_enabled)await capture('jumolf-premium','.twin-card');
+  }
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('.feature-tile,.discovery-hero,.track-builder-entry,.explore-section')].map(x=>x.outerHTML)`),unchanged,'other cards unchanged');
+  checked.push(width);
  }
  assert.deepEqual(errors,[]);console.log(JSON.stringify({passed:true,widths:checked,errors}));
 }finally{socket?.close();server.kill('SIGTERM');chrome.kill('SIGTERM');await new Promise(resolve=>setTimeout(resolve,250));await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100}).catch(()=>{});}
