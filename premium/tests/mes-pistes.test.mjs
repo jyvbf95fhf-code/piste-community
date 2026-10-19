@@ -37,3 +37,21 @@ test('missing GPS never becomes zero or fabricated replay, and projection is not
  assert.match(dossier.SessionDossierScreen(v,{tab:'replay'}),/Relecture indisponible/);
  assert.deepEqual(p,before);assert.equal(v.stats.find(r=>r[0]==='Distance de recherche')[1],'Indisponible');
 });
+import {createOperationalMissionStore} from '../src/operational-missions.mjs';
+test('OPS dossier reuses the persisted journal and GPS measures after completion without mutating the store',()=>{
+ let now=Date.parse('2026-10-19T10:00:00Z');const store=createOperationalMissionStore({ownerId:'u',clock:()=>now,idFactory:()=> 'ops'});
+ store.createDraft({dog:{id:'nox',name:'Nox'},handler:{id:'u',name:'Conducteur'}});store.enableGps('ops','u');store.startTracking('ops');
+ const fix=()=>({timestamp:now,coords:{latitude:48.2,longitude:7.3,accuracy:5}});store.appendGpsPoint('ops',fix());now+=10000;store.addGpsEvent('ops',{type:'Indice',note:'Repère réel',position:fix()});store.stopTracking('ops');store.complete('ops');
+ const before=store.get('ops'),v=dossier.operationalSessionDossier(before),html=dossier.SessionDossierScreen(v,{tab:'report'});
+ assert.match(html,/Repère réel/);assert.match(html,/Début du pistage/);assert.match(html,/00:00:10/);assert.match(html,/data-real-map-reader/);assert.doesNotMatch(html,/data-operational-action=|data-weather-load|data-weather-correct/);assert.deepEqual(store.get('ops'),before);
+});
+test('closed or departed shared sessions retain a partial dossier without revealing stored live GPS',()=>{
+ for(const phase of ['CANCELLED','INTERRUPTED','LEFT']){
+  const v=dossier.sharedSessionDossier({...projection,phase});assert.ok(v);assert.equal(v.replayAvailable,false);assert.deepEqual(v.map,{});
+ }
+});
+test('dossier navigation preserves the catalogue filters without allowing an external return link',()=>{
+ const html=tracks.TrackListScreen([],rows,{returnHref:'/tracks?status=Archivées&q=Nox'});assert.match(html,/from=%2Ftracks/);
+ assert.doesNotMatch(tracks.TrackListScreen([],rows,{returnHref:'https://example.invalid'}),/from=https/);
+ const v=dossier.sharedSessionDossier(projection);assert.match(dossier.SessionDossierScreen(v,{back:'/tracks?q=Nox'}),/href="\/tracks\?q=Nox"/);
+});

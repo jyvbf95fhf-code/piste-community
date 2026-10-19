@@ -839,16 +839,16 @@ function renderSessions(){
  return coachingInvitationCards()+`<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button><a class="button button-gold" href="/coaching/session?join=1">Rejoindre ou retrouver une session Coaching</a>`+SessionListScreen(rows,{filter:segment,query,dogId,dogName:dog?.name||'',consolidated:auth.assurance==='supabase-auth'});
 }
 function renderSessionDetail(id){
- const tab=new URLSearchParams(location.search).get('tab')||'summary';
+ const params=new URLSearchParams(location.search),tab=params.get('tab')||'summary',from=params.get('from'),back=from&&/^\/tracks(?:\?|$)/.test(from)?from:'/tracks';
  const p=sharedIndex?.get(id);
- if(p)return SessionDossierScreen(sharedSessionDossier(p),{tab,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.'});
+ if(p)return SessionDossierScreen(sharedSessionDossier(p),{tab,back,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.'});
  const operational=operationalStore.get(id);
- if(operational){const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return v?SessionDossierScreen(v,{tab}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});}
+ if(operational){const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return v?SessionDossierScreen(v,{tab,back}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});}
  const record=sessionCatalog.get(id);
- if(record){const v=localSessionDossier(record);return v?SessionDossierScreen(v,{tab}):SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id}));}
+ if(record){const v=localSessionDossier(record);return v?SessionDossierScreen(v,{tab,back}):SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id}));}
  const row=auth.assurance!=='supabase-auth'?sessionListView(sessionCatalog,{}).find(item=>item.id===id&&item.kind==='summary-demo'):null;
  if(row)return SessionDetailScreen({...row,dog:{name:row.dogName},participants:[],creatorRole:'Aucune donnée disponible',readOnly:true,report:null,observations:[]});
- return SessionDossierScreen(null,{error:sharedIndex?.error()||'Session inaccessible ou catalogue en cours de chargement. Actualisez pour vérifier vos accès.'});
+ return SessionDossierScreen(null,{back,error:sharedIndex?.error()||'Session inaccessible ou catalogue en cours de chargement. Actualisez pour vérifier vos accès.'});
 }
 function renderSessionDebrief(id){
  const record=sessionCatalog.get(id);
@@ -857,7 +857,7 @@ function renderSessionDebrief(id){
  return DebriefScreen(record.searchState,record.preparationState,record.tracerState,debriefUI,{readOnly:true});
 }
 function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose||record?.searchState?.gpsSearch){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational),{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
-function renderTracks(){const p=new URLSearchParams(location.search);const items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self');return `<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button>`+TrackListScreen(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]),sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list()}),{category:p.get('category'),status:p.get('status'),source:p.get('source'),query:p.get('q')});}
+function renderTracks(){const p=new URLSearchParams(location.search);const items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self');return `<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button>`+TrackListScreen(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]),sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list()}),{category:p.get('category'),status:p.get('status'),source:p.get('source'),query:p.get('q'),returnHref:location.pathname+location.search});}
 function renderTrackDetail(id){return TrackDetailScreen(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),id));}
 function renderLive(route){
  const remote=opsLiveRemote?.view();

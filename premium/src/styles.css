@@ -4512,3 +4512,6 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 
 .session-dossier .dossier-panel{padding:18px}.session-dossier .dossier-panel h2:first-child{margin-top:0}.session-dossier .dossier-print-actions .button{white-space:normal;height:auto;min-height:46px}.tracks-page .tracks-session-card{padding:18px}
 @media print{@page{margin:14mm}body:has(.dossier-report) .session-dossier *{color:#142638!important;text-shadow:none!important}.session-dossier .dossier-panel{padding:0}.session-dossier .sessions-heading{margin-bottom:16px}.dossier-report .gps-map-stage{border:1px solid #c1cbd3}}
+
+@media print{html:has(.dossier-report){background:#fff!important;color:#142638!important}.session-dossier .dossier-report .gps-map{print-color-adjust:exact;-webkit-print-color-adjust:exact}}
+@media print{html:has(.dossier-report){color-scheme:light}.dossier-report .gps-map-stage,.dossier-report .gps-map{height:420px!important;min-height:420px!important}}

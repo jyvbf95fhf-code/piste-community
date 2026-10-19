@@ -1,6 +1,6 @@
 // Local-only integration: bundled SDK and complete app; synthetic Auth, no live e-mails.
 import {chromium} from '@playwright/test';import chromiumBundle from '@sparticuz/chromium';
-import {createRemoteSession,projectRemoteSession} from '../src/server/coaching-service.mjs';
+import {createOperationalMissionStore} from '../src/operational-missions.mjs';
 import {readFile} from 'node:fs/promises';import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH||await chromiumBundle.executablePath(),args:chromiumBundle.args,headless:true});
 try{
@@ -10,6 +10,9 @@ try{
  const encode=x=>Buffer.from(JSON.stringify(x)).toString('base64url');const token=encode({alg:'HS256',typ:'JWT'})+'.'+encode({sub:user.id,exp:Math.floor(Date.now()/1000)+3600})+'.'+encode('synthetic');
  const gps={provenance:'device-geolocation',phase:'finished',startedAt:100000,endedAt:160000,elapsedMs:60000,distanceM:125,segments:[[{latitude:48.2,longitude:7.3,accuracy:5},{latitude:48.201,longitude:7.301,accuracy:5}],[{latitude:48.21,longitude:7.31,accuracy:5}]]};
  projection={id:sessionId,version:5,phase:'ARCHIVED',role:'driver',mode:'full_blind',dog:'Nox',traceType:'direct',pose:gps,search:gps,searchActiveMs:45000,team:[{id:user.id,name:'Compte réel',role:'driver'}],notes:[{authorName:'Coach',text:'Session vérifiée'}],events:[{text:'Recherche terminée',at:160000,source:'driver'}]};
+ const saved=new Map(),ops=createOperationalMissionStore({ownerId:user.id,storage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},idFactory:()=> 'ops-browser',clock:()=>Date.parse('2026-10-19T10:00:00Z')});
+ ops.createDraft({dog:{id:'nox',name:'Nox'},handler:{id:'u',name:'Conducteur OPS'}});ops.enableGps('ops-browser',user.id);ops.startTracking('ops-browser');ops.appendGpsPoint('ops-browser',{timestamp:Date.parse('2026-10-19T10:00:00Z'),coords:{latitude:48.2,longitude:7.3,accuracy:5}});ops.stopTracking('ops-browser');ops.complete('ops-browser');ops.archive('ops-browser');
+ await page.addInitScript(entries=>{for(const [k,v] of entries)localStorage.setItem(k,v);},[...saved]);
  const headers={'access-control-allow-origin':'https://piste.test','access-control-allow-headers':'*','access-control-allow-methods':'GET,PUT,POST,OPTIONS'};
  page.setDefaultTimeout(12000);page.on('pageerror',e=>{errors.push(e.message);console.error('APP ERROR:',e.stack);});
  await page.route('https://piste.test/**',async route=>{const path=new URL(route.request().url()).pathname;const source=path.endsWith('.mjs')||path.endsWith('.css')||path.endsWith('.js')||path.includes('/assets/')||path.endsWith('.html')?path:'/index.html';try{const body=await readFile(new URL('..'+source,import.meta.url));await route.fulfill({body,contentType:source.endsWith('.mjs')||source.endsWith('.js')?'text/javascript':source.endsWith('.css')?'text/css':source.endsWith('.html')?'text/html':source.endsWith('.svg')?'image/svg+xml':'image/png'});}catch{await route.fulfill({status:404,body:''});}});
@@ -32,10 +35,11 @@ try{
  await page.locator('[data-history-session="'+sessionId+'"]').waitFor();
  assert.equal(await page.locator('[data-history-session^="demo:"]').count(),0);
  assert.equal(await page.getByRole('link',{name:'Ouvrir le créateur de tracé',exact:true}).count(),0);
+ await page.getByLabel('Rechercher',{exact:true}).fill('coaching');
  await page.getByLabel('Statut',{exact:true}).selectOption('Archivées');
  await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();
  await page.waitForURL('**/tracks?**status=Archiv%C3%A9es**');
- await page.getByRole('link',{name:'Ouvrir le dossier',exact:true}).click();
+ await page.locator('[data-history-session="'+sessionId+'"]').getByRole('link',{name:'Ouvrir le dossier',exact:true}).click();
  await page.locator('[data-session-dossier="'+sessionId+'"]').waitFor();
  for(const label of ['Carte','Statistiques','Chronologie','Débrief','Replay','Rapport PDF']){
   await page.locator('.dossier-tabs').getByRole('link',{name:label,exact:true}).click();
@@ -46,7 +50,10 @@ try{
  assert.ok((await page.locator('.dossier-report').innerText()).includes('Session vérifiée'));
  for(const width of [320,390,430]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow ${width}`);}
  await page.screenshot({path:'/tmp/mes-pistes-report.png',fullPage:true});
- await page.pdf({path:'/tmp/mes-pistes-report.pdf',format:'A4',printBackground:true});
+ await page.emulateMedia({media:'print'});assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor),'rgb(255, 255, 255)');
+ await page.pdf({path:'/tmp/mes-pistes-report.pdf',format:'A4',printBackground:true});await page.emulateMedia({media:'screen'});
+ await page.goto('https://piste.test/sessions/ops-browser?tab=report');
+ await page.getByRole('heading',{name:'Rapport de session',exact:true}).waitFor();await page.getByText('Début du pistage',{exact:true}).waitFor();assert.equal(await page.locator('[data-operational-action]').count(),0);
  await page.goto('https://piste.test/tracks?category=training');
  await page.getByText('Aucune source de séances d’entraînement n’est actuellement raccordée en V2. Les sessions Coaching restent dans Pistes opérationnelles.').waitFor();
  // Active sessions keep their canonical cockpit and cannot gain dossier geometry.
