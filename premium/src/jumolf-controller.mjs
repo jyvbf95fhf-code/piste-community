@@ -1,3 +1,4 @@
+import {RexDemoScreen} from './jumolf-rex-screen.mjs';
 import {buildRealJumolfLearning} from './jumolf-real-learning.mjs';
 import {JumolfRealLearningScreen} from './jumolf-real-learning-screen.mjs';
 import {createAccountJumolfPreparation} from './jumolf-training-plan.mjs';
@@ -97,7 +98,9 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   redeemCode(code){if(getVerifiedEntitlement){if(!redeemRealCode)throw new Error('Un code réel doit être validé côté serveur.');return redeemRealCode(code).then(result=>{formMessage='';navigate('/jumolf');render();return result;});}const result=store.redeemCode(code);if(!result.ok){const messages={invalid:'Ce code n’est pas valide.',inactive:'Ce code n’est plus actif.',expired:'Ce code n’est plus valide.',revoked:'Ce code a été révoqué.',exhausted:'Ce code a atteint son nombre maximal d’utilisations.'};safeToast(messages[result.reason]||'Ce code n’est plus valide.');}else{formMessage='';navigate('/jumolf/activate');}return result;},
   deactivate(){store.deactivate();navigate('/jumolf');render();},
   screen(path=routePath()){
-   const route=resolveJumolfRoute(path)||{type:'entry'},state=store.snapshot(),currentAccess=access();
+   const route=resolveJumolfRoute(path)||{type:'entry'};
+   if(route.type==='rex')return RexDemoScreen(path);
+   const state=store.snapshot(),currentAccess=access();
    const query=new URLSearchParams(String(path).split('?')[1]||'');
    route.replay=query.get('replay')==='1';
    route.advanced=query.get('view')==='advanced';

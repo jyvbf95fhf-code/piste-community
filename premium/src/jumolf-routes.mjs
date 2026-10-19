@@ -1,6 +1,7 @@
 const decode=value=>{try{const id=decodeURIComponent(value);return id&&!id.includes('/')?id:null;}catch{return null;}};
 export function resolveJumolfRoute(path){
  const route=String(path||'').split('?')[0].replace(/\/+$/,'')||'/';
+ if(route==='/jumolf/rex')return {type:'rex'};
  if(route==='/jumolf')return {type:'entry'};
  if(route==='/jumolf/dashboard')return {type:'dashboard'};
  if(route==='/jumolf/dataset')return {type:'dataset'};

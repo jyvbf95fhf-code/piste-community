@@ -19,8 +19,11 @@ function offsets(source){
  const values=trace.map(p=>reference.reduce((n,r)=>Math.min(n,gpsDistance(p,r)),Infinity));
  return {values,status:'Écart aux points de référence enregistrés, sans interpolation.',searchPoints:trace.length,referencePoints:reference.length};
 }
-export function analyzeRealJumolfSnapshot(input,{consents={},...options}={}){
+export function analyzeRealJumolfSnapshot(input,options={}){
  if(!real(input))return null;
+ return analyzeDocumentedSnapshot(input,options);
+}
+function analyzeDocumentedSnapshot(input,{consents={},...options}={}){
  const s=applyJumolfSourceConsents({dogs:[],sessions:[input],tracks:[],operational:[]},consents).sessions[0];
  const run=analyzeJumolfSnapshot(s,{...options,consents:{...consents,ai_analysis:false}});
  const events=s.events||[],breaks=events.filter(rupture),returns=events.filter(resumption);
@@ -69,4 +72,15 @@ export function buildRealJumolfProfile(dogId,sources=[],{consents={}}={}){
   trends.push({metric:key,kind,status,direction,delta:ties?null:values.at(-1)-values[0],evidence,comparison:{status:modes.size>1?'partially_comparable':comparison.status,label:modes.size>1?'Partiellement comparable':comparison.status_label,reasons:[...comparison.reasons,...(modes.size>1?['Modes de visibilité différents entre les séances.']:[])]},excludedCount:rows.filter(r=>r.source.kind===kind).length-eligible.length,limits:[...baseLimits,...comparison.limitations,...(status!=='descriptive'?['Moins de trois observations chronologiques distinctes : tendance non établie.']:[]),...(comparison.status!=='comparable'?['Contexte partiellement renseigné ou différent : la variation est descriptive et ne compare pas des conditions contrôlées.']:[]),...(key.includes('reference_point')?['Écarts aux points de référence, sensibles à la précision GPS et à l’échantillonnage.']:[])]});
  }
  return {dogId,status:trends.some(t=>t.status==='descriptive')?'descriptive':'insufficient',trends,sessionCount:unique.length,reason:trends.length?'Les variations ci-dessous décrivent uniquement les observations disponibles.':'Données insuffisantes : au moins deux séances distinctes, datées et documentées par métrique sont nécessaires.',limits:baseLimits};
+}
+
+// Explicit fictional entry point: never relabel a demo source as an account source.
+export function analyzeJumolfDemoSnapshot(input,options={}){
+ if(input?.dataOrigin!=='demo'||input.synthetic!==true||input.demo!==true||!String(input.id).startsWith('rex-demo:'))return null;
+ const run=analyzeDocumentedSnapshot(input,options);
+ run.demo_science={...run.real_science,dataOrigin:'demo'};delete run.real_science;
+ run.dataOrigin='demo';run.synthetic=true;
+ run.limitations=run.limitations.map(x=>x==='Analyse descriptive de données réelles autorisées.'?'Calcul descriptif sur coordonnées et événements entièrement fictifs.':x);
+ for(const h of run.hypotheses)for(const item of h.evidence)item.provenance='simulated-event';
+ return run;
 }
