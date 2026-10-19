@@ -155,7 +155,7 @@ export function createDogsStore({ dogs = demoDogs, ownerId = null, storage = nul
         notes: String(values.notes || '').trim() || null,
         disciplines: Array.isArray(values.disciplines) ? [...values.disciplines] : [],
         sessions: [],
-        isDemonstration: true
+        isDemonstration: !ownerId
       };
       if (!DOG_PORTRAITS.some(portrait => portrait.id === dog.portrait)) throw new Error('Portrait mock invalide.');
       validateDog(dog);

@@ -143,7 +143,7 @@ function reconcileCoachingInvitations(){const owner=auth.assurance==='supabase-a
 function renderCoachingUpdates(){
  const link=document.querySelector('.header-actions a.notification');
  if(link){const count=communityStore.getNotificationStore().unreadCount(communityStore.viewerId)+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0);link.setAttribute('aria-label',count?'Notifications, '+count+' non lues':'Notifications');link.querySelector('.notification-count,.notification-dot')?.remove();if(count){const badge=document.createElement('span');badge.className='notification-count';badge.textContent=String(count);link.append(badge);}}
- if((['/','/sessions','/tracks','/notifications'].includes(location.pathname)||location.pathname.startsWith('/sessions/'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
+ if((['/','/sessions','/tracks','/notifications'].includes(location.pathname)||location.pathname.startsWith('/sessions/')||location.pathname.startsWith('/jumolf')||location.pathname.startsWith('/scientific'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
 }
 function coachingInvitationCards(){return coachingInvitations?CoachingInvitations(coachingInvitations.view()):'';}
 let sharedIndex=dogsOwnerId?createSharedSessionIndex({ownerId:dogsOwnerId,storage}):null,sharedAttempt=0;
