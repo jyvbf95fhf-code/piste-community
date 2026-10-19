@@ -20,3 +20,4 @@
 .shared-terrain .shared-close{position:sticky;top:0;z-index:2;float:right;background:#203c50}
 .shared-terrain>.gps-actions{padding-bottom:8px}
 .shared-terrain [data-corridor-toggle]{min-height:44px}
+.coaching-invitations{margin:20px 0 28px}.coaching-invitations .section-title{gap:12px;align-items:center}.coaching-invitations .section-title h2{min-width:0}.coaching-invitation{padding:20px;margin-top:16px;overflow-wrap:anywhere;border-color:#d8bc7666}.coaching-invitation h3{margin:10px 0}.coaching-invitation .coaching-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:20px}.coaching-invitation .coaching-actions .button{margin:0;min-height:48px;width:100%}

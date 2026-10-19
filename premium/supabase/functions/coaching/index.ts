@@ -8,4 +8,4 @@ const admin=createClient(url,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,options)
 const authClient=createClient(url,Deno.env.get('SUPABASE_ANON_KEY')!,options);
 const friendshipsEnabled=Deno.env.get('PISTE_COMMUNITY_FRIENDSHIPS')==='v1';
 const friendships=createCommunityFriendshipService(admin);
-Deno.serve(createCoachingHandler({admin,authClient,giftCodesEnabled:true,friendshipsEnabled,teamContactsProvider:friendshipsEnabled?id=>friendships.contacts(id):null}));
+Deno.serve(createCoachingHandler({admin,authClient,giftCodesEnabled:true,friendshipsEnabled,coachingInboxEnabled:true,teamContactsProvider:friendshipsEnabled?id=>friendships.contacts(id):null}));
