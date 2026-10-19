@@ -39,7 +39,7 @@ function projectOperational(mission){
   startedAt:mission.trackingStartedAt||mission.startedAt||null,finishedAt:mission.finishedAt||null,
   trackAge:age?{...(available(age.label)?{label:age.label}:{}),...(available(age.seconds)?{seconds:age.seconds}:{}),provenance:'calculated'}:null,
   trace:projectPoints(mission.trace),referenceTrace:projectPoints(mission.referenceTrace),
-  events:Array.isArray(mission.events)?mission.events.filter(item=>item?.shareable===true).map(item=>({...Object.fromEntries([['type',item.type||item.label],['timestamp',item.timestamp||item.at]].filter(([,value])=>available(value))),...(item.point&&Number.isFinite(item.point.x)&&Number.isFinite(item.point.y)?{point:{x:item.point.x,y:item.point.y}}:{})})):[],
+  events:Array.isArray(mission.events)?mission.events.filter(item=>item?.shareable===true).map(item=>({...(item.id?{id:String(item.id)}:{}),...Object.fromEntries([['type',item.type||item.label],['timestamp',item.timestamp||item.at]].filter(([,value])=>available(value))),...(item.point&&Number.isFinite(item.point.x)&&Number.isFinite(item.point.y)?{point:{x:item.point.x,y:item.point.y}}:{})})):[],
   weather:mission.weather?clone(mission.weather):mission.weatherDemo?{label:mission.weatherDemo.label||'Démonstration · non mesuré',provenance:'estimated'}:null,
   wind:mission.wind?clone(mission.wind):null,terrain:mission.context?.environment||mission.context?.terrain||null,
   corridor:mission.corridor?.geometry?{geometry:projectPoints(mission.corridor.geometry),provenance:'estimated'}:mission.olfactoryCorridorEnabled===true?{status:'enabled',provenance:'estimated'}:null,

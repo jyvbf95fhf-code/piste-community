@@ -53,7 +53,8 @@ export function buildRealJumolfProfile(dogId,sources=[],{consents={}}={}){
  const insufficient=reason=>({dogId:consents.dog_history?dogId:null,status:'insufficient',trends:[],reason,limits:baseLimits});
  if(!consents.dog_history||!consents.session_comparison)return insufficient('Les consentements historique du chien et comparaison sont nécessaires aux séries. Les métriques GPS requièrent leur consentement séparé.');
  if(!dogId)return insufficient('Aucun chien explicitement associé.');
- const unique=[...new Map(sources.filter(s=>real(s)&&(s.dogId||s.dog?.id)===dogId).map(s=>[s.id,s])).values()];
+ const permitted=applyJumolfSourceConsents({dogs:[],sessions:sources,tracks:[],operational:[]},consents).sessions;
+ const unique=[...new Map(permitted.filter(s=>real(s)&&(s.dogId||s.dog?.id)===dogId).map(s=>[s.id,s])).values()];
  const rows=unique.map(source=>({source,analysis:analyzeRealJumolfSnapshot(source,{consents})}));
  const trends=[];
  for(const kind of ['coaching','operational'])for(const key of metrics){
@@ -61,7 +62,7 @@ export function buildRealJumolfProfile(dogId,sources=[],{consents={}}={}){
   if(eligible.length<2)continue;
   const comparison=compareJumolfSessions(eligible.map(r=>({...r.source,metrics:r.analysis.metrics})));
   const evidence=eligible.map(({source:s,analysis:r})=>({id:s.id,title:s.title||'Séance',date:s.startedAt,value:r.metrics[key].value,provenance:r.metrics[key].provenance,method:r.metrics[key].method||'recorded-input',context:{kind:s.kind,terrain:s.terrain??null,age:s.trackAge?.seconds??null,weather:s.weather??null,wind:s.wind??null,handlerId:s.handlerId??null},eventEvidence:r.metrics[key].evidence||[]}));
-  const values=evidence.map(e=>e.value),diff=values.slice(1).map((v,i)=>v-values[i]),ties=new Set(evidence.map(e=>e.date)).size!==evidence.length;
+  const values=evidence.map(e=>e.value),diff=values.slice(1).map((v,i)=>v-values[i]),ties=new Set(evidence.map(e=>timestamp(e.date))).size!==evidence.length;
   const status=ties?'insufficient':evidence.length<3?'two_observations':'descriptive';
   const direction=ties?'Ordre chronologique insuffisant':diff.every(v=>v===0)?'Valeurs identiques':diff.every(v=>v>=0)?'Hausse descriptive':diff.every(v=>v<=0)?'Baisse descriptive':'Variations dans les deux sens';
   const modes=new Set(eligible.map(r=>r.source.mode).filter(Boolean));
