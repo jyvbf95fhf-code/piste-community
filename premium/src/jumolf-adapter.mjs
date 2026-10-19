@@ -4,7 +4,7 @@ function projectPoints(value){
  const points=Array.isArray(value)?value:Array.isArray(value?.points)?value.points:null;
  if(!points?.length)return null;
  return points.map(point=>Object.fromEntries([
-  ['space',point.space],['latitude',point.latitude],['longitude',point.longitude],['sequence',point.sequence],['x',point.x],['y',point.y],['timestamp',point.timestamp||point.at],['distanceM',point.distanceM],['breakBefore',typeof point.breakBefore==='boolean'?point.breakBefore:undefined]
+  ['space',point.space],['accuracy',point.accuracy],['latitude',point.latitude],['longitude',point.longitude],['sequence',point.sequence],['x',point.x],['y',point.y],['timestamp',point.timestamp||point.at],['distanceM',point.distanceM],['breakBefore',typeof point.breakBefore==='boolean'?point.breakBefore:undefined]
  ].filter(([,field])=>available(field))));
 }
 function projectSession(record){
@@ -14,12 +14,12 @@ function projectSession(record){
  const referenceTrace=projectPoints(session.referenceTrace||session.reference?.geometry||record?.referenceTrace);
  const weather=session.weather||record?.weather||null;
  return {
-  id:String(session.id||record?.id||''),kind:'coaching',title:session.title||session.name||'Session',status:session.status||null,
+  id:String(session.id||record?.id||''),dataOrigin:session.dataOrigin||null,synthetic:session.synthetic===true,demo:session.demo===true,handlerId:session.handlerId||null,mode:session.mode||null,kind:'coaching',title:session.title||session.name||'Session',status:session.status||null,
   dog:dog?{...(available(dog.id)?{id:dog.id}:{}),...(available(dog.name)?{name:dog.name}:{}),...(available(dog.breed)?{breed:dog.breed}:{}),...(available(dog.age)?{age:dog.age}:{})}:null,
   dogId:session.dogId||dog?.id||null,trackAge:session.trackAge?clone(session.trackAge):null,startedAt:session.startedAt||session.started_at||null,finishedAt:session.finishedAt||session.finished_at||null,
   terrain:session.terrain||session.environment||null,weather:weather?{...(available(weather.temperature)?{temperature:weather.temperature}:{}),...(available(weather.humidity)?{humidity:weather.humidity}:{}),...(available(weather.label)?{label:weather.label}:{}),...(available(weather.provenance)?{provenance:weather.provenance}:{}),...(weather.observedAt?{observedAt:weather.observedAt}:{}),...(weather.source?{source:weather.source}:{}),...(weather.wind?{wind:clone(weather.wind)}:{})}:null,
   wind:session.wind||weather?.wind||null,trace,referenceTrace,
-  events:Array.isArray(session.events)?session.events.map(item=>({type:item.type||item.label||null,timestamp:item.timestamp||item.at||null,...(item.point&&Number.isFinite(item.point.x)&&Number.isFinite(item.point.y)?{point:{x:item.point.x,y:item.point.y}}:{})})):[],
+  events:Array.isArray(session.events)?session.events.map(item=>({...(item.id?{id:String(item.id)}:{}),type:item.type||item.label||null,timestamp:item.timestamp||item.at||null,...(item.point&&Number.isFinite(item.point.x)&&Number.isFinite(item.point.y)?{point:{x:item.point.x,y:item.point.y}}:{})})):[],
   corridor:session.corridor&&Array.isArray(session.corridor.geometry)?{geometry:projectPoints(session.corridor.geometry),provenance:'estimated'}:null,
   probableZones:projectPoints(session.probableZones),uncertaintyZones:projectPoints(session.uncertaintyZones),
   metrics:session.metrics?{...Object.fromEntries(['averageLateralOffset','maxLateralOffset','distanceToReference','timeInCorridorSeconds','timeOutsideCorridorSeconds','resumptionDelaySeconds','distanceReferenceRatio','investigationZones'].filter(k=>Number.isFinite(session.metrics[k])).map(k=>[k,session.metrics[k]])),...(available(session.metrics.durationSeconds)?{durationSeconds:session.metrics.durationSeconds}:{}),...(available(session.metrics.distanceM)?{distanceM:session.metrics.distanceM}:{})}:null,
@@ -32,7 +32,7 @@ function projectTrack(track){
 function projectOperational(mission){
  const age=mission.time?.trackAgeAtStart||mission.time?.trackAgeAtSearchStart||null;
  return {
-  id:String(mission.id),kind:'operational',title:'Mission OPS',status:mission.status||null,trackingState:mission.trackingState||null,
+  id:String(mission.id),dataOrigin:mission.dataOrigin||null,synthetic:mission.synthetic===true,demo:mission.demo===true,handlerId:mission.handlerId||null,kind:'operational',title:'Mission OPS',status:mission.status||null,trackingState:mission.trackingState||null,
   dog:mission.dog?{...(available(mission.dog.id)?{id:mission.dog.id}:{}),...(available(mission.dog.name)?{name:mission.dog.name}:{}),...(available(mission.dog.breed)?{breed:mission.dog.breed}:{})}:null,
   dogId:mission.dogId||mission.dog?.id||null,
   handlerName:mission.handler?.name||null,

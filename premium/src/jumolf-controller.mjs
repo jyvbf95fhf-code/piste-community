@@ -1,3 +1,4 @@
+import {analyzeRealJumolfSnapshot,buildRealJumolfProfile} from './jumolf-real-science.mjs';
 import {JumolfSimpleHome,JumolfSimpleResult,JumolfRealLearningStatus} from './jumolf-simple-screen.mjs';
 import {applyJumolfSourceConsents} from './jumolf-consent.mjs';
 import {buildJumolfSources} from './jumolf-adapter.mjs';
@@ -37,6 +38,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
  const sourceById=id=>[...consentedSources().sessions,...consentedSources().tracks,...consentedSources().operational].find(item=>item.id===id)||null;
  const latestFor=(id,consents=store.snapshot().consents)=>{
   const row=store.snapshot().analysis_runs.filter(item=>item.source_snapshot_id===id).at(-1);if(!row)return null;
+  if(row.real_science){const source=sourceById(id);if(!source)return null;const current=analyzeRealJumolfSnapshot(source,{consents,generatedAt:row.generated_at,analysisId:row.id,analysisVersion:row.analysis_version});return current?{...current,...(row.feedback?{feedback:row.feedback}:{})}:null;}
   const run=clone(row);
   if(!consents.gps)for(const key of ['distance_to_reference_m','average_lateral_offset_m','max_lateral_offset_m','time_in_corridor_s','time_outside_corridor_s','traveled_distance_m','reference_ratio','speed_m_s','investigation_zones'])run.metrics[key]={value:null,status:'indisponible · consentement GPS désactivé',provenance:null};
   if(!consents.weather)run.weather={value:null,provenance:null,status:'indisponible · consentement météo désactivé'};
@@ -53,15 +55,15 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   if(!currentAccess.jumolf_enabled)throw new Error('Activez JUMOLF avant de lancer une analyse.');
   const source=sourceById(id);if(!source)throw new Error('Source indisponible ou non autorisée.');
   const previous=store.snapshot().analysis_runs.filter(item=>item.source_snapshot_id===id);
-  const run=analyzeJumolfSnapshot(source,{consents:{...store.snapshot().consents,...(!isDemo()?{ai_analysis:false}:{})},generatedAt:clock(),analysisId:`jumolf-analysis-${id}-${previous.length+1}`,analysisVersion:!isDemo()?`account-analysis-${previous.length+1}`:recalculate?`analysis-mock-${previous.length+1}`:undefined});
+  const run=(!isDemo()&&source.dataOrigin==='account'?analyzeRealJumolfSnapshot:analyzeJumolfSnapshot)(source,{consents:{...store.snapshot().consents,...(!isDemo()&&source.dataOrigin!=='account'?{ai_analysis:false}:{})},generatedAt:clock(),analysisId:`jumolf-analysis-${id}-${previous.length+1}`,analysisVersion:!isDemo()?`account-analysis-${previous.length+1}`:recalculate?`analysis-mock-${previous.length+1}`:undefined});
   store.addAnalysis(run);return run;
  };
  const compare=ids=>{
   const currentAccess=access();if(!currentAccess.entitlement_valid||!currentAccess.jumolf_enabled)throw new Error('Un accès JUMOLF actif est nécessaire pour comparer des sessions.');
   if(!store.snapshot().consents.session_comparison)throw new Error('Le consentement à la comparaison est désactivé.');
-  const sources=consentedSources(),sessions=ids.map(id=>[...sources.sessions,...sources.operational].find(item=>item.id===id)).filter(Boolean);
+  const sources=consentedSources(),sessions=(isDemo()?ids:[...new Set(ids)]).map(id=>[...sources.sessions,...sources.operational].find(item=>item.id===id)).filter(Boolean);
   if(sessions.length<2)throw new Error('Sélectionnez au moins deux sessions disponibles.');
-  comparison=compareJumolfSessions(sessions.map(source=>({...source,metrics:analyzeJumolfSnapshot(source,{consents:{ai_analysis:false}}).metrics})));return comparison;
+  comparison=compareJumolfSessions(sessions.map(source=>({...source,metrics:(!isDemo()&&source.dataOrigin==='account'?analyzeRealJumolfSnapshot(source,{consents:store.snapshot().consents}):analyzeJumolfSnapshot(source,{consents:{ai_analysis:false}})).metrics})));return comparison;
  };
  const controller={
   activate,completeOnboarding,
@@ -95,7 +97,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    else if(route.type==='dog'&&route.id===JUMOLF_DEMO_DOG_ID&&(isDemo()||route.demo)){dogProfile=buildJumolfSyntheticDogProfile(syntheticDataset.sessions);dogProfile.anomalyCount=syntheticAnomalies.length;}
    else if(route.type==='dog'){
     const dog=sources.dogs.find(item=>item.id===route.id)||null;
-    const ids=new Set([...sources.sessions,...sources.operational].map(s=>s.id));dogProfile=buildJumolfDogProfile(route.id,state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)&&state.consents.gps),dog);
+    const ids=new Set([...sources.sessions,...sources.operational].map(s=>s.id));dogProfile=buildJumolfDogProfile(route.id,state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)&&state.consents.gps),dog);if(!isDemo())dogProfile.realScience=buildRealJumolfProfile(route.id,[...sources.sessions,...sources.operational],{consents:state.consents});
    }
    if(!isDemo()&&route.type==='session'&&!route.advanced&&!source?.synthetic&&!source?.demo)return JumolfSimpleResult({source,analysis,state});
    if(route.type==='compare'&&route.demo)comparison=buildJumolfDemoComparison();

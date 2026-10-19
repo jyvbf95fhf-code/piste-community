@@ -1,9 +1,9 @@
-const value=(session,key)=>session?.metrics?.[key]?.value??session?.metrics?.[key]??null;
+const value=(session,key)=>{const m=session?.metrics?.[key];return m&&typeof m==='object'?m.value??null:m??null;};
 const present=value=>value!==null&&value!==undefined&&value!=='';
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const context=session=>({dogId:session.dogId||session.dog?.id||null,type:session.kind||session.type||null,terrain:session.terrain||null,age:session.trackAge?.seconds??session.trackAge?.label??null,weather:session.weather||null,wind:session.wind||null,handler:session.handlerId||session.handler?.id||session.handler?.name||null});
 const labels={dogId:'chien',type:'type de session',terrain:'terrain',age:'délai de piste',weather:'météo',wind:'vent',handler:'conducteur'};
-const metricKeys=['distance_to_reference_m','average_lateral_offset_m','max_lateral_offset_m','time_in_corridor_s','time_outside_corridor_s','ruptures','resumptions','resumption_delay_s','traveled_distance_m','reference_ratio','speed_m_s','investigation_zones','track_age'];
+const metricKeys=['distance_to_reference_m','average_lateral_offset_m','max_lateral_offset_m','time_in_corridor_s','time_outside_corridor_s','ruptures','resumptions','resumption_delay_s','traveled_distance_m','reference_ratio','speed_m_s','investigation_zones','track_age','duration_seconds','reference_point_mean_m','reference_point_max_m'];
 
 export function compareJumolfSessions(sessions=[]){
  const valid=(sessions||[]).filter(item=>item?.id);
