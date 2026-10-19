@@ -107,20 +107,16 @@ test('archived session provenance is marked and detail preserves source session'
  assert.match(TrackListScreen(rows),/Mes pistes/);
 });
 
-test('Mes pistes separates session history and replay from the prepared-track editor',()=>{
- const html=TrackListScreen([], [{id:'done-1',title:'Sous les pins',status:'Terminée',dogName:'Nox',date:'Aujourd’hui · 08:30',href:'/sessions/done-1',replayHref:'/sessions/done-1/replay'}]);
- assert.match(html,/Historique terrain/);
- assert.match(html,/SESSIONS TERMINÉES · LECTURE SEULE/);
- assert.match(html,/href="\/sessions\/done-1">Détail/);
- assert.match(html,/href="\/sessions\/done-1\/replay">Replay/);
+test('Mes pistes preserves its prepared tracks in a secondary section without a creator shortcut',()=>{
+ const html=TrackListScreen([], [{id:'done-1',kind:'coaching',title:'Sous les pins',status:'Terminée',dogName:'Nox',date:'Aujourd’hui · 08:30',href:'/sessions/done-1'}]);
+ assert.match(html,/OPS et Coaching/);
+ assert.match(html,/href="\/sessions\/done-1">Ouvrir le dossier/);
  assert.match(html,/Tracés consultables/);
- assert.match(html,/href="\/track-builder">Ouvrir le créateur de tracé/);
- assert.doesNotMatch(html,/href="\/track-builder"[^>]*>.*Historique/);
+ assert.doesNotMatch(html,/href="\/track-builder"/);
 });
 
-test('Mes pistes labels replay unavailable for summary-only history instead of linking to a missing replay',()=>{
- const html=TrackListScreen([], [{id:'demo:recent',title:'Lisière',status:'Terminée',dogName:'Nox',date:'Hier',href:'/sessions/demo%3Arecent',replayHref:null}]);
+test('Mes pistes keeps summary-only history without fabricating a replay',()=>{
+ const html=TrackListScreen([], [{id:'demo:recent',kind:'summary-demo',title:'Lisière',status:'Terminée',dogName:'Nox',date:'Hier',href:'/sessions/demo%3Arecent',replayHref:null}]);
  assert.match(html,/Lisière/);
- assert.match(html,/Replay indisponible/);
- assert.doesNotMatch(html,/href="\/sessions\/demo%3Arecent\/replay"/);
+ assert.doesNotMatch(html,/href="\/sessions\/demo%3Arecent\/replay"|tab=replay/);
 });

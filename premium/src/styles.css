@@ -4490,3 +4490,25 @@ main { padding-top:8px; }
 .session-exit-options button{background:transparent;color:#f5e6c2;text-align:left;padding:12px;border:0;border-radius:8px;font:inherit;cursor:pointer}
 .session-exit-options button:hover,.session-exit-options button:focus-visible{background:#294050}
 dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:8px 0 18px;padding:10px;border-radius:8px;font:inherit}
+
+/* Mes pistes: account catalogue and consultation only. */
+.piste-categories,.dossier-tabs{display:flex;gap:8px;overflow-x:auto;padding:6px 0 14px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+.piste-categories a,.dossier-tabs a{flex:0 0 auto;min-height:44px;padding:12px 15px;border:1px solid #52667a;border-radius:16px;color:inherit;text-decoration:none;font-weight:650}
+.piste-categories a[aria-current=page],.dossier-tabs a[aria-current=page]{background:#243c54;color:#fff;border-color:#a5bccb}
+.piste-categories a{flex:1;text-align:center;white-space:normal}
+.piste-search{display:grid;gap:14px}.piste-search label{display:grid;gap:7px;font-size:14px}.piste-search>div{display:flex;gap:12px}.piste-search>div label{flex:1;min-width:0}.piste-search input,.piste-search select{box-sizing:border-box;width:100%;min-width:0;min-height:46px;padding:10px;border:1px solid #84939f;border-radius:12px;font:inherit;background:#fff;color:#152a3e}
+.tracks-page .tracks-session-card{display:grid;gap:14px;margin-bottom:12px}.tracks-page .tracks-session-card>div{display:grid;gap:7px;min-width:0}.tracks-page .tracks-session-card strong{overflow-wrap:anywhere}.tracks-page .tracks-session-card nav{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.tracks-library>summary{cursor:pointer;padding:18px 0;font-weight:650;min-height:44px}
+.session-dossier{min-width:0;max-width:100%;padding-bottom:32px}.session-dossier h1{overflow-wrap:anywhere}.dossier-tabs{position:relative;margin-bottom:14px}.dossier-panel{min-width:0}.dossier-data{margin:0}.dossier-data>div{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:14px 0;border-bottom:1px solid #91a4b144}.dossier-data dt{opacity:.8}.dossier-data dd{margin:0;text-align:right;font-weight:650;overflow-wrap:anywhere}.dossier-timeline{padding-left:22px}.dossier-timeline li{padding:10px 0}.dossier-timeline time,.dossier-timeline strong,.dossier-timeline small{display:block;margin:4px 0}.session-dossier li,.session-dossier p{overflow-wrap:anywhere;line-height:1.55}.session-dossier .real-map-reader{margin:16px 0}.dossier-report h3{margin-top:28px}.dossier-print-actions{padding-bottom:20px}
+@media(max-width:360px){.piste-categories a{padding:12px 9px;font-size:13px}.dossier-data>div{grid-template-columns:1fr;gap:6px}.dossier-data dd{text-align:left}}
+@media print{
+ body:has(.dossier-report){background:white!important;color:#142638!important}
+ body:has(.dossier-report) .sidebar,body:has(.dossier-report) .app-header,body:has(.dossier-report) .bottom-nav,body:has(.dossier-report) .dossier-tabs,body:has(.dossier-report) .dossier-back,body:has(.dossier-report) .dossier-print-actions,body:has(.dossier-report) .gps-map-controls,body:has(.dossier-report) .app-footer{display:none!important}
+ body:has(.dossier-report) .main-shell,body:has(.dossier-report) main,body:has(.dossier-report) .app-content{margin:0!important;padding:0!important;max-width:none!important}
+ body:has(.dossier-report) .card{background:white!important;color:#142638!important;box-shadow:none!important;border:0!important}
+ .dossier-report h3{break-after:avoid}.dossier-data>div,.dossier-timeline li{break-inside:avoid}.dossier-report .real-map-reader{break-inside:avoid}.dossier-report .gps-map{height:300px!important}.session-dossier{padding:0}.session-dossier .badge{color:#142638!important}
+}
+
+@media print{body:has(.dossier-report) .screen-header,body:has(.dossier-report) .prototype-note,body:has(.dossier-report) .skip-link{display:none!important}body:has(.dossier-report) .app-shell{max-width:none!important;padding:0!important;background:white!important;min-height:0!important}.dossier-report .gps-map-stage{height:300px!important;min-height:0!important}}
+
+.session-dossier .dossier-panel{padding:18px}.session-dossier .dossier-panel h2:first-child{margin-top:0}.session-dossier .dossier-print-actions .button{white-space:normal;height:auto;min-height:46px}.tracks-page .tracks-session-card{padding:18px}
+@media print{@page{margin:14mm}body:has(.dossier-report) .session-dossier *{color:#142638!important;text-shadow:none!important}.session-dossier .dossier-panel{padding:0}.session-dossier .sessions-heading{margin-bottom:16px}.dossier-report .gps-map-stage{border:1px solid #c1cbd3}}

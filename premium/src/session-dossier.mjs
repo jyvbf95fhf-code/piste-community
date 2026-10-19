@@ -1,0 +1,46 @@
+import {escapeHTML as e,StatusBadge} from './components.mjs';
+import {MapShell} from './map-shell.mjs';
+import {operationalJournalMarkup} from './operational-screen.mjs';
+import {OperationalWeatherMarkup} from './operational-weather.mjs';
+import {OperationalMap} from './operational-map.mjs';
+import {operationalReplayView} from './operational-views.mjs';
+import {sessionDetailView} from './session-views.mjs';
+import {formatElapsed,formatTimestamp} from './coaching-time.mjs';
+const missing='Indisponible';
+const distance=n=>Number.isFinite(n)?(n/1000).toFixed(2).replace('.',',')+' km':missing;
+const date=n=>Number.isFinite(n)?new Date(n).toLocaleString('fr-FR'):formatTimestamp(n);
+const elapsed=n=>Number.isFinite(n)?formatElapsed(n/1000):missing;
+const finished=p=>['DEBRIEF','ARCHIVED'].includes(p);
+const roles={driver:'Conducteur',traceur:'Traceur',coach:'Coach',observer:'Observateur'};
+const hasGps=g=>g?.provenance==='device-geolocation'&&g.segments?.some(s=>s.length>0);
+// Projection adapters only. No command, session transition or permission decision.
+export function sharedSessionDossier(p){
+ if(!p||!finished(p.phase))return null;
+ return {id:p.id,title:`Coaching · ${p.dog||missing}`,status:p.phase==='ARCHIVED'?'Archivée':'Terminée',source:'Coaching partagé',
+ summary:[['Chien',p.dog||missing],['Visibilité',({normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'})[p.mode]||missing],['Votre rôle',roles[p.role]||missing],...(p.team||[]).map(x=>[roles[x.role]||'Participant',x.name||missing])],
+ stats:[['Météo historique',missing],['Distance de pose',distance(p.pose?.distanceM)],['Distance de recherche',distance(p.search?.distanceM)],['Durée de pose',elapsed(p.pose?.elapsedMs)],['Recherche active',elapsed(p.searchActiveMs)],['Recherche totale',elapsed(p.search?.elapsedMs)],['Fin de pose',date(p.pose?.endedAt)],['Début de recherche',date(p.search?.startedAt)],['Fin de recherche',date(p.search?.endedAt)]],
+ timeline:(p.events||[]).map(x=>({text:x.text||x.type||missing,at:date(x.at),actor:roles[x.source]||x.source||missing})),notes:(p.notes||[]).map(x=>`${x.authorName||'Participant'} · ${x.text||''}`),
+ map:{gpsPose:p.pose,gpsSearch:p.search},replayAvailable:!!(hasGps(p.pose)||hasGps(p.search)),limitations:['Conditions météo non conservées dans ce dossier partagé.','La relecture V2 est statique. Aucun déplacement ni horodatage manquant n’est reconstruit.']};
+}
+export function localSessionDossier(record){
+ if(!finished(record?.searchState?.phase))return null;
+ const v=sessionDetailView(record),r=v?.report;if(!r)return null;
+ return {id:v.id,title:v.title,status:v.status,source:r.summary.hasGps?'Coaching · données de cet appareil':'Coaching · démonstration',summary:[['Chien',v.dog?.name||missing],['Mode',v.mode],['Date',v.date]],stats:[['Distance de recherche',distance(r.summary.searchDistance)],['Distance de pose',distance(r.summary.layingDistance)],['Recherche active',formatElapsed(r.summary.searchSeconds)],['Durée totale active',formatElapsed(r.summary.totalSeconds)]],timeline:(r.events||[]).map(x=>({text:x.text||x.type,at:date(x.at),actor:roles[x.source]||x.source||missing})),notes:r.observations.items,map:r.map,replayAvailable:!!(hasGps(r.map?.gpsPose)||hasGps(r.map?.gpsSearch)),limitations:['Données disponibles sur cet appareil. Les mesures de démonstration ne sont pas des mesures GPS.','Relecture statique des coordonnées disponibles uniquement.']};
+}
+export function operationalSessionDossier(mission,{weather}={}){
+ const v=operationalReplayView(mission);if(!v)return null;
+ return {id:v.id,title:v.title,status:v.status,source:'Mission OPS',summary:[['Chien',v.dog?.name||missing],['Conducteur',v.handler?.name||missing],['Création',date(mission.createdAt)],['Adresse d’intervention',v.places?.interventionAddress||missing],['Personne recherchée',v.details?.searchedPerson||missing],['Contexte',v.details?.context||missing],['Environnement',v.details?.environment||missing]],stats:[['Distance de recherche',distance(v.distance)],['Durée active',elapsed(v.duration)],['Résultat',v.result||missing],...Object.entries(v.dogEvaluation||{}).filter(([k,x])=>k!=='comment'&&Number.isFinite(x)).map(([k,x])=>['Chien · '+k,x+' / 5']),...Object.entries(v.fieldEvaluation||{}).filter(([k,x])=>k!=='comment'&&Number.isFinite(x)).map(([k,x])=>['Terrain · '+k,x+' / 5'])],weatherMarkup:OperationalWeatherMarkup({...weather,readOnly:true}),timelineMarkup:operationalJournalMarkup(v.journal,v.events,v.trace,v.handler?.name),timeline:(v.timeline||[]).map(x=>({text:x.text||x.label||x.type||x.event?.type||missing,at:date(x.at||x.createdAt),actor:x.actor||missing})),notes:[...Object.entries(v.dogEvaluation||{}),...Object.entries(v.fieldEvaluation||{})].filter(([,x])=>typeof x==='string'&&x).map(([k,x])=>`${k} · ${x}`),map:v,operational:true,replayAvailable:!!hasGps(v.gpsTrack),limitations:['Seules les données enregistrées de la mission sont consultées.','Relecture statique ; les coupures GPS restent séparées.']};
+}
+const dl=rows=>`<dl class="dossier-data">${rows.map(([k,v])=>`<div><dt>${e(k)}</dt><dd>${e(v??missing)}</dd></div>`).join('')}</dl>`;
+const timeline=v=>v.timelineMarkup||(v.timeline.length?`<ol class="dossier-timeline">${v.timeline.map(x=>`<li><time>${e(x.at)}</time><strong>${e(x.text)}</strong><small>${e(x.actor)}</small></li>`).join('')}</ol>`:'<p>Aucun événement horodaté disponible.</p>');
+const notes=v=>v.notes?.length?`<ul>${v.notes.map(x=>`<li>${e(x)}</li>`).join('')}</ul>`:'<p>Aucun débrief enregistré accessible.</p>';
+const map=v=>v.operational?OperationalMap(v.map,{interactive:false}):MapShell(v.map,{postSession:true});
+const tabs=[['summary','Résumé'],['map','Carte'],['stats','Statistiques'],['timeline','Chronologie'],['debrief','Débrief'],['replay','Replay'],['report','Rapport PDF']];
+export function SessionDossierScreen(v,{tab='summary',back='/tracks',error=''}={}){
+ if(!v)return `<section class="session-dossier"><a class="back-link" href="${e(back)}">← Mes pistes</a><h1>Dossier indisponible</h1><p role="status">${e(error||'Session active, inaccessible ou données indisponibles. Actualisez le catalogue pour vérifier vos accès.')}</p><button class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button></section>`;
+ if(!tabs.some(([id])=>id===tab))tab='summary';
+ const heading=`<header class="sessions-heading"><span class="eyebrow">DOSSIER DE SESSION · LECTURE SEULE</span><h1>${e(v.title)}</h1><p>${StatusBadge(v.status,'neutral')} ${e(v.source)}</p></header>`;
+ const report=`<article class="dossier-report"><h2>Rapport de session</h2><p>Établi à partir des seules données accessibles. Aucune donnée absente n’est reconstituée.</p><h3>Résumé</h3>${dl(v.summary)}<h3>Statistiques</h3>${dl(v.stats)}${v.weatherMarkup||''}<h3>Carte des traces disponibles</h3>${map(v)}<h3>Chronologie</h3>${timeline(v)}<h3>Débrief</h3>${notes(v)}<h3>Disponibilité des données</h3><ul>${v.limitations.map(x=>`<li>${e(x)}</li>`).join('')}</ul></article>`;
+ const content=tab==='summary'?`<h2>Résumé</h2>${dl(v.summary)}<aside>${v.limitations.map(x=>`<p>${e(x)}</p>`).join('')}</aside>`:tab==='map'?`<h2>Carte enregistrée</h2>${map(v)}`:tab==='stats'?`<h2>Statistiques</h2>${dl(v.stats)}${v.weatherMarkup||''}`:tab==='timeline'?`<h2>Chronologie</h2>${timeline(v)}`:tab==='debrief'?`<h2>Débrief</h2>${notes(v)}`:tab==='replay'?v.replayAvailable?`<h2>Relecture statique</h2><p>Traces enregistrées en lecture seule. Le replay animé n’est pas disponible en V2.</p>${map(v)}${timeline(v)}`:'<h2>Relecture indisponible</h2><p>Aucune trace GPS réelle accessible. Aucun parcours n’est reconstruit.</p>':`<div class="dossier-print-actions"><button type="button" class="button button-dark" data-dossier-print>Imprimer / enregistrer en PDF</button><p>Sur iPhone : ouvrez l’aperçu d’impression, puis Partager → Enregistrer dans Fichiers. Le fond de carte dépend de sa disponibilité.</p></div>${report}`;
+ return `<section class="session-dossier" data-session-dossier="${e(v.id)}"><a class="back-link dossier-back" href="${e(back)}">← Mes pistes</a>${heading}<nav class="dossier-tabs" aria-label="Dossier de session">${tabs.map(([id,label])=>`<a href="/sessions/${e(encodeURIComponent(v.id))}?tab=${id}" aria-current="${id===tab?'page':'false'}">${label}</a>`).join('')}</nav><section class="card dossier-panel" data-dossier-panel="${tab}">${content}</section></section>`;
+}

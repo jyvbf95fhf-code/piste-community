@@ -1,3 +1,4 @@
+import {SessionDossierScreen,sharedSessionDossier,localSessionDossier,operationalSessionDossier} from './session-dossier.mjs';
 import {createCoachingInvitations,CoachingInvitations} from './coaching-invitations.mjs';
 import {createCommunityFriendships} from './community-friendships.mjs';
 import {DataExportsPanel,createDataExportController} from './data-exports-client.mjs';
@@ -142,7 +143,7 @@ function reconcileCoachingInvitations(){const owner=auth.assurance==='supabase-a
 function renderCoachingUpdates(){
  const link=document.querySelector('.header-actions a.notification');
  if(link){const count=communityStore.getNotificationStore().unreadCount(communityStore.viewerId)+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0);link.setAttribute('aria-label',count?'Notifications, '+count+' non lues':'Notifications');link.querySelector('.notification-count,.notification-dot')?.remove();if(count){const badge=document.createElement('span');badge.className='notification-count';badge.textContent=String(count);link.append(badge);}}
- if(['/','/sessions','/notifications'].includes(location.pathname)&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
+ if((['/','/sessions','/tracks','/notifications'].includes(location.pathname)||location.pathname.startsWith('/sessions/'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
 }
 function coachingInvitationCards(){return coachingInvitations?CoachingInvitations(coachingInvitations.view()):'';}
 let sharedIndex=dogsOwnerId?createSharedSessionIndex({ownerId:dogsOwnerId,storage}):null,sharedAttempt=0;
@@ -765,6 +766,7 @@ function render(focus=false) {
  document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell(content+exportPanelForRoute(route),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0));
  const restoredExport=document.querySelector('[data-data-exports]');if(restoredExport&&exportUi){restoredExport.open=exportUi.open;for(const name of ['domain','format']){const field=restoredExport.querySelector(`[name=${name}]`);if([...field.options].some(o=>o.value===exportUi[name]))field.value=exportUi[name];}}
  if(remoteCoaching){const slot=document.querySelector('[data-remote-premium-slot]');if(remoteCoachingRoot)slot.replaceWith(remoteCoachingRoot);else {const index=sharedIndex,ownedDogs=dogsStore,wizardOwnerId=currentUser.user_id;remoteCoachingRoot=slot;remoteCoachingMount=mountRemoteCoaching({root:slot,client:accountClient,embedded:true,initialWizardState:coachingWizardState,onWizardChange:value=>{if(currentUser?.user_id===wizardOwnerId)coachingWizardState=value;},dogs:dogsStore.list(),entry:new URLSearchParams(location.search).has('join')?'list':'create',preferList:route!=='/coaching/session'||new URLSearchParams(location.search).has('join'),sessionId:new URLSearchParams(location.search).get('session'),initialTab:new URLSearchParams(location.search).get('tab')||'summary',onProjection:(p,id)=>p?index?.accept(p):id&&index?.forget(id),onSessions:list=>list.forEach(p=>index?.accept(p)),onCreated:(p,dogId)=>{index?.accept(p);const dog=ownedDogs.get(dogId);if(dog)index.linkDog(p.id,dog);},onDogLink:(id,dogId)=>{const dog=ownedDogs.get(dogId);if(!dog)throw Error('Chien indisponible.');index.linkDog(id,dog);},associationMarkup:sharedDogAssociation});}}
+ const selectedDossierTab=document.querySelector('.dossier-tabs [aria-current=page]');if(selectedDossierTab){const nav=selectedDossierTab.parentElement;nav.scrollLeft=selectedDossierTab.offsetLeft-nav.offsetLeft-(nav.clientWidth-selectedDossierTab.offsetWidth)/2;}
  trackSmart.reconcile();
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  opsWeather.mount();
@@ -837,13 +839,16 @@ function renderSessions(){
  return coachingInvitationCards()+`<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button><a class="button button-gold" href="/coaching/session?join=1">Rejoindre ou retrouver une session Coaching</a>`+SessionListScreen(rows,{filter:segment,query,dogId,dogName:dog?.name||'',consolidated:auth.assurance==='supabase-auth'});
 }
 function renderSessionDetail(id){
+ const tab=new URLSearchParams(location.search).get('tab')||'summary';
+ const p=sharedIndex?.get(id);
+ if(p)return SessionDossierScreen(sharedSessionDossier(p),{tab,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.'});
  const operational=operationalStore.get(id);
- if(operational)return OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});
+ if(operational){const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return v?SessionDossierScreen(v,{tab}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});}
  const record=sessionCatalog.get(id);
- if(record)return SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id}));
- const row=sessionListView(sessionCatalog,{}).find(item=>item.id===id&&item.kind==='summary-demo');
- if(!row)return SessionDetailScreen(null);
- return SessionDetailScreen({...row,dog:{name:row.dogName},participants:[],creatorRole:'Aucune donnée disponible',readOnly:true,report:null,observations:[]});
+ if(record){const v=localSessionDossier(record);return v?SessionDossierScreen(v,{tab}):SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id}));}
+ const row=auth.assurance!=='supabase-auth'?sessionListView(sessionCatalog,{}).find(item=>item.id===id&&item.kind==='summary-demo'):null;
+ if(row)return SessionDetailScreen({...row,dog:{name:row.dogName},participants:[],creatorRole:'Aucune donnée disponible',readOnly:true,report:null,observations:[]});
+ return SessionDossierScreen(null,{error:sharedIndex?.error()||'Session inaccessible ou catalogue en cours de chargement. Actualisez pour vérifier vos accès.'});
 }
 function renderSessionDebrief(id){
  const record=sessionCatalog.get(id);
@@ -852,7 +857,7 @@ function renderSessionDebrief(id){
  return DebriefScreen(record.searchState,record.preparationState,record.tracerState,debriefUI,{readOnly:true});
 }
 function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose||record?.searchState?.gpsSearch){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational),{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
-function renderTracks(){return TrackListScreen(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),completedSessionHistoryView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),includeDemoRows:auth.assurance!=='supabase-auth',operationalMissions:operationalStore.list()}));}
+function renderTracks(){const p=new URLSearchParams(location.search);const items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self');return `<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button>`+TrackListScreen(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]),sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list()}),{category:p.get('category'),status:p.get('status'),source:p.get('source'),query:p.get('q')});}
 function renderTrackDetail(id){return TrackDetailScreen(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),id));}
 function renderLive(route){
  const remote=opsLiveRemote?.view();
@@ -902,6 +907,7 @@ function filterSessions() {
  document.querySelector('#session-results').innerHTML=SessionListResults(rows);
 }
 document.addEventListener('click',async event=>{
+ if(event.target.closest('[data-dossier-print]')){window.print();return;}
  if(personalCloud?.controller.handleClick(event))return;
  if(event.target.closest('[data-refresh-coaching-invitations]')){void coachingInvitations?.refresh();return;}
  const invitationAction=event.target.closest('[data-coaching-invitation]');if(invitationAction){event.preventDefault();const inbox=coachingInvitations,owner=coachingInvitationsOwner,id=invitationAction.dataset.sessionId,role=invitationAction.dataset.role,accept=invitationAction.dataset.coachingInvitation==='accept';try{const p=await inbox.respond(id,role,accept);if(coachingInvitations!==inbox||auth.getSession().user?.user_id!==owner)return;if(p){sharedIndex?.accept(p);history.pushState({},'','/coaching/session?session='+encodeURIComponent(p.id));render(true);}else Toast('Invitation Coaching refusée.');}catch(error){Toast(error.message);void inbox?.refresh();}return;}
@@ -1347,6 +1353,7 @@ window.addEventListener('resize',syncNavigationHeight);
 render();
 
 document.addEventListener('submit',async event=>{
+ if(event.target.matches('[data-piste-filter]')){event.preventDefault();const params=new URLSearchParams(new FormData(event.target));history.pushState({},'','/tracks?'+params);render(true);return;}
  if(event.target.matches('[data-ops-account-link]')){event.preventDefault();const alias=event.target.dataset.opsAccountLink,userId=event.target.elements.userId.value,enabled=communityStore.getContactPermissions(alias)?.live_access_authorized===true;try{if(!opsLiveRemote.view().directory.some(p=>p.id===userId))throw Error('Compte réel indisponible.');opsLiveBindings.set(alias,userId,enabled);await opsLiveRemote.setHabitual(userId,enabled);opsHabitualState.set(userId,enabled);Toast('Compte Live OPS associé.');render();}catch(error){Toast(error.message);}return;}
  if(event.target.matches('[data-ops-invite]')){event.preventDefault();try{await opsLiveRemote.invite(event.target.dataset.opsInvite,event.target.elements.userId.value);Toast('Invitation Live envoyée au compte choisi.');await opsLiveRemote.refresh();}catch(error){Toast(error.message);}return;}
  if(personalCloud?.controller.handleSubmit(event))return;
