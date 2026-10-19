@@ -5,13 +5,14 @@ import {CoachingScreen,CoachingRoleCards} from './coaching-screen.mjs';
 import {PremiumPictogram as P} from './coaching-pictograms.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {remotePreparedInput,remoteGpxInput} from './coaching-remote-reference.mjs';
-export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[],initialState=null,onChange=()=>{}}={}){
+export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[],initialState=null,onChange=()=>{},resolveJumolfPreparation=p=>p}={}){
  let d={...createDraft({user_id:profile.id,name:profile.name},dogs),step:'mode',...(profile.coaching_team_version===1?{teamSetupVersion:1}:{})},reference=null;
  if(initialState?.ownerId===profile.id&&initialState.draft?.identityContext?.userId===profile.id){d={...structuredClone(initialState.draft),dogs:dogs.map(dog=>({...dog})),session:null};if(!dogs.some(dog=>dog.id===d.dogId))d.dogId=dogs.length===1?dogs[0].id:null;}
  let teamContacts=null,restoredRoles=initialState?.ownerId===profile.id?structuredClone(d.roles):null;
  const sequence=()=>['mode',...(['prepared','gpx'].includes(d.traceType)?['prepare']:[]),'dog','roles','review'];
  const snapshot=()=>({ownerId:profile.id,draft:structuredClone(d)});
  const notify=()=>onChange(snapshot());
+ const refreshJumolfPreparation=()=>{if(!d.jumolfPreparation)return;const current=resolveJumolfPreparation(d.jumolfPreparation);if(current&&current.dogId===d.dogId)d={...d,jumolfPreparation:current};else{const {jumolfPreparation,...rest}=d;d=rest;}};
  const roles=()=>{const previous=d.roles;d.participants=[{id:'self',name:profile.name},{id:'pending-traceur',name:'Traceur · à inviter'},{id:'pending-driver',name:'Conducteur · à inviter'},{id:'pending-coach',name:'Coach · à inviter'}];d.roles={traceur:d.trackingScenario==='self_trace'?'self':d.trackingScenario==='connected_traceur'?(d.creatorRole==='traceur'?'self':'pending-traceur'):null,driver:d.creatorRole==='driver'?'self':'pending-driver',coach:d.creatorRole==='coach'?'self':null,observers:[]};if(teamContacts){d.participants=[{id:'self',name:profile.name},...teamContacts];for(const role of ['traceur','driver','coach'])if(d.roles[role]!=='self'&&!(role==='traceur'&&d.trackingScenario!=='connected_traceur')&&previous[role]&&previous[role]!=='self'&&!previous[role].startsWith('pending-'))d.roles[role]=previous[role];d.roles.observers=[...previous.observers];}};roles();
  const canPrepare=()=>preparation(d)!=='delegated';
  function errors(){const errors=[];if(d.teamSetupVersion===1){try{teamAssignments();}catch(error){errors.push({message:error.message});}}if(!d.mode)errors.push({message:'Choisissez un mode.'});if(!d.traceType)errors.push({message:'Choisissez le type de tracé.'});if(['prepared','gpx'].includes(d.traceType)&&canPrepare()&&!reference)errors.push({code:'preparation_required',message:'Choisissez une référence avant de créer la session.'});if(!d.dogId)errors.push({message:'Choisissez un chien.'});if(d.preparationTrack&&d.mode!=='normal'&&(d.creatorRole==='driver'||d.mode==='full_blind'&&d.creatorRole==='coach'))errors.push({message:'Vous connaissez déjà cette référence : choisissez une fonction autorisée ou une nouvelle session.'});return errors;}
@@ -32,8 +33,9 @@ export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[],ini
   if(restoredRoles){d={...d,roles:restoredRoles};restoredRoles=null;}
   notify();
  },
- render(notice='',busy=false){const html=CoachingScreen(d,notice,available(),[],{},null,null,{shared:true,groupConfiguration:true,compactReview:true,stepSequence:sequence(),headings:{mode:'Configurer la session',prepare:'Choisir le tracé',dog:'Choisir le chien',roles:'Votre équipe',review:'Récapitulatif'},descriptions:{mode:'',review:''},rolesMarkup:roleMarkup(),prepareMarkup:prepareMarkup(),errors:errors(),canContinue:d.step==='mode'?!!d.mode&&!!d.traceType:d.step==='prepare'?(!canPrepare()||!!d.preparationTrack):undefined,allowedTraceTypes:d.trackingScenario.startsWith('external_')?['direct','none']:undefined});return busy?`<div aria-busy="true"><fieldset class="coaching-wizard-busy" disabled>${html}</fieldset></div>`:html;},
+ render(notice='',busy=false){refreshJumolfPreparation();const preparation=d.jumolfPreparation?.dogId===d.dogId?d.jumolfPreparation:null;const brief=preparation?`<aside class="card jumolf-training-brief"><h2>Objectif JUMOLF</h2><strong>${e(preparation.title)}</strong><p>${e(preparation.objective)}</p><details><summary>Protocole à observer</summary><ul>${preparation.protocol.preparation.map(x=>`<li>${e(x)}</li>`).join('')}</ul><ol>${preparation.protocol.steps.map(x=>`<li>${e(x)}</li>`).join('')}</ol><p>${e(preparation.protocol.difficulty)}</p><ul>${preparation.protocol.criteria.map(x=>`<li>${e(x)}</li>`).join('')}</ul></details><p>Préparation locale à cette visite, sans réalisation déclarée. Les rôles et modes de visibilité restent à choisir. Le lien n’est pas enregistré durablement.</p><a href="/jumolf/exercises?dog=${encodeURIComponent(d.dogId||'')}">Retour à JUMOLF</a></aside>`:'';const html=brief+CoachingScreen(d,notice,available(),[],{},null,null,{shared:true,groupConfiguration:true,compactReview:true,stepSequence:sequence(),headings:{mode:'Configurer la session',prepare:'Choisir le tracé',dog:'Choisir le chien',roles:'Votre équipe',review:'Récapitulatif'},descriptions:{mode:'',review:''},rolesMarkup:roleMarkup(),prepareMarkup:prepareMarkup(),errors:errors(),canContinue:d.step==='mode'?!!d.mode&&!!d.traceType:d.step==='prepare'?(!canPrepare()||!!d.preparationTrack):undefined,allowedTraceTypes:d.trackingScenario.startsWith('external_')?['direct','none']:undefined});return busy?`<div aria-busy="true"><fieldset class="coaching-wizard-busy" disabled>${html}</fieldset></div>`:html;},
  dispatch({action,field,value,step}={}){
+  refreshJumolfPreparation();
   if(field==='teamRole'||field==='teamObservers'){
    if(!teamContacts)throw Error('Catalogue de contacts indisponible.');
    if(field==='teamObservers'&&value?.includes('self'))throw Error('Votre fonction principale est déjà attribuée.');
@@ -41,6 +43,7 @@ export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[],ini
    const next=field==='teamRole'?assignRole(d,value?.role,value?.person||null):setObservers(d,value);
    normalizeCoachingTeam({assignments:coachingDraftAssignments(next),contacts:teamContacts,ownerId:profile.id,creatorRole:d.creatorRole,scenario:d.trackingScenario});d=next;
   }
+  if(field==='dogId'&&value!==d.jumolfPreparation?.dogId){const {jumolfPreparation,...rest}=d;d=rest;}
   if(field==='mode'||field==='traceType'||field==='dogId'){const changed=field==='traceType'&&value!==d.traceType;d=updateDraft(d,{[field]:value});if(changed){reference=null;}}
   else if(field==='trackingScenario'){d=setTrackingScenario(d,value);if(value.startsWith('external_')){d=updateDraft(d,{traceType:'direct'});reference=null;}roles();}
   else if(field==='preparation'){const track=available().find(t=>t.id===value);if(!track)throw Error('Référence indisponible.');d=selectPreparation(d,track);reference=remotePreparedInput(track);}
@@ -60,4 +63,12 @@ export function createSharedCoachingWizard({profile,dogs=[],getTracks=()=>[],ini
 export function coachingTrackReturnState(state,ownerId,search,track){
  if(!ownerId||new URLSearchParams(search).get('from')!=='coaching'||state?.ownerId!==ownerId||state.draft?.identityContext?.userId!==ownerId||state.draft?.session||state.draft?.step!=='prepare'||!['prepared','gpx'].includes(state.draft.traceType)||preparation(state.draft)==='delegated'||!track?.id||state.draft.traceType==='gpx'&&track.source!=='gpx')return null;
  return {...structuredClone(state),createdTrackId:track.id};
+}
+
+// Local presentation handoff only. No server payload or membership is changed.
+export function coachingJumolfPreparationState({ownerId,dogs=[],preparation:input,currentState=null}={}){
+ if(currentState?.draft)throw Error('Un brouillon Coaching est déjà en cours. Reprenez-le avant de préparer une autre séance.');
+ if(!ownerId||!input?.dogId||!dogs.some(d=>d.id===input.dogId))throw Error('Compte ou chien indisponible.');
+ const draft=createDraft({user_id:ownerId},dogs);
+ return {ownerId,draft:{...draft,step:'mode',dogId:input.dogId,jumolfPreparation:structuredClone(input)}};
 }

@@ -17,3 +17,20 @@ export function classifyJumolfHypothesis({comparableCount=0,supportingCount=0,co
  if(['Tendance en amélioration','Tendance stable','Tendance dégradée'].includes(trend))return trend;
  return 'Fluctuation ponctuelle';
 }
+
+// Real progression never uses the synthetic improving/degraded classifier above.
+export function summarizeAccountJumolfProgress(trends=[]){
+ const comparable=trends.filter(t=>t.status==='descriptive'&&t.comparison.status==='comparable');
+ return {comparable,stable:comparable.filter(t=>t.direction==='Valeurs identiques'),examine:comparable.filter(t=>t.direction!=='Valeurs identiques'),provisional:trends.filter(t=>t.status==='two_observations'&&t.comparison.status==='comparable')};
+}
+import {buildRealJumolfProfile} from './jumolf-real-science.mjs';
+export function buildAccountJumolfProgress({dogId,rows=[],profile,consents={}}={}){
+ if(!consents.session_comparison)return {...summarizeAccountJumolfProgress(),incomparable:[]};
+ // Exact context cohorts preserve the comparison engine's strict conditions.
+ const groups=new Map();
+ for(const row of rows){if(row.kind==='coaching'&&!['normal','simple_blind','full_blind'].includes(row.mode))continue;const key=JSON.stringify([row.kind,row.mode||null,row.terrain||null,row.trackAge?.seconds??row.trackAge?.label??null,row.weather||null,row.wind||null,row.handlerId||null]);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}
+ const trends=[...groups.values()].filter(g=>g.length>=2).flatMap(g=>buildRealJumolfProfile(dogId,g,{consents}).trends);
+ const unknownMode=rows.some(r=>r.kind==='coaching'&&!['normal','simple_blind','full_blind'].includes(r.mode));
+ const contextual=(profile?.trends||[]).map(t=>t.kind==='coaching'&&unknownMode?{...t,comparison:{...t.comparison,status:'partially_comparable',label:'Partiellement comparable',reasons:[...t.comparison.reasons,'Mode de visibilité Coaching indisponible sur au moins une séance.']}}:t);
+ return {...summarizeAccountJumolfProgress(trends),incomparable:contextual.filter(t=>t.comparison.status!=='comparable')};
+}

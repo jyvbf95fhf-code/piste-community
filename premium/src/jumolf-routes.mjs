@@ -5,6 +5,7 @@ export function resolveJumolfRoute(path){
  if(route==='/jumolf/dashboard')return {type:'dashboard'};
  if(route==='/jumolf/dataset')return {type:'dataset'};
  if(route==='/jumolf/discoveries')return {type:'discoveries'};
+ if(route==='/jumolf/exercises')return {type:'exercises'};
  if(route==='/jumolf/progress')return {type:'progress'};
  if(route==='/jumolf/journal')return {type:'journal'};
  if(route==='/jumolf/activate')return {type:'activate'};
