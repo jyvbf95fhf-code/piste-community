@@ -11,7 +11,6 @@ const geo=([px,py])=>{const x=(34131+px/256)/2**16,y=(22705+py/256)/2**16;return
 const anchors=[[65,235],[65,155],[65,80],[68,15],[150,25],[235,36]];
 const reference=anchors.flatMap((p,i)=>i===anchors.length-1?[geo(p)]:Array.from({length:14},(_,j)=>geo([p[0]+(anchors[i+1][0]-p[0])*j/14,p[1]+(anchors[i+1][1]-p[1])*j/14])));
 const distance=trace=>trace.slice(1).reduce((n,p,i)=>n+gpsDistance({latitude:p.y,longitude:p.x},{latitude:trace[i].y,longitude:trace[i].x}),0);
-const round=n=>Math.round(n*100)/100;
 let fixture;
 export function buildRexDemo(){
  if(fixture)return structuredClone(fixture);

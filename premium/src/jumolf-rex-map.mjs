@@ -22,9 +22,10 @@ export function mountRexMaps({document=globalThis.document,L=globalThis.L,Resize
  const chooseBase=id=>{
   if(!Object.hasOwn(REX_BASE_LAYERS,id))return;
   const def=REX_BASE_LAYERS[id],next=L.tileLayer(def.url,{maxZoom:def.maxZoom,maxNativeZoom:def.maxNativeZoom||def.maxZoom,attribution:def.attribution});
-  const old=tiles;tiles=next;root.dataset.rexBase=id;root.querySelector('[data-rex-base]').value=id;next.addTo(map);if(old)map.removeLayer(old);
+  const old=tiles;tiles=next;root.dataset.rexActiveBase=id;root.querySelector('[data-rex-base]').value=id;next.addTo(map);if(old)map.removeLayer(old);
+  root.querySelector('[data-rex-basemap-label]').textContent=id==='satellite'?'Fond satellite authentique SPOT 2025 · traces et événements fictifs.':id==='aerial'?'Photographies aériennes authentiques IGN · traces et événements fictifs.':'Plan OpenStreetMap · traces et événements fictifs.';
   let failed=false;status.textContent=id==='satellite'?'Chargement du satellite SPOT 2025…':id==='aerial'?'Chargement des photos aériennes IGN…':'Chargement du plan…';
-  next.on('tileload',()=>{if(tiles===next&&!failed)status.textContent=id==='satellite'?'Satellite SPOT 2025 · imagerie authentique IGN.':id==='aerial'?'Photographies aériennes IGN · ce fond n’est pas satellite.':'Plan OpenStreetMap · ce fond n’est pas satellite.';});
+  next.on('load',()=>{if(tiles===next&&!failed)status.textContent=id==='satellite'?'Satellite SPOT 2025 · imagerie authentique IGN.':id==='aerial'?'Photographies aériennes IGN · ce fond n’est pas satellite.':'Plan OpenStreetMap · ce fond n’est pas satellite.';});
   next.on('tileerror',()=>{if(tiles!==next||mounted!==row||failed)return;failed=true;if(id==='satellite'){chooseBase('aerial');status.textContent='Satellite indisponible · photographies aériennes IGN affichées en remplacement.';}else status.textContent='Fond indisponible. Changez de fond ou réessayez ; les traces fictives ne sont pas perdues.';});
  };
  const replay=()=>{
