@@ -21,6 +21,19 @@ Les objectifs liés sont ceux de la mémoire locale du Lot 4, uniquement lorsque
 
 Une mémoire inter-appareils nécessitera un contrat serveur versionné de préparation et de rattachement, validations d’identité, provenance et projections par rôle ; les domaines cloud actuels ne stockent pas tous les détails pédagogiques. Ce lot ne modifie ni serveur Supabase déployé, schéma, migration, Auth, RLS, Edge ni Live OPS.
 
-## Validation en cours
+## Validation finale
 
-Première suite ciblée : 473 tests réussis. Parcours navigateur et revue ciblée à compléter avant sauvegarde finale. Aucune Preview ni aucun déploiement.
+- **478 tests ciblés réussis, 0 échec.** Inclut 16 nouveaux cas d’adaptation/progression et les tests existants des moteurs A/B, profils, générateur, Mission Control, Coaching, identités et permissions, mémoire du Lot 4, Mes pistes, persistance et exports. Les nouveaux comportements sensibles ont été vérifiés par tests initialement en échec puis corrigés.
+- `jumolf-v3-lot5.browser.mjs` : application complète, transport QA isolé. Formats 320/390/430/1280 px, absence de débordement, commandes tactiles, conducteur courant puis autre conducteur, paramètres de niveau/compétence préremplis dans le générateur partagé, génération et édition sur la carte existante, préparation explicite vers Coaching, lien local de la recommandation conservé, zéro création de session automatique et masquage des agrégats après retrait du consentement aux comparaisons.
+- `jumolf-v3-lot4.browser.mjs` : régression complète réussie, mêmes quatre formats ; brouillon retrouvé après rechargement, création unique, référence transmise, séance QA enregistrée avec le réducteur existant, retour progression/dossier/carte/rapport. Les données de capteur et météo de test restent des fixtures, pas des mesures métier réelles.
+- `jumolf-v3-lot3b.browser.mjs` : régression Mission Control réussie, mêmes quatre formats, 28 vignettes aériennes IGN réelles ; contrôles de carte, aperçu non modifiable, météo manquante, frise, réduction des animations et absence de remontage pendant la simulation.
+- Revue indépendante : deux points corrigés, retrait du consentement de comparaison et isolation des déclarations conducteur/binôme. Aucune anomalie matérielle restante dans le périmètre revu. Syntaxe des modules modifiés et `git diff --check` propres.
+- Suite ciblée uniquement. Les cinq anciens tests SVG de `track-editor-map.test.mjs`, déjà documentés dans les lots précédents comme incompatibles avec la carte réelle du socle, sont hors de cette sélection.
+
+La lecture simple présente une proposition principale ; les alternatives et analyses scientifiques détaillées restent consultables à la demande. Les objectifs déclarés de la visite sont distingués des objectifs liés à des séances clôturées. Un réglage de niveau périmé ou invalide est remplacé par la valeur éditoriale d’initiation, jamais par un niveau de maîtrise déduit.
+
+Pour reproduire les navigateurs : dépendances de développement déjà déclarées dans `premium/package.json`, puis `PISTE_CHROMIUM_PATH=/chemin/vers/chromium node premium/tests/jumolf-v3-lot5.browser.mjs` (idem scripts Lot 4 et 3B). Aucune nouvelle dépendance produit ni service payant.
+
+Une recommandation transférée reste un contexte de visite revalidé ; recharger son URL ne recrée ni recommandation autorisée ni lien scientifique et conduit à un contexte générique explicite si le transfert a disparu. Les suggestions modifiées restent ajustables et la séance réelle conserve les identités définitives de Coaching.
+
+Aucune Preview, aucun déploiement, aucune modification Supabase. Arrêt après sauvegarde GitHub.
