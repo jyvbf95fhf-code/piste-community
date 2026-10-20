@@ -1354,7 +1354,8 @@ window.addEventListener('popstate',event=>{
  render(true);
 });
 function syncNavigationHeight() {
- const nav=document.querySelector('.bottom-nav');
+ const pisteNav=document.querySelector('.bottom-nav');
+ const nav=pisteNav?.getClientRects().length?pisteNav:document.querySelector('.v3-nav');
  if(nav) document.documentElement.style.setProperty('--nav-height',`${Math.ceil(window.innerHeight-nav.getBoundingClientRect().top)}px`);
 }
 window.addEventListener('resize',syncNavigationHeight);

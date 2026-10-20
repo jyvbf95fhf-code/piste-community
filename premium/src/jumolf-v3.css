@@ -5,12 +5,12 @@
 .jumolf-v3-shell .jumolf-header { align-items:center; gap:20px; margin-bottom:20px; }
 .jumolf-v3-shell .jumolf-brand strong { letter-spacing:.12em; font-size:25px; }
 .jumolf-v3-shell .jumolf-brand small { letter-spacing:.13em; color:var(--v3-muted); font-size:9px; }
-.jumolf-v3-shell .jumolf-header-state { color:var(--v3-gold); font-size:10px; max-width:170px; text-align:right; line-height:1.6; }
+.jumolf-v3-shell .jumolf-header-state { color:var(--v3-gold); font-size:10px; max-width:170px; white-space:normal; text-align:right; line-height:1.6; }
 .jumolf-v3-shell .v3-return { display:inline-flex; align-items:center; min-height:44px; color:var(--v3-muted); font-size:12px; margin-bottom:6px; }
-.jumolf-v3-shell .v3-nav { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); padding:6px; gap:4px; background:#102335; border:1px solid #294253; border-radius:18px; margin-bottom:28px; overflow:visible; }
-.jumolf-v3-shell .v3-nav a { min-height:58px; display:flex; align-items:center; justify-content:center; gap:9px; padding:10px 6px; border-radius:12px; color:var(--v3-muted); font-size:13px; white-space:normal; text-align:center; border:0; }
-.jumolf-v3-shell .v3-nav a svg { width:20px; height:20px; }
-.jumolf-v3-shell .v3-nav a[aria-current=page] { color:#b8f3f4; background:#1c3c4b; box-shadow:inset 0 0 0 1px #3a6673; }
+.jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); padding:6px; gap:4px; background:#102335; border:1px solid #294253; border-radius:18px; margin-bottom:28px; overflow:visible; }
+.jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a { min-height:58px; display:flex; align-items:center; justify-content:center; gap:9px; padding:10px 6px; border-radius:12px; color:var(--v3-muted); font-size:13px; white-space:normal; text-align:center; border:0; }
+.jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a svg { width:20px; height:20px; }
+.jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a[aria-current=page] { color:#b8f3f4; background:#1c3c4b; box-shadow:inset 0 0 0 1px #3a6673; }
 .jumolf-v3-shell :is(a,button,summary,select):focus-visible { outline:2px solid var(--v3-cyan); outline-offset:4px; }
 .jumolf-v3-shell .jumolf-panel { background:#112335; border:1px solid #2a4355; border-radius:20px; }
 .jumolf-v3-shell .jumolf-button { min-height:48px; border-radius:12px; white-space:normal; text-align:center; max-width:100%; padding:12px 18px; line-height:1.45; }
@@ -64,13 +64,13 @@
  .app-shell[data-jumolf=true] > .bottom-nav { display:none; }
  .app-shell[data-jumolf=true] main { padding-bottom:calc(90px + env(safe-area-inset-bottom)); }
  .jumolf-v3-shell { width:100%; padding:0 0 20px; }
- .jumolf-v3-shell .jumolf-header { padding:0; margin-bottom:18px; }
+ .jumolf-v3-shell .jumolf-header { padding:0; margin-bottom:18px; flex-wrap:wrap; }
  .jumolf-v3-shell .jumolf-header-state { max-width:108px; font-size:9px; }
  .jumolf-v3-shell .jumolf-brand strong { font-size:22px; }
  .jumolf-v3-shell .jumolf-brand small { font-size:8px; letter-spacing:.06em; }
- .jumolf-v3-shell .v3-nav { position:fixed; z-index:90; bottom:0; left:0; right:0; margin:0; border-radius:18px 18px 0 0; border-bottom:0; padding:7px 5px calc(7px + env(safe-area-inset-bottom)); background:#0d2031f5; backdrop-filter:blur(16px); gap:2px; }
- .jumolf-v3-shell .v3-nav a { flex-direction:column; min-height:54px; gap:5px; font-size:10px; padding:7px 1px; }
- .jumolf-v3-shell .v3-nav a svg { width:21px; height:21px; }
+ .jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav { position:fixed; z-index:90; bottom:0; left:0; right:0; margin:0; border-radius:18px 18px 0 0; border-bottom:0; padding:7px 5px calc(7px + env(safe-area-inset-bottom)); background:#0d2031f5; backdrop-filter:blur(16px); gap:2px; }
+ .jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a { flex-direction:column; min-height:54px; gap:5px; font-size:10px; padding:7px 1px; }
+ .jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a svg { width:21px; height:21px; }
  .v3-hero { grid-template-columns:minmax(0,1fr) 78px; gap:10px; padding:24px 18px; border-radius:22px; }
  .v3-hero h1 { font-size:34px; }
  .v3-hero .v3-hero-subtitle { font-size:14px; }

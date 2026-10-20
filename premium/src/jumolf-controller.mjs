@@ -101,12 +101,16 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   deactivate(){store.deactivate();navigate('/jumolf');render();},
   screen(path=routePath()){
    const route=resolveJumolfRoute(path)||{type:'entry'};
-   const requestedJourney=new URLSearchParams(String(path).split('?')[1]||'').get('journey');
+   const query=new URLSearchParams(String(path).split('?')[1]||'');
+   const requestedJourney=query.get('journey');
    if(JUMOLF_JOURNEYS.some(([key])=>key===requestedJourney))journey=requestedJourney;
+   if(['rex','learn'].includes(route.type)&&query.has('dog')){
+    const a=access(),dogs=a.entitlement_valid&&a.jumolf_enabled?consentedSources().dogs:[];
+    selectedDogId=dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';
+   }
    if(route.type==='rex')return RexDemoScreen(path);
    if(route.type==='learn')return JumolfV3Learn();
    const state=store.snapshot(),currentAccess=access();
-   const query=new URLSearchParams(String(path).split('?')[1]||'');
    route.replay=query.get('replay')==='1';
    route.advanced=query.get('view')==='advanced';
    route.demo=route.demo===true||query.get('demo')==='1';
@@ -118,9 +122,19 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    const dogs=sources.dogs||[];
    if(query.has('dog'))selectedDogId=dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';
    else if(!dogs.some(d=>d.id===selectedDogId))selectedDogId=dogs.length===1?dogs[0].id:'';
+   if(route.type==='dog'||route.type==='session'&&!route.demo){
+    const id=route.type==='dog'?route.id:[...sources.sessions,...sources.operational].find(s=>s.id===route.id)?.dogId;
+    selectedDogId=dogs.some(d=>d.id===id)?id:'';
+   }
    const selectedDog=dogs.find(d=>d.id===selectedDogId)||null;
    if(!isDemo()&&(route.type==='analyze'||query.get('scope')==='unlinked'))return JumolfSimpleHome({sources,state,selectedDogId,unlinked:query.get('scope')==='unlinked'});
-   if(route.type==='entry'&&!route.advanced)return JumolfV3Home({sources,state,dog:selectedDog,report:!isDemo()&&selectedDog?realLearning(selectedDog.id):null,viewer:getViewer(),journey,realMode:!isDemo()});
+   if(route.type==='entry'&&!route.advanced){
+    // Presentation metadata stays out of the scientific source contracts.
+    const identity=selectedDog?(getRawSources().dogs||[]).find(d=>d.id===selectedDog.id):null;
+    const personalPhotoDataUrl=/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z\d+/]+=*$/i.test(identity?.personalPhotoDataUrl||'')?identity.personalPhotoDataUrl:null;
+    const dog=selectedDog?{...selectedDog,portrait:identity?.portrait,personalPhotoDataUrl}:null;
+    return JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()});
+   }
    if(isDemo()&&route.type==='analyze')route.type='dashboard';
    if(route.type==='train')return isDemo()?JumolfV3Home({realMode:false}):JumolfV3Train({dogs,dog:selectedDog,state,journey});
    if(!isDemo()&&['exercises','progress'].includes(route.type)){if(query.has('dog'))selectedDogId=sources.dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';else if(!sources.dogs.some(d=>d.id===selectedDogId))selectedDogId=sources.dogs.length===1?sources.dogs[0].id:'';const dog=sources.dogs.find(d=>d.id===selectedDogId)||null;return JumolfRealLearningScreen({route,dogs:sources.dogs,dog,report:dog?realLearning(dog.id):null,canPrepare:!!prepareRealTraining});}

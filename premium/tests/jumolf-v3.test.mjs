@@ -14,3 +14,29 @@ test('presentation journeys never activate features, change consents or create s
 test('shell carries the selected dog and marks analysis, training and demo sections without losing advanced access',()=>{const h=JumolfShell('/jumolf/session/new','content',{realMode:true,dogId:'a',journey:'expert'});for(const s of ['Accueil','Apprendre','S’entraîner','Analyser','Progresser','Outils avancés'])assert.ok(h.includes(s));assert.match(h,/href="\/jumolf\/analyze\?dog=a&amp;journey=expert" aria-current="page"/);assert.match(h,/\/scientific/);assert.match(JumolfShell('/jumolf/rex','content',{realMode:true}),/DÉMONSTRATION · FICTIF/);});
 test('missing dates and empty history never invent a latest session, progress or score',()=>{const {controller,replace}=setup();replace({dogs:[{id:'a',name:'<img src=x onerror=alert(1)>'}],sessions:[session('undated','a',null)]});const h=controller.screen('/jumolf?dog=a');assert.match(h,/Date.*indisponible|datée/);assert.doesNotMatch(h,/<img src=x|score de progression|Séance undated/);assert.match(h,/&lt;img/);});
 test('real analysis list remains available without dog history consent and supports unlinked sessions',()=>{const {controller,store}=setup();assert.match(controller.screen('/jumolf/analyze?dog=a'),/Séance old/);assert.doesNotMatch(controller.screen('/jumolf/analyze?dog=a'),/Séance other/);store.setConsent('dog_history',false);assert.match(controller.screen('/jumolf/analyze'),/Séance other/);});
+test('public learning and Rex deep links preserve the explicitly requested authorized dog',()=>{
+ const {controller,store}=setup();
+ for(const path of ['/jumolf/learn','/jumolf/rex']){
+  controller.screen('/jumolf?dog=a');
+  controller.screen(path+'?dog=b&journey=expert');
+  assert.deepEqual(controller.navigationContext(),{dogId:'b',journey:'expert'});
+ }
+ store.setConsent('dog_history',false);
+ controller.screen('/jumolf/learn?dog=a');
+ assert.equal(controller.navigationContext().dogId,'');
+});
+test('home reuses the selected personal dog photo and hides it when dog consent is withdrawn',()=>{
+ const {controller,store,replace}=setup();
+ replace({dogs:[{id:'a',name:'Nox',personalPhotoDataUrl:'data:image/png;base64,YQ=='}],sessions:[]});
+ assert.match(controller.screen('/jumolf?dog=a'),/src="data:image\/png;base64,YQ=="/);
+ store.setConsent('dog_history',false);
+ assert.doesNotMatch(controller.screen('/jumolf?dog=a'),/data:image/);
+});
+test('direct dog and session links carry their own authorized canine identity into navigation',()=>{
+ const {controller}=setup();
+ for(const path of ['/jumolf/dog/b','/jumolf/session/other']){
+  controller.screen('/jumolf?dog=a');
+  controller.screen(path);
+  assert.equal(controller.navigationContext().dogId,'b');
+ }
+});
