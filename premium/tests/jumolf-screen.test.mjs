@@ -5,9 +5,9 @@ import {JumolfShell} from '../src/jumolf-shell.mjs';
 
 test('shell scopes JUMOLF identity and navigation inside the module only',()=>{
  const html=JumolfShell('/jumolf','<p>local screen</p>');
- assert.match(html,/class="jumolf-shell"/);
- assert.match(html,/MOTEUR D’ANALYSE/);
- assert.match(html,/href="\/jumolf\/compare"/);
+ assert.match(html,/class="jumolf-shell jumolf-v3-shell"/);
+ assert.match(html,/L’INTELLIGENCE DU BINÔME/);
+ assert.match(html,/href="\/jumolf\/compare\?journey=discovery"/);
  assert.match(html,/local screen/);
 });
 
