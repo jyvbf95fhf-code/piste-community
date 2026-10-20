@@ -1,0 +1,17 @@
+.canine-controls,.canine-brief,.canine-editor-brief {border:1px solid #355163;border-radius:18px;padding:16px;background:linear-gradient(145deg,#101f32,#0a1422);color:#edf4fa;overflow-wrap:anywhere;min-width:0}
+.canine-controls {display:grid;gap:14px;margin:4px 0 20px}
+.canine-eyebrow {font-size:11px;font-weight:750;letter-spacing:.12em;color:#d6c7a6}
+.canine-controls label {display:grid;gap:8px;min-width:0}
+.canine-controls select,.canine-controls input {min-height:48px;max-width:100%;width:100%;box-sizing:border-box;font-size:16px}
+.canine-controls summary,.canine-brief summary {min-height:44px;display:flex;align-items:center;cursor:pointer;color:#a8e5ee;gap:10px;font-weight:700}
+.canine-controls p,.canine-brief p,.canine-brief li {line-height:1.6}
+.canine-controls small,.canine-brief small {color:#bbcbd7;line-height:1.6}
+.canine-brief {margin:14px 0}
+.canine-brief ul {padding-left:20px}
+.canine-brief h4 {color:#dfd1b5;margin:24px 0 10px}
+.canine-brief a,.canine-controls a {color:#99e3ef;text-decoration:underline;text-underline-offset:3px}
+.canine-geometry {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.canine-editor-brief {margin:12px 0}
+.canine-editor-brief .button {width:100%;white-space:normal;min-height:48px}
+.creator-smart-dialog .smart-proposal {min-width:0}
+@media(max-width:430px){.canine-geometry{grid-template-columns:1fr}.canine-controls,.canine-brief{padding:13px}.canine-brief{font-size:14px}.creator-smart-dialog .smart-criteria{grid-template-columns:1fr}}

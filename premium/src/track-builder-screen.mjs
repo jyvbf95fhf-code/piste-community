@@ -8,7 +8,7 @@ const button=(label,action,extra='',tone='button-dark')=>`<button class="button 
 export function TrackPreview(){return MapShell({});}
 
 export function TrackBuilderScreen(state,items) {
- if(state?.editorDraft)return TrackEditorScreen({draft:state.editorDraft,tracks:items,dogs:state.dogs||[],results:state.results||[],fixtures:state.fixtures||[],selectedPointId:state.selectedPointId||null,nextPointKind:state.nextPointKind||'via',notice:state.notice||'',error:state.error||'',smartState:state.smartState,premiumAccess:state.premiumAccess,metadataOpen:state.metadataOpen!==false});
+ if(state?.editorDraft)return TrackEditorScreen({draft:state.editorDraft,tracks:items,dogs:state.dogs||[],results:state.results||[],fixtures:state.fixtures||[],selectedPointId:state.selectedPointId||null,nextPointKind:state.nextPointKind||'via',notice:state.notice||'',error:state.error||'',smartState:state.smartState,canineBrief:state.canineBrief,canPrepareCanine:state.canPrepareCanine,premiumAccess:state.premiumAccess,metadataOpen:state.metadataOpen!==false});
  const selected=items.find(t=>t.id===state.selectedId);
  const editor=['new','import','edit'].includes(state.view);
  const file=gpxFixtures.find(f=>f.id===state.fileId);

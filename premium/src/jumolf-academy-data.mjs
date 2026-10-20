@@ -46,7 +46,7 @@ export const ACADEMY_LESSONS=[
  'Une comparaison nécessite une tâche et des conditions décrites. Changer plusieurs paramètres complique l’interprétation.',
  'Repérer les changements de direction sur la référence. Choisir un seul paramètre à explorer et conserver les autres autant que possible.',
  'Noter angle prévu, référence disponible, aides et signalements ; vérifier la densité des points GPS.',
- 'Un angle géométrique n’est pas un niveau de difficulté olfactive. Les quatre niveaux du générateur V3 ne sont pas implémentés ici.'),
+ 'Un angle géométrique n’est pas un niveau de difficulté olfactive. Les quatre niveaux du générateur sont des repères pédagogiques éditoriaux ajustables, sans certification officielle ni seuil scientifique validé.'),
  lesson('longe','Conduite de longe : observer ses interventions','human','Recommandation pédagogique',['learning','humane'],
  'Les interactions du conducteur font partie du contexte d’apprentissage. Le rôle de conducteur dans l’application n’atteste pas une compétence technique.',
  'Dans un cadre sûr, observer ses changements de rythme et ses interventions avec un coach. Ne pas employer de saccades punitives.',

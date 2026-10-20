@@ -11,7 +11,9 @@ import {createOpsLiveRemote} from './ops-live-remote.mjs';
 import {createOpsLiveTransport} from './ops-live-transport.mjs';
 import {createOpsLiveBindings} from './ops-live-bindings.mjs';
 import {createSharedSessionIndex} from './consolidated-session-index.mjs';
-import {coachingJumolfPreparationState,coachingTrackReturnState} from './coaching-shared-wizard.mjs';
+import {coachingJumolfPreparationState,coachingTrackReturnState,coachingGeneratedTrackState} from './coaching-shared-wizard.mjs';
+import {buildCanineBrief} from './track-canine.mjs';
+import {CanineBrief} from './track-canine-screen.mjs';
 import {mountRemoteCoaching} from './coaching-remote-app.mjs';
 import {createOperationalWeatherController} from './operational-weather.mjs';
 import {createSmartTrackService} from './track-smart-service.mjs';
@@ -599,7 +601,12 @@ function ensureTrackEditor(){
  }else trackEditor={draft:createTrackDraft({geographic:true}),selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:key,copySource:null};
  trackEditorActive=true;trackEditorHref=key;
 }
-function renderTrackEditor(){ensureTrackEditor();trackSmart.reconcile();return TrackBuilderScreen({editorDraft:trackEditor.draft,smartState:trackSmart.view(),premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());}
+function renderTrackEditor(){
+ ensureTrackEditor();trackSmart.reconcile();const smart=trackSmart.view(),context=jumolfController.canineContext(smart.dogId);
+ const training=trackEditor.canine,allowed=jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium';
+ const brief=training?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(training.proposal,training.options,jumolfController.canineContext(trackEditor.draft.dogId)),{initial:true}):'';
+ return TrackBuilderScreen({editorDraft:trackEditor.draft,smartState:{...smart,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
+}
 function communitySourceOptions(){
  return buildCommunitySourceOptions({sessionRecords:sessionCatalog.list(),tracks:trackLibrary.list(),dogs:dogsStore.list()});
 }
@@ -677,7 +684,8 @@ let scientificController=createScientificController({actor:currentUser,dataset:s
 let scientificCorpusController=createScientificCorpusController({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])})),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
 function restoreSmartTrackEntry(){
  if(location.pathname!=='/track-builder'){smartEntryOpenedKey=null;return;}
- if(new URLSearchParams(location.search).get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;openSmartTrackPanel();}
+ const params=new URLSearchParams(location.search);
+ if(params.get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;if(params.get('canine')==='1'){const context=jumolfController.canineContext(params.get('dog'));trackSmart.setOptions({level:'initiation',dogId:context.dog?.id||''});render();}openSmartTrackPanel();}
 }
 function openSmartTrackPanel({focus=true}={}){
  const panel=document.querySelector('[data-smart-panel]'),menu=document.querySelector('[data-creator-panel]');
@@ -687,8 +695,8 @@ function openSmartTrackPanel({focus=true}={}){
 }
 
 function selectSmartProposal(id){
- try{const {proposal,commune}=trackSmart.proposal(id),ownerId=currentUser?.user_id,key=trackEditor.routeKey,fingerprint=smartTrackFingerprint();
-  const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();const draft=smartTrackDraft(proposal,commune);trackSmart.dispose();editorChange(draft,{selectedPointId:null,copySource:null,nextPointKind:'via',notice:'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}};
+ try{const {proposal,commune,options,dogId}=trackSmart.proposal(id),ownerId=currentUser?.user_id,key=trackEditor.routeKey,fingerprint=smartTrackFingerprint();
+  const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();let draft=smartTrackDraft(proposal,commune);if(options){const context=jumolfController.canineContext(dogId);const brief=buildCanineBrief(proposal,options);draft={...draft,dogId:context.dog?.id||'',notes:(draft.notes+' Objectif pédagogique : '+brief.objective+' Niveau choisi : '+brief.level+'. Fiche initiale à réévaluer après édition.').slice(0,1000)};}trackSmart.dispose();editorChange(draft,{canine:options?{ownerId,proposal,options}:null,selectedPointId:null,copySource:null,nextPointKind:'via',notice:options?'Piste pédagogique ouverte · ajustez-la sur la carte. Retrouvez la fiche initiale et « Enregistrer et préparer dans Coaching » dans Menu.':'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}};
   if(trackEditor.draft?.dirty)ConfirmationDialog({title:'Ouvrir cette proposition ?',description:'Elle remplacera les modifications non enregistrées du brouillon actuel. Le parcours proposé restera modifiable avant enregistrement.',onConfirm:apply});else apply();
  }catch(error){Toast(error.message);}
 }
@@ -1244,7 +1252,7 @@ document.addEventListener('pointerup',event=>{
 });
 document.addEventListener('change',event=>{
  const field=event.target;
- if(field.matches('[data-smart-option]')){const busy=trackSmart.view().busy;trackSmart.setOptions({[field.dataset.smartOption]:field.value});if(busy)render();else{document.querySelector('.smart-proposals')?.replaceChildren();document.querySelector('.smart-feedback')?.remove();}return;}
+ if(field.matches('[data-smart-option]')){const busy=trackSmart.view().busy,key=field.dataset.smartOption;trackSmart.setOptions({[key]:field.value});if(busy||['level','dogId','skill'].includes(key)){render();document.querySelector(`[data-smart-option="${key}"]`)?.focus();}else{document.querySelector('.smart-proposals')?.replaceChildren();document.querySelector('.smart-feedback')?.remove();}return;}
  if(field.matches('[data-editor-gpx-file]')){const file=field.files?.[0];field.value='';if(file)void importEditorGpx(file);return;}
  if(profileController.handleChange(event))return;
  if(scientificContributionController.handleChange(event))return;
@@ -1457,11 +1465,17 @@ document.addEventListener('submit',async event=>{
   try{
    if(trackHasPendingRoutes(trackEditor.draft.points))throw Error('Attendez le calcul des routes ou corrigez le segment en attente.');
    const values=Object.fromEntries(new FormData(editorForm).entries());
+   const prepareCanine=event.submitter?.name==='prepareCanine';
+   let generatedState=null;
+   if(prepareCanine){
+    const a=jumolfAccess();if(auth.assurance!=='supabase-auth'||!a.entitlement_valid||a.entitlement!=='premium'||trackEditor.canine?.ownerId!==currentUser?.user_id)throw Error('Préparation pédagogique indisponible ou non autorisée.');
+    generatedState=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:dogsStore.list().filter(d=>!d.isDemonstration),dogId:values.dogId||'',track:{id:'pending',name:values.name,geometry:{points:trackEditor.draft.points}},currentState:coachingWizardState});
+   }
    let saved;
    if(trackEditor.draft.id)saved=trackLibrary.updatePrepared(trackEditor.draft.id,{...values,geometry:{points:trackEditor.draft.points}});
    else if(trackEditor.copySource)saved=trackLibrary.createCopy({name:values.name,description:values.description,category:values.category,difficulty:values.difficulty,dogId:values.dogId,notes:values.notes,sourceId:trackEditor.copySource.sourceId,sourceKind:trackEditor.copySource.kind,points:trackEditor.draft.points});
    else saved=trackLibrary.createPrepared({...values,geometry:{points:trackEditor.draft.points},source:trackEditor.draft.source||'draw',provenance:trackEditor.draft.provenance||'manual',fileName:trackEditor.draft.fileName});
-   const returnState=coachingTrackReturnState(coachingWizardState,currentUser?.user_id,location.search,saved);
+   const returnState=generatedState?{...generatedState,draft:{...generatedState.draft,preparationTrack:saved}}:coachingTrackReturnState(coachingWizardState,currentUser?.user_id,location.search,saved);
    if(returnState)coachingWizardState=returnState;
    trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:''};history.pushState({},'',returnState?'/new-session':`/tracks/${encodeURIComponent(`prepared:${saved.id}`)}`);render(true);
   }catch(error){trackEditor={...trackEditor,error:error.message};render();document.querySelector('#track-editor-name')?.focus();}

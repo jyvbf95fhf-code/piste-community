@@ -24,8 +24,8 @@ const presetLabel=item=>item.label||item.name||'Lieu mock';
 const basemaps=[['standard','Standard'],['topographic','Topographique'],['satellite','Satellite']];
 const modes=[['free','Libre'],['follow','Rues / chemins']];
 
-export function TrackEditorScreen({draft,tracks=[],dogs=[],results=[],fixtures=[],selectedPointId=null,nextPointKind='via',notice='',error='',metadataOpen=true,smartState={},premiumAccess={},metrics=trackDraftMetrics(draft)}={}){
- if(draft.coordinateSpace==='wgs84')return GeographicTrackCockpit({draft,dogs,selectedPointId,nextPointKind,notice,error,smartState,premiumAccess});
+export function TrackEditorScreen({draft,tracks=[],dogs=[],results=[],fixtures=[],selectedPointId=null,nextPointKind='via',notice='',error='',metadataOpen=true,smartState={},canineBrief='',canPrepareCanine=false,premiumAccess={},metrics=trackDraftMetrics(draft)}={}){
+ if(draft.coordinateSpace==='wgs84')return GeographicTrackCockpit({draft,dogs,selectedPointId,nextPointKind,notice,error,smartState,canineBrief,canPrepareCanine,premiumAccess});
  const points=draft.points||[],hasRoute=points.length>=2,saveEnabled=hasRoute&&String(draft.name||'').trim().length>0;
  const resultsHtml=`${results.length?`<div class="track-editor-search-results" role="listbox" aria-label="Lieux de démonstration">${results.map((item,index)=>`<button type="button" data-editor-place="${index}" role="option" aria-label="Centrer sur ${e(presetLabel(item))}">${e(presetLabel(item))}<small>${e(item.subtitle||'Lieu fictif · démonstration')}</small></button>`).join('')}</div>`:''}<p class="track-editor-search-note">Aucun géocodage réel · sélection parmi des lieux de démonstration.</p>`;
  const map=TrackEditorMap(draft,{selectedPointId});

@@ -100,6 +100,13 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    profileNotice='Rubriques appliquées pendant cette visite uniquement. Aucun enregistrement durable.';
   },
   navigationContext(){const a=access();return {dogId:a.entitlement_valid&&a.jumolf_enabled&&consentedSources().dogs.some(d=>d.id===selectedDogId)?selectedDogId:'',journey};},
+  canineContext(dogId=''){
+   reconcileProfileDrafts();const a=access();
+   if(isDemo()||!getViewer()?.id||!a.entitlement_valid||!a.jumolf_enabled||!store.snapshot().consents.dog_history)return {dogs:[],dog:null,recommendations:[],declarations:[]};
+   const dogs=consentedSources().dogs,dog=dogs.find(d=>d.id===dogId)||null;
+   const declarations=dog?PROFILE_MEMBERS.flatMap(member=>{const fields=profileDrafts.get(draftKey(member,dog.id))?.fields||{};return ['experience','objectives','observations','workAreas'].filter(k=>fields[k]).map(k=>`${({dog:'Chien',handler:'Conducteur',team:'Binôme'})[member]} · ${({experience:'expérience déclarée',objectives:'objectifs déclarés',observations:'observations déclarées',workAreas:'axes déclarés'})[k]} : ${fields[k]}`);}):[];
+   return clone({dogs,dog,recommendations:dog?realLearning(dog.id).recommendations:[],declarations});
+  },
   currentTrainingPreparation(request){
    const a=access();if(isDemo()||!a.entitlement_valid||!a.jumolf_enabled||!request)return null;
    const dog=consentedSources().dogs.find(d=>d.id===request.dogId),rec=realLearning(request.dogId).recommendations.find(r=>r.id===request.recommendationId);

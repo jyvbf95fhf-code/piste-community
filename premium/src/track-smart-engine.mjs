@@ -1,6 +1,7 @@
 import {geographicDistance} from './track-geographic.mjs';
 import {createTrackDraft} from './track-editor.mjs';
 import {routeSegmentKey} from './track-route-segments.mjs';
+import {trackGeometry} from './track-canine.mjs';
 const highways=new Set(['residential','living_street','pedestrian','service','unclassified','tertiary','tertiary_link','footway','path','track','cycleway','steps']);
 const rural=new Set(['path','track','cycleway']);
 const surfaces=new Map([
@@ -13,11 +14,12 @@ const coord=n=>[n.lon,n.lat];
 const meters=(a,b)=>geographicDistance({x:a[0],y:a[1]},{x:b[0],y:b[1]});
 const validNode=n=>Number.isSafeInteger(n?.id)&&Number.isFinite(n.lon)&&Math.abs(n.lon)<=180&&Number.isFinite(n.lat)&&Math.abs(n.lat)<=90;
 const blocked=t=>['no','private','customers','permit','discouraged'].includes(t?.access)||['no','private','discouraged','use_sidepath'].includes(t?.foot)||t?.construction||t?.highway==='construction'||t?.area==='yes';
-export function validateSmartOptions({commune,distanceKm,terrain,transitions}={}){
+export function validateSmartOptions({commune,distanceKm,terrain,transitions,geometry}={}){
  if(!commune||!/^(?:\d{5}|2[AB]\d{3})$/.test(commune.code)||!Array.isArray(commune.center)||!validNode({id:1,lon:commune.center[0],lat:commune.center[1]}))throw Error('Sélectionnez une commune de France.');
- const km=Number(distanceKm);if(!Number.isFinite(km)||km<.5||km>10)throw Error('Choisissez une distance entre 0,5 et 10 km.');
+ if(geometry&&(!Number.isInteger(geometry.maxTurns)||geometry.maxTurns<0||geometry.maxTurns>30||!Number.isFinite(geometry.minAngle)||geometry.minAngle<30||geometry.minAngle>150))throw Error('Critères géométriques invalides.');
+ const km=Number(distanceKm);if(!Number.isFinite(km)||km<(geometry?.maxTurns>=0?.05:.5)||km>10)throw Error(geometry?'Choisissez une distance entre 0,05 et 10 km.':'Choisissez une distance entre 0,5 et 10 km.');
  if(!['urban','nature','mixed'].includes(terrain)||!['any','few','several'].includes(transitions))throw Error('Critères de parcours invalides.');
- return {commune,distanceKm:km,terrain,transitions};
+ return {commune,distanceKm:km,terrain,transitions,...geometry?{geometry:{...geometry}}:{}};
 }
 function networkGraph(data){
  if(!Array.isArray(data?.elements)||data.elements.length>150000||data.remark)throw Error('Données cartographiques incomplètes. Réessayez plus tard.');
@@ -52,15 +54,15 @@ export function generateSmartTracks(data,input){
  let beam=starts.map(id=>({node:id,ids:new Set([id]),edges:[],length:0,start:coord(nodes.get(id))})),candidates=[],expanded=0;
  for(let step=0;beam.length&&step<250&&expanded<30000;step++){
   const next=[];for(const s of beam){for(const e of adj.get(s.node)||[]){expanded++;if(e.nodeIds.slice(1).some(id=>s.ids.has(id)))continue;const remainder=target-s.length,edge=trimmedEdge(e,remainder),edges=[...s.edges,edge],length=s.length+edge.distanceM,ids=new Set([...s.ids,...e.nodeIds]);
-   if(length>=target-.01){const coordinates=edges.flatMap((e,i)=>i?e.coordinates.slice(1):e.coordinates),end=coordinates.at(-1);if(meters(s.start,end)<Math.max(80,target*.15))continue;const stats=statistics(edges);if(options.terrain==='urban'&&stats.urbanRatio<.75||options.terrain==='nature'&&stats.natureRatio<.75||options.terrain==='mixed'&&(stats.urbanRatio<.15||stats.natureRatio<.15))continue;
-    candidates.push({edges,coordinates,nodeIds:[...ids],...stats,transitionsSatisfied:transitionSatisfied(stats,options.transitions),requested:options,rank:score(stats,options),signature:new Set(edges.flatMap(e=>e.nodeIds.slice(1).map((id,i)=>[id,e.nodeIds[i]].sort((a,b)=>a-b).join(':'))))});
+   if(length>=target-.01){const coordinates=edges.flatMap((e,i)=>i?e.coordinates.slice(1):e.coordinates),end=coordinates.at(-1);if(meters(s.start,end)<Math.max(options.geometry?20:80,target*.15))continue;const stats=statistics(edges);if(options.terrain==='urban'&&stats.urbanRatio<.75||options.terrain==='nature'&&stats.natureRatio<.75||options.terrain==='mixed'&&(stats.urbanRatio<.15||stats.natureRatio<.15))continue;
+    candidates.push({...options.geometry?{geometry:trackGeometry(coordinates,options.geometry)}:{},edges,coordinates,nodeIds:[...ids],...stats,transitionsSatisfied:transitionSatisfied(stats,options.transitions),requested:options,rank:score(stats,options),signature:new Set(edges.flatMap(e=>e.nodeIds.slice(1).map((id,i)=>[id,e.nodeIds[i]].sort((a,b)=>a-b).join(':'))))});
    }else next.push({node:e.to,ids,edges,length,start:s.start});
   }}
   // Keep alternatives from different departure areas; bound work on the iPhone.
   const groups=new Map();for(const s of next){const key=s.edges[0]?.from;const rows=groups.get(key)||[];rows.push(s);groups.set(key,rows);}beam=[];for(const rows of groups.values()){rows.sort((a,b)=>(score(statistics(b.edges),options)+b.length/target*.3)-(score(statistics(a.edges),options)+a.length/target*.3));beam.push(...rows.slice(0,12));}
   if(candidates.length>500)break;
  }
- const selected=[];candidates.sort((a,b)=>Number(b.transitionsSatisfied)-Number(a.transitionsSatisfied)||b.rank-a.rank);
+ const selected=[];candidates.sort((a,b)=>Number(b.geometry?.satisfied??true)-Number(a.geometry?.satisfied??true)||Number(b.transitionsSatisfied)-Number(a.transitionsSatisfied)||b.rank-a.rank);
  for(const c of candidates){if(selected.some(p=>{let shared=0;for(const key of c.signature)if(p.signature.has(key))shared++;return shared/Math.min(c.signature.size,p.signature.size)>.7;}))continue;selected.push(c);if(selected.length===3)break;}
  return selected.map(({signature,rank,...p},i)=>({...p,id:`proposal-${i+1}`,title:`Proposition ${i+1}`}));
 }

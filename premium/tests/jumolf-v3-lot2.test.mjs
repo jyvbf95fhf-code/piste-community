@@ -22,3 +22,11 @@ test('a themed lesson retains its filter and offers neighbors from that theme',(
  assert.match(h,/longe\?journey=discovery&amp;topic=human/);
  assert.match(h,/protocoles\?journey=discovery&amp;topic=human/);
 });
+test('generator context contains only authorized dog observations and visit declarations',()=>{
+ const {controller,store,replace}=setup();controller.setProfileDraft('team','a',{objectives:'Continuité'});
+ const c=controller.canineContext('a');assert.equal(c.dog.id,'a');assert.ok(c.recommendations.some(r=>r.key==='interruptions'));assert.match(c.declarations.join(' '),/Continuité/);
+ assert.equal(controller.canineContext('missing').dog,null);assert.deepEqual(controller.canineContext('missing').recommendations,[]);
+ store.setConsent('ai_analysis',false);assert.ok(controller.canineContext('a').recommendations.every(r=>!r.personalized));
+ store.setConsent('dog_history',false);assert.deepEqual(controller.canineContext('a'),{dogs:[],dog:null,recommendations:[],declarations:[]});
+ store.setConsent('dog_history',true);replace({dogs:[],sessions:[]});assert.equal(controller.canineContext('a').dog,null);
+});
