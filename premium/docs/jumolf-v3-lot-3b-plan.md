@@ -16,10 +16,14 @@ Briefing : identité canine autorisée, préparateur connecté (conducteur terra
 
 ## Exécution
 
-- [ ] Branche dédiée et protection de déploiement avant première sauvegarde distante.
-- [ ] Tests RED→GREEN : géométrie/parcours, calcul temporel, météo manquante, provenance et contrôleur annulable.
-- [ ] Couche Mission Control, aperçu, légende, frise et simulation sur la carte existante ; pas de rafraîchissement complet de carte pendant l’animation.
-- [ ] Tests ciblés Lot 3/JUMOLF/Coaching/OPS et nouveau parcours 320/390/430/1280, réduction des animations et performance.
-- [ ] Revue finale indépendante, correctifs matériels, documentation des limites et sauvegarde GitHub avec arbre vérifié et verrou de référence.
+- [x] Branche dédiée et protection de déploiement avant première sauvegarde distante.
+- [x] Tests RED→GREEN : géométrie/parcours, calcul temporel, météo manquante, provenance et contrôleur annulable.
+- [x] Couche Mission Control, aperçu, légende, frise et simulation sur la carte existante ; pas de rafraîchissement complet de carte pendant l’animation.
+- [x] Tests ciblés Lot 3/JUMOLF/Coaching/OPS et nouveau parcours 320/390/430/1280, réduction des animations et performance.
+- [x] Revue finale indépendante, correctifs matériels, documentation des limites et sauvegarde GitHub avec arbre vérifié et verrou de référence.
 
 Protections : aucune modification V1/main/production, Supabase/Auth/RLS/Edge/GPS, aucun service payant ou dépendance produit, aucune publication Vercel. Pas de Lots 4/5.
+
+## Terminé
+
+288 tests ciblés et les deux parcours navigateur validés à 320/390/430/1280. Fond aérien IGN réellement chargé ; appel horaire Open-Meteo réel vérifié séparément des fixtures navigateur. Revue indépendante et correction RED→GREEN du verrouillage de l’aperçu. Détails et limites dans `jumolf-v3-lot-3b-validation.md`. Aucun déploiement.

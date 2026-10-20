@@ -12,6 +12,12 @@
 .mission-map .leaflet-control-attribution{margin-bottom:160px;background:#08192fe6;color:#d7e8ee;max-width:250px;white-space:normal}
 .mission-map .leaflet-control-attribution a{color:#b4eff7}
 .mission-map .creator-notice{max-height:48px;overflow:auto;font-size:11px;margin:0;max-width:calc(100% - 60px)}
+.mission-map .creator-notice[role=status]{display:none}
+.mission-editor-notice{font-size:11px;border-left:2px solid #cdbb98;padding-left:10px}
+.mission-preview-fields{display:grid;gap:12px;border:0;padding:0;margin:0;min-width:0}
+.mission-preview-fields:disabled{opacity:.6}
+.mission-map .creator-dock[inert]{opacity:.4}
+[data-track-cockpit].mission-map .leaflet-control-attribution a{color:#d6f5ff!important}
 .mission-map:has([data-creator-panel][open]) .mission-control{visibility:hidden}
 .mission-control{color:#eaf4fc;font:14px/1.55 system-ui;min-width:0}
 .mission-hud{position:absolute;left:17px;top:114px;right:80px;z-index:420;display:flex;align-items:flex-start;flex-direction:column;gap:5px;pointer-events:none}

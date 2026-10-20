@@ -3,9 +3,9 @@ import {GPS_BASE_LAYERS} from './coaching-gps-screen.mjs';
 import {endpointBadge} from './route-endpoint-markers.mjs';
 let mounted=null;
 export function disposeTrackEditorMap(){if(mounted){mounted.disposed=true;mounted.observer?.disconnect();mounted.map.remove();mounted=null;}}
-export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L,draft,mission=false,selectedPointId=null,onAdd=()=>{},onMove=()=>{},onSelect=()=>{},onView=()=>{},ResizeObserver=globalThis.ResizeObserver}={}){
+export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L,draft,mission=false,previewReadOnly=false,selectedPointId=null,onAdd=()=>{},onMove=()=>{},onSelect=()=>{},onView=()=>{},ResizeObserver=globalThis.ResizeObserver}={}){
  disposeTrackEditorMap();const element=document?.querySelector('[data-editor-real-map]');if(!element)return;
- let route=draft;const readOnly=element.dataset.readonly==='true';if(readOnly){try{route=JSON.parse(element.dataset.route);}catch{return;}}
+ let route=draft;const storedReadOnly=element.dataset.readonly==='true',readOnly=storedReadOnly||previewReadOnly;if(storedReadOnly){try{route=JSON.parse(element.dataset.route);}catch{return;}}
  if(!L){element.textContent='Carte indisponible. Le brouillon reste conservé.';return;}
  const points=route?.points||[],view=route?.mapView;const map=L.map(element,{doubleClickZoom:false,zoomControl:!element.closest?.('[data-track-cockpit]')}).setView(view?.center||[46.6,2.5],view?.zoom||6),layers=L.layerGroup().addTo(map),row={map,layers,L,element,disposed:false};mounted=row;
  const notice=message=>{const status=element.parentElement.querySelector('[data-editor-map-status]');if(status)status.textContent=message;};
@@ -30,11 +30,11 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  if(!readOnly){marker.on('click',()=>{if(!row.disposed)onSelect(p.id);});marker.on('dragend',()=>{if(row.disposed)return;const pos=marker.getLatLng();onMove(p.id,{x:pos.lng,y:pos.lat});});}
  }
  if(!readOnly)map.on('click',event=>{if(row.disposed||event.originalEvent?.target?.closest?.('.leaflet-marker-icon,.mission-poi'))return;onAdd({x:event.latlng.lng,y:event.latlng.lat});});
- map.on('moveend',()=>{if(row.disposed)return;const center=map.getCenter();onView({center:[center.lat,center.lng],zoom:map.getZoom()});});
+ map.on('moveend',()=>{if(row.disposed||readOnly)return;const center=map.getCenter();onView({center:[center.lat,center.lng],zoom:map.getZoom()});});
  if(!readOnly){const center=map.getCenter();onView({center:[center.lat,center.lng],zoom:map.getZoom()});}
  if(ResizeObserver){row.observer=new ResizeObserver(()=>{if(!row.disposed)map.invalidateSize();});row.observer.observe(element);}
 }
-export function recenterTrackEditorMap(){if(!mounted)return false;const markers=[];mounted.layers.eachLayer(layer=>{if(layer.getLatLng)markers.push(layer.getLatLng());});if(markers.length)mounted.map.fitBounds(markers,{padding:[30,30],maxZoom:17});else mounted.map.setView([46.6,2.5],6);return true;}
+export function recenterTrackEditorMap(){if(!mounted)return false;if(mounted.mission?.preview){mounted.map.fitBounds(mounted.mission.route.segments.flat().map(p=>[p[1],p[0]]),{padding:[65,65],maxZoom:17});return true;}const markers=[];mounted.layers.eachLayer(layer=>{if(layer.getLatLng)markers.push(layer.getLatLng());});if(markers.length)mounted.map.fitBounds(markers,{padding:[30,30],maxZoom:17});else mounted.map.setView([46.6,2.5],6);return true;}
 export function centerTrackEditorMap(latitude,longitude){if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180)throw Error('Coordonnées de centrage invalides.');if(mounted)mounted.map.setView([latitude,longitude],16);}
 
 // Presentation overlays on the same editor map. All widths are screen pixels.

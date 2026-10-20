@@ -603,6 +603,7 @@ function previewSmartProposal(id){try{const preview=trackSmart.proposal(id);if(!
 function missionAction(action,target){
  if(!missionContext())return;
  if(action==='edit'){document.querySelector('[data-mission-panel]')?.removeAttribute('open');openSmartTrackPanel();}
+ else if(action==='dismiss'){trackEditor.preview=null;render();}
  else if(action==='apply')selectSmartProposal(target.dataset.proposalId);
  else if(['previous','next'].includes(action)){const proposals=trackSmart.view().proposals,index=proposals.findIndex(p=>p.id===trackEditor.preview?.proposal.id);if(proposals.length)previewSmartProposal(proposals[(index+(action==='next'?1:-1)+proposals.length)%proposals.length].id);}
  else if(action==='prepare'){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;const form=document.querySelector('[data-track-editor-form]'),button=form?.querySelector('[name="prepareCanine"]');if(!button||button.disabled)throw Error('Vérifiez le nom et la géométrie du tracé dans Menu avant de préparer.');form.requestSubmit(button);}
@@ -625,7 +626,7 @@ function renderTrackEditor(){
  const training=trackEditor.canine,allowed=jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium';
  const brief=training?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(training.proposal,training.options,jumolfController.canineContext(trackEditor.draft.dogId)),{initial:true}):'';
  const preview=trackEditor.preview,selectedContext=jumolfController.canineContext(preview?.dogId||trackEditor.draft.dogId);missionDog=selectedContext.dog;missionSourceBrief=preview?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(preview.proposal,preview.options,selectedContext),{initial:true}):brief;const mission=missionContext();
- return TrackBuilderScreen({editorDraft:trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),mission):'',smartState:{...smart,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
+ return TrackBuilderScreen({editorDraft:trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
 }
 function communitySourceOptions(){
  return buildCommunitySourceOptions({sessionRecords:sessionCatalog.list(),tracks:trackLibrary.list(),dogs:dogsStore.list()});
@@ -808,7 +809,7 @@ function render(focus=false) {
  mountRexMaps();
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  opsWeather.mount();
- mountTrackEditorMap({draft:trackEditor.draft,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
+ mountTrackEditorMap({draft:trackEditor.preview?{...trackEditor.draft,basemap:trackEditor.preview.draft.basemap}:trackEditor.draft,previewReadOnly:!!trackEditor.preview,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{if(trackEditor.preview)return;try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{if(trackEditor.preview)return;try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{if(trackEditor.preview)return;trackEditor.selectedPointId=id;render();},onView:mapView=>{if(!trackEditor.preview&&trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  const mission=missionContext();if(mission)missionMount=mountMissionControl({root:document.querySelector('[data-mission-control]'),controller:missionController,context:mission,draw:paintTrackMissionMap,onAction:missionAction});
  if(missionPanelWasOpen){const panel=document.querySelector('[data-mission-panel]');if(panel)panel.open=true;for(const [id,open] of missionSections){const section=document.querySelector(`[data-mission-section="${id}"]`);if(section)section.open=open;}const sheet=document.querySelector('.mission-panel-content');if(sheet)sheet.scrollTop=missionScroll;}
  trackRouting.reconcile();
@@ -1026,6 +1027,7 @@ document.addEventListener('click',async event=>{
  const editorAction=event.target.closest('[data-editor-action]');
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
+  if(trackEditor.preview&&!['open-smart','close-smart','close-menu','cancel','geo-center','locate','recenter'].includes(action)){Toast('Aperçu en lecture seule : appliquez la piste ou gardez votre brouillon avant de modifier.');return;}
   try{
    if(action==='open-smart')openSmartTrackPanel();
    else if(action==='close-smart'){document.querySelector('[data-smart-panel]')?.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}
@@ -1049,7 +1051,7 @@ document.addEventListener('click',async event=>{
  const place=event.target.closest('[data-editor-place]');
  if(place){const result=trackEditor.results[Number(place.dataset.editorPlace)];if(result){trackEditor={...trackEditor,draft:{...trackEditor.draft,center:result.center,searchQuery:result.name},notice:`${result.name} · position fictive`,results:[]};render();}return;}
  const mode=event.target.closest('[data-editor-mode]');if(mode){editorChange(setTrackMode(trackEditor.draft,mode.dataset.editorMode));return;}
- const basemap=event.target.closest('[data-editor-basemap-choice]');if(basemap){trackEditor={...trackEditor,draft:{...trackEditor.draft,basemap:basemap.dataset.editorBasemapChoice}};render();return;}
+ const basemap=event.target.closest('[data-editor-basemap-choice]');if(basemap){if(trackEditor.preview)trackEditor.preview={...trackEditor.preview,draft:{...trackEditor.preview.draft,basemap:basemap.dataset.editorBasemapChoice}};else trackEditor={...trackEditor,draft:{...trackEditor.draft,basemap:basemap.dataset.editorBasemapChoice}};render();return;}
  const placement=event.target.closest('[data-editor-placement]');if(placement){trackEditor={...trackEditor,nextPointKind:placement.dataset.editorPlacement};render();return;}
  const pointSelect=event.target.closest('[data-editor-select-point]');if(pointSelect){trackEditor={...trackEditor,selectedPointId:pointSelect.dataset.editorSelectPoint};render();return;}
  const fixture=event.target.closest('[data-editor-gpx-fixture]');if(fixture){const fixtureId=fixture.dataset.editorGpxFixture;const importFixture=()=>{try{const item=trackLibrary.importFixture(fixtureId);trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:''};history.pushState({},'',`/tracks/${encodeURIComponent(`prepared:${item.id}`)}`);render(true);}catch(error){trackEditor={...trackEditor,error:error.message};render();}};if(trackEditor.draft?.dirty)ConfirmationDialog({title:'Quitter sans enregistrer ?',description:'Les modifications de ce brouillon seront perdues.',onConfirm:importFixture});else importFixture();return;}
@@ -1488,6 +1490,7 @@ document.addEventListener('submit',async event=>{
  if(editorForm){
   event.preventDefault();
   try{
+   if(trackEditor.preview)throw Error('Appliquez la proposition avant de sauvegarder ou de préparer une séance.');
    if(trackHasPendingRoutes(trackEditor.draft.points))throw Error('Attendez le calcul des routes ou corrigez le segment en attente.');
    const values=Object.fromEntries(new FormData(editorForm).entries());
    const prepareCanine=event.submitter?.name==='prepareCanine';

@@ -28,3 +28,7 @@ test('hourly provider service validates units, dates and missing fields without 
  const rows=await service.getTimeline({latitude:48,longitude:7},{start,end});assert.equal(rows.length,2);assert.equal(rows[0].wind_speed_kmh,10);assert.equal(rows[1].wind_speed_kmh,undefined);assert.equal(rows[1].wind_direction_deg,undefined);assert.equal(url.origin,'https://api.open-meteo.com');assert.equal(url.searchParams.get('timeformat'),'unixtime');assert.ok(url.searchParams.get('start_hour'));await service.getTimeline({latitude:48,longitude:7},{start,end});assert.equal(calls,1);
  await assert.rejects(()=>service.getTimeline({latitude:48,longitude:7},{start:start-86400000*20,end}));assert.equal(calls,1);
 });
+test('provider timeout leaves a clear French degraded state instead of a forecast',async()=>{
+ const service=weather.createMissionWeatherService({clock:()=>start,timeoutMs:5,fetch:async(_,options)=>new Promise((_,reject)=>options.signal.addEventListener('abort',()=>reject(new DOMException('aborted','AbortError')),{once:true}))});
+ await assert.rejects(()=>service.getTimeline({latitude:48,longitude:7},{start,end}),/Météo horaire indisponible|délai dépassé/);
+});
