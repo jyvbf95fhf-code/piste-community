@@ -2,6 +2,8 @@ const decode=value=>{try{const id=decodeURIComponent(value);return id&&!id.inclu
 export function resolveJumolfRoute(path){
  const route=String(path||'').split('?')[0].replace(/\/+$/,'')||'/';
  if(route==='/jumolf/learn')return {type:'learn'};
+ if(route==='/jumolf/team')return {type:'team'};
+ if(route.startsWith('/jumolf/learn/')){const id=decode(route.slice('/jumolf/learn/'.length));return id?{type:'lesson',id}:null;}
  if(route==='/jumolf/train')return {type:'train'};
  if(route==='/jumolf/analyze')return {type:'analyze'};
  if(route==='/jumolf/rex')return {type:'rex'};

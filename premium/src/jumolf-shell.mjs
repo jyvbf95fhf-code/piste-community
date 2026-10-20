@@ -4,9 +4,9 @@ import {Icon} from './icons.mjs';
 import {jumolfV3Link} from './jumolf-v3-screen.mjs';
 const nav=[['/jumolf','home','Accueil'],['/jumolf/learn','science','Apprendre'],['/jumolf/train','route','S’entraîner'],['/jumolf/analyze','twin','Analyser'],['/jumolf/progress','chart','Progresser']];
 function activeSection(route){
- if(['/jumolf/learn','/jumolf/rex','/jumolf/onboarding'].includes(route))return '/jumolf/learn';
+ if(['/jumolf/learn','/jumolf/rex','/jumolf/onboarding'].includes(route)||route.startsWith('/jumolf/learn/'))return '/jumolf/learn';
  if(['/jumolf/train','/jumolf/exercises'].includes(route)||/^\/jumolf\/(targeted|verification)/.test(route))return '/jumolf/train';
- if(route==='/jumolf/progress'||route.startsWith('/jumolf/dog/'))return '/jumolf/progress';
+ if(route==='/jumolf/progress'||route==='/jumolf/team'||route.startsWith('/jumolf/dog/'))return '/jumolf/progress';
  if(['/jumolf/analyze','/jumolf/compare','/jumolf/compare/demo','/jumolf/dataset','/jumolf/discoveries','/jumolf/journal'].includes(route)||/^\/jumolf\/(session|discovery)/.test(route))return '/jumolf/analyze';
  return '/jumolf';
 }

@@ -1,0 +1,30 @@
+/* Lot 2: scoped educational cards and evidence profiles, using the V3 palette. */
+.jumolf-v3-shell .academy-paths,.jumolf-v3-shell .binome-tabs,.jumolf-v3-shell .academy-next { display:flex;flex-wrap:wrap;gap:10px;margin:18px 0; }
+.jumolf-v3-shell :is(.academy-paths,.binome-tabs) a { flex:1 1 120px; }
+.jumolf-v3-shell :is(.academy-paths,.binome-tabs) a[aria-current=page] { border-color:#9d927c;color:#efdfbf;background:#2a414a; }
+.jumolf-v3-shell :is(.academy-lesson,.binome-profile)> .jumolf-panel { margin:16px 0;padding:24px; }
+.jumolf-v3-shell :is(.academy-lesson,.binome-profile) :is(p,li) { line-height:1.7; }
+.jumolf-v3-shell .academy-sources article { padding:16px 0;border-top:1px solid #365366; }
+.jumolf-v3-shell .academy-sources :is(h3,a,p) { overflow-wrap:anywhere; }
+.jumolf-v3-shell .academy-topics { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:14px 0; }
+.jumolf-v3-shell .academy-topics a { padding:12px;min-height:44px;border:1px solid #365366;border-radius:10px; }
+.jumolf-v3-shell [data-academy] summary,.jumolf-v3-shell .binome-profile summary { cursor:pointer;min-height:48px;padding:12px 0; }
+.jumolf-v3-shell .binome-identity { display:flex;gap:20px;align-items:center; }
+.jumolf-v3-shell .binome-identity .v3-dog-portrait { flex:none;width:96px;height:96px;border-radius:50%;background:#19384b; }
+.jumolf-v3-shell .binome-identity .v3-dog-portrait svg { width:56px;height:56px; }
+.jumolf-v3-shell .binome-evidence { padding-left:20px; }
+.jumolf-v3-shell .binome-evidence li { margin:10px 0; }
+.jumolf-v3-shell .binome-evidence a { display:inline-flex;align-items:center;min-height:44px; }
+.jumolf-v3-shell .binome-evidence small { display:block;color:var(--v3-muted); }
+.jumolf-v3-shell [data-jumolf-form=profile-draft] { display:grid;gap:16px; }
+.jumolf-v3-shell [data-jumolf-form=profile-draft] label { display:grid;gap:8px;font-weight:600; }
+.jumolf-v3-shell [data-jumolf-form=profile-draft] textarea { font-size:16px;resize:vertical;min-height:88px; }
+.jumolf-v3-shell .academy-next a { flex:1 1 200px; }
+@media(max-width:760px){
+ .jumolf-v3-shell :is(.academy-lesson,.binome-profile)> .jumolf-panel { padding:18px; }
+ .jumolf-v3-shell .binome-identity { align-items:flex-start;gap:12px; }
+ .jumolf-v3-shell .binome-identity .v3-dog-portrait { width:64px;height:64px; }
+ .jumolf-v3-shell .academy-paths,.jumolf-v3-shell .binome-tabs { gap:6px; }
+ .jumolf-v3-shell .academy-paths a,.jumolf-v3-shell .binome-tabs a { flex:1 1 80px;padding:10px;font-size:12px; }
+ .jumolf-v3-shell .academy-topics { grid-template-columns:minmax(0,1fr); }
+}
