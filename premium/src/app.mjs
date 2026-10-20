@@ -25,7 +25,10 @@ import {createTrackRoutingController} from './track-routing-controller.mjs';
 import {trackHasPendingRoutes} from './track-route-segments.mjs';
 import {applyTrackRoute} from './track-editor.mjs';
 import {removeLastTrackSegment} from './track-editor.mjs';
-import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap} from './track-editor-real-map.mjs';
+import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap,paintTrackMissionMap} from './track-editor-real-map.mjs';
+import {createMissionController} from './track-mission-controller.mjs';
+import {MissionControlPanel} from './track-mission-screen.mjs';
+import {mountMissionControl} from './track-mission-view.mjs';
 import {createOperationalGpsController,canUseOperationalGps,ownsOperationalGps} from './operational-gps-controller.mjs';
 import {formatOperationalGpsClock,operationalGpsStatusText} from './operational-gps-screen.mjs';
 import {createDriverGpsController,canUseDriverGps,ownsDriverGps} from './coaching-driver-gps-controller.mjs';
@@ -588,6 +591,22 @@ let smartEntryOpenedKey=null;
 let trackEditorActive=false,trackEditorHref='/track-builder',trackEditorDrag=null,trackEditorExitDialog=false,trackEditorIgnoreMapClickUntil=0;
 const smartTrackFingerprint=()=>JSON.stringify([trackEditor.draft?.id,trackEditor.draft?.points,trackEditor.draft?.name,trackEditor.draft?.description,trackEditor.draft?.category,trackEditor.draft?.difficulty,trackEditor.draft?.dogId,trackEditor.draft?.notes,trackEditor.draft?.activeMode]);
 const trackSmart=createSmartTrackController({service:createSmartTrackService({getAuthorization:async()=>{const {data}=await accountClient.auth.getSession();return data?.session?{Authorization:`Bearer ${data.session.access_token}`}:{}}}),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?{ownerId:currentUser?.user_id,key:trackEditor.routeKey,fingerprint:smartTrackFingerprint(),access:jumolfAccess()}:null,onChange:()=>{if(location.pathname==='/track-builder')render();}});
+let missionMount=null,missionSourceBrief='',missionDog=null;
+function missionContext(){
+ const state=jumolfStore.accessSnapshot(),r=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null,a=resolveJumolfAccess(auth.assurance==='supabase-auth'?{...state,jumolf_entitlement:r?.entitlement||'none',entitlement_record:r||{entitlement:'none'}}:state),training=trackEditor.preview||trackEditor.canine;
+ if(location.pathname!=='/track-builder'||!currentUser?.user_id||!a.entitlement_valid||a.entitlement!=='premium'||training?.ownerId!==currentUser.user_id||!training.options)return null;
+ const consents=state.consents,draft=trackEditor.preview?.draft||trackEditor.draft;
+ return {ownerId:currentUser.user_id,key:trackEditor.routeKey,draft,proposal:training.proposal,options:training.options,weatherAllowed:!!consents.weather,preview:!!trackEditor.preview,previewId:trackEditor.preview?.proposal.id,title:training.proposal.title,dog:consents.dog_history&&missionDog?.id===(trackEditor.preview?.dogId||draft?.dogId)?missionDog:null,viewer:{name:currentUser.name},sourceBrief:missionSourceBrief,canPrepare:!trackEditor.preview&&auth.assurance==='supabase-auth'};
+}
+const missionController=createMissionController({getContext:missionContext});
+function previewSmartProposal(id){try{const preview=trackSmart.proposal(id);if(!preview.options)throw Error('Choisissez un niveau pédagogique.');trackEditor.preview={...preview,ownerId:currentUser?.user_id,draft:{...smartTrackDraft(preview.proposal,preview.commune),basemap:'satellite',dogId:jumolfController.canineContext(preview.dogId).dog?.id||''}};render();document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}}
+function missionAction(action,target){
+ if(!missionContext())return;
+ if(action==='edit'){document.querySelector('[data-mission-panel]')?.removeAttribute('open');openSmartTrackPanel();}
+ else if(action==='apply')selectSmartProposal(target.dataset.proposalId);
+ else if(['previous','next'].includes(action)){const proposals=trackSmart.view().proposals,index=proposals.findIndex(p=>p.id===trackEditor.preview?.proposal.id);if(proposals.length)previewSmartProposal(proposals[(index+(action==='next'?1:-1)+proposals.length)%proposals.length].id);}
+ else if(action==='prepare'){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;const form=document.querySelector('[data-track-editor-form]'),button=form?.querySelector('[name="prepareCanine"]');if(!button||button.disabled)throw Error('Vérifiez le nom et la géométrie du tracé dans Menu avant de préparer.');form.requestSubmit(button);}
+}
 const trackRouting=createTrackRoutingController({service:createTrackRoutingService(),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?.coordinateSpace==='wgs84'?{id:trackEditor.routeKey,ownerId:currentUser?.user_id,draft:trackEditor.draft}:null,onResult:(id,route)=>{trackEditor={...trackEditor,draft:applyTrackRoute(trackEditor.draft,id,route)};render();},onStatus:notice=>{if(trackEditor.notice===notice)return;trackEditor={...trackEditor,notice};render();}});
 const trackPlaces=[{name:'Forêt de Fontainebleau',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Sentier des crêtes',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Place du village',subtitle:'Adresse fictive · démonstration',center:{x:180,y:150}}];
 function ensureTrackEditor(){
@@ -605,7 +624,8 @@ function renderTrackEditor(){
  ensureTrackEditor();trackSmart.reconcile();const smart=trackSmart.view(),context=jumolfController.canineContext(smart.dogId);
  const training=trackEditor.canine,allowed=jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium';
  const brief=training?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(training.proposal,training.options,jumolfController.canineContext(trackEditor.draft.dogId)),{initial:true}):'';
- return TrackBuilderScreen({editorDraft:trackEditor.draft,smartState:{...smart,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
+ const preview=trackEditor.preview,selectedContext=jumolfController.canineContext(preview?.dogId||trackEditor.draft.dogId);missionDog=selectedContext.dog;missionSourceBrief=preview?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(preview.proposal,preview.options,selectedContext),{initial:true}):brief;const mission=missionContext();
+ return TrackBuilderScreen({editorDraft:trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),mission):'',smartState:{...smart,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
 }
 function communitySourceOptions(){
  return buildCommunitySourceOptions({sessionRecords:sessionCatalog.list(),tracks:trackLibrary.list(),dogs:dogsStore.list()});
@@ -696,12 +716,12 @@ function openSmartTrackPanel({focus=true}={}){
 
 function selectSmartProposal(id){
  try{const {proposal,commune,options,dogId}=trackSmart.proposal(id),ownerId=currentUser?.user_id,key=trackEditor.routeKey,fingerprint=smartTrackFingerprint();
-  const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();let draft=smartTrackDraft(proposal,commune);if(options){const context=jumolfController.canineContext(dogId);const brief=buildCanineBrief(proposal,options);draft={...draft,dogId:context.dog?.id||'',notes:(draft.notes+' Objectif pédagogique : '+brief.objective+' Niveau choisi : '+brief.level+'. Fiche initiale à réévaluer après édition.').slice(0,1000)};}trackSmart.dispose();editorChange(draft,{canine:options?{ownerId,proposal,options}:null,selectedPointId:null,copySource:null,nextPointKind:'via',notice:options?'Piste pédagogique ouverte · ajustez-la sur la carte. Retrouvez la fiche initiale et « Enregistrer et préparer dans Coaching » dans Menu.':'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}};
+  const apply=()=>{if(location.pathname!=='/track-builder'||currentUser?.user_id!==ownerId||trackEditor.routeKey!==key||smartTrackFingerprint()!==fingerprint)return;try{trackSmart.proposal(id);trackRouting.dispose();let draft=smartTrackDraft(proposal,commune);if(options){const context=jumolfController.canineContext(dogId);const brief=buildCanineBrief(proposal,options);draft={...draft,basemap:'satellite',dogId:context.dog?.id||'',notes:(draft.notes+' Objectif pédagogique : '+brief.objective+' Niveau choisi : '+brief.level+'. Fiche initiale à réévaluer après édition.').slice(0,1000)};}trackSmart.dispose({keepCriteria:!!options});editorChange(draft,{canine:options?{ownerId,proposal,options}:null,selectedPointId:null,copySource:null,nextPointKind:'via',notice:options?'Piste pédagogique ouverte · ajustez-la sur la carte. Retrouvez la fiche initiale et « Enregistrer et préparer dans Coaching » dans Menu.':'Parcours proposé · adaptez-le sur la carte puis enregistrez-le. Accès et surfaces à vérifier.'});document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}};
   if(trackEditor.draft?.dirty)ConfirmationDialog({title:'Ouvrir cette proposition ?',description:'Elle remplacera les modifications non enregistrées du brouillon actuel. Le parcours proposé restera modifiable avant enregistrement.',onConfirm:apply});else apply();
  }catch(error){Toast(error.message);}
 }
 async function importEditorGpx(file){const initial=trackEditor.draft,fingerprint=d=>JSON.stringify([d?.id,d?.points,d?.name,d?.description,d?.category,d?.difficulty,d?.dogId,d?.notes,d?.activeMode]),initialKey=fingerprint(initial),ownerId=currentUser?.user_id,key=trackEditor.routeKey;try{const parsed=await readTrackGpxFile(file);const valid=()=>location.pathname==='/track-builder'&&currentUser?.user_id===ownerId&&trackEditor.routeKey===key&&fingerprint(trackEditor.draft)===initialKey;if(!valid())return;const apply=()=>{if(!valid())return;trackRouting.dispose();editorChange(createImportedGpxDraft(parsed),{canine:null,selectedPointId:null,copySource:null,nextPointKind:'via',notice:`${parsed.fileName} · ${parsed.points.length} points importés. Enregistrez pour conserver ce parcours.`});const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=false;};if(initial?.dirty)ConfirmationDialog({title:'Remplacer le brouillon ?',description:'Le GPX sera chargé sur la carte. Les modifications non enregistrées du brouillon actuel seront remplacées.',onConfirm:apply});else apply();}catch(error){if(location.pathname==='/track-builder'&&currentUser?.user_id===ownerId&&trackEditor.routeKey===key&&fingerprint(trackEditor.draft)===initialKey){trackEditor={...trackEditor,error:error.message};render();}}}
-function editorChange(nextDraft,patch={}){trackEditor={...trackEditor,...patch,draft:nextDraft,error:''};render();}
+function editorChange(nextDraft,patch={}){trackEditor={...trackEditor,preview:null,...patch,draft:nextDraft,error:''};render();}
 function requestTrackEditorExit(destination,{replace=false}={}){
  if(trackEditorExitDialog)return;
  trackEditorExitDialog=true;
@@ -717,6 +737,8 @@ function exportPanelForRoute(route){
  return domain||['/profile','/profile/sync'].includes(route)?DataExportsPanel({user:currentUser,domain}):'';
 }
 function render(focus=false) {
+ const missionPanelWasOpen=document.querySelector('[data-mission-panel]')?.open===true,missionSections=[...document.querySelectorAll('[data-mission-section]')].map(el=>[el.dataset.missionSection,el.open]),missionScroll=document.querySelector('.mission-panel-content')?.scrollTop||0;
+ missionMount?.dispose();missionMount=null;missionController.reconcile();
  const exportPanel=document.querySelector('[data-data-exports]'),exportUi=exportPanel?{open:exportPanel.open,domain:exportPanel.querySelector('[name=domain]')?.value,format:exportPanel.querySelector('[name=format]')?.value}:null;
  const smartPanelWasOpen=document.querySelector('[data-smart-panel]')?.open===true;
  const smartPanelScroll=document.querySelector('[data-smart-panel] .creator-menu-sheet')?.scrollTop||0;
@@ -786,7 +808,9 @@ function render(focus=false) {
  mountRexMaps();
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  opsWeather.mount();
- mountTrackEditorMap({draft:trackEditor.draft,selectedPointId:trackEditor.selectedPointId,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
+ mountTrackEditorMap({draft:trackEditor.draft,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{trackEditor.selectedPointId=id;render();},onView:mapView=>{if(trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
+ const mission=missionContext();if(mission)missionMount=mountMissionControl({root:document.querySelector('[data-mission-control]'),controller:missionController,context:mission,draw:paintTrackMissionMap,onAction:missionAction});
+ if(missionPanelWasOpen){const panel=document.querySelector('[data-mission-panel]');if(panel)panel.open=true;for(const [id,open] of missionSections){const section=document.querySelector(`[data-mission-section="${id}"]`);if(section)section.open=open;}const sheet=document.querySelector('.mission-panel-content');if(sheet)sheet.scrollTop=missionScroll;}
  trackRouting.reconcile();
  if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;for(const [id,open] of creatorSections){const section=document.querySelector(`[data-creator-section="${id}"]`);if(section)section.open=open;}}
  if(smartPanelWasOpen){openSmartTrackPanel({focus:false});const sheet=document.querySelector('[data-smart-panel] .creator-menu-sheet');if(sheet)sheet.scrollTop=smartPanelScroll;if(smartWasBusy&&!trackSmart.view().busy)document.querySelector('[data-smart-panel] .smart-feedback')?.scrollIntoView({block:'start'});}
@@ -997,6 +1021,7 @@ document.addEventListener('click',async event=>{
  }
  const smartCommune=event.target.closest('[data-smart-commune]');if(smartCommune&&location.pathname==='/track-builder'){try{trackSmart.chooseCommune(smartCommune.dataset.smartCommune);}catch(error){Toast(error.message);}return;}
  const smartProposal=event.target.closest('[data-smart-proposal]');if(smartProposal&&location.pathname==='/track-builder'){selectSmartProposal(smartProposal.dataset.smartProposal);return;}
+ const smartPreview=event.target.closest('[data-smart-preview]');if(smartPreview&&location.pathname==='/track-builder'){previewSmartProposal(smartPreview.dataset.smartPreview);return;}
  if(event.target.closest('[data-smart-cancel]')&&location.pathname==='/track-builder'){trackSmart.cancel();return;}
  const editorAction=event.target.closest('[data-editor-action]');
  if(editorAction&&location.pathname==='/track-builder'){

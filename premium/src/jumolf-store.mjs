@@ -10,6 +10,7 @@ export function createJumolfStore({entitlement='none',entitlementRecord=null,clo
  const snapshot=()=>{const result=cloneJumolf(state);if(accessCodeCatalog)result.access_codes=accessCodeCatalog.list();return result;};
  return Object.freeze({
   snapshot,
+  accessSnapshot:()=>cloneJumolf({jumolf_entitlement:state.jumolf_entitlement,entitlement_record:state.entitlement_record,jumolf_enabled:state.jumolf_enabled,consents:state.consents}),
   setEntitlement(value,metadata={}){const type=normalizeEntitlement(value);state.jumolf_entitlement=type;state.entitlement_record={entitlement:type,granted_at:type==='none'?null:clock(),expires_at:null,source:type==='none'?null:type,source_id:null,revoked_at:null,note:'',...cloneJumolf(metadata),entitlement:type};return snapshot();},
   setEntitlementRecord(record){const type=normalizeEntitlement(record?.entitlement);state.jumolf_entitlement=type;state.entitlement_record={...cloneJumolf(record||{}),entitlement:type};return snapshot();},
   applyDemoProfile(profileId){const profile=JUMOLF_ACCESS_PROFILES[profileId];if(!profile)throw new Error('Profil JUMOLF de démonstration inconnu.');state.jumolf_entitlement=profile.entitlement;state.entitlement_record=cloneJumolf(profile.entitlement_record);state.jumolf_enabled=profile.jumolf_enabled;state.jumolf_activation_pending=false;state.jumolf_enabled_at=profile.jumolf_enabled?profile.entitlement_record.granted_at:null;state.jumolf_onboarding_completed=profile.jumolf_onboarding_completed;return snapshot();},

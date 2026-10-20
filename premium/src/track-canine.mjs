@@ -35,9 +35,9 @@ export function trackGeometry(coordinates,{minTurns=0,maxTurns=30,minAngle=45}={
   for(let i=a+1;i<b;i++){const t=len?Math.max(0,Math.min(1,((p[i][0]-p[a][0])*dx+(p[i][1]-p[a][1])*dy)/len)):0,d=(p[i][0]-p[a][0]-t*dx)**2+(p[i][1]-p[a][1]-t*dy)**2;if(d>far){far=d;index=i;}}
   if(index>=0){keep.add(index);stack.push([a,index],[index,b]);}
  }
- const points=[...keep].sort((a,b)=>a-b).map(i=>p[i]),angles=[];
- for(let i=1;i<points.length-1;i++){const a=points[i-1],b=points[i],c=points[i+1],u=[b[0]-a[0],b[1]-a[1]],v=[c[0]-b[0],c[1]-b[1]],norm=Math.hypot(...u)*Math.hypot(...v);if(!norm)continue;const angle=Math.acos(Math.max(-1,Math.min(1,(u[0]*v[0]+u[1]*v[1])/norm)))*180/Math.PI;if(angle>=minAngle)angles.push(Math.round(angle));}
- return {turns:angles.length,angles,satisfied:angles.length>=minTurns&&angles.length<=maxTurns,method:`Simplification cartographique 10 m ; déviation ≥ ${minAngle}°`,minTurns,maxTurns,minAngle};
+ const indices=[...keep].sort((a,b)=>a-b),points=indices.map(i=>p[i]),angles=[],corners=[];
+ for(let i=1;i<points.length-1;i++){const a=points[i-1],b=points[i],c=points[i+1],u=[b[0]-a[0],b[1]-a[1]],v=[c[0]-b[0],c[1]-b[1]],norm=Math.hypot(...u)*Math.hypot(...v);if(!norm)continue;const angle=Math.acos(Math.max(-1,Math.min(1,(u[0]*v[0]+u[1]*v[1])/norm)))*180/Math.PI;if(angle>=minAngle){angles.push(Math.round(angle));corners.push({index:indices[i],coordinate:coordinates[indices[i]],angle:Math.round(angle)});}}
+ return {turns:angles.length,angles,corners,satisfied:angles.length>=minTurns&&angles.length<=maxTurns,method:`Simplification cartographique 10 m ; déviation ≥ ${minAngle}°`,minTurns,maxTurns,minAngle};
 }
 export function buildCanineBrief(proposal,options,context={}){
  const o=canineOptions(options),level=CANINE_LEVELS.find(l=>l.id===o.level),skill=CANINE_SKILLS.find(s=>s.id===o.skill);
