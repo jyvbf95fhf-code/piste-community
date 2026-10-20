@@ -108,4 +108,3 @@ assert.deepEqual(errors,[]);
 console.log(JSON.stringify({passed:true,widths:[320,390,430,1280],levels:4,actualApp:true,osmFixture:true,authorizedObservations:true,dogChangeRefresh:true,insufficientData:true,consentRevocation:true,premiumGate:true,mapAndEdit:true,explicitCoachingDraft:true,sessionWrites:0}));
 await context.close();
 }finally{await browser.close();}
-
