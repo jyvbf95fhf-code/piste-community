@@ -17,5 +17,5 @@ const practicalProtocols={
 export function buildAccountJumolfProtocol(key){return structuredClone(practicalProtocols[key]||practicalProtocols.general);}
 export function createAccountJumolfPreparation(recommendation,dog){
  if(recommendation?.dataOrigin!=='account'||recommendation.synthetic||recommendation.dogId!==dog?.id)throw Error('Proposition ou chien indisponible.');
- return {recommendationId:recommendation.id,dogId:dog.id,title:recommendation.title,objective:recommendation.objective,protocol:structuredClone(recommendation.protocol),status:'proposed',persistence:'visit-only'};
+ return {recommendationId:recommendation.id,dogId:dog.id,title:recommendation.title,objective:recommendation.objective,protocol:structuredClone(recommendation.protocol),status:'proposed',persistence:'visit-only',limits:structuredClone(recommendation.limits||[])};
 }

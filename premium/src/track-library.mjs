@@ -1,3 +1,4 @@
+import {normalizeTrainingMemory} from './jumolf-training-memory.mjs';
 import {validatePersistenceRecord} from './persistence-contract.mjs';
 import {normalizeTrackRoute} from './track-route-segments.mjs';
 import {geographicCoordinates,trackDeparture} from './track-geographic.mjs';
@@ -35,6 +36,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
    const ids=new Set();const restored=snapshot.items.map(item=>{
     if(!item||item.ownerId!=='self'||!(/^(track-local-[1-9][0-9]*|track-cloud-[0-9a-f-]{36})$/.test(item.id))||item.id.startsWith('track-local-')&&!Number.isSafeInteger(Number(item.id.slice(12)))||ids.has(item.id)||!['draw','gpx'].includes(item.source))throw Error('Tracé invalide');
     ids.add(item.id);const normalized={id:item.id,ownerId:'self',source:item.source,name:validName(item.name),provenance:optionalText(item.provenance,80),description:optionalText(item.description),category:optionalText(item.category,80),difficulty:optionalText(item.difficulty,80),dogId:optionalText(item.dogId,80),notes:optionalText(item.notes,1000)};
+    if(item.trainingMemory&&ownerId)try{normalized.trainingMemory=normalizeTrainingMemory(item.trainingMemory,{ownerId,dogId:normalized.dogId});}catch{warning='Préparation pédagogique incompatible : tracé conservé sans rattachement.';}
     if(item.fileName)normalized.fileName=optionalText(item.fileName,240);
     if(item.copiedFrom?.id&&['prepared','pose','search','reference'].includes(item.copiedFrom.kind))normalized.copiedFrom={id:optionalText(item.copiedFrom.id,240),kind:item.copiedFrom.kind};
     if(item.geometry){const points=validPoints(item.geometry.points);normalized.geometry={points};normalized.start=trackDeparture(points[0]);}
@@ -64,23 +66,25 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
    const r=validatePersistenceRecord(record);if(r.kind!=='track'||r.deletedAt)throw Error('Tracé distant indisponible.');const normalized=createTrackLibrary().createPrepared(r.payload);const restored={...normalized,id:localId,ownerId:'self'};commit([...items.filter(item=>item.id!==localId),restored]);return copy(restored);
   },
   create(name) {return insert({name:validName(name),source:'draw',start:mockStart(),description:'Votre tracé mock'});},
-  createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',fileName,geometry,copiedFrom}={}) {
+  createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',fileName,geometry,copiedFrom,trainingMemory}={}) {
    if(!['draw','gpx'].includes(source))throw Error('Provenance source inconnue.');
    const points=validPoints(geometry?.points);
-   return insert({name:validName(name),source,provenance,...(source==='gpx'&&fileName?{fileName:optionalText(fileName,240)}:{}),...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),geometry:{points},start:trackDeparture(points[0])});
+   return insert({name:validName(name),source,provenance,...(source==='gpx'&&fileName?{fileName:optionalText(fileName,240)}:{}),...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),...(trainingMemory?{trainingMemory:normalizeTrainingMemory(trainingMemory,{ownerId:ownerId||trainingMemory.ownerId,dogId})}:{}),geometry:{points},start:trackDeparture(points[0])});
   },
   updatePrepared(id,patch={}) {
    const current=find(id);
    if(['pose','search','reference'].includes(current.source))throw Error('Une trace de session est en lecture seule.');
    const next={...current};
    for(const key of ['name','description','category','difficulty','dogId','notes'])if(Object.hasOwn(patch,key))next[key]=key==='name'?validName(patch[key]):optionalText(patch[key],key==='notes'?1000:key==='description'?240:80);
+   if(Object.hasOwn(patch,'dogId')&&patch.dogId!==current.dogId||Object.hasOwn(patch,'geometry')&&JSON.stringify(patch.geometry)!==JSON.stringify(current.geometry))delete next.trainingMemory;
+   if(patch.trainingMemory)next.trainingMemory=normalizeTrainingMemory(patch.trainingMemory,{ownerId:ownerId||patch.trainingMemory.ownerId,dogId:next.dogId});
    if(Object.hasOwn(patch,'geometry'))next.geometry={points:validPoints(patch.geometry?.points)};
    if(next.geometry?.points?.length)next.start=trackDeparture(next.geometry.points[0]);
    commit(items.map(item=>item.id===id?next:item));return copy(next);
   },
   duplicatePrepared(id,{name}={}) {
    const current=find(id);if(!current.geometry?.points?.length)throw Error('Aucune géométrie disponible à copier.');
-   const {id:sourceId,ownerId,...fields}=copy(current);
+   const {id:sourceId,ownerId,trainingMemory,...fields}=copy(current);
    return insert({...fields,name:validName(name||`${current.name} · copie`),source:'draw',provenance:'copy',copiedFrom:{id:sourceId,kind:'prepared'},geometry:{points:validPoints(current.geometry.points)}});
   },
   createCopy({name,sourceId,sourceKind,points,description='',category='',difficulty='',dogId='',notes=''}={}) {

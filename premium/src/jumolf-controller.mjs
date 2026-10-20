@@ -36,12 +36,12 @@ const syntheticTemporalLearning=buildJumolfTemporalLearning(syntheticDataset.ses
 const clone=value=>structuredClone(value);
 const routePath=()=>location.pathname+location.search;
 
-export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({})}={}){
+export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({}),getTrainingMemories=()=>[]}={}){
  const isDemo=()=>typeof demoMode==='function'?demoMode():demoMode;
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='',selectedDogId='',journey='discovery';
  let preparationSequence=0,pendingPreparation=null;const trainingLinks=[];
  const profileDrafts=new Map();let draftOwnerId=null,profileNotice='';
- const realLearning=dogId=>{const sources=consentedSources();return buildRealJumolfLearning(dogId,[...sources.sessions,...sources.operational],{consents:store.snapshot().consents,links:trainingLinks});};
+ const realLearning=dogId=>{const sources=consentedSources();return buildRealJumolfLearning(dogId,[...sources.sessions,...sources.operational],{consents:store.snapshot().consents,links:[...trainingLinks,...getTrainingMemories().filter(m=>m.completed&&m.recommendationId).map(m=>({dogId:m.dogId,recommendationId:m.recommendationId,sessionId:'coaching:'+m.sessionId}))]});};
  const learningJournal=createJumolfLearningStore({clock}),targetedPlans=[];
  for(const finding of isDemo()?syntheticDiscoveries:[])learningJournal.append({type:'discovery_detected',discovery_id:finding.id,priority:finding.priority});
  const consentedSources=()=>applyJumolfSourceConsents(buildJumolfSources(getRawSources()),store.snapshot().consents);
@@ -173,7 +173,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    }
    if(isDemo()&&route.type==='analyze')route.type='dashboard';
    if(route.type==='train')return isDemo()?JumolfV3Home({realMode:false}):JumolfV3Train({dogs,dog:selectedDog,state,journey});
-   if(!isDemo()&&['exercises','progress'].includes(route.type)){if(query.has('dog'))selectedDogId=sources.dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';else if(!sources.dogs.some(d=>d.id===selectedDogId))selectedDogId=sources.dogs.length===1?sources.dogs[0].id:'';const dog=sources.dogs.find(d=>d.id===selectedDogId)||null;return JumolfRealLearningScreen({route,dogs:sources.dogs,dog,report:dog?realLearning(dog.id):null,canPrepare:!!prepareRealTraining});}
+   if(!isDemo()&&['exercises','progress'].includes(route.type)){if(query.has('dog'))selectedDogId=sources.dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';else if(!sources.dogs.some(d=>d.id===selectedDogId))selectedDogId=sources.dogs.length===1?sources.dogs[0].id:'';const dog=sources.dogs.find(d=>d.id===selectedDogId)||null;return JumolfRealLearningScreen({route,dogs:sources.dogs,dog,report:dog?realLearning(dog.id):null,memories:dog?getTrainingMemories().filter(m=>m.dogId===dog.id):[],canPrepare:!!prepareRealTraining});}
    if(!isDemo()&&['discoveries','discovery','targeted','verification','journal'].includes(route.type))return JumolfRealLearningStatus();
    let source=null,analysis=null,map=null,timeline=null,dogProfile=null;
    if(route.type==='session'){
