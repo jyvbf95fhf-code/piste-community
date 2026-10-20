@@ -25,4 +25,16 @@ Horaires et âge préparés sont des déclarations/calculs, jamais des heures GP
 
 ## Validation
 
-En cours : tests unitaires de continuité, identités homonymes, comptes, données manquantes, séance incomplète, permission/consentement retiré, idempotence, conflits et non-régression ciblée ; parcours navigateur 320/390/430/ordinateur. Résultats finaux à compléter après exécution.
+- 462 tests ciblés réussis, 0 échec : JUMOLF Lots A/B/1/2/3/3B, nouvelle mémoire, générateur, assistant Coaching, contrôleur distant, permissions, registre des associations, sauvegardes personnelles, Mes pistes, exports et vues OPS. Les tests de mémoire ont d’abord reproduit les manques puis validé les corrections.
+- `jumolf-v3-lot4.browser.mjs` : parcours réel de l’application sur transport QA isolé, génération puis horaires/météo de préparation, rechargement et reprise du brouillon, une création explicite, géométrie réellement transférée au réducteur Coaching existant, pose/recherche/fin de séance par ce même réducteur avec points capteur QA. Retour par navigation JUMOLF vers progression et dossier, carte et rapport existants ; absence de débordement à 320/390/430/1280 px. Les coordonnées QA sont des fixtures de test, pas des données métier présentées comme réelles.
+- `jumolf-v3-lot4-recovery.browser.mjs` exécuté dans deux modes : échec de reconnexion après création réussie ; échec d’envoi de référence. Brouillon consommé, récupération de la même session et choix du tracé par le menu Coaching existant, une seule création. Aucun second moteur ni nouvel enregistrement GPS.
+- Régression navigateur `jumolf-v3-lot3b.browser.mjs` réussie à 320/390/430/1280 px : 16 vignettes aériennes IGN réelles, comparaison, édition protégée, météo manquante, frise, réduction des animations et absence de remontage de carte pendant la simulation. Météo de test isolée, pas d’écriture dans un compte réel.
+- Contrôles spécifiques : chiens homonymes identifiés par ID, mauvais chien détaché, réassociation sans destruction de la mémoire d’origine, retrait de consentements et de projection, état incomplet, données insuffisantes, conflit entre onglets, notes originales intactes, restauration cloud identique conservant les détails locaux. Aucune réussite ni progression automatique attribuée à une proposition.
+- Revue indépendante : corrections des cas changement de chien et création réussie suivie d’une coupure ; aucune anomalie matérielle restante dans le périmètre revu.
+- Syntaxe des modules modifiés et `git diff --check` propres. Suite ciblée uniquement ; les cinq anciens tests SVG de `track-editor-map.test.mjs`, déjà documentés au Lot 3B comme incompatibles avec la carte réelle du socle, ne font pas partie de cette validation.
+
+Pour reproduire les navigateurs : dépendances de développement déjà déclarées dans `premium/package.json`, puis `PISTE_CHROMIUM_PATH=/chemin/vers/chromium node premium/tests/jumolf-v3-lot4.browser.mjs` et la variante de récupération avec `PISTE_LOT4_FAILURE_MODE=reconnect` ou `reference`. Aucun service payant ni dépendance produit ajoutée.
+
+Le contrat préparatoire du Lot 5 est la vue versionnée de préparation reliée à `sessionId`, `dogId`, `handlerId`/`binomeId` calculés depuis l’équipe autorisée, avec provenance et statut complet/incomplet. Les séances sources de l’analyse A/B restent les projections enregistrées ; les valeurs préparées ne remplacent aucune mesure. Aucun nouveau moteur de recommandation ou de score développé.
+
+Aucun déploiement. Preview privée uniquement après une autorisation distincte.
