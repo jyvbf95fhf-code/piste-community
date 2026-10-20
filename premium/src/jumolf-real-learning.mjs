@@ -1,20 +1,21 @@
 // Lot B consumes only current authorized projections. No journal/cloud writes.
 import {analyzeRealJumolfSnapshot,buildRealJumolfProfile} from './jumolf-real-science.mjs';
 import {applyJumolfSourceConsents} from './jumolf-consent.mjs';
-import {buildAccountJumolfRecommendation} from './jumolf-recommendations.mjs';
+import {buildAccountJumolfRecommendation,adaptAccountJumolfRecommendations} from './jumolf-recommendations.mjs';
 import {buildAccountJumolfProtocol} from './jumolf-training-plan.mjs';
-import {buildAccountJumolfProgress} from './jumolf-progress-tracker.mjs';
+import {buildAccountJumolfProgress,buildAccountLongitudinalProgress} from './jumolf-progress-tracker.mjs';
 const finite=n=>Number.isFinite(n)&&n>=0;
 export const realLearningMetricLabels={ruptures:'Signalements de rupture',resumptions:'Signalements de reprise',reference_point_mean_m:'Écart moyen aux points GPS de référence',reference_point_max_m:'Écart maximal aux points GPS de référence',average_lateral_offset_m:'Écart latéral moyen fourni',max_lateral_offset_m:'Écart latéral maximal fourni',traveled_distance_m:'Distance de recherche',duration_seconds:'Durée active de recherche',track_age:'Âge de piste'};
 const limits=['Proposition par règle descriptive, pas un diagnostic olfactif ni une prescription validée.','Les signalements sont des observations enregistrées ; leurs causes restent inconnues.','Les données GPS décrivent le téléphone, avec leurs erreurs et coupures.','Une séance suggérée ou préparée ne vaut pas exercice réalisé.','Aucun effet de l’exercice sur le chien n’est démontré.'];
-export function buildRealJumolfLearning(dogId,sources=[],{consents={},links=[]}={}){
- const hidden={dogId:null,history:[],recommendations:[],progress:{comparable:[],incomparable:[],stable:[],examine:[],provisional:[]},profile:null,reason:'Autorisez l’historique du chien pour accéder à ses exercices et à sa progression.'};
+export function buildRealJumolfLearning(dogId,sources=[],{consents={},links=[],handlerId=null,memories=[],level='initiation',skill='',declarations=[]}={}){
+ const hidden={longitudinal:null,dogId:null,history:[],recommendations:[],progress:{comparable:[],incomparable:[],stable:[],examine:[],provisional:[]},profile:null,reason:'Autorisez l’historique du chien pour accéder à ses exercices et à sa progression.'};
  if(!consents.dog_history||!dogId)return hidden;
  const permitted=applyJumolfSourceConsents({dogs:[],sessions:sources,tracks:[],operational:[]},consents).sessions;
- const rows=[...new Map(permitted.filter(s=>(s.dogId||s.dog?.id)===dogId).map(s=>[s.id,s])).values()].map(source=>({source,analysis:analyzeRealJumolfSnapshot(source,{consents})})).filter(r=>r.analysis);
+ const rows=[...new Map(permitted.filter(s=>(s.dogId||s.dog?.id)===dogId&&(!handlerId||(handlerId==='unattributed'?!s.handlerId:s.handlerId===handlerId))).map(s=>[s.id,s])).values()].map(source=>({source,analysis:analyzeRealJumolfSnapshot(source,{consents})})).filter(r=>r.analysis);
+ for(const row of rows){const planned=consents.gps&&row.source.plannedReferenceTrace?.length?analyzeRealJumolfSnapshot({...row.source,referenceTrace:row.source.plannedReferenceTrace},{consents}):null;row.analysis.metrics.planned_reference_point_mean_m=planned?.metrics.reference_point_mean_m||{value:null,status:'indisponible',provenance:null};}
  const evidence=(row,keys)=>({sessionId:row.source.id,title:row.source.title||'Séance enregistrée',date:row.source.startedAt||null,kind:row.source.kind,observations:keys.flatMap(key=>{const m=row.analysis.metrics[key];return finite(m?.value)?[{key,label:realLearningMetricLabels[key]||key,value:m.value,provenance:m.provenance,method:m.method||'recorded-input',events:m.evidence||[]}]:[]}),context:{terrain:row.source.terrain??null,trackAge:row.source.trackAge??null,weather:row.source.weather??null,wind:row.source.wind??null}});
  const profile=buildRealJumolfProfile(dogId,rows.map(r=>r.source),{consents});
- const history=rows.map(r=>({id:r.source.id,title:r.source.title||'Séance enregistrée',date:r.source.startedAt||null,kind:r.source.kind,metrics:r.analysis.metrics,observations:r.analysis.real_science.observations,context:evidence(r,[]).context})).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+ const history=rows.map(r=>({id:r.source.id,title:r.source.title||'Séance enregistrée',date:r.source.startedAt||null,kind:r.source.kind,handlerId:r.source.handlerId||null,metrics:r.analysis.metrics,observations:r.analysis.real_science.observations,context:evidence(r,[]).context})).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
  const definitions=[
   {key:'interruptions',title:'Observer les ruptures et les reprises',objective:'Documenter les interruptions signalées et les conditions de reprise, sans présumer leur cause.',keys:['ruptures','resumptions'],match:r=>r.analysis.metrics.ruptures.value>0||r.analysis.metrics.resumptions.value>0},
   {key:'reference',title:'Relire la recherche et sa référence',objective:'Distinguer les écarts aux points enregistrés, les limites GPS et les observations terrain.',keys:['reference_point_mean_m','reference_point_max_m','average_lateral_offset_m'],match:r=>['reference_point_mean_m','average_lateral_offset_m'].some(k=>finite(r.analysis.metrics[k]?.value))},
@@ -26,5 +27,5 @@ export function buildRealJumolfLearning(dogId,sources=[],{consents={},links=[]}=
  if(!recommendations.length)recommendations.push(buildAccountJumolfRecommendation({dogId,key:'general',title:'Séance exploratoire générale',objective:'Constituer des observations factuelles avant de personnaliser le travail.',evidence:[],protocol:buildAccountJumolfProtocol('general'),limits:[...limits,!consents.ai_analysis?'Personnalisation désactivée par le consentement aux interprétations.':'Données insuffisantes pour une proposition personnalisée.'],personalized:false}));
  for(const rec of recommendations)rec.linkedSessions=history.filter(s=>links.some(l=>l.dogId===dogId&&l.recommendationId===rec.id&&l.sessionId===s.id)).map(s=>({id:s.id,title:s.title,date:s.date,status:'Séance terminée liée dans cette visite ; réalisation du protocole non vérifiée'}));
  const progress=buildAccountJumolfProgress({dogId,rows:rows.map(r=>r.source),profile,consents});
- return {dogId,history,recommendations,progress,profile,reason:rows.length?'Observations des séances terminées autorisées ; exercices suggérés, sans réalisation implicite.':'Données insuffisantes : aucune séance réelle terminée exploitable pour ce chien.'};
+ return {dogId,handlerId,history,recommendations:adaptAccountJumolfRecommendations(recommendations,{level,skill,declarations,handlerId}),progress,profile,longitudinal:buildAccountLongitudinalProgress({dogId,handlerId,rows,memories,progress,consents}),reason:rows.length?'Observations des séances terminées autorisées ; exercices suggérés, sans réalisation implicite.':'Données insuffisantes : aucune séance réelle terminée exploitable pour ce chien.'};
 }

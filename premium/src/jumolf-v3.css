@@ -92,3 +92,20 @@
  .jumolf-v3-shell .rex-entry-icon svg { width:32px; height:32px; }
 }
 @media(prefers-reduced-motion:reduce) { .jumolf-v3-shell * { scroll-behavior:auto; transition:none; } }
+/* Descriptive progression, scoped to the selected dog and handler. */
+.longitudinal,.adaptive-next { min-width:0; overflow-wrap:anywhere; }
+.longitudinal-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr)); gap:14px; margin:18px 0; }
+.longitudinal-controls label { display:grid; gap:8px; color:#d8e8ee; font-size:14px; }
+.longitudinal-controls select { width:100%; min-width:0; min-height:48px; border-radius:12px; border:1px solid #476579; background:#132d42; color:#eff8fa; padding:10px; }
+.longitudinal-charts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:16px; }
+.longitudinal-chart { margin:0 0 18px; padding:16px; min-width:0; border-radius:16px; border:1px solid #365367; background:linear-gradient(135deg,#17354b,#102336); }
+.longitudinal-chart figcaption { color:#e9f5f7; font-weight:650; }
+.longitudinal-chart small,.adaptive-next small { display:block; color:#c1d7e1; line-height:1.6; font-weight:400; }
+.longitudinal-bars { display:grid; gap:12px; margin:20px 0; }
+.longitudinal-bars > div { display:grid; grid-template-columns:44px minmax(20px,1fr) 52px; align-items:center; gap:10px; font-size:12px; color:#d5e8ef; }
+.longitudinal-bars strong { text-align:right; font-variant-numeric:tabular-nums; }
+.longitudinal-bar { display:block; width:var(--bar-width); min-height:9px; border-radius:6px; background:#93dfe6; }
+.longitudinal details summary,.adaptive-next details summary { min-height:44px; padding:12px 0; cursor:pointer; color:#d7ebf0; }
+.adaptive-next { padding:18px 0; border-top:1px solid #365367; margin-top:16px; }
+.adaptive-next h3 { color:#e6c895; }
+.longitudinal a { overflow-wrap:anywhere; }

@@ -1,3 +1,4 @@
+import {canineOptions} from './track-canine.mjs';
 import {JumolfV3Home,JumolfV3Learn,JumolfV3Train,JUMOLF_JOURNEYS} from './jumolf-v3-screen.mjs';
 import {buildBinomeProfiles,normalizeProfileDraft,PROFILE_MEMBERS} from './jumolf-binome-model.mjs';
 import {BinomeProfileScreen} from './jumolf-binome-screen.mjs';
@@ -39,9 +40,9 @@ const routePath=()=>location.pathname+location.search;
 export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({}),getTrainingMemories=()=>[]}={}){
  const isDemo=()=>typeof demoMode==='function'?demoMode():demoMode;
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='',selectedDogId='',journey='discovery';
- let preparationSequence=0,pendingPreparation=null;const trainingLinks=[];
+ let preparationSequence=0,pendingPreparation=null,pendingGenerator=null;const trainingLinks=[];
  const profileDrafts=new Map();let draftOwnerId=null,profileNotice='';
- const realLearning=dogId=>{const sources=consentedSources();return buildRealJumolfLearning(dogId,[...sources.sessions,...sources.operational],{consents:store.snapshot().consents,links:[...trainingLinks,...getTrainingMemories().filter(m=>m.completed&&m.recommendationId).map(m=>({dogId:m.dogId,recommendationId:m.recommendationId,sessionId:'coaching:'+m.sessionId}))]});};
+ const realLearning=(dogId,selection={})=>{const sources=consentedSources();return buildRealJumolfLearning(dogId,[...sources.sessions,...sources.operational],{...selection,memories:getTrainingMemories(),declarations:PROFILE_MEMBERS.filter(member=>member==='dog'||!selection.handlerId||selection.handlerId===getViewer()?.id).map(member=>profileDrafts.get(draftKey(member,dogId))?.fields.objectives).filter(Boolean),consents:store.snapshot().consents,links:[...trainingLinks,...getTrainingMemories().filter(m=>m.completed&&m.recommendationId).map(m=>({dogId:m.dogId,recommendationId:m.recommendationId,sessionId:'coaching:'+m.sessionId}))]});};
  const learningJournal=createJumolfLearningStore({clock}),targetedPlans=[];
  for(const finding of isDemo()?syntheticDiscoveries:[])learningJournal.append({type:'discovery_detected',discovery_id:finding.id,priority:finding.priority});
  const consentedSources=()=>applyJumolfSourceConsents(buildJumolfSources(getRawSources()),store.snapshot().consents);
@@ -100,24 +101,34 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    profileNotice='Rubriques appliquées pendant cette visite uniquement. Aucun enregistrement durable.';
   },
   navigationContext(){const a=access();return {dogId:a.entitlement_valid&&a.jumolf_enabled&&consentedSources().dogs.some(d=>d.id===selectedDogId)?selectedDogId:'',journey};},
-  canineContext(dogId=''){
+  canineContext(dogId='',selection={}){
    reconcileProfileDrafts();const a=access();
    if(isDemo()||!getViewer()?.id||!a.entitlement_valid||!a.jumolf_enabled||!store.snapshot().consents.dog_history)return {dogs:[],dog:null,recommendations:[],declarations:[]};
    const dogs=consentedSources().dogs,dog=dogs.find(d=>d.id===dogId)||null;
    const declarations=dog?PROFILE_MEMBERS.flatMap(member=>{const fields=profileDrafts.get(draftKey(member,dog.id))?.fields||{};return ['experience','objectives','observations','workAreas'].filter(k=>fields[k]).map(k=>`${({dog:'Chien',handler:'Conducteur',team:'Binôme'})[member]} · ${({experience:'expérience déclarée',objectives:'objectifs déclarés',observations:'observations déclarées',workAreas:'axes déclarés'})[k]} : ${fields[k]}`);}):[];
-   return clone({dogs,dog,recommendations:dog?realLearning(dog.id).recommendations:[],declarations});
+   return clone({dogs,dog,recommendations:dog?realLearning(dog.id,selection).recommendations:[],declarations});
   },
   currentTrainingPreparation(request){
    const a=access();if(isDemo()||!a.entitlement_valid||!a.jumolf_enabled||!request)return null;
-   const dog=consentedSources().dogs.find(d=>d.id===request.dogId),rec=realLearning(request.dogId).recommendations.find(r=>r.id===request.recommendationId);
-   return dog&&rec?{...createAccountJumolfPreparation(rec,dog),token:request.token}:null;
+   const dog=consentedSources().dogs.find(d=>d.id===request.dogId),rec=realLearning(request.dogId,request.selection||{}).recommendations.find(r=>r.id===request.recommendationId);
+   return dog&&rec?{...createAccountJumolfPreparation(rec,dog),token:request.token,selection:request.selection||{}}:null;
   },
-  prepareTraining(dogId,recommendationId){
+  prepareTraining(dogId,recommendationId,selection={}){
    const a=access();if(isDemo()||!a.entitlement_valid||!a.jumolf_enabled||!prepareRealTraining)throw Error('Préparation JUMOLF indisponible ou non autorisée.');
-   const dog=consentedSources().dogs.find(d=>d.id===dogId),report=realLearning(dogId),recommendation=report.recommendations.find(r=>r.id===recommendationId);
+   const dog=consentedSources().dogs.find(d=>d.id===dogId),report=realLearning(dogId,selection),recommendation=report.recommendations.find(r=>r.id===recommendationId);
    if(!dog||!recommendation)throw Error('Proposition ou chien indisponible avec les autorisations actuelles.');
-   const request={...createAccountJumolfPreparation(recommendation,dog),token:`jumolf-preparation-${++preparationSequence}`};
+   const request={...createAccountJumolfPreparation(recommendation,dog),selection,token:`jumolf-preparation-${++preparationSequence}`};
    prepareRealTraining(clone(request));pendingPreparation=request;return clone(request);
+  },
+  prepareNextTraining(dogId,recommendationId,selection={}){
+   const a=access();if(isDemo()||!getViewer()?.id||!a.entitlement_valid||!a.jumolf_enabled||!consentedSources().dogs.some(d=>d.id===dogId))throw Error('Préparation du prochain entraînement indisponible.');
+   const rec=realLearning(dogId,selection).recommendations.find(r=>r.id===recommendationId);if(!rec)throw Error('Proposition plus accessible avec ces données.');
+   const request={ownerId:getViewer().id,token:'jumolf-next-'+(++preparationSequence),dogId,recommendationId,selection:clone(selection),options:canineOptions(rec.adaptation.generator),sources:clone(rec.adaptation.sources),objective:rec.objective};
+   pendingGenerator=request;navigate('/track-builder?tool=smart&canine=1&dog='+encodeURIComponent(dogId)+'&jumolfNext='+encodeURIComponent(request.token));return clone(request);
+  },
+  generatorPreparation(token){
+   const a=access(),p=pendingGenerator;if(!p||p.ownerId!==getViewer()?.id||p.token!==token||isDemo()||!a.entitlement_valid||!a.jumolf_enabled||!consentedSources().dogs.some(d=>d.id===p.dogId))return null;
+   const rec=realLearning(p.dogId,p.selection).recommendations.find(r=>r.id===p.recommendationId);return rec?{...clone(p),sources:clone(rec.adaptation.sources),options:canineOptions(rec.adaptation.generator)}:null;
   },
   confirmTrainingCreated({token,dogId,sessionId}={}){
    const a=access();if(isDemo()||!a.entitlement_valid||!a.jumolf_enabled||!pendingPreparation||pendingPreparation.token!==token||pendingPreparation.dogId!==dogId||typeof sessionId!=='string'||!sessionId.startsWith('coaching:'))return false;
@@ -163,7 +174,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='team'){
     if(isDemo())return JumolfV3Home({realMode:false});
     const viewer=getViewer(),member=PROFILE_MEMBERS.includes(query.get('member'))?query.get('member'):'team';
-    return BinomeProfileScreen({model:buildBinomeProfiles({sources,dogId:selectedDogId,viewer,consents:state.consents}),dogs,dog:presentationFor(selectedDog),member,consents:state.consents,journey,draft:profileDrafts.get(draftKey(member,selectedDogId))?.fields||{},notice:profileNotice,canEdit:!!viewer.id&&state.consents.dog_history});
+    return BinomeProfileScreen({model:buildBinomeProfiles({sources,dogId:selectedDogId,viewer,consents:state.consents,memories:getTrainingMemories()}),dogs,dog:presentationFor(selectedDog),member,consents:state.consents,journey,draft:profileDrafts.get(draftKey(member,selectedDogId))?.fields||{},notice:profileNotice,canEdit:!!viewer.id&&state.consents.dog_history});
    }
    if(!isDemo()&&(route.type==='analyze'||query.get('scope')==='unlinked'))return JumolfSimpleHome({sources,state,selectedDogId,unlinked:query.get('scope')==='unlinked'});
    if(route.type==='entry'&&!route.advanced){
@@ -173,7 +184,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    }
    if(isDemo()&&route.type==='analyze')route.type='dashboard';
    if(route.type==='train')return isDemo()?JumolfV3Home({realMode:false}):JumolfV3Train({dogs,dog:selectedDog,state,journey});
-   if(!isDemo()&&['exercises','progress'].includes(route.type)){if(query.has('dog'))selectedDogId=sources.dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';else if(!sources.dogs.some(d=>d.id===selectedDogId))selectedDogId=sources.dogs.length===1?sources.dogs[0].id:'';const dog=sources.dogs.find(d=>d.id===selectedDogId)||null;return JumolfRealLearningScreen({route,dogs:sources.dogs,dog,report:dog?realLearning(dog.id):null,memories:dog?getTrainingMemories().filter(m=>m.dogId===dog.id):[],canPrepare:!!prepareRealTraining});}
+   if(!isDemo()&&['exercises','progress'].includes(route.type)){if(query.has('dog'))selectedDogId=sources.dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';else if(!sources.dogs.some(d=>d.id===selectedDogId))selectedDogId=sources.dogs.length===1?sources.dogs[0].id:'';const dog=sources.dogs.find(d=>d.id===selectedDogId)||null;const ids=[...new Set([...sources.sessions,...sources.operational].filter(s=>s.dogId===dog?.id).map(s=>s.handlerId||'unattributed'))];const handlers=ids.map(id=>({id,label:id==='unattributed'?'Conducteur non renseigné':id===getViewer()?.id?(getViewer().name||'Vous'):'Conducteur · '+id}));const requested=query.get('handler'),handlerId=query.has('handler')?(ids.includes(requested)?requested:'__choose__'):ids.includes(getViewer()?.id)?getViewer().id:ids.length===1?ids[0]:'__choose__';const selection={handlerId,level:query.get('level')||'initiation',skill:query.get('skill')||''};return JumolfRealLearningScreen({route,dogs:sources.dogs,dog,report:dog?realLearning(dog.id,selection):null,handlers,selection,memories:dog?getTrainingMemories().filter(m=>m.dogId===dog.id&&m.handlerId===selection.handlerId):[],canPrepare:!!prepareRealTraining});}
    if(!isDemo()&&['discoveries','discovery','targeted','verification','journal'].includes(route.type))return JumolfRealLearningStatus();
    let source=null,analysis=null,map=null,timeline=null,dogProfile=null;
    if(route.type==='session'){
@@ -202,7 +213,8 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    try{
     if(getVerifiedEntitlement&&['simulate-premium','demo-profile'].includes(action))throw new Error('Les accès réels sont vérifiés côté serveur.');
     if(!isDemo()&&['create-targeted','create-verification','ignore-targeted','mark-targeted-completed'].includes(action))throw new Error('Cette action appartient au mode démonstration.');
-    if(action==='prepare-real-training'){controller.prepareTraining(node.dataset.jumolfDogId,node.dataset.jumolfRecommendation);}
+    if(action==='prepare-next-training'){controller.prepareNextTraining(node.dataset.jumolfDogId,node.dataset.jumolfRecommendation,{handlerId:node.dataset.handler,level:node.dataset.level,skill:node.dataset.skill});}
+    else if(action==='prepare-real-training'){controller.prepareTraining(node.dataset.jumolfDogId,node.dataset.jumolfRecommendation,{handlerId:node.dataset.handler||null,level:node.dataset.level||'initiation'});}
     else if(action==='quick-analyze'){const id=node.dataset.jumolfSession,a=access();if(!a.entitlement_valid||!a.jumolf_enabled)throw Error('Un accès JUMOLF actif est nécessaire.');if(!sourceById(id))throw Error('Source indisponible ou non autorisée.');if(!latestFor(id))analyze(id);navigate('/jumolf/session/'+encodeURIComponent(id));}
     else if(action==='activate')activate();
     else if(action==='onboarding-next'){onboardingStep=Math.min(3,onboardingStep+1);render();}
@@ -224,6 +236,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   },
   handleChange(event){
    const field=event.target;
+   if(field.matches?.('[data-jumolf-progress-handler],[data-jumolf-progress-level],[data-jumolf-progress-skill]')){const params=new URLSearchParams(globalThis.location?.search||'');const key=field.matches('[data-jumolf-progress-handler]')?'handler':field.matches('[data-jumolf-progress-level]')?'level':'skill';params.set(key,field.value);navigate('/jumolf/progress?'+params);return true;}
    if(field.matches?.('[data-jumolf-learning-dog]')){selectedDogId=consentedSources().dogs.some(d=>d.id===field.value)?field.value:'';navigate((globalThis.location?.pathname==='/jumolf/progress'?'/jumolf/progress':'/jumolf/exercises')+'?dog='+encodeURIComponent(selectedDogId));return true;}
    if(field.matches?.('[data-jumolf-dog]')){selectedDogId=consentedSources().dogs.some(d=>d.id===field.value)?field.value:'';const path=globalThis.location?.pathname;const target=['/jumolf/analyze','/jumolf/train','/jumolf/team'].includes(path)?path:'/jumolf';const member=new URLSearchParams(globalThis.location?.search||'').get('member');navigate(target+'?dog='+encodeURIComponent(selectedDogId)+'&journey='+journey+(target==='/jumolf/team'&&PROFILE_MEMBERS.includes(member)?'&member='+member:''));return true;}
    if(field.matches?.('[data-jumolf-consent]')){store.setConsent(field.dataset.jumolfConsent,field.checked);if(!field.checked)profileDrafts.clear();if(field.dataset.jumolfConsent==='session_comparison'&&!field.checked)comparison=null;render();return true;}

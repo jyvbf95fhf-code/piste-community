@@ -34,3 +34,15 @@ export function buildAccountJumolfProgress({dogId,rows=[],profile,consents={}}={
  const contextual=(profile?.trends||[]).map(t=>t.kind==='coaching'&&unknownMode?{...t,comparison:{...t.comparison,status:'partially_comparable',label:'Partiellement comparable',reasons:[...t.comparison.reasons,'Mode de visibilité Coaching indisponible sur au moins une séance.']}}:t);
  return {...summarizeAccountJumolfProgress(trends),incomparable:contextual.filter(t=>t.comparison.status!=='comparable')};
 }
+
+// Descriptive longitudinal reading of the existing authorized A/B analyses.
+// Preparation memory is contextual only; it never substitutes for field metrics.
+export function buildAccountLongitudinalProgress({dogId,handlerId=null,rows=[],memories=[],progress={},consents={}}={}){
+ const ids=new Set(rows.map(r=>r.source.id));
+ const sessionId=m=>String(m.sessionId||'').startsWith('coaching:')?m.sessionId:'coaching:'+m.sessionId;
+ const worked=memories.filter(m=>m.completed&&m.dogId===dogId&&(!handlerId||m.handlerId===handlerId)&&ids.has(sessionId(m))).filter(m=>rows.some(r=>r.source.id===sessionId(m)&&r.source.handlerId===m.handlerId)).map(m=>({sessionId:sessionId(m),objective:m.objective,skill:m.skill||null,level:m.level||null,handlerId:m.handlerId,storage:'account-local'}));
+ const dated=rows.filter(r=>Number.isFinite(Date.parse(r.source.startedAt))).sort((a,b)=>Date.parse(a.source.startedAt)-Date.parse(b.source.startedAt));
+ const metric=(key,planned=false)=>dated.flatMap(r=>{const m=r.analysis.metrics[key];return Number.isFinite(m?.value)&&m.value>=0?[{sessionId:r.source.id,title:r.source.title,date:r.source.startedAt,value:m.value,provenance:m.provenance||'calculated',handlerId:r.source.handlerId||null,kind:r.source.kind,actor:'recording-phone',...(planned?{referenceBasis:'prepared-geographic',method:'nearest-recorded-points'}:{})}]:[];});
+ const recurrences=['ruptures','resumptions'].flatMap(key=>{const evidence=dated.filter(r=>r.source.handlerId&&r.source.handlerId===handlerId&&r.analysis.metrics[key]?.value>0);return evidence.length>=2?[{key,label:key==='ruptures'?'Signalements de rupture répétés':'Signalements de reprise répétés',sessions:evidence.map(r=>({sessionId:r.source.id,date:r.source.startedAt,value:r.analysis.metrics[key].value,events:r.analysis.metrics[key].evidence||[]}))}]:[];});
+ return {dogId,handlerId,storage:'account-local',sessionCount:rows.length,worked,recurrences,series:{distance:metric('traveled_distance_m'),duration:metric('duration_seconds'),plannedOffset:metric('planned_reference_point_mean_m',true)},comparisons:consents.session_comparison?[...(progress.comparable||[]),...(progress.provisional||[])]:[],missingDates:rows.length-dated.length,limits:['Les séries décrivent le téléphone et les signalements, pas une performance du chien.','Les conditions manquantes ou différentes limitent les comparaisons.','Les objectifs liés proviennent de la mémoire de cet appareil, sans synchronisation cloud.','Une préparation liée ne prouve pas que son protocole a été réalisé.']};
+}

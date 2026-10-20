@@ -18,7 +18,7 @@ function projectSession(record){
   dog:dog?{...(available(dog.id)?{id:dog.id}:{}),...(available(dog.name)?{name:dog.name}:{}),...(available(dog.breed)?{breed:dog.breed}:{}),...(available(dog.age)?{age:dog.age}:{})}:null,
   dogId:session.dogId||dog?.id||null,trackAge:session.trackAge?clone(session.trackAge):null,startedAt:session.startedAt||session.started_at||null,finishedAt:session.finishedAt||session.finished_at||null,
   terrain:session.terrain||session.environment||null,weather:weather?{...(available(weather.temperature)?{temperature:weather.temperature}:{}),...(available(weather.humidity)?{humidity:weather.humidity}:{}),...(available(weather.label)?{label:weather.label}:{}),...(available(weather.provenance)?{provenance:weather.provenance}:{}),...(weather.observedAt?{observedAt:weather.observedAt}:{}),...(weather.source?{source:weather.source}:{}),...(weather.wind?{wind:clone(weather.wind)}:{})}:null,
-  wind:session.wind||weather?.wind||null,trace,referenceTrace,
+  wind:session.wind||weather?.wind||null,trace,referenceTrace,plannedReferenceTrace:projectPoints(session.plannedReferenceTrace),
   events:Array.isArray(session.events)?session.events.map(item=>({...(item.id?{id:String(item.id)}:{}),type:item.type||item.label||null,timestamp:item.timestamp||item.at||null,...(item.point&&Number.isFinite(item.point.x)&&Number.isFinite(item.point.y)?{point:{x:item.point.x,y:item.point.y}}:{})})):[],
   corridor:session.corridor&&Array.isArray(session.corridor.geometry)?{geometry:projectPoints(session.corridor.geometry),provenance:'estimated'}:null,
   probableZones:projectPoints(session.probableZones),uncertaintyZones:projectPoints(session.uncertaintyZones),
