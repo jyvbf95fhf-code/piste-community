@@ -15,14 +15,14 @@ import {createCoachingRemoteController} from './coaching-remote-controller.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {GpsMapMarkup,mountGpsMaps,destroyGpsMaps} from './coaching-gps-screen.mjs';
 import {GpsMapStage,GpsButton,GpsTouchLockMarkup} from './coaching-gps-ui.mjs';
-export function mountRemoteCoaching({root,client=createClient(config.url,config.publishableKey),preferList=false,embedded=false,dogs=[],primaryDogId=null,entry='create',sessionId=null,initialTab='summary',initialWizardState=null,onWizardChange=()=>{},onProjection=()=>{},onSessions=()=>{},onCreated=()=>{},onDogLink=()=>{},associationMarkup=()=>'',resolveJumolfPreparation=p=>p}={}){
+export function mountRemoteCoaching({root,client=createClient(config.url,config.publishableKey),preferList=false,embedded=false,dogs=[],primaryDogId=null,resumeStoredSession=true,entry='create',sessionId=null,initialTab='summary',initialWizardState=null,onWizardChange=()=>{},onProjection=()=>{},onSessions=()=>{},onCreated=()=>{},onDogLink=()=>{},associationMarkup=()=>'',resolveJumolfPreparation=p=>p}={}){
 const auth=createCoachingRemoteAuth({client,allowedProjectRef:config.projectRef});
 let disposed=false,pointerActive=false,deferredRender=false;const cleanups=[];const drafts={};
 function listen(target,type,fn){target.addEventListener(type,fn);cleanups.push(()=>target.removeEventListener(type,fn));}
 const tracks=()=>profile?createTrackLibrary({storage:localStorage,ownerId:profile.id}).list().filter(t=>t.ownerId==='self'&&t.geometry?.points?.every(p=>p.space==='wgs84')&&(state.projection?.traceType!=='gpx'||t.source==='gpx')):[];
 const roleLabel={traceur:'Traceur',driver:'Conducteur',coach:'Coach',observer:'Observateur'},phaseLabel={PREPARATION:'Session créée · participants attendus',LAYING:'Pose en cours',TRACK_FINISHED:'Pose terminée',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',DEBRIEF:'Débrief partagé',LAYING_WAIT:'Retour au départ attendu',ARCHIVED:'Session archivée',CANCELLED:'Session annulée',INTERRUPTED:'Session interrompue',LEFT:'Participation arrêtée'};
 let wizard=null,teamCatalogue=null,teamRefresh=null,sharedSheet=null,sharedDebriefTab=initialTab;
-let opening=(sessionId||(!preferList&&sessionStorage.getItem('piste.remote.session')))?{id:sessionId||sessionStorage.getItem('piste.remote.session'),error:''}:null;
+let opening=(sessionId||(resumeStoredSession&&!preferList&&sessionStorage.getItem('piste.remote.session')))?{id:sessionId||sessionStorage.getItem('piste.remote.session'),error:''}:null;
 let initializing=true;
 let profile=null,state={projection:null,status:'',pending:false,gpsRunning:false},sessions=[],invitation=null,notice='',busy=false,rendering=false;
 const controller=createCoachingRemoteController({client,onChange:view=>{onProjection(view.projection,state?.projection?.id);state={...view,projectionAt:view.projection?.version===state.projection?.version?state.projectionAt:Date.now()};const editing=!busy&&root.contains(document.activeElement)&&document.activeElement.closest('[data-remote-form]');if(pointerActive||editing)deferredRender=true;else if(!rendering)render();}});

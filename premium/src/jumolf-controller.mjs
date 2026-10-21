@@ -39,7 +39,7 @@ const syntheticTemporalLearning=buildJumolfTemporalLearning(syntheticDataset.ses
 const clone=value=>structuredClone(value);
 const routePath=()=>location.pathname+location.search;
 
-export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({}),getTrainingMemories=()=>[],getAccountDemo=()=>null,deviceResetScreen=()=>''}={}){
+export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({}),getTrainingMemories=()=>[],getAccountDemo=()=>null,getPrimaryDogId=()=>'',deviceResetScreen=()=>''}={}){
  const isDemo=()=>typeof demoMode==='function'?demoMode():demoMode;
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='',selectedDogId='',journey='discovery';
  let preparationSequence=0,pendingPreparation=null,pendingGenerator=null;const trainingLinks=[];
@@ -171,7 +171,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='onboarding'&&state.jumolf_onboarding_completed&&!route.replay)route.type='entry';
    const dogs=accountDemo?.status==='ready'&&state.consents.dog_history&&['prepare','train'].includes(route.type)?[accountDemo.dog]:sources.dogs||[];
    if(query.has('dog'))selectedDogId=dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';
-   else if(!dogs.some(d=>d.id===selectedDogId))selectedDogId=dogs.length===1?dogs[0].id:'';
+   else if(!dogs.some(d=>d.id===selectedDogId))selectedDogId=dogs.some(d=>d.id===getPrimaryDogId())?getPrimaryDogId():dogs.length===1?dogs[0].id:'';
    if(route.type==='dog'||route.type==='session'&&!route.demo){
     const id=route.type==='dog'?route.id:[...sources.sessions,...sources.operational].find(s=>s.id===route.id)?.dogId;
     selectedDogId=dogs.some(d=>d.id===id)?id:'';

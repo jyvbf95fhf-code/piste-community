@@ -1,3 +1,8 @@
+import {createPersistenceJournal} from './persistence-journal.mjs';
+import {removeAccountRecord} from './account-record-removal.mjs';
+import {sessionRemovalPolicy,SessionRemovalMenu,SessionRemovalConfirmation} from './session-removal.mjs';
+import {activeTrackingDogs,resolveDefaultTrackingDog,resolveDogId,isProtectedDog} from './dog-selection.mjs';
+import {selectCommunityNotifications} from './community-notifications.mjs';
 import {createLoboAccountController} from './lobo-account-controller.mjs';
 import {createPersonalCloudRepository} from './personal-cloud-client.mjs';
 import {saveDisplayedProposal,preparedTrackForConsultation} from './track-proposal-save.mjs';
@@ -152,7 +157,7 @@ function reconcileCoachingInvitations(){const owner=auth.assurance==='supabase-a
 // Background updates must never replace an in-progress form or terrain screen.
 function renderCoachingUpdates(){
  const link=document.querySelector('.header-actions a.notification');
- if(link){const count=communityStore.getNotificationStore().unreadCount(communityStore.viewerId)+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0);link.setAttribute('aria-label',count?'Notifications, '+count+' non lues':'Notifications');link.querySelector('.notification-count,.notification-dot')?.remove();if(count){const badge=document.createElement('span');badge.className='notification-count';badge.textContent=String(count);link.append(badge);}}
+ if(link){const count=selectedCommunityNotifications().filter(n=>!n.read).length+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0);link.setAttribute('aria-label',count?'Notifications, '+count+' non lues':'Notifications');link.querySelector('.notification-count,.notification-dot')?.remove();if(count){const badge=document.createElement('span');badge.className='notification-count';badge.textContent=String(count);link.append(badge);}}
  if(location.pathname!=='/jumolf/rex'&&(['/','/sessions','/tracks','/notifications'].includes(location.pathname)||location.pathname.startsWith('/sessions/')||location.pathname.startsWith('/jumolf')||location.pathname.startsWith('/scientific'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
 }
 function coachingInvitationCards(){return coachingInvitations?CoachingInvitations(coachingInvitations.view()):'';}
@@ -223,15 +228,15 @@ function afterCommunityContactRemoval(userId){
 function reconcileCommunityFriendships(route){
  const owner=auth.assurance==='supabase-auth'?currentUser?.user_id:null;
  if(owner!==communityOwnerId){persistentCommunity?.dispose();persistentCommunity=null;communityOwnerId=owner;communityEntryKey='';
-  if(owner)persistentCommunity=createCommunityFriendships({baseStore:communityStore,ownerId:owner,ownerName:currentUser.name,getOwnerId:()=>auth.getSession().user?.user_id,call:body=>accountApi.call(body),onChange:()=>{if(location.pathname.startsWith('/community'))render();},afterRemove:afterCommunityContactRemoval,getLivePermission:id=>communityLiveBinding(id)?.enabled===true,setLivePermission:setCommunityLivePermission});
+  if(owner)persistentCommunity=createCommunityFriendships({baseStore:communityStore,ownerId:owner,ownerName:currentUser.name,getOwnerId:()=>auth.getSession().user?.user_id,call:body=>accountApi.call(body),onChange:()=>{if(location.pathname.startsWith('/community')||location.pathname==='/notifications')render();},afterRemove:afterCommunityContactRemoval,getLivePermission:id=>communityLiveBinding(id)?.enabled===true,setLivePermission:setCommunityLivePermission});
   communityController=makeCommunityController();
  }
- const key=route.startsWith('/community')?route+location.search:'';
+ const key=route.startsWith('/community')||route==='/notifications'?route+location.search:'';
  if(persistentCommunity&&key&&key!==communityEntryKey){communityEntryKey=key;const target=resolveCommunityRoute(route),instance=persistentCommunity;void instance.refresh().then(()=>{if(instance===persistentCommunity&&target?.type==='profile'&&!instance.store.getProfile(target.id))return instance.store.resolveProfile(target.id);}).catch(()=>{});}
  else communityEntryKey=key;
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&location.pathname.startsWith('/community'))void persistentCommunity?.refresh().catch(()=>{});});
-window.addEventListener('online',()=>{if(location.pathname.startsWith('/community'))void persistentCommunity?.refresh().catch(()=>{});});
+window.addEventListener('online',()=>{if(location.pathname.startsWith('/community')||location.pathname==='/notifications')void persistentCommunity?.refresh().catch(()=>{});});
 let opsLiveRemote=null,opsLiveBindings=null,opsLiveRemoteOwner=null,opsLiveTickPending=false,opsLiveAttempt=0;
 const opsHabitualState=new Map();
 function reconcileOpsLive(){
@@ -258,12 +263,12 @@ window.addEventListener('online',()=>{void tickOpsLive(true);});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void tickOpsLive(true);});
 function renderPisteNotifications(){
  const local=communityStore.getNotificationStore(),prefs=local.getPreferences(communityStore.viewerId);
- const rows=[...local.list(communityStore.viewerId),...(prefs.notify_live_in_app?opsLiveRemote?.view().notifications||[]:[])];
+ const rows=[...selectedCommunityNotifications(),...(prefs.notify_live_in_app?opsLiveRemote?.view().notifications||[]:[])];
  return coachingInvitationCards()+NotificationsScreen(rows,rows.filter(n=>!n.read).length);
 }
 let profileOwnerId=currentUser?.user_id||null;
 let profileStore=createProfileStore({}, {ownerId:profileOwnerId,storage});
-const makeProfileController=()=>createProfileController({store:profileStore,communityStore,getDogs:()=>dogsStore.list(),notificationStore:communityStore.getNotificationStore(),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
+const makeProfileController=()=>createProfileController({store:profileStore,communityStore,getDogs:()=>accountDogs(),notificationStore:communityStore.getNotificationStore(),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
 let profileController=makeProfileController();
 let personalCloud=null;
 function personalCloudForUser(){if(personalCloud?.ownerId===currentUser?.user_id)return personalCloud.controller;personalCloud?.controller.dispose();const ownerId=currentUser?.user_id;if(!ownerId)return null;
@@ -276,6 +281,50 @@ function personalCloudForUser(){if(personalCloud?.ownerId===currentUser?.user_id
   if(r.kind==='session-dog-link'){const p=sharedIndex.get(r.payload.sessionId);if(!p)throw Error('Ouvrez d’abord la session Coaching autorisée, puis restaurez son association.');sharedIndex.linkDog(p.id,dogsStore.get(r.payload.dogId));return p.id;}
  }});personalCloud={ownerId,controller};return controller;}
 
+function accountDogs(){
+ const rows=dogsStore.list().filter(d=>auth.assurance!=='supabase-auth'||!d.isDemonstration),demo=loboAccount.snapshot();
+ if(demo?.status==='ready'&&!resolveDogId(rows,demo.dog.id))rows.unshift({...demo.dog,isDemonstration:false,cloudId:demo.dog.id});
+ return rows;
+}
+function trackingDogs(){return activeTrackingDogs(accountDogs());}
+function defaultTrackingDog(){return resolveDefaultTrackingDog(accountDogs(),profileStore.snapshot().primary_dog_id);}
+function sessionDog(id){const dogs=trackingDogs(),key=id?resolveDogId(dogs,id):defaultTrackingDog()?.id;return dogs.find(d=>d.id===key)||null;}
+function localDog(id){const dogs=accountDogs(),key=resolveDogId(dogs,id);return dogs.find(d=>d.id===key)||null;}
+async function removeCloudPersonal(kind,localId,cloudId,ownerId,expectedRevision=null){
+ const journal=createPersistenceJournal({ownerId}),repository=createPersonalCloudRepository({client:accountClient,ownerId});
+ try{const known=await journal.lookup({kind,localId});if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const id=cloudId||known?.id;if(!id)return false;await removeAccountRecord({kind,id,ownerId,getOwnerId:()=>currentUser?.user_id,repository,journal,expectedRevision});return true;}finally{journal.dispose();repository.dispose();}
+}
+async function removeAccountDog(id,ownerId){
+ if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const dog=localDog(id);if(!dog||isProtectedDog(dog))throw Error('Chien protégé ou indisponible.');
+ const cloud=auth.assurance==='supabase-auth'?await removeCloudPersonal('dog',id,dog.cloudId,ownerId):false;if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');
+ try{dogsStore.remove(id,{confirmed:true});}catch(error){throw Error((cloud?'Sauvegarde cloud supprimée ; copie locale non retirée : ':'')+error.message);}
+ const preferred=profileStore.snapshot().primary_dog_id;if(resolveDogId([dog],preferred))profileStore.setPrimaryDog(resolveDefaultTrackingDog(accountDogs())?.id||null);
+ jumolfController=makeJumolfController();history.pushState({},'','/dogs');render(true);Toast('Chien supprimé ; historiques conservés.');
+}
+let sessionCloudOwner=null,sessionCloudMap=new Map(),sessionCloudLoading=false,sessionCloudReadAt=0;
+function loadSessionCloudMappings(){
+ const ownerId=currentUser?.user_id;if(ownerId!==sessionCloudOwner){sessionCloudOwner=ownerId;sessionCloudMap.clear();sessionCloudReadAt=0;}
+ if(auth.assurance!=='supabase-auth'||!ownerId||sessionCloudLoading||Date.now()-sessionCloudReadAt<15000)return;
+ const rows=operationalStore.list().filter(m=>!m.cloudReadOnly&&m.ownerUserId===ownerId);if(!rows.length)return;
+ sessionCloudLoading=true;const journal=createPersistenceJournal({ownerId});
+ void (async()=>{try{const map=new Map();for(const m of rows){const r=await journal.lookup({kind:'ops',localId:m.id});if(r?.revision>0)map.set(m.id,{cloudBacked:true,cloudId:r.id,cloudRevision:r.revision});}if(currentUser?.user_id===ownerId){sessionCloudMap=map;sessionCloudReadAt=Date.now();}}catch{sessionCloudReadAt=Date.now();}finally{journal.dispose();sessionCloudLoading=false;if(currentUser?.user_id===ownerId&&location.pathname==='/sessions')render();}})();
+}
+function sessionRecord(id){return operationalStore.get(id)||sessionCatalog.get(id)||sharedIndex?.get(id)||null;}
+function sessionPolicy(id){const record=sessionRecord(id),mapping=sessionCloudOwner===currentUser?.user_id?sessionCloudMap.get(id):null;return sessionRemovalPolicy(mapping?{...record,...mapping}:record,{ownerId:currentUser?.user_id,localOwnerId:coachingHistoryOwnerId,currentSessionId:coachingDraft.session?.id});}
+async function removeSession(id,scope,ownerId){
+ if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const record=sessionRecord(id),policy=sessionPolicy(id);if(!SessionRemovalConfirmation(policy,{scope}))throw Error(policy.localReason||policy.cloudReason||'Suppression indisponible.');
+ if(policy.kind==='operational'){
+  if(scope==='cloud')await removeCloudPersonal('ops',id,policy.cloudId,ownerId,policy.cloudRevision);
+  if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const result=operationalStore.remove(id,{ownerId,currentSessionId:coachingDraft.session?.id});if(!result.ok)throw Error(result.reason||'Retrait local indisponible.');
+ }else{const result=coachingHistoryStorage.remove(ownerId,id,{currentSessionId:coachingDraft.session?.id});if(!result.ok)throw Error(result.reason||'Historique local non supprimé.');const removed=sessionCatalog.remove(id,{ownerId,localOwnerId:coachingHistoryOwnerId,currentSessionId:coachingDraft.session?.id});if(!removed.ok)throw Error(removed.reason);if(coachingDraft.session?.id===id){cleanupCoachingExit();coachingDraft=newCoachingDraft();preparationState=null;searchState=search.createSearch();tracerState=tracer.createTracer();terrainOpen=false;}}
+ jumolfController=makeJumolfController();history.pushState({},'','/sessions');render(true);Toast(scope==='cloud'?'Sauvegarde et copie locale supprimées.':'Séance retirée de cet appareil.');
+}
+function selectedCommunityNotifications(){
+ const real=auth.assurance==='supabase-auth',view=communityViewStore(),viewerId=real?currentUser?.user_id:communityStore.viewerId;
+ const items=[...communityStore.getNotificationStore().listAll(),...(real?view.getNotificationStore().listAll():[])];
+ const state=real?(persistentCommunity?.status().ready?view.getState():null):communityStore.getState();
+ return selectCommunityNotifications({items:[...new Map(items.map(n=>[n.id,n])).values()],viewerId,friendshipState:state});
+}
 function restoreProfileForUser(){const ownerId=currentUser?.user_id||null;if(ownerId===profileOwnerId)return;personalCloud?.controller.dispose();personalCloud=null;profileOwnerId=ownerId;profileStore=createProfileStore({}, {ownerId,storage});profileController=makeProfileController();}
 let communityLiveStore=createCommunityLiveStore({communityStore});
 let notifiedCoachingStarts=new Set();
@@ -592,12 +641,18 @@ function renderSessionExitMenu(){return SessionExitMenu(sessionControlView(exitS
 const newTrackUI=()=>({view:'list',selectedId:null,fileId:null,name:'',notice:'',error:''});
 let trackUI=newTrackUI();
 let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:'',copySource:null};
+let smartDogHydrationKey='';
 let smartEntryOpenedKey=null;
 let trackEditorActive=false,trackEditorHref='/track-builder',trackEditorDrag=null,trackEditorExitDialog=false,trackEditorIgnoreMapClickUntil=0;
 const smartTrackFingerprint=()=>JSON.stringify([trackEditor.draft?.id,trackEditor.draft?.points,trackEditor.draft?.name,trackEditor.draft?.description,trackEditor.draft?.category,trackEditor.draft?.difficulty,trackEditor.draft?.dogId,trackEditor.draft?.notes,trackEditor.draft?.activeMode]);
 const trackSmart=createSmartTrackController({service:createSmartTrackService({getAuthorization:async()=>{const {data}=await accountClient.auth.getSession();return data?.session?{Authorization:`Bearer ${data.session.access_token}`}:{}}}),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?{ownerId:currentUser?.user_id,key:trackEditor.routeKey,fingerprint:smartTrackFingerprint(),access:jumolfAccess()}:null,onChange:()=>{if(location.pathname==='/track-builder')render();}});
 let missionMount=null,missionSourceBrief='',missionDog=null;
-function canineTrackContext(dogId){const token=new URLSearchParams(location.search).get('jumolfNext'),request=token?jumolfController.generatorPreparation(token):null,context=jumolfController.canineContext(dogId,request&&request.dogId===dogId?request.selection:{});if(token&&(!request||request.dogId!==dogId))return {...context,recommendations:[],declarations:context.declarations.filter(d=>d.startsWith('Chien ·'))};return {...context,...(request&&request.dogId===dogId?{recommendationId:request.recommendationId}:{} )};}
+function canineTrackContext(dogId){
+ const selected=sessionDog(dogId),demo=loboAccount.snapshot();dogId=selected?.cloudId&&selected.cloudId===demo?.dog?.id?demo.dog.id:selected?.id||dogId;
+ const token=new URLSearchParams(location.search).get('jumolfNext'),request=token?jumolfController.generatorPreparation(token):null,raw=jumolfController.canineContext(dogId,request&&request.dogId===dogId?request.selection:{});
+ const present=dog=>{const id=resolveDogId(trackingDogs(),dog.id);return id?{...dog,id}:dog;},context={...raw,dog:raw.dog?present(raw.dog):null,dogs:raw.dogs.map(present)};
+ if(token&&(!request||request.dogId!==dogId))return {...context,recommendations:[],declarations:context.declarations.filter(d=>d.startsWith('Chien ·'))};return {...context,...(request&&request.dogId===dogId?{recommendationId:request.recommendationId}:{} )};
+}
 function missionContext(){
  const state=jumolfStore.accessSnapshot(),r=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null,a=resolveJumolfAccess(auth.assurance==='supabase-auth'?{...state,jumolf_entitlement:r?.entitlement||'none',entitlement_record:r||{entitlement:'none'}}:state),training=trackEditor.preview||trackEditor.canine;
  if(location.pathname!=='/track-builder'||!currentUser?.user_id||!a.entitlement_valid||a.entitlement!=='premium'||training?.ownerId!==currentUser.user_id||!training.options)return null;
@@ -609,7 +664,7 @@ function previewSmartProposal(id){try{const preview=trackSmart.proposal(id);trac
 function submitCurrentTrack(prepare=false){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;const form=document.querySelector('[data-track-editor-form]'),button=prepare?form?.querySelector('[name="prepareCanine"]'):form?.querySelector('button[type="submit"]:not([name])');if(!button||button.disabled)throw Error('Vérifiez le nom, le chien et la géométrie dans Menu.');form.requestSubmit(button);}
 function prepareSavedTrack(saved){
  const access=jumolfAccess();if(auth.assurance!=='supabase-auth'||!access.entitlement_valid||access.entitlement!=='premium')throw Error('Préparation Premium indisponible pour ce compte.');
- const next=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:dogsStore.list().filter(d=>!d.isDemonstration),dogId:saved.dogId||'',track:saved,currentState:coachingWizardState});
+ const next=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,dogId:saved.dogId||'',track:saved,currentState:coachingWizardState});
  const ownerId=currentUser.user_id,proceed=()=>{const a=jumolfAccess();if(currentUser?.user_id!==ownerId||!a.entitlement_valid||a.entitlement!=='premium')return;try{if(coachingWizardState?.draft)throw Error('Un brouillon Coaching est déjà en cours.');sharedIndex?.saveTrainingDraft(next);coachingWizardState=next;trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:'',preview:null};history.pushState({},'','/new-session');render(true);}catch(error){Toast(error.message);}};
  if(trackEditorActive&&trackEditor.draft?.dirty)ConfirmationDialog({title:'Continuer vers Coaching ?',description:'La piste choisie est enregistrée et restera réutilisable. Le brouillon précédent comporte des modifications non enregistrées ; quitter maintenant les abandonnera.',onConfirm:proceed});else proceed();
 }
@@ -651,14 +706,15 @@ function ensureTrackEditor(){
   if(!source){trackEditor={...trackEditor,draft:createTrackDraft(),notice:'Géométrie indisponible : aucune copie créée.',routeKey:key,copySource:null};}
   else {const copySource={...source,sourceId:row.id,name:row.name};trackEditor={draft:createTrackDraft({copySource}),selectedPointId:null,nextPointKind:'via',results:[],notice:'Copie locale créée · la source reste en lecture seule.',error:'',routeKey:key,copySource};}
  }else trackEditor={draft:createTrackDraft({geographic:true}),selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:key,copySource:null};
+ if(!trackEditor.draft.dogId)trackEditor.draft.dogId=defaultTrackingDog()?.id||'';
  trackEditorActive=true;trackEditorHref=key;
 }
 function renderTrackEditor(){
- ensureTrackEditor();trackSmart.reconcile();const smart=trackSmart.view(),context=canineTrackContext(smart.dogId);
+ ensureTrackEditor();if(smartDogHydrationKey===trackEditor.routeKey&&defaultTrackingDog()){trackSmart.setOptions({dogId:defaultTrackingDog().id});smartDogHydrationKey='';}if(!trackEditor.draft.dogId)trackEditor.draft.dogId=defaultTrackingDog()?.id||'';trackSmart.reconcile();const smart=trackSmart.view(),context=canineTrackContext(smart.dogId);
  const training=trackEditor.canine,allowed=jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium';
  const brief=training?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(training.proposal,training.options,canineTrackContext(trackEditor.draft.dogId)),{initial:true}):'';
  const preview=trackEditor.preview,selectedContext=canineTrackContext(preview?.dogId||trackEditor.draft.dogId);missionDog=selectedContext.dog;missionSourceBrief=preview?.ownerId===currentUser?.user_id&&preview?.options&&allowed?CanineBrief(buildCanineBrief(preview.proposal,preview.options,selectedContext),{initial:true}):brief;const mission=missionContext();
- return TrackBuilderScreen({editorDraft:trackEditor.preview?.draft||trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
+ return TrackBuilderScreen({editorDraft:trackEditor.preview?.draft||trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:trackingDogs(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
 }
 function communitySourceOptions(){
  return buildCommunitySourceOptions({sessionRecords:sessionCatalog.list(),tracks:trackLibrary.list(),dogs:dogsStore.list()});
@@ -684,7 +740,7 @@ function profileConsentSummary(){
 function renderProfile(route){
  if(route.type==='sync')return auth.assurance==='supabase-auth'?personalCloudForUser().screen():'<p>Connectez-vous à votre compte PISTE pour accéder aux sauvegardes privées.</p>';
  const notifications=communityStore.getNotificationStore();
- return (profileStore.persistenceWarning()?`<p role="status">${escapeHTML(profileStore.persistenceWarning())}</p>`:'')+ProfileScreen({route,user:currentUser,profileStore,dogs:dogsStore.list(),communityProfile:communityStore.getProfile(communityStore.viewerId),jumolfAccess:jumolfAccess(),jumolfState:jumolfStore.snapshot(),consent:profileConsentSummary(),scientificAccess:scientificCorpusAccessFor(currentUser),adminAccess:adminStore.accessFor(currentUser),notificationPreferences:notifications.getPreferences(communityStore.viewerId),appVersion:adminCurrentVersion()});
+ return (profileStore.persistenceWarning()?`<p role="status">${escapeHTML(profileStore.persistenceWarning())}</p>`:'')+ProfileScreen({route,user:currentUser,profileStore,dogs:accountDogs(),communityProfile:communityStore.getProfile(communityStore.viewerId),jumolfAccess:jumolfAccess(),jumolfState:jumolfStore.snapshot(),consent:profileConsentSummary(),scientificAccess:scientificCorpusAccessFor(currentUser),adminAccess:adminStore.accessFor(currentUser),notificationPreferences:notifications.getPreferences(communityStore.viewerId),appVersion:adminCurrentVersion()});
 }
 function makeCommunityController(){return createCommunityController({store:communityViewStore(),sourceOptions:communitySourceOptions,origin:location.origin,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let communityController=makeCommunityController();
@@ -716,15 +772,15 @@ function accountScientificDataset(){return buildAccountScientificDataset(buildJu
 function scienceDataset(){return auth.assurance==='supabase-auth'?accountScientificDataset():scientificDataset;}
 function prepareJumolfTraining(preparation){
  if(auth.assurance!=='supabase-auth'||!currentUser?.user_id)throw Error('Un compte connecté est nécessaire.');
- coachingWizardState=coachingJumolfPreparationState({ownerId:currentUser.user_id,dogs:dogsStore.list().filter(d=>!d.isDemonstration),preparation,currentState:coachingWizardState});
+ coachingWizardState=coachingJumolfPreparationState({ownerId:currentUser.user_id,dogs:trackingDogs(),preparation,currentState:coachingWizardState});
  try{sharedIndex?.saveTrainingDraft(coachingWizardState);}catch(error){Toast(error.message);}
  history.pushState({},'','/new-session');render(true);
 }
-function trainingMemoryFor(p){const memory=sharedIndex?.training(p?.id),dogId=sharedIndex?.dogId(p?.id);if(!memory||!dogsStore.get(dogId)||!jumolfAccess().entitlement_valid||jumolfAccess().entitlement!=='premium')return null;return trainingMemoryView(memory,p,{ownerId:currentUser?.user_id,dogId,consents:jumolfStore.snapshot().consents});}
-const loboAccount=createLoboAccountController({getViewer:()=>auth.assurance==='supabase-auth'?currentUser:null,verifyUser:async()=>{const r=await accountClient.auth.getUser();if(r.error)throw r.error;return r.data?.user;},repository:ownerId=>createPersonalCloudRepository({client:accountClient,ownerId}),call:body=>accountApi.call(body),storage,indexedDB:window.indexedDB,onChange:()=>render(),beforeReset:()=>{personalCloud?.controller.dispose();personalCloud=null;},afterReset:async bundle=>{
+function trainingMemoryFor(p){const memory=sharedIndex?.training(p?.id),dogId=sharedIndex?.dogId(p?.id);if(!memory||!localDog(dogId)||!jumolfAccess().entitlement_valid||jumolfAccess().entitlement!=='premium')return null;return trainingMemoryView(memory,p,{ownerId:currentUser?.user_id,dogId,consents:jumolfStore.snapshot().consents});}
+const loboAccount=createLoboAccountController({getViewer:()=>auth.assurance==='supabase-auth'?currentUser:null,verifyUser:async()=>{const r=await accountClient.auth.getUser();if(r.error)throw r.error;return r.data?.user;},repository:ownerId=>createPersonalCloudRepository({client:accountClient,ownerId}),call:body=>accountApi.call(body),storage,indexedDB:window.indexedDB,onChange:()=>{if(document.querySelector('form[data-dog-form],form[data-profile-form],form[data-community-form="post-create"]'))return;render();},beforeReset:()=>{personalCloud?.controller.dispose();personalCloud=null;},afterReset:async bundle=>{
  const ownerId=currentUser.user_id;dogsStore=createDogsStore({dogs:[],ownerId,storage});trackLibrary=createTrackLibrary({ownerId,storage});operationalStore=createOperationalMissionStore({ownerId,storage});sessionCatalog.clear();coachingDraft=newCoachingDraft();sharedIndex?.dispose();sharedIndex=createSharedSessionIndex({ownerId,storage});await sharedIndex.refresh(async()=>bundle.coachingProjections);if(currentUser?.user_id!==ownerId)throw Error('Compte modifié.');const controller=personalCloudForUser();await controller.load();if(currentUser?.user_id!==ownerId)throw Error('Compte modifié.');await controller.restore(bundle.personalRecords.map(r=>r.kind+':'+r.id));
 }});
-function makeJumolfController(){return createJumolfController({getAccountDemo:()=>loboAccount.snapshot(),deviceResetScreen:()=>loboAccount.screen(),store:jumolfStore,getTrainingMemories:()=>sharedIndex?.list().map(trainingMemoryFor).filter(Boolean)||[],getViewer:()=>({id:currentUser?.user_id,name:currentUser?.name,role:currentUser?.role}),prepareRealTraining:auth.assurance==='supabase-auth'?prepareJumolfTraining:null,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
+function makeJumolfController(){return createJumolfController({getAccountDemo:()=>loboAccount.snapshot(),deviceResetScreen:()=>loboAccount.screen(),store:jumolfStore,getPrimaryDogId:()=>defaultTrackingDog()?.id||'',getTrainingMemories:()=>sharedIndex?.list().map(trainingMemoryFor).filter(Boolean)||[],getViewer:()=>({id:currentUser?.user_id,name:currentUser?.name,role:currentUser?.role}),prepareRealTraining:auth.assurance==='supabase-auth'?prepareJumolfTraining:null,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let jumolfController=makeJumolfController();
 const scientificDataset=generateJumolfSyntheticDataset();
 const scientificAnalytics=buildJumolfSyntheticAnalytics(scientificDataset.sessions);
@@ -743,7 +799,7 @@ let scientificCorpusController=createScientificCorpusController({access:scientif
 function restoreSmartTrackEntry(){
  if(location.pathname!=='/track-builder'){smartEntryOpenedKey=null;return;}
  const params=new URLSearchParams(location.search);
- if(params.get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;if(params.get('canine')==='1'){const context=canineTrackContext(params.get('dog'));const request=jumolfController.generatorPreparation(params.get('jumolfNext'));trackSmart.setOptions({...(request&&request.dogId===context.dog?.id?request.options:{level:'initiation'}),dogId:context.dog?.id||''});if(params.has('jumolfNext')&&!request)trackEditor.notice='Proposition plus accessible : paramètres génériques à vérifier. Aucune personnalisation conservée.';render();}openSmartTrackPanel();}
+ if(params.get('tool')==='smart'&&smartEntryOpenedKey!==trackEditor.routeKey){smartEntryOpenedKey=trackEditor.routeKey;if(params.get('canine')==='1'){const context=canineTrackContext(params.get('dog'));if(!context.dog&&loboAccount.snapshot()?.status==='loading')smartDogHydrationKey=trackEditor.routeKey;const request=jumolfController.generatorPreparation(params.get('jumolfNext'));trackSmart.setOptions({...(request&&request.dogId===context.dog?.id?request.options:{level:'initiation'}),dogId:context.dog?.id||''});if(params.has('jumolfNext')&&!request)trackEditor.notice='Proposition plus accessible : paramètres génériques à vérifier. Aucune personnalisation conservée.';render();}openSmartTrackPanel();}
 }
 function openSmartTrackPanel({focus=true}={}){
  const panel=document.querySelector('[data-smart-panel]'),menu=document.querySelector('[data-creator-panel]');
@@ -817,10 +873,10 @@ function render(focus=false) {
  const communityRoute=resolveCommunityRoute(route);
  const profileRoute=resolveProfileRoute(route);
  const jumolfRoute=resolveJumolfRoute(route)?route:null;
- if(jumolfRoute&&loboAccount.snapshot()===null&&currentUser?.admin_role==='owner_admin')void loboAccount.refresh();
+ if(loboAccount.snapshot()===null&&currentUser?.admin_role==='owner_admin')void loboAccount.refresh();
  const scientificRoute=resolveScientificRoute(route)?route:null;
  const scientificContributionRoute=resolveScientificContributionRoute(route);
- const dogForTitle=dogsRoute?.dogId?dogsStore.get(dogsRoute.dogId):null;
+ const dogForTitle=dogsRoute?.dogId?localDog(dogsRoute.dogId):null;
  captureCoachingHistory();
  captureCoachingPreparation();
  const adminRoute=resolveAdminRoute(`${route}${location.search}`);
@@ -838,10 +894,10 @@ function render(focus=false) {
  if(remoteCoachingKey!==remoteKey){remoteCoachingMount?.destroy();remoteCoachingMount=null;remoteCoachingRoot=null;remoteCoachingKey=remoteKey;}
  if(remoteCoachingRoot)remoteCoachingRoot.remove();
  const remoteMarkup='<div data-remote-premium-slot class="remote-shell remote-embedded"></div>';
- const content=remoteCoaching?remoteMarkup+(route==='/sessions'?renderSessions():''):adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||(auth.assurance==='supabase-auth'?'<section class="card"><h1>Contribution scientifique</h1><p>Aucun dossier réel n’est transmis à un corpus partagé. Vos analyses personnelles restent disponibles dans Science et JUMOLF, selon vos droits et autorisations.</p><a href="/scientific">Science</a></section>':scientificContributionController.screen(route)):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?(operationalRoute.type==='replay'||operationalMission?.cloudReadOnly)?OperationalReplayScreen(operationalReplayView(operationalMission),{weather:(operationalMission?.cloudReadOnly&&operationalMission.weatherSnapshot)||opsWeather.snapshot(operationalMission)}):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:dogsStore.list(),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,gps:opsGps.view(),weather:opsWeather.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?renderPisteNotifications():route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list(),includeDemoRows:auth.assurance!=='supabase-auth'}),jumolfAccess(),adminStore.accessFor(currentUser).allowed,coachingInvitationCards()):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
- document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell(content+exportPanelForRoute(route),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),communityStore.getNotificationStore().unreadCount(communityStore.viewerId)+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0));
+ const content=remoteCoaching?remoteMarkup+(route==='/sessions'?renderSessions():''):adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||(auth.assurance==='supabase-auth'?'<section class="card"><h1>Contribution scientifique</h1><p>Aucun dossier réel n’est transmis à un corpus partagé. Vos analyses personnelles restent disponibles dans Science et JUMOLF, selon vos droits et autorisations.</p><a href="/scientific">Science</a></section>':scientificContributionController.screen(route)):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?(operationalRoute.type==='replay'||operationalMission?.cloudReadOnly)?OperationalReplayScreen(operationalReplayView(operationalMission),{weather:(operationalMission?.cloudReadOnly&&operationalMission.weatherSnapshot)||opsWeather.snapshot(operationalMission)}):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:trackingDogs().sort((a,b)=>Number(b.id===defaultTrackingDog()?.id)-Number(a.id===defaultTrackingDog()?.id)),view:operationalView,livePolicy:operationalMission?communityLiveStore.getSessionPolicy('ops',operationalMission.id):{},ui:{...operationalUI,gps:opsGps.view(),weather:opsWeather.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?renderPisteNotifications():route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list(),includeDemoRows:auth.assurance!=='supabase-auth'}),jumolfAccess(),adminStore.accessFor(currentUser).allowed,coachingInvitationCards()):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
+ document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell(content+exportPanelForRoute(route),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),selectedCommunityNotifications().filter(n=>!n.read).length+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0),{realMode:auth.assurance==='supabase-auth'});
  const restoredExport=document.querySelector('[data-data-exports]');if(restoredExport&&exportUi){restoredExport.open=exportUi.open;for(const name of ['domain','format']){const field=restoredExport.querySelector(`[name=${name}]`);if([...field.options].some(o=>o.value===exportUi[name]))field.value=exportUi[name];}}
- if(remoteCoaching){const slot=document.querySelector('[data-remote-premium-slot]');if(remoteCoachingRoot)slot.replaceWith(remoteCoachingRoot);else {const index=sharedIndex,ownedDogs=dogsStore,wizardOwnerId=currentUser.user_id;remoteCoachingRoot=slot;remoteCoachingMount=mountRemoteCoaching({root:slot,client:accountClient,embedded:true,initialWizardState:coachingWizardState,resolveJumolfPreparation:p=>jumolfController.currentTrainingPreparation(p),onWizardChange:value=>{if(currentUser?.user_id===wizardOwnerId){coachingWizardState=value;try{index?.saveTrainingDraft(value);}catch(error){Toast(error.message);}}},dogs:dogsStore.list(),entry:new URLSearchParams(location.search).has('join')?'list':'create',preferList:route!=='/coaching/session'||new URLSearchParams(location.search).has('join'),sessionId:new URLSearchParams(location.search).get('session'),initialTab:new URLSearchParams(location.search).get('tab')||'summary',onProjection:(p,id)=>p?index?.accept(p):id&&index?.forget(id),onSessions:list=>list.forEach(p=>index?.accept(p)),onCreated:(p,dogId,memory)=>{if(currentUser?.user_id!==wizardOwnerId)return;index?.accept(p);const dog=ownedDogs.get(dogId);if(dog){index.linkDog(p.id,dog);if(memory)try{index.linkTraining(p.id,memory);}catch(error){Toast('Session créée, mémoire pédagogique non enregistrée : '+error.message);}}if(currentUser?.user_id===wizardOwnerId)jumolfController.confirmTrainingCreated({token:coachingWizardState?.draft?.jumolfPreparation?.token,dogId,sessionId:'coaching:'+p.id});},onDogLink:(id,dogId)=>{const dog=ownedDogs.get(dogId);if(!dog)throw Error('Chien indisponible.');index.linkDog(id,dog);},associationMarkup:sharedDogAssociation});}}
+ if(remoteCoaching){const slot=document.querySelector('[data-remote-premium-slot]');if(loboAccount.snapshot()?.status==='loading'&&!trackingDogs().length){slot.innerHTML='<p role="status">Chargement de votre chien autorisé…</p>';}else if(remoteCoachingRoot)slot.replaceWith(remoteCoachingRoot);else {const index=sharedIndex,ownedDogs={get:id=>localDog(id)},wizardOwnerId=currentUser.user_id;remoteCoachingRoot=slot;remoteCoachingMount=mountRemoteCoaching({root:slot,client:accountClient,embedded:true,resumeStoredSession:route!=='/new-session',initialWizardState:coachingWizardState,resolveJumolfPreparation:p=>jumolfController.currentTrainingPreparation(p),onWizardChange:value=>{if(currentUser?.user_id===wizardOwnerId){coachingWizardState=value;try{index?.saveTrainingDraft(value);}catch(error){Toast(error.message);}}},dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,entry:new URLSearchParams(location.search).has('join')?'list':'create',preferList:route!=='/coaching/session'||new URLSearchParams(location.search).has('join'),sessionId:new URLSearchParams(location.search).get('session'),initialTab:new URLSearchParams(location.search).get('tab')||'summary',onProjection:(p,id)=>p?index?.accept(p):id&&index?.forget(id),onSessions:list=>list.forEach(p=>index?.accept(p)),onCreated:(p,dogId,memory)=>{if(currentUser?.user_id!==wizardOwnerId)return;index?.accept(p);const dog=ownedDogs.get(dogId);if(dog){index.linkDog(p.id,dog);if(memory)try{index.linkTraining(p.id,memory);}catch(error){Toast('Session créée, mémoire pédagogique non enregistrée : '+error.message);}}const request=coachingWizardState?.draft?.jumolfPreparation;if(currentUser?.user_id===wizardOwnerId&&(!request||resolveDogId(trackingDogs(),request.dogId)===dogId))jumolfController.confirmTrainingCreated({token:request?.token,dogId:request?.dogId||dogId,sessionId:'coaching:'+p.id});},onDogLink:(id,dogId)=>{const dog=ownedDogs.get(dogId);if(!dog)throw Error('Chien indisponible.');index.linkDog(id,dog);},associationMarkup:sharedDogAssociation});}}
  const selectedDossierTab=document.querySelector('.dossier-tabs [aria-current=page]');if(selectedDossierTab){const nav=selectedDossierTab.parentElement;nav.scrollLeft=selectedDossierTab.offsetLeft-nav.offsetLeft-(nav.clientWidth-selectedDossierTab.offsetWidth)/2;}
  trackSmart.reconcile();
  mountRexMaps();
@@ -881,12 +937,12 @@ function render(focus=false) {
  if(focus) { window.scrollTo(0,0); document.querySelector('main').focus({preventScroll:true}); }
 }
 function renderDogs(route) {
- if(route.type==='list')return DogsListScreen(dogsStore.list());
- if(route.type==='create')return DogFormScreen();
- const dog=dogsStore.get(route.dogId);
+ if(route.type==='list')return DogsListScreen(accountDogs(),{primaryDogId:defaultTrackingDog()?.id});
+ if(route.type==='create')return DogFormScreen(null,{realMode:auth.assurance==='supabase-auth'});
+ const dog=localDog(route.dogId);
  if(!dog)return DogNotFoundScreen();
  const rows=sessionListView(sessionCatalog,{demoRows:false,sharedSessions:sharedIndex?.list()||[],dogIds:sharedOptions().dogIds,operationalMissions:operationalStore.list(),dogId:dog.id});
- return route.type==='edit'?DogFormScreen(dog):DogProfileScreen({...dog,sessions:[...rows,...(dog.sessions||[])]});
+ return route.type==='edit'?DogFormScreen(dog,{realMode:auth.assurance==='supabase-auth'}):DogProfileScreen({...dog,sessions:[...rows,...(dog.sessions||[])]},{primaryDogId:defaultTrackingDog()?.id,associations:{sessions:rows.length,tracks:trackLibrary.list().filter(t=>resolveDogId([dog],t.dogId)).length,operational:operationalStore.list().filter(m=>resolveDogId([dog],m.dogId)).length}});
 }
 function refreshDogPhotoPreview(form) {
  const existing=form.dataset.dogId?dogsStore.get(form.dataset.dogId):null;
@@ -912,20 +968,21 @@ function renderCoachingQa(){
  return panel+renderPreparation();
 }
 function renderSessions(){
+ loadSessionCloudMappings();
  const dogId=new URLSearchParams(location.search).get('dog')||'';
  const dog=dogId?dogsStore.get(dogId):null;
  const query=new URLSearchParams(location.search).get('q')||'';
- const rows=sessionListView(sessionCatalog,{filter:segment,query,dogId,currentSessionId:coachingDraft.session?.id,operationalMissions:operationalStore.list(),...sharedOptions()});
+ const rows=sessionListView(sessionCatalog,{filter:segment,query,dogId,currentSessionId:coachingDraft.session?.id,operationalMissions:operationalStore.list(),...sharedOptions()}).map(row=>({...row,removal:sessionPolicy(row.id)}));
  return coachingInvitationCards()+`<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button><a class="button button-gold" href="/coaching/session?join=1">Rejoindre ou retrouver une session Coaching</a>`+SessionListScreen(rows,{filter:segment,query,dogId,dogName:dog?.name||'',consolidated:auth.assurance==='supabase-auth'});
 }
 function renderSessionDetail(id){
  const params=new URLSearchParams(location.search),tab=params.get('tab')||'summary',from=params.get('from'),back=from&&/^\/(?:tracks|jumolf\/progress)(?:\?|$)/.test(from)?from:'/tracks';
  const p=sharedIndex?.get(id);
- if(p)return SessionDossierScreen(sharedSessionDossier(p,{training:trainingMemoryFor(p)}),{tab,back,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.'});
+ if(p)return SessionRemovalMenu(sessionPolicy(id))+SessionDossierScreen(sharedSessionDossier(p,{training:trainingMemoryFor(p)}),{tab,back,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.'});
  const operational=operationalStore.get(id);
- if(operational){const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return v?SessionDossierScreen(v,{tab,back}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});}
+ if(operational){const menu=SessionRemovalMenu(sessionPolicy(id));const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return menu+(v?SessionDossierScreen(v,{tab,back}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)}));}
  const record=sessionCatalog.get(id);
- if(record){const v=localSessionDossier(record);return v?SessionDossierScreen(v,{tab,back}):SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id}));}
+ if(record){const v=localSessionDossier(record);return SessionRemovalMenu(sessionPolicy(id))+(v?SessionDossierScreen(v,{tab,back}):SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id})));}
  const row=auth.assurance!=='supabase-auth'?sessionListView(sessionCatalog,{}).find(item=>item.id===id&&item.kind==='summary-demo'):null;
  if(row)return SessionDetailScreen({...row,dog:{name:row.dogName},participants:[],creatorRole:'Aucune donnée disponible',readOnly:true,report:null,observations:[]});
  return SessionDossierScreen(null,{back,error:sharedIndex?.error()||'Session inaccessible ou catalogue en cours de chargement. Actualisez pour vérifier vos accès.'});
@@ -983,7 +1040,7 @@ function renderPreparationContent(){
 function filterSessions() {
  const query=(document.querySelector('input[type=search]')?.value || '').toLocaleLowerCase('fr');
  const dogId=new URLSearchParams(location.search).get('dog')||'';
- const rows=sessionListView(sessionCatalog,{filter:segment,query,dogId,currentSessionId:coachingDraft.session?.id,operationalMissions:operationalStore.list(),...sharedOptions()});
+ const rows=sessionListView(sessionCatalog,{filter:segment,query,dogId,currentSessionId:coachingDraft.session?.id,operationalMissions:operationalStore.list(),...sharedOptions()}).map(row=>({...row,removal:sessionPolicy(row.id)}));
  document.querySelector('#session-results').innerHTML=SessionListResults(rows);
 }
 document.addEventListener('click',async event=>{
@@ -992,7 +1049,7 @@ document.addEventListener('click',async event=>{
  if(personalCloud?.controller.handleClick(event))return;
  if(event.target.closest('[data-refresh-coaching-invitations]')){void coachingInvitations?.refresh();return;}
  const invitationAction=event.target.closest('[data-coaching-invitation]');if(invitationAction){event.preventDefault();const inbox=coachingInvitations,owner=coachingInvitationsOwner,id=invitationAction.dataset.sessionId,role=invitationAction.dataset.role,accept=invitationAction.dataset.coachingInvitation==='accept';try{const p=await inbox.respond(id,role,accept);if(coachingInvitations!==inbox||auth.getSession().user?.user_id!==owner)return;if(p){sharedIndex?.accept(p);history.pushState({},'','/coaching/session?session='+encodeURIComponent(p.id));render(true);}else Toast('Invitation Coaching refusée.');}catch(error){Toast(error.message);void inbox?.refresh();}return;}
- if(event.target.closest('[data-refresh-shared-sessions]')){refreshSharedCatalog(true);return;}
+ if(event.target.closest('[data-refresh-shared-sessions]')){sessionCloudReadAt=0;loadSessionCloudMappings();refreshSharedCatalog(true);return;}
  const help=event.target.closest('[data-coaching-help]');if(help){openCoachingHelp(document,help.dataset.coachingHelp,help);return;}
  if(profileController.handleClick(event))return;
  if(scientificContributionController.handleClick(event))return;
@@ -1004,7 +1061,7 @@ document.addEventListener('click',async event=>{
  const acceptOps=event.target.closest('[data-ops-accept-invite]');if(acceptOps){void opsLiveRemote.acceptInvite(acceptOps.dataset.opsAcceptInvite).then(()=>opsLiveRemote.refresh()).catch(e=>Toast(e.message));return;}
  const revokeOps=event.target.closest('[data-ops-revoke]');if(revokeOps){void opsLiveRemote.revoke(revokeOps.dataset.opsRevoke,revokeOps.dataset.userId).then(()=>opsLiveRemote.refresh()).catch(e=>Toast(e.message));return;}
  const removedContact=event.target.closest('[data-community-action="remove-contact"]');if(removedContact&&!persistentCommunity)void afterCommunityContactRemoval(removedContact.dataset.userId);
- if(notificationOpen){communityStore.markNotificationRead(notificationOpen.dataset.notificationOpen);const notice=opsLiveRemote?.view().notifications.find(n=>n.id===notificationOpen.dataset.notificationOpen);if(notice)void opsLiveRemote.markRead(notice.session_id).then(()=>opsLiveRemote?.refresh()).catch(()=>{});}
+ if(notificationOpen){communityViewStore().markNotificationRead(notificationOpen.dataset.notificationOpen);communityStore.markNotificationRead(notificationOpen.dataset.notificationOpen);const notice=opsLiveRemote?.view().notifications.find(n=>n.id===notificationOpen.dataset.notificationOpen);if(notice)void opsLiveRemote.markRead(notice.session_id).then(()=>opsLiveRemote?.refresh()).catch(()=>{});}
  const link=event.target.closest('a');
  if(link && !link.hasAttribute('download') && ['http:','https:'].includes(link.protocol) && link.origin===location.origin && !link.pathname.endsWith('.html') && !link.hash && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey && event.button===0) { event.preventDefault();const destination=link.pathname+link.search;if(trackEditorActive&&trackEditor.draft?.dirty&&destination!==trackEditorHref){requestTrackEditorExit(destination);return;}if(destination!==location.pathname+location.search){if(destination!=='/track-builder'&&!destination.startsWith('/track-builder?'))trackEditorActive=false;history.pushState({},'',destination);}render(true); return; }
  if(communityController.handleClick(event))return;
@@ -1257,6 +1314,9 @@ document.addEventListener('click',async event=>{
  }
  const action=event.target.closest('[data-action]')?.dataset.action;
  if(action==='logout') {persistentCommunity?.dispose();persistentCommunity=null;communityOwnerId=null;communityEntryKey='';coachingWizardState=null;opsGps.pause();cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; await auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
+ const sessionRemove=event.target.closest('[data-session-remove]');if(sessionRemove){const id=sessionRemove.dataset.sessionId,scope=sessionRemove.dataset.sessionRemove,ownerId=currentUser?.user_id,confirmation=SessionRemovalConfirmation(sessionPolicy(id),{scope});if(!confirmation){Toast('Suppression indisponible pour cette session.');return;}ConfirmationDialog({...confirmation,onConfirm:()=>{void removeSession(id,scope,ownerId).catch(error=>Toast(error.message));}});return;}
+ const dogDefault=event.target.closest('[data-dog-set-default]');if(dogDefault){try{const dog=sessionDog(dogDefault.dataset.dogSetDefault);if(!dog)throw Error('Chien pisteur indisponible.');profileStore.setPrimaryDog(dog.id);jumolfController=makeJumolfController();render();Toast('Chien pisteur par défaut enregistré sur cet appareil.');}catch(error){Toast(error.message);}return;}
+ const dogRemove=event.target.closest('[data-dog-remove]');if(dogRemove){const id=dogRemove.dataset.dogRemove,ownerId=currentUser?.user_id,dog=localDog(id);if(!dog||isProtectedDog(dog)){Toast('LOBO et sa démonstration sont protégés.');return;}ConfirmationDialog({title:'Supprimer ce chien ?',description:'Seule cette fiche sera retirée. Les pistes, séances et historiques, y compris partagés, restent conservés. Le prochain chien pisteur disponible deviendra le choix par défaut. Une sauvegarde cloud associée sera également supprimée si elle est identifiée.',onConfirm:()=>{void removeAccountDog(id,ownerId).catch(error=>Toast(error.message));}});return;}
  const photoReset=event.target.closest('[data-dog-photo-reset]');
  if(photoReset){const form=photoReset.closest('form[data-dog-form]');form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl='';form.querySelector('[data-dog-photo]').value='';photoReset.hidden=true;form.querySelector('.dog-photo-pick span').textContent='Ajouter une photo';form.querySelector('.dog-photo-feedback').textContent='';refreshDogPhotoPreview(form);return;}
  if(action==='notification') Toast(mock.notification);
@@ -1477,7 +1537,7 @@ document.addEventListener('submit',async event=>{
  if(operationalIntakeForm){
   event.preventDefault();
   try{
-   const dog=dogsStore.get(operationalIntakeForm.elements.dogId.value);
+   const dog=sessionDog(operationalIntakeForm.elements.dogId.value);
    if(!dog)throw new Error('Choisissez un chien disponible.');
    const raw=Object.fromEntries(new FormData(operationalIntakeForm).entries());
    const text=value=>String(value??'').trim()||null;
@@ -1548,7 +1608,7 @@ document.addEventListener('submit',async event=>{
    let generatedState=null;
    if(prepareCanine){
     const a=jumolfAccess();if(auth.assurance!=='supabase-auth'||!a.entitlement_valid||a.entitlement!=='premium'||trackEditor.canine?.ownerId!==currentUser?.user_id)throw Error('Préparation pédagogique indisponible ou non autorisée.');
-    generatedState=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:dogsStore.list().filter(d=>!d.isDemonstration),dogId:values.dogId||'',track:{id:'pending',name:values.name,geometry:{points:trackEditor.draft.points}},currentState:coachingWizardState});
+    generatedState=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,dogId:values.dogId||'',track:{id:'pending',name:values.name,geometry:{points:trackEditor.draft.points}},currentState:coachingWizardState});
    }
    let saved;
    const trainingContext=missionContext(),dogId=values.dogId||'';

@@ -1,0 +1,51 @@
+/* V2 only. Existing modules and map geometry remain unchanged. */
+.app-shell { --premium-gold:#8ce7f2; --premium-goldMuted:#64bacb; --gold:#8ce7f2; --theme-accent:#8ce7f2; --theme-accent-muted:#5faec0; --theme-accent-soft:#153848; --theme-gold:#8ce7f2; --iphone-cyan:#8ce7f2; --iphone-green:#94e4b8; --iphone-violet:#c7b6ff; --iphone-coral:#ffb4aa; }
+.app-shell .button.button-gold,.proposal-save-dialog .button.button-gold { color:#092333; background:#94e4b8; border-color:#94e4b8; box-shadow:none; }
+.app-shell :is(.button.button-gold,a.button)[href*="track-builder"],.app-shell .button[data-prepared-action=coaching] { color:#092333; background:#8ce7f2; border-color:#8ce7f2; }
+.app-shell :is(.badge.gold,.eyebrow) { color:#8ce7f2; }
+.app-shell :is(.button,.coaching-choice,button,summary) { touch-action:manipulation; }
+.app-shell button:focus-visible,.app-shell summary:focus-visible,.app-shell a:focus-visible { outline:3px solid #8ce7f2; outline-offset:3px; }
+.app-shell [data-scientific-action],.app-shell a.button[href*="/jumolf/analy"],.app-shell a.button[href*="/jumolf/progress"] { border-color:#c7b6ff; }
+.app-shell :is([role=alert],.gps-start-status,.remote-notice) { line-height:1.5; overflow-wrap:break-word; }
+.app-shell [role=alert]:not(:empty) { color:#ffb4aa; }
+/* Current cards contain a text span + chevron; the old three-column icon layout squeezed text to 34px. */
+.app-shell .tracks-page .track-record-card { grid-template-columns:minmax(0,1fr) 20px; align-items:start; gap:10px; padding:16px; border-color:#53839366; }
+.app-shell .tracks-page .track-record-card>span:first-child { display:grid; gap:7px; min-width:0; }
+.app-shell .tracks-page .track-record-card strong { font-size:1rem; line-height:1.45; word-break:normal; overflow-wrap:break-word; }
+.app-shell .tracks-page .track-record-card small { display:block; font-size:.84rem; line-height:1.5; word-break:normal; overflow-wrap:break-word; color:var(--theme-text-muted,#b8cbd9); }
+.app-shell .tracks-page .track-record-card>span:last-child { font-size:1.3rem; color:#8ce7f2; }
+.app-shell .tracks-page .piste-search { padding:12px; gap:10px; margin-block:12px; }
+.app-shell .piste-search label { gap:5px; font-size:.85rem; }
+.app-shell .piste-search>div { gap:8px; }
+.app-shell .piste-search input,.app-shell .piste-search select { min-height:44px; padding:8px 10px; }
+.app-shell .piste-search .button { min-height:44px; padding:9px 12px; }
+.app-shell .piste-search>a { font-size:.82rem; }
+.app-shell .piste-categories { gap:7px; }
+.app-shell .piste-categories a { min-height:44px; padding:8px; line-height:1.3; }
+.app-shell main { padding-bottom:calc(var(--nav-height,84px) + env(safe-area-inset-bottom) + 28px); }
+.app-shell :is(.tracks-page,.sessions-page,.dog-profile-page,.community-page) { min-width:0; }
+.app-shell .coaching-principal { padding:16px; border:1px solid #8ce7f288; border-radius:16px; background:#102c3f; margin-bottom:18px; }
+.app-shell .coaching-principal .eyebrow { font-size:.8rem; font-weight:800; letter-spacing:.08em; }
+.app-shell .coaching-principal [role=group] { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.app-shell .coaching-principal button { min-height:52px; padding:10px 5px; font:inherit; font-weight:700; border:1px solid #759bad; border-radius:10px; background:#142a3c; color:#edf5fb; }
+.app-shell .coaching-principal button[aria-pressed=true] { color:#092333; background:#94e4b8; border-color:#94e4b8; }
+.app-shell .coaching-role-self { color:#94e4b8; font-weight:700; }
+.app-shell .gps-start-status { padding:10px 12px; color:#8ce7f2; background:#102c3f; border:1px solid #42677c; border-radius:12px; font-size:.85rem; margin:8px 0; }
+.app-shell .session-history-item { display:grid; grid-template-columns:minmax(0,1fr) 44px; gap:5px; align-items:start; min-width:0; }
+.app-shell .session-removal-menu { position:relative; margin-block:6px; justify-self:end; }
+.app-shell .session-removal-menu>summary { cursor:pointer; min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; font-size:1.5rem; list-style:none; border-radius:12px; color:var(--theme-text,#edf5fb); background:var(--theme-surface-raised,#142a3c); border:1px solid #647d8d; }
+.app-shell .session-removal-menu>div { position:absolute; z-index:40; right:0; top:48px; display:grid; gap:10px; width:min(250px,75vw); padding:14px; border:1px solid #647d8d; border-radius:12px; color:var(--theme-text,#edf5fb); background:var(--theme-surface-raised,#142a3c); box-shadow:0 10px 24px #0005; }
+.app-shell .session-removal-menu button { min-height:44px; padding:10px; background:#38262e; color:#ffb4aa; border:1px solid #a96b69; border-radius:9px; font:inherit; text-align:left; }
+.app-shell .session-removal-menu small { font-size:.8rem; line-height:1.5; }
+.app-shell .dog-default-panel,.app-shell .dog-removal-panel { padding:16px; margin-block:16px; border:1px solid #54798b; border-radius:14px; }
+@media(max-width:430px){
+ .app-shell .tracks-session-card { grid-template-columns:minmax(0,1fr); padding:14px; }
+ .app-shell .tracks-session-card nav { justify-content:flex-start; }
+ .app-shell .tracks-session-card strong { font-size:.95rem; }
+ .app-shell .tracks-session-card small { font-size:.8rem; }
+ .app-shell .session-history-item .session-history-card { grid-template-columns:26px minmax(0,1fr); gap:8px; padding:12px; }
+ .app-shell .session-history-item .session-history-card>.icon { display:none; }
+ .app-shell .session-history-item .session-history-copy strong { font-size:.9rem; }
+ .app-shell .session-history-item .session-history-copy>span:not(.session-history-badges),.app-shell .session-history-item .session-history-copy>small { font-size:.76rem; }
+}
+@media(prefers-reduced-motion:reduce){.app-shell .coaching-principal button{transition:none;}}

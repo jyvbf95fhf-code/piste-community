@@ -29,3 +29,4 @@ test('demo feed reconciles obsolete requests while preserving fixture source',()
  assert.ok(!store.getNotifications().some(n=>n.id==='notification-lea-contact'));
  assert.ok(store.getNotificationStore().listAll().some(n=>n.id==='notification-lea-contact'));
 });
+test('real application shell omits generic prototype label while demo retains it',async()=>{const {AppShell}=await import('../src/components.mjs');assert.doesNotMatch(AppShell('Real','/community','Name','N','community',0,{realMode:true}),/Prototype visuel · données fictives/);assert.match(AppShell('Demo','/community','Name','N','community'),/Prototype visuel · données fictives/);});

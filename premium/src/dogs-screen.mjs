@@ -138,10 +138,10 @@ function select(name, label, options, selected) {
   return `<label class="dog-form-field" for="dog-${e(name)}">${e(label)}<select id="dog-${e(name)}" name="${e(name)}">${options.map(option => `<option value="${e(option.id)}" ${option.id === selected ? 'selected' : ''}>${e(option.label)}</option>`).join('')}</select></label>`;
 }
 
-export function DogFormScreen(dog = null) {
+export function DogFormScreen(dog = null,{realMode=false}={}) {
   const editing = !!dog;
   const title = editing ? 'Modifier le profil' : 'Ajouter un chien';
-  const heading = pageHeading('PROFIL MOCK · MODIFICATIONS TEMPORAIRES', title, 'Les photos et modifications restent dans cette visite et disparaissent au rechargement.');
+  const heading = pageHeading(realMode?'PROFIL CANIN · COMPTE PERSONNEL':'PROFIL MOCK · MODIFICATIONS TEMPORAIRES', title, realMode?'Les modifications sont conservées sur cet appareil pour votre compte. La sauvegarde cloud reste disponible dans Profil.':'Les photos et modifications restent dans cette visite et disparaissent au rechargement.');
   const disciplines = new Set(dogDisciplines(dog || {}));
   const isRetired = ['retired','archived'].includes(dog?.status || 'active');
   const disciplineFields = DOG_DISCIPLINES.map(item => `<label class="dog-discipline-choice"><input type="checkbox" name="disciplines" value="${e(item.id)}" ${disciplines.has(item.id) ? 'checked' : ''}><span>${e(item.label)}</span></label>`).join('');

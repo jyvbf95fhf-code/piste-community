@@ -11,7 +11,7 @@ export function sessionRemovalPolicy(record,{ownerId,localOwnerId,currentSession
  const id=session?.id??'';
  const kind=record?.kind==='ops'||record?.kind==='operational'?'operational':'coaching';
  const shared=record?.source==='shared'||record?.sharedId||kind==='coaching'&&!record?.session;
- const cloud=!!record?.cloudReadOnly||record?.kind==='ops'&&Number.isSafeInteger(record.revision);
+ const cloud=!!record?.cloudReadOnly||record?.cloudBacked===true||record?.kind==='ops'&&Number.isSafeInteger(record.revision);
  const cloudId=record?.cloudId??(cloud?record.id:null);
  const cloudRevision=record?.cloudRevision??(cloud?record.revision:null);
  const explicitOwners=[record?.ownerUserId,record?.ownerId,record?.owner_id,session?.ownerId,session?.ownerUserId].filter(v=>v!==undefined&&v!==null);
