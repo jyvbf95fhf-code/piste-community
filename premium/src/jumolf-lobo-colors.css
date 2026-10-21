@@ -95,3 +95,5 @@
 @media(prefers-reduced-motion:reduce) {
   .jumolf-shell *, .mission-map .mission-panel-chevron { animation:none; transition:none; scroll-behavior:auto; }
 }
+.jumolf-shell .rex-disclaimer strong { color:var(--lobo-violet); }
+.jumolf-shell .rex-facts dd { overflow-wrap:normal; word-break:normal; font-size:clamp(.82rem,3.8vw,1.1rem); }

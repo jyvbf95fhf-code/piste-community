@@ -1,3 +1,4 @@
+import {LoboDemoScreen} from './lobo-demo-screen.mjs';
 import {JumolfDemoHistoryScreen,JumolfDemoHistoryEntry} from './jumolf-demo-history-screen.mjs';
 import {canineOptions,CANINE_LEVELS,CANINE_SKILLS} from './track-canine.mjs';
 import {JumolfV3Home,JumolfV3Learn,JumolfV3Prepare,JumolfV3Train,JUMOLF_JOURNEYS} from './jumolf-v3-screen.mjs';
@@ -38,7 +39,7 @@ const syntheticTemporalLearning=buildJumolfTemporalLearning(syntheticDataset.ses
 const clone=value=>structuredClone(value);
 const routePath=()=>location.pathname+location.search;
 
-export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({}),getTrainingMemories=()=>[]}={}){
+export function createJumolfController({store,getRawSources=()=>({}),navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString(),demoMode=true,getVerifiedEntitlement=null,redeemRealCode=null,prepareRealTraining=null,getViewer=()=>({}),getTrainingMemories=()=>[],getAccountDemo=()=>null,deviceResetScreen=()=>''}={}){
  const isDemo=()=>typeof demoMode==='function'?demoMode():demoMode;
  let onboardingStep=0,comparison=null,timelineIndex=0,formMessage='',selectedDogId='',journey='discovery';
  let preparationSequence=0,pendingPreparation=null,pendingGenerator=null;const trainingLinks=[];
@@ -105,6 +106,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   canineContext(dogId='',selection={}){
    reconcileProfileDrafts();const a=access();
    if(isDemo()||!getViewer()?.id||!a.entitlement_valid||!a.jumolf_enabled||!store.snapshot().consents.dog_history)return {dogs:[],dog:null,recommendations:[],declarations:[]};
+   const demo=getAccountDemo();if(demo?.status==='ready')return clone({dogs:[demo.dog],dog:demo.dog.id===dogId?demo.dog:null,recommendations:[],declarations:['Démonstration fictive : aucun diagnostic réel.']});
    const dogs=consentedSources().dogs,dog=dogs.find(d=>d.id===dogId)||null;
    const declarations=dog?PROFILE_MEMBERS.filter(member=>member==='dog'||!selection.handlerId||selection.handlerId===getViewer()?.id).flatMap(member=>{const fields=profileDrafts.get(draftKey(member,dog.id))?.fields||{};return ['experience','objectives','observations','workAreas'].filter(k=>fields[k]).map(k=>`${({dog:'Chien',handler:'Conducteur',team:'Binôme'})[member]} · ${({experience:'expérience déclarée',objectives:'objectifs déclarés',observations:'observations déclarées',workAreas:'axes déclarés'})[k]} : ${fields[k]}`);}):[];
    return clone({dogs,dog,recommendations:dog?realLearning(dog.id,selection).recommendations:[],declarations});
@@ -161,10 +163,13 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    route.demo=route.demo===true||query.get('demo')==='1';
    if(route.type==='premium'||route.type==='access-code'||!currentAccess.entitlement_valid||(!currentAccess.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'))return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
    if(!state.jumolf_onboarding_completed&&route.type!=='onboarding'&&!route.replay&&route.type!=='activate')return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
+   const accountDemo=!isDemo()?getAccountDemo():null;
+   if(accountDemo&&['entry','analyze','progress','exercises','compare','lobo'].includes(route.type))return LoboDemoScreen(accountDemo,path,{consents:state.consents,section:route.type==='lobo'?'analyze':route.type});
+   if(route.type==='device-reset')return deviceResetScreen();
    const sources=consentedSources();
    if(!isDemo()){const ids=new Set([...sources.sessions,...sources.tracks,...sources.operational].map(s=>s.id));state.analysis_runs=state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)).map(r=>latestFor(r.source_snapshot_id,state.consents)).filter(Boolean);if(comparison&&!comparison.demo){if(!state.consents.session_comparison)comparison=null;else try{compare(comparison.sessions.map(s=>s.id));}catch{comparison=null;}}}
    if(route.type==='onboarding'&&state.jumolf_onboarding_completed&&!route.replay)route.type='entry';
-   const dogs=sources.dogs||[];
+   const dogs=accountDemo?.status==='ready'&&state.consents.dog_history&&['prepare','train'].includes(route.type)?[accountDemo.dog]:sources.dogs||[];
    if(query.has('dog'))selectedDogId=dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';
    else if(!dogs.some(d=>d.id===selectedDogId))selectedDogId=dogs.length===1?dogs[0].id:'';
    if(route.type==='dog'||route.type==='session'&&!route.demo){

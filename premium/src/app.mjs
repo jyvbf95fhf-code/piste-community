@@ -1,3 +1,5 @@
+import {createLoboAccountController} from './lobo-account-controller.mjs';
+import {createPersonalCloudRepository} from './personal-cloud-client.mjs';
 import {saveDisplayedProposal,preparedTrackForConsultation} from './track-proposal-save.mjs';
 import {createTrainingMemory,trainingMemoryNotes,trainingMemoryView} from './jumolf-training-memory.mjs';
 import {mountRexMaps} from './jumolf-rex-map.mjs';
@@ -708,7 +710,7 @@ function jumolfDemoRawSources(){
 }
 function jumolfRawSources(){
  if(auth.assurance!=='supabase-auth')return jumolfDemoRawSources();
- return buildAccountAnalysisSources({ownerId:currentUser?.user_id,localOwnerId:coachingHistoryOwnerId,sharedOwnerId:sharedIndex?.ownerId,tracksOwnerId:trackLibraryOwnerId,dogs:dogsStore.list(),coachingRecords:sessionCatalog.list(),sharedSessions:sharedIndex?.list()||[],dogIds:sharedOptions().dogIds,operationalMissions:operationalStore.list().map(m=>({...m,trackingElapsedMs:operationalStore.trackingElapsedMs(m.id)})),tracks:trackLibrary.list(),weatherForMission:m=>opsWeather.snapshot(m)});
+ return buildAccountAnalysisSources({ownerId:currentUser?.user_id,localOwnerId:coachingHistoryOwnerId,sharedOwnerId:sharedIndex?.ownerId,tracksOwnerId:trackLibraryOwnerId,dogs:dogsStore.list(),coachingRecords:sessionCatalog.list(),sharedSessions:sharedIndex?.list()||[],dogIds:sharedOptions().dogIds,operationalMissions:operationalStore.list().map(m=>({...m,trackingElapsedMs:m.cloudReadOnly?m.trackingElapsedMs:operationalStore.trackingElapsedMs(m.id)})),tracks:trackLibrary.list(),weatherForMission:m=>opsWeather.snapshot(m)});
 }
 function accountScientificDataset(){return buildAccountScientificDataset(buildJumolfSources(jumolfRawSources()),currentUser?.user_id);}
 function scienceDataset(){return auth.assurance==='supabase-auth'?accountScientificDataset():scientificDataset;}
@@ -719,7 +721,10 @@ function prepareJumolfTraining(preparation){
  history.pushState({},'','/new-session');render(true);
 }
 function trainingMemoryFor(p){const memory=sharedIndex?.training(p?.id),dogId=sharedIndex?.dogId(p?.id);if(!memory||!dogsStore.get(dogId)||!jumolfAccess().entitlement_valid||jumolfAccess().entitlement!=='premium')return null;return trainingMemoryView(memory,p,{ownerId:currentUser?.user_id,dogId,consents:jumolfStore.snapshot().consents});}
-function makeJumolfController(){return createJumolfController({store:jumolfStore,getTrainingMemories:()=>sharedIndex?.list().map(trainingMemoryFor).filter(Boolean)||[],getViewer:()=>({id:currentUser?.user_id,name:currentUser?.name,role:currentUser?.role}),prepareRealTraining:auth.assurance==='supabase-auth'?prepareJumolfTraining:null,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
+const loboAccount=createLoboAccountController({getViewer:()=>auth.assurance==='supabase-auth'?currentUser:null,verifyUser:async()=>{const r=await accountClient.auth.getUser();if(r.error)throw r.error;return r.data?.user;},repository:ownerId=>createPersonalCloudRepository({client:accountClient,ownerId}),call:body=>accountApi.call(body),storage,indexedDB:window.indexedDB,onChange:()=>render(),beforeReset:()=>{personalCloud?.controller.dispose();personalCloud=null;},afterReset:async bundle=>{
+ const ownerId=currentUser.user_id;dogsStore=createDogsStore({dogs:[],ownerId,storage});trackLibrary=createTrackLibrary({ownerId,storage});operationalStore=createOperationalMissionStore({ownerId,storage});sessionCatalog.clear();coachingDraft=newCoachingDraft();sharedIndex?.dispose();sharedIndex=createSharedSessionIndex({ownerId,storage});await sharedIndex.refresh(async()=>bundle.coachingProjections);if(currentUser?.user_id!==ownerId)throw Error('Compte modifié.');const controller=personalCloudForUser();await controller.load();if(currentUser?.user_id!==ownerId)throw Error('Compte modifié.');await controller.restore(bundle.personalRecords.map(r=>r.kind+':'+r.id));
+}});
+function makeJumolfController(){return createJumolfController({getAccountDemo:()=>loboAccount.snapshot(),deviceResetScreen:()=>loboAccount.screen(),store:jumolfStore,getTrainingMemories:()=>sharedIndex?.list().map(trainingMemoryFor).filter(Boolean)||[],getViewer:()=>({id:currentUser?.user_id,name:currentUser?.name,role:currentUser?.role}),prepareRealTraining:auth.assurance==='supabase-auth'?prepareJumolfTraining:null,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let jumolfController=makeJumolfController();
 const scientificDataset=generateJumolfSyntheticDataset();
 const scientificAnalytics=buildJumolfSyntheticAnalytics(scientificDataset.sessions);
@@ -812,6 +817,7 @@ function render(focus=false) {
  const communityRoute=resolveCommunityRoute(route);
  const profileRoute=resolveProfileRoute(route);
  const jumolfRoute=resolveJumolfRoute(route)?route:null;
+ if(jumolfRoute&&loboAccount.snapshot()===null&&currentUser?.admin_role==='owner_admin')void loboAccount.refresh();
  const scientificRoute=resolveScientificRoute(route)?route:null;
  const scientificContributionRoute=resolveScientificContributionRoute(route);
  const dogForTitle=dogsRoute?.dogId?dogsStore.get(dogsRoute.dogId):null;
@@ -982,6 +988,7 @@ function filterSessions() {
 }
 document.addEventListener('click',async event=>{
  if(event.target.closest('[data-dossier-print]')){window.print();return;}
+ const loboAction=event.target.closest('[data-lobo-action]');if(loboAction){event.preventDefault();await loboAccount.action(loboAction.dataset.loboAction,{backupVerified:document.querySelector('[data-lobo-backup-verified]')?.checked===true,download:raw=>{const url=URL.createObjectURL(new Blob([raw],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='piste-lobo-safari-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}});return;}
  if(personalCloud?.controller.handleClick(event))return;
  if(event.target.closest('[data-refresh-coaching-invitations]')){void coachingInvitations?.refresh();return;}
  const invitationAction=event.target.closest('[data-coaching-invitation]');if(invitationAction){event.preventDefault();const inbox=coachingInvitations,owner=coachingInvitationsOwner,id=invitationAction.dataset.sessionId,role=invitationAction.dataset.role,accept=invitationAction.dataset.coachingInvitation==='accept';try{const p=await inbox.respond(id,role,accept);if(coachingInvitations!==inbox||auth.getSession().user?.user_id!==owner)return;if(p){sharedIndex?.accept(p);history.pushState({},'','/coaching/session?session='+encodeURIComponent(p.id));render(true);}else Toast('Invitation Coaching refusée.');}catch(error){Toast(error.message);void inbox?.refresh();}return;}

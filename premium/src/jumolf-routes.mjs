@@ -4,6 +4,8 @@ export function resolveJumolfRoute(path){
  if(route==='/jumolf/prepare'||route==='/jumolf/learn')return {type:'prepare'};
  if(route==='/jumolf/team')return {type:'team'};
  if(route.startsWith('/jumolf/learn/')){const id=decode(route.slice('/jumolf/learn/'.length));return id?{type:'prepare'}:null;}
+ if(route==='/jumolf/lobo')return {type:'lobo'};
+ if(route==='/jumolf/device-reset')return {type:'device-reset'};
  if(route==='/jumolf/train')return {type:'train'};
  if(route==='/jumolf/analyze')return {type:'analyze'};
  if(route==='/jumolf/demo-history')return {type:'demo-history'};
