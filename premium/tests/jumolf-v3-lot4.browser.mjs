@@ -43,7 +43,7 @@ await context.route('**/*',async route=>{const req=route.request(),url=new URL(r
 });
 
 
-async function activate(){await page.goto('https://science.test/jumolf/activate');
+async function activate(){await page.goto('https://science.test/jumolf');if(await page.getByLabel('Choisir mon chien',{exact:true}).count())return;await page.goto('https://science.test/jumolf/activate');
 for(const key of ['gps','weather','dog_history','ai_analysis','session_comparison'])await page.locator('[data-jumolf-consent="'+key+'"]').check();
 await page.locator('[data-jumolf-action="activate"]').click();for(let i=0;i<3;i++)await page.locator('[data-jumolf-action="onboarding-next"]').click();await page.locator('[data-jumolf-action="complete-onboarding"]').click();}
 await activate();await page.getByLabel('Choisir mon chien',{exact:true}).selectOption('dog-a');
@@ -82,7 +82,7 @@ for(const type of ['approach-start','arrive-start','ready-pose'])command(type);
 command('start-pose',{fix:fix()});at+=10000;command('gps-batch',{kind:'pose',points:[{...fix(.001),sequence:1,segmentId:'start'}]});command('finish-pose');command('in-place');command('return-start');at+=3600000;command('start-search',{fix:fix()});at+=10000;command('gps-batch',{kind:'search',points:[{...fix(.001),sequence:1,segmentId:'start'}]});command('finish-search');
 assert.equal(created.phase,'DEBRIEF');
 await activate();await page.getByLabel('Choisir mon chien',{exact:true}).waitFor();await page.getByLabel('Choisir mon chien',{exact:true}).selectOption('dog-a');await page.getByRole('navigation',{name:'Navigation JUMOLF',exact:true}).getByRole('link',{name:'Progresser',exact:true}).click();
-// Activation is intentionally visit scoped in the existing app. Set it without reloading below.
+// Activation is now retained per verified account on this device.
 if(await page.locator('[data-jumolf-action="activate"]').count())throw Error('unexpected activation reset');
 await page.locator('[data-training-history] a').waitFor();assert.match(await page.locator('[data-training-history]').innerText(),/Séance clôturée/);
 for(const width of [320,390,430,1280]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'progress overflow '+width);}
@@ -95,8 +95,8 @@ await page.getByRole('link',{name:'Rapport PDF',exact:true}).click();assert.ok(a
 created={...created,phase:'INTERRUPTED',version:created.version+1};
 await page.getByRole('button',{name:'Actualiser les sessions'}).count();
 await page.evaluate(async()=>{document.querySelector('[data-refresh-shared-sessions]')?.click();});
-// A full app reload must still require existing JUMOLF consent, rather than retaining an authorization in memory.
-await page.goto('https://science.test/jumolf/activate');assert.equal(await page.locator('[data-training-history] a').count(),0);
+// Reload retains consent choices while server authorization is rechecked.
+await page.goto('https://science.test/jumolf/settings');await page.getByRole('heading',{name:'Réglages JUMOLF'}).waitFor();assert.equal(await page.locator('[data-jumolf-consent="gps"]').isChecked(),true);
 assert.equal(calls.filter(c=>c==='create').length,1);assert.deepEqual(errors,[]);
 console.log(JSON.stringify({passed:true,widths:[320,390,430,1280],restoredDraft:true,exactDogId:true,oneExplicitSession:true,realReducer:true,providerSnapshot:true,declaredAge:true,dossier:true,report:true,cloudMemory:false}));
 await context.close();
