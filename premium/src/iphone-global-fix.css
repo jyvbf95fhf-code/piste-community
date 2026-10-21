@@ -49,3 +49,10 @@
  .app-shell .session-history-item .session-history-copy>span:not(.session-history-badges),.app-shell .session-history-item .session-history-copy>small { font-size:.76rem; }
 }
 @media(prefers-reduced-motion:reduce){.app-shell .coaching-principal button{transition:none;}}
+/* Community's historical scoped background must not win over the new primary text color. */
+.app-shell:has(.community-page) .community-page .button.button-gold { color:#092333; background:#94e4b8; border-color:#94e4b8; }
+.app-shell:has(.community-page) .community-page .community-contact-search summary.button.button-gold { color:#092333; background:#8ce7f2; border-color:#8ce7f2; }
+.app-shell:has(.community-page) .community-page [data-community-action="accept-contact"] { color:#092333; background:#94e4b8; border-color:#94e4b8; }
+.app-shell:has(.community-page) .community-page [data-community-action="refuse-contact"] { color:#ffb4aa; border-color:#a96b69; background:#38262e; }
+.app-shell .operational-create-mission { color:#092333; background:#94e4b8; border-color:#94e4b8; box-shadow:none; }
+.app-shell .coaching-choice[aria-pressed="true"] { color:var(--theme-text,#edf5fb); border-color:#8ce7f2; background:#163849; }

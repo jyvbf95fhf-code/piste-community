@@ -283,7 +283,7 @@ function personalCloudForUser(){if(personalCloud?.ownerId===currentUser?.user_id
 
 function accountDogs(){
  const rows=dogsStore.list().filter(d=>auth.assurance!=='supabase-auth'||!d.isDemonstration),demo=loboAccount.snapshot();
- if(demo?.status==='ready'&&!resolveDogId(rows,demo.dog.id))rows.unshift({...demo.dog,isDemonstration:false,cloudId:demo.dog.id});
+ if(demo?.status==='ready'&&!rows.some(d=>d.id===demo.dog.id||d.cloudId===demo.dog.id))rows.unshift({...demo.dog,isDemonstration:false,cloudId:demo.dog.id});
  return rows;
 }
 function trackingDogs(){return activeTrackingDogs(accountDogs());}
@@ -311,12 +311,13 @@ function loadSessionCloudMappings(){
 }
 function sessionRecord(id){return operationalStore.get(id)||sessionCatalog.get(id)||sharedIndex?.get(id)||null;}
 function sessionPolicy(id){const record=sessionRecord(id),mapping=sessionCloudOwner===currentUser?.user_id?sessionCloudMap.get(id):null;return sessionRemovalPolicy(mapping?{...record,...mapping}:record,{ownerId:currentUser?.user_id,localOwnerId:coachingHistoryOwnerId,currentSessionId:coachingDraft.session?.id});}
+function removalError(reason){return ({storage:'Le stockage local est indisponible. Réessayez sans fermer cette page.',conflict:'Cet historique a changé dans un autre onglet. Actualisez avant de supprimer.',invalid:'Le contenu local est illisible ; son original est conservé.',owner:'Cette suppression est réservée au propriétaire.', 'not-found':'Cette séance n’est plus présente dans cet historique.'})[reason]||reason||'Suppression indisponible.';}
 async function removeSession(id,scope,ownerId){
  if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const record=sessionRecord(id),policy=sessionPolicy(id);if(!SessionRemovalConfirmation(policy,{scope}))throw Error(policy.localReason||policy.cloudReason||'Suppression indisponible.');
  if(policy.kind==='operational'){
   if(scope==='cloud')await removeCloudPersonal('ops',id,policy.cloudId,ownerId,policy.cloudRevision);
-  if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const result=operationalStore.remove(id,{ownerId,currentSessionId:coachingDraft.session?.id});if(!result.ok)throw Error(result.reason||'Retrait local indisponible.');
- }else{const result=coachingHistoryStorage.remove(ownerId,id,{currentSessionId:coachingDraft.session?.id});if(!result.ok)throw Error(result.reason||'Historique local non supprimé.');const removed=sessionCatalog.remove(id,{ownerId,localOwnerId:coachingHistoryOwnerId,currentSessionId:coachingDraft.session?.id});if(!removed.ok)throw Error(removed.reason);if(coachingDraft.session?.id===id){cleanupCoachingExit();coachingDraft=newCoachingDraft();preparationState=null;searchState=search.createSearch();tracerState=tracer.createTracer();terrainOpen=false;}}
+  if(currentUser?.user_id!==ownerId)throw Error('Le compte a changé.');const result=operationalStore.remove(id,{ownerId,currentSessionId:coachingDraft.session?.id});if(!result.ok)throw Error((scope==='cloud'?'Sauvegarde cloud supprimée ; copie locale non retirée. ':'')+removalError(result.reason));
+ }else{const result=coachingHistoryStorage.remove(ownerId,id,{currentSessionId:coachingDraft.session?.id});if(!result.ok)throw Error(removalError(result.reason));const removed=sessionCatalog.remove(id,{ownerId,localOwnerId:coachingHistoryOwnerId,currentSessionId:coachingDraft.session?.id});if(!removed.ok)throw Error(removed.reason);if(coachingDraft.session?.id===id){cleanupCoachingExit();coachingDraft=newCoachingDraft();preparationState=null;searchState=search.createSearch();tracerState=tracer.createTracer();terrainOpen=false;}}
  jumolfController=makeJumolfController();history.pushState({},'','/sessions');render(true);Toast(scope==='cloud'?'Sauvegarde et copie locale supprimées.':'Séance retirée de cet appareil.');
 }
 function selectedCommunityNotifications(){
