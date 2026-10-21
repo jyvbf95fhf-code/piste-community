@@ -2,7 +2,7 @@ import {escapeHTML as e,EmptyState,StatusBadge} from './components.mjs';
 
 function label(item){
  if(item.type==='live_session_started')return item.session_type==='ops'?`${item.owner_display_name||'Un membre'} partage un suivi de piste opérationnel`:`${item.owner_display_name||'Un membre'} a démarré une session Live`;
- const actor=item.actorId||item.owner_display_name||'Un membre';
+ const actor=item.actorDisplayName||item.owner_display_name||item.actorId||'Un membre';
  return ({contact_request:`${actor} vous a envoyé une demande de contact`,contact_accepted:`${actor} a accepté votre demande de contact`,follow:`${actor} vous suit`,like:`${actor} aime votre publication`,comment:`${actor} a commenté votre publication`})[item.type]||'Nouvelle notification';
 }
 function target(item){return item.type==='live_session_started'?item.route||'/live':item.type==='contact_request'||item.type==='contact_accepted'?'/community/contacts':item.postId?`/community/post/${encodeURIComponent(item.postId)}`:item.actorId?`/community/profile/${encodeURIComponent(item.actorId)}`:'/notifications';}

@@ -1,3 +1,4 @@
+import {sessionRemovalPolicy} from './session-removal.mjs';
 import {isExitClosure,validSessionControl} from './coaching-session-control.mjs';
 import {validGpsSearch} from './coaching-driver-gps-model.mjs';
 import {validGpsTracer} from './coaching-gps-model.mjs';
@@ -43,6 +44,25 @@ export function createCoachingHistoryStorage(storage){
     saved.set(key,raw);
     return {ok:true,records:structuredClone(data.records)};
    }catch{return {ok:false,records:[]};}
+  },
+  remove(ownerId,id,{currentSessionId=''}={}){
+   if(!ownerValid(ownerId)||!id)return {ok:false,reason:'owner'};
+   const key=keyFor(ownerId);
+   try{
+    if(!saved.has(key)||storage.getItem(key)!==saved.get(key))return {ok:false,reason:'conflict'};
+    const raw=saved.get(key);
+    if(raw===null)return {ok:false,reason:'not-found'};
+    const data=JSON.parse(raw);
+    if(data?.version!==1||data.ownerId!==ownerId||!validRecords(data.records))return {ok:false,reason:'invalid'};
+    const record=data.records.find(r=>r.session.id===id);
+    if(!record)return {ok:false,reason:'not-found'};
+    const policy=sessionRemovalPolicy(record,{ownerId,localOwnerId:ownerId,currentSessionId});
+    if(!policy.canRemoveLocal)return {ok:false,reason:policy.localReason};
+    const records=data.records.filter(r=>r.session.id!==id);
+    const payload=JSON.stringify({...data,records});
+    storage.setItem(key,payload);saved.set(key,payload);
+    return {ok:true};
+   }catch{return {ok:false,reason:'storage'};}
   },
   save(ownerId,records){
    if(!ownerValid(ownerId)||typeof storage?.setItem!=='function'||typeof storage?.getItem!=='function'||!Array.isArray(records))return {ok:false};

@@ -3,6 +3,17 @@ const preferenceDefaults=()=>({notify_live_in_app:true,notify_live_email:false,n
 const recipientOf=item=>item.recipient_user_id||item.recipientId||null;
 const liveKey=item=>item.type==='live_session_started'&&item.session_id&&recipientOf(item)?`${item.session_id}:${recipientOf(item)}`:null;
 
+// A presentation projection only: never deletes events or changes another account.
+// Omit friendshipState until an authoritative snapshot has succeeded.
+export function selectCommunityNotifications({items=[],viewerId,friendshipState=null}={}){
+ if(!viewerId)return [];
+ return items.filter(item=>{
+  if(recipientOf(item)!==viewerId||item.channels?.inApp===false)return false;
+  if(item.type!=='contact_request'||!friendshipState)return true;
+  return (friendshipState.contactRequests||[]).some(request=>request.status==='pending'&&request.toUserId===viewerId&&request.fromUserId===item.actorId&&(!item.requestId||item.requestId===request.id));
+ });
+}
+
 export function createCommunityNotificationStore({notifications=[],viewerId='self'}={}){
  const events=clone(notifications).map(item=>({channels:{inApp:true,email:false,push:false},read:false,...item}));
  const preferences=new Map();let sequence=1;

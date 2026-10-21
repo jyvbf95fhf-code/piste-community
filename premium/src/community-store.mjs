@@ -1,6 +1,6 @@
 import {COMMUNITY_PROFILE_FIXTURES,COMMUNITY_POST_FIXTURES,COMMUNITY_CONTACT_FIXTURES,COMMUNITY_CONTACT_REQUEST_FIXTURES,COMMUNITY_FOLLOW_FIXTURES,COMMUNITY_NOTIFICATION_FIXTURES,COMMUNITY_PHOTO_FIXTURES} from './community-fixtures.mjs';
 import {canViewCommunityPost,contactStatus,projectCommunitySource,COMMUNITY_VISIBILITY} from './community-model.mjs';
-import {createCommunityNotificationStore} from './community-notifications.mjs';
+import {createCommunityNotificationStore,selectCommunityNotifications} from './community-notifications.mjs';
 
 const clone=value=>structuredClone(value);
 const stamp=()=>new Date().toISOString();
@@ -123,7 +123,7 @@ export function createCommunityStore(options={}){
  function deleteOwnPost(postId){const item=post(postId);if(!item||item.authorId!==state.viewerId)throw new Error('Vous ne pouvez supprimer que vos propres publications.');state.posts=state.posts.filter(value=>value.id!==postId);return true;}
  function reportPost(postId,reason=''){const item=post(postId);if(!item||!canViewCommunityPost(state,item,state.viewerId))return false;state.reports.push({postId,reporterId:state.viewerId,reason:String(reason).slice(0,200),createdAt:stamp()});return true;}
  function hidePost(postId){const item=post(postId);if(!item||!canViewCommunityPost(state,item,state.viewerId)||state.hiddenPostIds.includes(postId))return false;state.hiddenPostIds.push(postId);return true;}
- function getNotifications(){return notificationStore.list(state.viewerId).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).map(snapshot);}
+ function getNotifications(){return selectCommunityNotifications({items:notificationStore.list(state.viewerId),viewerId:state.viewerId,friendshipState:state}).sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt))).map(snapshot);}
  function markNotificationRead(id){return notificationStore.markRead(id,state.viewerId);}
  function getProfile(id){return snapshot(profile(id));}
  function listProfiles(){return state.profiles.map(snapshot);}

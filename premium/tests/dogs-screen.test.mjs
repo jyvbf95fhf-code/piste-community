@@ -114,3 +114,27 @@ test('personal photo data URI takes precedence over the mock portrait in list an
   assert.match(profile, /data:image\/png;base64,AA==/);
   assert.doesNotMatch(profile, /hero-malinois-mountain\.png/);
 });
+
+test('Dogs centrally shows eligible default and only offers explicit default for another active tracking dog', () => {
+  const first={id:'first',name:'First',status:'active',disciplines:['tracking'],portrait:'silhouette'};
+  const second={...first,id:'second',name:'Second'};
+  const retired={...first,id:'retired',status:'retired'};
+  const html=DogsListScreen([first,second,retired],{primaryDogId:'second'});
+  assert.match(html,/Chien de piste par défaut/);
+  assert.match(html,/data-dog-set-default="first"/);
+  assert.doesNotMatch(html,/data-dog-set-default="(?:second|retired)"/);
+  assert.match(DogsListScreen([first]),/Chien de piste par défaut/);
+  assert.doesNotMatch(DogsListScreen([retired]),/data-dog-set-default/);
+});
+test('dog removal discloses associations without offering historical cascade and protects stable LOBO identity', () => {
+  const dog=createDogsStore().get('nox');
+  const html=DogProfileScreen(dog,{associations:{sessions:4,tracks:2,operational:1}});
+  assert.match(html,/data-dog-remove="nox"/);
+  assert.match(html,/4 session\(s\)/);
+  assert.match(html,/2 piste\(s\)/);
+  assert.match(html,/1 mission\(s\) OPS/);
+  assert.match(html,/historiques.*conservés/);
+  const protectedHtml=DogProfileScreen({...dog,id:'local',cloudId:'10b00000-0000-4000-8000-000000000001'});
+  assert.doesNotMatch(protectedHtml,/data-dog-remove/);
+  assert.match(protectedHtml,/protégé/);
+});

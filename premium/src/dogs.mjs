@@ -70,6 +70,10 @@ const demoDogs = [
 ];
 
 const clone = value => structuredClone(value);
+export const PROTECTED_DOG_ID = '10b00000-0000-4000-8000-000000000001';
+export function isProtectedDog(dog = {}) {
+  return [dog.id, dog.cloudId].some(id => typeof id === 'string' && [PROTECTED_DOG_ID, `dog-${PROTECTED_DOG_ID}`].includes(id.toLowerCase()));
+}
 const allowedFields = new Set([
   'name', 'officialName', 'breed', 'sex', 'dateOfBirth', 'retirementDate', 'age', 'registrationNumber',
   'specialty', 'status', 'portrait', 'personalPhotoDataUrl', 'notes', 'disciplines'
@@ -135,7 +139,7 @@ export function createDogsStore({ dogs = demoDogs, ownerId = null, storage = nul
     restoreCloud(record,localId=record.id){
       const r=validatePersistenceRecord(record);if(r.kind!=='dog'||r.deletedAt)throw Error('Profil distant indisponible.');
       const check=createDogsStore({dogs:[{portrait:'silhouette',status:'active',...r.payload,id:localId}]});const dog=check.update(localId,{});dog.isDemonstration=false;dog.cloudId=r.id;dog.cloudRevision=r.revision;
-      const next=records.filter(d=>d.id!==localId);next.push(dog);persist(next);records=next;return snapshot(dog);
+      const next=records.some(d=>d.id===localId)?records.map(d=>d.id===localId?dog:d):[...records,dog];persist(next);records=next;return snapshot(dog);
     },
     create(values = {}) {
       const dog = {
@@ -185,6 +189,17 @@ export function createDogsStore({ dogs = demoDogs, ownerId = null, storage = nul
     },
     archive(id) {
       return this.update(id, { status: 'archived' });
+    },
+    // Confirmation is collected by the app; this operation never edits session/history stores.
+    remove(id, { confirmed = false } = {}) {
+      if (confirmed !== true) throw Error('Confirmez explicitement la suppression du profil chien.');
+      const dog = records.find(record => record.id === id);
+      if (!dog) return null;
+      if (isProtectedDog(dog)) throw Error('Ce profil chien est protégé et ne peut pas être supprimé.');
+      const next = records.filter(record => record.id !== id);
+      persist(next);
+      records = next;
+      return snapshot(dog);
     }
   });
 }

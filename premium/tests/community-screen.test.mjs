@@ -101,3 +101,19 @@ test('search shows matching profile and track result types with visible relation
   const trackHtml=page({type:'search'},{query:'trace'});
   assert.match(trackHtml,/data-community-result="track"/);
 });
+
+test('accepted contacts keep access controls and removal inside secondary disclosure',()=>{
+ const html=page({type:'contacts'});
+ assert.match(html,/<details class="community-access-menu"><summary>Accès Live et Coaching<\/summary>/);
+ assert.match(html,/<details class="community-contact-menu"><summary[^>]*>Options<\/summary><div><button[^>]*data-community-action="remove-contact"/);
+ assert.doesNotMatch(html,/<details class="community-access-menu" open/);
+ assert.match(html,/aucun rôle Coaching/);
+});
+
+test('Prototype describes demo content only, never the real account Contacts view',()=>{
+ const store=createCommunityStore();
+ assert.match(page({type:'contacts'},{store}),/Prototype · contacts de démonstration/);
+ const real=new Proxy(store,{get(target,key){return key==='getFriendshipStatus'?()=>({ready:true,loading:false,pending:false,message:''}):target[key];}});
+ assert.doesNotMatch(page({type:'contacts'},{store:real}),/Prototype/);
+ assert.doesNotMatch(page({type:'feed'},{store:real}),/Prototype/);
+});

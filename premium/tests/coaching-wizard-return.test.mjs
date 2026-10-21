@@ -2,9 +2,9 @@ import {test} from 'node:test';import assert from 'node:assert/strict';
 import {createSharedCoachingWizard} from '../src/coaching-shared-wizard.mjs';
 const profile={id:'owner',name:'Test'},dogs=[{id:'dog',name:'Nox'}],track={id:'created',name:'Nouveau tracé',source:'draw',ownerId:'self',geometry:{points:[{x:7.4,y:48.3,space:'wgs84',kind:'start'},{x:7.401,y:48.301,space:'wgs84',kind:'arrival',incomingMode:'free'}]}};
 function configured(options={}){const w=createSharedCoachingWizard({profile,dogs,...options});for(const [field,value] of [['mode','normal'],['trackingScenario','connected_traceur'],['traceType','prepared']])w.dispatch({field,value});return w;}
-test('real wizard groups configuration then reference, dog, team and review without resetting choices',()=>{
+test('real wizard groups configuration then reference, team and review with the selected dog without resetting choices',()=>{
  const w=configured({getTracks:()=>[track]});assert.match(w.render(),/data-wizard-step="mode"/);for(const field of ['mode','trackingScenario','traceType'])assert.match(w.render(),new RegExp('data-coaching-choice="'+field+'"'));
- assert.match(w.render(),/Étape 1 \/ 5/);w.dispatch({action:'next'});assert.match(w.render(),/data-wizard-step="prepare"/);w.dispatch({field:'preparation',value:'created'});w.dispatch({action:'next'});assert.match(w.render(),/data-wizard-step="dog"/);w.dispatch({action:'next'});assert.match(w.render(),/data-wizard-step="roles"/);w.dispatch({action:'back'});assert.match(w.render(),/data-value="dog" aria-pressed="true"/);w.dispatch({action:'back'});assert.match(w.render(),/data-value="created" aria-pressed="true"/);
+ assert.match(w.render(),/Étape 1 \/ 4/);w.dispatch({action:'next'});assert.match(w.render(),/data-wizard-step="prepare"/);w.dispatch({field:'preparation',value:'created'});w.dispatch({action:'next'});assert.match(w.render(),/data-wizard-step="roles"/);w.dispatch({action:'back'});assert.match(w.render(),/data-value="created" aria-pressed="true"/);
 });
 test('creator detour resumes the same owner draft at the selected new reference',()=>{
  const original=configured();original.dispatch({action:'next'});const snapshot=original.snapshot();assert.equal(snapshot.ownerId,profile.id);
@@ -13,7 +13,7 @@ test('creator detour resumes the same owner draft at the selected new reference'
 });
 test('blind modes keep delegated selection and a direct route skips an unnecessary reference step',()=>{
  const w=createSharedCoachingWizard({profile,dogs});w.dispatch({field:'mode',value:'full_blind'});w.dispatch({field:'traceType',value:'prepared'});w.dispatch({action:'next'});assert.match(w.render(),/Traceur fait le choix/);assert.doesNotMatch(w.render(),/from=coaching/);
- const direct=createSharedCoachingWizard({profile,dogs});direct.dispatch({field:'mode',value:'normal'});direct.dispatch({field:'traceType',value:'direct'});direct.dispatch({action:'next'});assert.match(direct.render(),/data-wizard-step="dog"/);assert.match(direct.render(),/Étape 2 \/ 4/);
+ const direct=createSharedCoachingWizard({profile,dogs});direct.dispatch({field:'mode',value:'normal'});direct.dispatch({field:'traceType',value:'direct'});direct.dispatch({action:'next'});assert.match(direct.render(),/data-wizard-step="roles"/);assert.match(direct.render(),/Étape 2 \/ 3/);
 });
 
 test('only a Coaching creator detour can return to its own draft',async()=>{

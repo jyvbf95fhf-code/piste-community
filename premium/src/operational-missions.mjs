@@ -1,3 +1,4 @@
+import {sessionRemovalPolicy} from './session-removal.mjs';
 import {validatePersistenceRecord} from './persistence-contract.mjs';
 import {createGpsPose,startGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,validGpsPose,normalizeGpsFix} from './coaching-gps-model.mjs';
 import { gpxFixtures } from './track-library.mjs';
@@ -282,6 +283,31 @@ export function createOperationalMissionStore({
 
     get(id) {
       return snapshot(records.get(id));
+    },
+
+    remove(id,{ownerId:actorId,currentSessionId=''}={}){
+      const mission=records.get(id);
+      if(!mission)return {ok:false,reason:'not-found'};
+      const policy=sessionRemovalPolicy(mission,{ownerId:actorId,currentSessionId});
+      if(actorId!==ownerId||!policy.canRemoveLocal)return {ok:false,reason:policy.localReason||'owner'};
+      const key=mission.cloudReadOnly?cloudKey:mission.gpsTrack?persistenceKey:null;
+      if(key){
+        try{
+          if(!storage)throw Error();
+          const raw=storage.getItem(key);
+          if(raw!==null){
+            const data=JSON.parse(raw);
+            if(data?.version!==1||data.ownerId!==ownerId||!Array.isArray(data.missions))return {ok:false,reason:'invalid'};
+            const target=data.missions.find(m=>m.id===id);
+            if(target&&target.ownerUserId!==ownerId)return {ok:false,reason:'owner'};
+            // Read the latest envelope and remove exactly one ID, preserving other tabs' records.
+            const json=JSON.stringify({...data,missions:data.missions.filter(m=>m.id!==id)});
+            storage.setItem(key,json);
+            if(!mission.cloudReadOnly)lastSaved=json;
+          }
+        }catch{return {ok:false,reason:'storage'};}
+      }
+      records.delete(id);return {ok:true};
     },
 
     restoreCloud(record){

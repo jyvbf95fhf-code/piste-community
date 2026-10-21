@@ -1,6 +1,7 @@
 import { Icon } from './icons.mjs';
 import { EmptyState, StatusBadge, escapeHTML } from './components.mjs';
 import { dogDisciplines, DOG_DISCIPLINES, DOG_PORTRAITS, DOG_STATUSES, summarizeDogActivity } from './dogs.mjs';
+import { activeTrackingDogs, isProtectedDog, resolveDefaultTrackingDog, resolveDogId } from './dog-selection.mjs';
 
 const e = escapeHTML;
 const statusLabels = new Map(DOG_STATUSES.map(status => [status.id, status.label]));
@@ -54,7 +55,7 @@ function pageHeading(kicker, title, subtitle, action = '') {
   return `<section class="page-heading dogs-heading"><span class="eyebrow">${e(kicker)}</span><div class="dogs-heading-row"><h1>${e(title)}</h1>${action}</div><p>${e(subtitle)}</p></section>`;
 }
 
-export function DogsListScreen(dogs = []) {
+export function DogsListScreen(dogs = [], { primaryDogId = null } = {}) {
   const action = `<a class="button button-gold dogs-add-button" href="/dogs/new">${Icon('plus')}Ajouter un chien</a>`;
   const heading = pageHeading('VOS COMPAGNONS', 'Mes chiens', 'Profils de démonstration · données conservées dans cette visite', action);
   if (!dogs.length) {
@@ -70,7 +71,9 @@ export function DogsListScreen(dogs = []) {
       <span class="dog-list-trailing">${dogStatus(dog)}${Icon('arrow')}</span>
     </a>`;
   }).join('');
-  return `${heading}<section class="dog-list" aria-label="Liste de vos chiens">${cards}</section><p class="dogs-demo-note">Tous les profils présentés sont fictifs. Les modifications sont temporaires.</p>`;
+  const eligible = activeTrackingDogs(dogs), selected = resolveDefaultTrackingDog(dogs, primaryDogId);
+  const preference = `<section class="card dog-default-selection" aria-label="Chien de piste par défaut"><h2>Chien de piste par défaut</h2><p>${selected ? e(selected.name) : 'Aucun chien actif en discipline Piste.'}</p><p>Utilisé à l’ouverture des outils de piste. Votre choix reste modifiable pour chaque activité.</p>${eligible.length > 1 ? eligible.filter(dog => dog.id !== selected?.id).map(dog => `<button class="button button-dark" type="button" data-dog-set-default="${e(dog.id)}">Définir ${e(dog.name)} par défaut</button>`).join('') : ''}</section>`;
+  return `${heading}${preference}<section class="dog-list" aria-label="Liste de vos chiens">${cards}</section>${dogs.every(d=>d.isDemonstration!==false)?'<p class="dogs-demo-note">Tous les profils présentés sont fictifs. Les modifications sont temporaires.</p>':'<p class="dogs-demo-note">Profils personnels du compte. Les démonstrations sont identifiées dans leur fiche ; les préférences restent modifiables.</p>'}`;
 }
 
 function metric(label, value, tone = '') {
@@ -102,7 +105,7 @@ function scienceSection() {
   ].map(([label,value]) => `<article class="dog-science-item"><span>${e(label)}</span><strong>${e(value)}</strong></article>`).join('')}</div></section>`;
 }
 
-export function DogProfileScreen(dog) {
+export function DogProfileScreen(dog, { primaryDogId = null, associations = {} } = {}) {
   if (!dog) return DogNotFoundScreen();
   const summary = summarizeDogActivity(dog);
   const edit = `<a class="button button-dark dog-edit-button" href="/dogs/${encodeURIComponent(dog.id)}/edit">${Icon('edit')}Modifier le profil</a>`;
@@ -115,7 +118,16 @@ export function DogProfileScreen(dog) {
   ].join('')}</div><div class="dog-secondary-metrics">${metric('Distance moyenne', displayDistance(summary.averageDistanceMeters))}${metric('Durée moyenne', displayDuration(summary.averageDurationMinutes))}${metric('Sessions terminées', summary.completionRate === null ? 'Aucune donnée disponible' : `${summary.completionRate} %`)}${metric('Tendance', summary.trend || 'Aucune donnée disponible')}</div></section>`;
   const notes = `<section class="dog-section dog-notes"><div class="dog-section-heading"><span class="eyebrow">REPÈRES TERRAIN</span><h2>Notes</h2></div><p class="dog-notes-copy">${e(dog.notes || 'Aucune note')}</p></section>`;
   const sessionLink = `<a class="button button-dark dog-sessions-link" href="/sessions?dog=${encodeURIComponent(dog.id)}">Voir les sessions de ce chien</a>`;
-  return `<a class="back-link dogs-back-link" href="/dogs">← Mes chiens</a><div class="dog-profile-actions">${edit}</div>${identity}${metrics}${disciplineSection(dog)}${notes}${historySection(dog)}${sessionLink}${scienceSection()}<p class="dogs-demo-note">Profil et mesures de démonstration · aucune donnée médicale réelle.</p>`;
+  const preference = activeTrackingDogs([dog]).length ? resolveDogId([dog], primaryDogId) === dog.id
+    ? '<p>Chien de piste par défaut</p>'
+    : `<button type="button" class="button button-dark" data-dog-set-default="${e(dog.id)}">Définir comme chien de piste par défaut</button>` : '';
+  const count = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
+  const associationsCopy = [
+    [count(associations.sessions) ?? (Array.isArray(dog.sessions) ? dog.sessions.length : null), 'session(s)'],
+    [count(associations.tracks), 'piste(s)'], [count(associations.operational), 'mission(s) OPS']
+  ].map(([amount, label]) => `${amount === null ? 'Nombre indisponible de' : amount} ${label}`).join(' · ');
+  const removal = `<section class="dog-section dog-removal"><h2>Supprimer le profil chien</h2><p>Associations connues : ${e(associationsCopy)}.</p><p>Les sessions, pistes et historiques sont conservés. La suppression du profil demande une confirmation.</p>${isProtectedDog(dog) ? '<p>Ce profil chien est protégé.</p>' : `<button class="button button-dark" type="button" data-dog-remove="${e(dog.id)}">Supprimer le profil chien</button>`}</section>`;
+  return `<a class="back-link dogs-back-link" href="/dogs">← Mes chiens</a><div class="dog-profile-actions">${edit}${preference}</div>${identity}${metrics}${disciplineSection(dog)}${notes}${historySection(dog)}${sessionLink}${scienceSection()}${removal}<p class="dogs-demo-note">Profil et mesures de démonstration · aucune donnée médicale réelle.</p>`;
 }
 
 function input(name, label, value = '', type = 'text', attributes = '') {

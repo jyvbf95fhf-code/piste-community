@@ -59,3 +59,15 @@ test('session creation action gives separate IDs to independent page counters',a
  function create(mod,actionId){const draft=mod.updateDraft(mod.createDraft({user_id:'owner',name:'Owner'},[{id:'nox',name:'Nox'}]),{mode:'normal',traceType:'direct'});return mod.createSession(draft,{actionId,type:'session-creation',author:{userId:'owner',participantId:'self',source:'mock-auth',assurance:'local-simulation'},occurredAt:'2026-10-11T19:00:00.000Z',origin:'simulation:coaching-session-creation',sessionId:null,referenceId:null,beneficiaryParticipantId:null}).session;}
  assert.notEqual(create(a,'unique-tab-a').id,create(b,'unique-tab-b').id);
 });
+
+test('targeted removal preserves other account histories and refuses stale writers',()=>{
+ const storage=memory(),store=createCoachingHistoryStorage(storage),first=fixture(),second=fixture();
+ store.save('isolated-owner',[first,second]);store.save('isolated-other',[first]);
+ const stale=createCoachingHistoryStorage(storage);stale.load('isolated-owner');
+ assert.equal(store.remove('isolated-owner',first.session.id).ok,true);
+ assert.deepEqual(createCoachingHistoryStorage(storage).load('isolated-owner').records,[second]);
+ assert.deepEqual(createCoachingHistoryStorage(storage).load('isolated-other').records,[first]);
+ assert.equal(stale.remove('isolated-owner',second.session.id).reason,'conflict');
+ assert.equal(store.remove('isolated-owner',second.session.id).ok,true);
+ assert.deepEqual(createCoachingHistoryStorage(storage).load('isolated-owner').records,[]);
+});

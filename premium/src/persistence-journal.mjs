@@ -29,6 +29,7 @@ export function createPersistenceJournal({ownerId,indexedDB=globalThis.indexedDB
    const oldKey=Object.keys(s.records).find(k=>s.records[k].kind===r.kind&&s.records[k].id===r.id),known=oldKey?JSON.parse(oldKey)[1]:null;
    active();const localId=await restore(known);active();await change(next=>{next.records[JSON.stringify([r.kind,localId])]={kind:r.kind,id:r.id,revision:r.revision,payload:r.payload};});return localId;
   });},
+  async lookup({kind,localId}){const s=await change(()=>{});const row=s.records[JSON.stringify([kind,localId])];return row?structuredClone(row):null;},
   async localId({kind,id}){const s=await change(()=>{});const key=Object.keys(s.records).find(k=>s.records[k].kind===kind&&s.records[k].id===id);return key?JSON.parse(key)[1]:null;},
   async adopt({localId,record}){const r=validatePersistenceRecord(record);await change(s=>{if(s.commands.some(c=>c.kind===r.kind&&c.id===r.id))throw Error('Modification locale en attente : restauration refusée.');s.records[JSON.stringify([r.kind,localId])]={kind:r.kind,id:r.id,revision:r.revision,payload:r.payload};});},
   async pending(){const s=await change(()=>{}),blocked=new Set(s.commands.filter(c=>c.conflict).map(c=>c.kind+':'+c.id));return s.commands.filter(c=>!blocked.has(c.kind+':'+c.id));},

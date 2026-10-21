@@ -3,11 +3,9 @@ import {preparePersistenceCandidate} from './persistence-domain-adapters.mjs';
 import {normalizeOperationalMission} from './operational-data.mjs';
 import {createRemoteSession,reduceRemoteSession,projectRemoteSession} from './server/coaching-service.mjs';
 import {gpsDistance} from './coaching-gps-model.mjs';
-export const LOBO_DEMO_OWNER_ID='eeca6271-b459-443b-8c2f-46ce20215c8a';
-export const LOBO_DEMO_LABEL='Démonstration fictive';
-const uuid=n=>'10b00000-0000-4000-8000-'+String(n).padStart(12,'0');
-export const LOBO_DEMO_MANIFEST=Object.freeze({version:1,ownerId:LOBO_DEMO_OWNER_ID,label:LOBO_DEMO_LABEL,dogId:uuid(1),opsIds:Object.freeze(Array.from({length:20},(_,n)=>uuid(1001+n))),coachingIds:Object.freeze(Array.from({length:20},(_,n)=>uuid(2001+n)))});
-const kinds=new Map([[uuid(1),'dog'],...LOBO_DEMO_MANIFEST.opsIds.map(id=>[id,'operational']),...LOBO_DEMO_MANIFEST.coachingIds.map(id=>[id,'coaching'])]);
+import {LOBO_DEMO_OWNER_ID,LOBO_DEMO_LABEL,LOBO_DEMO_MANIFEST} from './lobo-demo-identity.mjs';
+export {LOBO_DEMO_OWNER_ID,LOBO_DEMO_LABEL,LOBO_DEMO_MANIFEST} from './lobo-demo-identity.mjs';
+const kinds=new Map([[LOBO_DEMO_MANIFEST.dogId,'dog'],...LOBO_DEMO_MANIFEST.opsIds.map(id=>[id,'operational']),...LOBO_DEMO_MANIFEST.coachingIds.map(id=>[id,'coaching'])]);
 const flags={dataOrigin:'demo',synthetic:true,demo:true,demoLabel:LOBO_DEMO_LABEL};
 const labelText=value=>typeof value==='string'&&value.includes(LOBO_DEMO_LABEL);
 // Recognition uses all three: an exact manifest ID, its verified owner, and a persistent marker.
