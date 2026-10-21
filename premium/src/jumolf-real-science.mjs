@@ -52,13 +52,20 @@ function analyzeDocumentedSnapshot(input,{consents={},...options}={}){
 }
 const metrics=['ruptures','resumptions','average_lateral_offset_m','max_lateral_offset_m','reference_point_mean_m','reference_point_max_m','traveled_distance_m','duration_seconds'];
 const baseLimits=['Série descriptive, sans test statistique ni démonstration causale.','Une baisse ou une hausse ne constitue pas une amélioration ou une dégradation du chien.','Les variations de distance, durée et nombre d’événements ne sont pas normalisées entre elles.','Séances de types distincts analysées séparément ; aucune identité n’est inférée du nom.','Les séries de signalements ne décrivent pas la fréquence globale des difficultés : les observations manquantes sont exclues, sans les remplacer par zéro.'];
-export function buildRealJumolfProfile(dogId,sources=[],{consents={}}={}){
+export function buildRealJumolfProfile(dogId,sources=[],options={}){
+ return buildDocumentedProfile(dogId,sources,options,real,analyzeRealJumolfSnapshot);
+}
+const historyDemo=s=>s?.dataOrigin==='demo'&&s.synthetic===true&&s.demo===true&&String(s.id).startsWith('rex-demo:history:')&&s.kind==='coaching'&&s.status==='ARCHIVED';
+export function buildJumolfDemoProfile(dogId,sources=[],options={}){
+ return {...buildDocumentedProfile(dogId,sources,options,historyDemo,analyzeJumolfDemoSnapshot),dataOrigin:'demo',synthetic:true};
+}
+function buildDocumentedProfile(dogId,sources=[],{consents={}}={},eligibleSource,analyze){
  const insufficient=reason=>({dogId:consents.dog_history?dogId:null,status:'insufficient',trends:[],reason,limits:baseLimits});
  if(!consents.dog_history||!consents.session_comparison)return insufficient('Les consentements historique du chien et comparaison sont nécessaires aux séries. Les métriques GPS requièrent leur consentement séparé.');
  if(!dogId)return insufficient('Aucun chien explicitement associé.');
  const permitted=applyJumolfSourceConsents({dogs:[],sessions:sources,tracks:[],operational:[]},consents).sessions;
- const unique=[...new Map(permitted.filter(s=>real(s)&&(s.dogId||s.dog?.id)===dogId).map(s=>[s.id,s])).values()];
- const rows=unique.map(source=>({source,analysis:analyzeRealJumolfSnapshot(source,{consents})}));
+ const unique=[...new Map(permitted.filter(s=>eligibleSource(s)&&(s.dogId||s.dog?.id)===dogId).map(s=>[s.id,s])).values()];
+ const rows=unique.map(source=>({source,analysis:analyze(source,{consents})}));
  const trends=[];
  for(const kind of ['coaching','operational'])for(const key of metrics){
   const eligible=rows.filter(r=>r.source.kind===kind&&timestamp(r.source.startedAt)!==null&&finite(r.analysis?.metrics[key]?.value)).sort((a,b)=>timestamp(a.source.startedAt)-timestamp(b.source.startedAt));

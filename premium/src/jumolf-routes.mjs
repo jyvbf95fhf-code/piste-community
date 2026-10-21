@@ -1,11 +1,12 @@
 const decode=value=>{try{const id=decodeURIComponent(value);return id&&!id.includes('/')?id:null;}catch{return null;}};
 export function resolveJumolfRoute(path){
  const route=String(path||'').split('?')[0].replace(/\/+$/,'')||'/';
- if(route==='/jumolf/learn')return {type:'learn'};
+ if(route==='/jumolf/prepare'||route==='/jumolf/learn')return {type:'prepare'};
  if(route==='/jumolf/team')return {type:'team'};
- if(route.startsWith('/jumolf/learn/')){const id=decode(route.slice('/jumolf/learn/'.length));return id?{type:'lesson',id}:null;}
+ if(route.startsWith('/jumolf/learn/')){const id=decode(route.slice('/jumolf/learn/'.length));return id?{type:'prepare'}:null;}
  if(route==='/jumolf/train')return {type:'train'};
  if(route==='/jumolf/analyze')return {type:'analyze'};
+ if(route==='/jumolf/demo-history')return {type:'demo-history'};
  if(route==='/jumolf/rex')return {type:'rex'};
  if(route==='/jumolf')return {type:'entry'};
  if(route==='/jumolf/dashboard')return {type:'dashboard'};

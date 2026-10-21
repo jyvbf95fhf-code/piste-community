@@ -127,6 +127,7 @@ export function trackListView(libraryItems=[],sessionRecords=[],sharedSessions=[
  const prepared=(libraryItems||[]).map(item=>({
   id:`prepared:${item.id}`,libraryId:item.id,name:item.name,kind:item.source==='gpx'?'gpx':'prepared',
   realGpx:item.provenance==='gpx-import'||Boolean(item.fileName&&item.geometry?.points?.every(p=>p.space==='wgs84')),provenance:item.provenance==='gpx-import'?'Import GPX · fichier réel':item.provenance==='copy'?`Copie d’un tracé · ${item.copiedFrom?.kind||'source'}`:item.source==='gpx'?'Import GPX · démonstration':'Préparé manuellement',
+  lifecycle:item.geometry?.points?.length>1?'prepared':'draft',ownerId:item.ownerId,description:item.description||'',category:item.category||'',difficulty:item.difficulty||'',dogId:item.dogId||'',notes:item.notes||'',trainingMemory:item.trainingMemory?structuredClone(item.trainingMemory):null,
   fileName:item.fileName||null,geometryAvailable:Array.isArray(item.geometry?.points)&&item.geometry.points.length>1,
   editable:item.source!=='gpx'||item.provenance==='gpx-import',sessionId:null,map:null,path:null,points:item.geometry?.points||[]
  }));

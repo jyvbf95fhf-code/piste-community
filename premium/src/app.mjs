@@ -1,3 +1,4 @@
+import {saveDisplayedProposal,preparedTrackForConsultation} from './track-proposal-save.mjs';
 import {createTrainingMemory,trainingMemoryNotes,trainingMemoryView} from './jumolf-training-memory.mjs';
 import {mountRexMaps} from './jumolf-rex-map.mjs';
 import {SessionDossierScreen,sharedSessionDossier,localSessionDossier,operationalSessionDossier} from './session-dossier.mjs';
@@ -599,17 +600,43 @@ function missionContext(){
  const state=jumolfStore.accessSnapshot(),r=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null,a=resolveJumolfAccess(auth.assurance==='supabase-auth'?{...state,jumolf_entitlement:r?.entitlement||'none',entitlement_record:r||{entitlement:'none'}}:state),training=trackEditor.preview||trackEditor.canine;
  if(location.pathname!=='/track-builder'||!currentUser?.user_id||!a.entitlement_valid||a.entitlement!=='premium'||training?.ownerId!==currentUser.user_id||!training.options)return null;
  const consents=state.consents,draft=trackEditor.preview?.draft||trackEditor.draft;
- return {ownerId:currentUser.user_id,key:trackEditor.routeKey,draft,proposal:training.proposal,options:training.options,weatherAllowed:!!consents.weather,preview:!!trackEditor.preview,previewId:trackEditor.preview?.proposal.id,title:training.proposal.title,dog:consents.dog_history&&missionDog?.id===(trackEditor.preview?.dogId||draft?.dogId)?missionDog:null,viewer:{name:currentUser.name},sourceBrief:missionSourceBrief,canPrepare:!trackEditor.preview&&auth.assurance==='supabase-auth'};
+ return {ownerId:currentUser.user_id,key:trackEditor.routeKey,draft,proposal:training.proposal,options:training.options,weatherAllowed:!!consents.weather,preview:!!trackEditor.preview,previewId:trackEditor.preview?.proposal.id,proposalPosition:trackSmart.view().proposals.findIndex(p=>p.id===trackEditor.preview?.proposal.id)+1,proposalCount:trackSmart.view().proposals.length,title:training.proposal.title,dog:consents.dog_history&&missionDog?.id===(trackEditor.preview?.dogId||draft?.dogId)?missionDog:null,viewer:{name:currentUser.name},sourceBrief:missionSourceBrief,canPrepare:auth.assurance==='supabase-auth'};
 }
 const missionController=createMissionController({getContext:missionContext});
-function previewSmartProposal(id){try{const preview=trackSmart.proposal(id);if(!preview.options)throw Error('Choisissez un niveau pédagogique.');trackEditor.preview={...preview,ownerId:currentUser?.user_id,draft:{...smartTrackDraft(preview.proposal,preview.commune),basemap:'satellite',dogId:canineTrackContext(preview.dogId).dog?.id||''}};render();document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}}
+function previewSmartProposal(id){try{const preview=trackSmart.proposal(id);trackEditor.preview={...preview,ownerId:currentUser?.user_id,draft:{...smartTrackDraft(preview.proposal,preview.commune),basemap:'satellite',dogId:canineTrackContext(preview.dogId).dog?.id||''}};render();document.querySelector('[data-smart-panel]')?.close();}catch(error){Toast(error.message);}}
+function submitCurrentTrack(prepare=false){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;const form=document.querySelector('[data-track-editor-form]'),button=prepare?form?.querySelector('[name="prepareCanine"]'):form?.querySelector('button[type="submit"]:not([name])');if(!button||button.disabled)throw Error('Vérifiez le nom, le chien et la géométrie dans Menu.');form.requestSubmit(button);}
+function prepareSavedTrack(saved){
+ const access=jumolfAccess();if(auth.assurance!=='supabase-auth'||!access.entitlement_valid||access.entitlement!=='premium')throw Error('Préparation Premium indisponible pour ce compte.');
+ const next=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:dogsStore.list().filter(d=>!d.isDemonstration),dogId:saved.dogId||'',track:saved,currentState:coachingWizardState});
+ const ownerId=currentUser.user_id,proceed=()=>{const a=jumolfAccess();if(currentUser?.user_id!==ownerId||!a.entitlement_valid||a.entitlement!=='premium')return;try{if(coachingWizardState?.draft)throw Error('Un brouillon Coaching est déjà en cours.');sharedIndex?.saveTrainingDraft(next);coachingWizardState=next;trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:'',preview:null};history.pushState({},'','/new-session');render(true);}catch(error){Toast(error.message);}};
+ if(trackEditorActive&&trackEditor.draft?.dirty)ConfirmationDialog({title:'Continuer vers Coaching ?',description:'La piste choisie est enregistrée et restera réutilisable. Le brouillon précédent comporte des modifications non enregistrées ; quitter maintenant les abandonnera.',onConfirm:proceed});else proceed();
+}
+function openProposalSave(prepare=false){
+ const preview=trackEditor.preview,ownerId=currentUser?.user_id,access=jumolfAccess();if(!preview||preview.ownerId!==ownerId||!access.entitlement_valid||access.entitlement!=='premium')throw Error('Proposition indisponible pour ce compte.');
+ document.querySelector('[data-proposal-save-dialog]')?.remove();const dialog=document.createElement('dialog');dialog.dataset.proposalSaveDialog='';dialog.className='proposal-save-dialog';
+ dialog.innerHTML=`<form><h2>Enregistrer le tracé</h2><p>La proposition affichée sera conservée dans Pistes préparées. Votre brouillon précédent reste inchangé.</p><label>Nom du tracé<input name="name" maxlength="80" required value="${escapeHTML(preview.draft.name)}"></label><p role="alert" data-save-error></p><div class="coaching-actions"><button type="button" data-save-cancel>Annuler</button><button type="submit" class="button button-gold">${prepare?'Enregistrer puis préparer Coaching':'Enregistrer le tracé'}</button></div></form>`;
+ dialog.querySelector('[data-save-cancel]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>dialog.remove());
+ dialog.querySelector('form').onsubmit=event=>{event.preventDefault();const feedback=dialog.querySelector('[data-save-error]');try{
+  const current=jumolfAccess();if(currentUser?.user_id!==ownerId||trackEditor.preview!==preview||!current.entitlement_valid||current.entitlement!=='premium')throw Error('Le compte, les droits ou la proposition ont changé.');
+  if(prepare&&coachingWizardState?.draft)throw Error('Un brouillon Coaching existe déjà. Reprenez-le ; il reste conservé.');
+  const context=canineTrackContext(preview.draft.dogId);let memory=null;
+  if(preview.options&&preview.draft.dogId&&context.dog)memory=createTrainingMemory({ownerId,dogId:preview.draft.dogId,options:preview.options,proposal:preview.proposal,draft:preview.draft,mission:missionController.snapshot(),context});
+  const saved=saveDisplayedProposal({library:trackLibrary,preview,ownerId,name:dialog.querySelector('[name="name"]').value,trainingMemory:memory});
+  dialog.close();trackEditor.notice='Tracé enregistré dans Pistes préparées. Le brouillon précédent est conservé.';render();
+  if(prepare){try{prepareSavedTrack(saved);}catch(error){Toast('Tracé enregistré. '+error.message);}return;}
+  const confirmation=document.createElement('dialog');confirmation.className='proposal-save-dialog';confirmation.innerHTML=`<h2>Tracé enregistré</h2><p>${escapeHTML(saved.name)}</p><p>Votre brouillon précédent reste disponible sur la carte. Les informations pédagogiques détaillées restent sur cet appareil.</p><a class="button button-gold" href="/tracks/${encodeURIComponent('prepared:'+saved.id)}">Ouvrir la piste sauvegardée</a><a class="button button-dark" href="/profile/sync">Sauvegardes cloud existantes</a><button type="button">Continuer sur la carte</button>`;confirmation.querySelector('button').onclick=()=>confirmation.close();confirmation.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>confirmation.close()));confirmation.addEventListener('close',()=>confirmation.remove());document.body.append(confirmation);confirmation.showModal();
+ }catch(error){feedback.textContent=error.message;}};
+ document.body.append(dialog);dialog.showModal();dialog.querySelector('input').focus();
+}
 function missionAction(action,target){
  if(!missionContext())return;
  if(action==='edit'){document.querySelector('[data-mission-panel]')?.removeAttribute('open');openSmartTrackPanel();}
  else if(action==='dismiss'){trackEditor.preview=null;render();}
- else if(action==='apply')selectSmartProposal(target.dataset.proposalId);
+ else if(action==='apply'||action==='adjust'){if(trackEditor.preview)selectSmartProposal(trackEditor.preview.proposal.id);else {document.querySelector('[data-mission-panel]')?.removeAttribute('open');Toast('Ajustez les points directement sur la carte.');}}
+ else if(action==='save'){if(trackEditor.preview)openProposalSave();else submitCurrentTrack(false);}
+ else if(action==='coaching'){Toast('La préparation Coaching nécessite un compte autorisé.');}
  else if(['previous','next'].includes(action)){const proposals=trackSmart.view().proposals,index=proposals.findIndex(p=>p.id===trackEditor.preview?.proposal.id);if(proposals.length)previewSmartProposal(proposals[(index+(action==='next'?1:-1)+proposals.length)%proposals.length].id);}
- else if(action==='prepare'){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;const form=document.querySelector('[data-track-editor-form]'),button=form?.querySelector('[name="prepareCanine"]');if(!button||button.disabled)throw Error('Vérifiez le nom et la géométrie du tracé dans Menu avant de préparer.');form.requestSubmit(button);}
+ else if(action==='prepare'){if(trackEditor.preview)openProposalSave(true);else submitCurrentTrack(true);}
 }
 const trackRouting=createTrackRoutingController({service:createTrackRoutingService(),getContext:()=>location.pathname==='/track-builder'&&trackEditor.draft?.coordinateSpace==='wgs84'?{id:trackEditor.routeKey,ownerId:currentUser?.user_id,draft:trackEditor.draft}:null,onResult:(id,route)=>{trackEditor={...trackEditor,draft:applyTrackRoute(trackEditor.draft,id,route)};render();},onStatus:notice=>{if(trackEditor.notice===notice)return;trackEditor={...trackEditor,notice};render();}});
 const trackPlaces=[{name:'Forêt de Fontainebleau',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Sentier des crêtes',subtitle:'Lieu fictif · démonstration',center:{x:180,y:150}},{name:'Place du village',subtitle:'Adresse fictive · démonstration',center:{x:180,y:150}}];
@@ -628,8 +655,8 @@ function renderTrackEditor(){
  ensureTrackEditor();trackSmart.reconcile();const smart=trackSmart.view(),context=canineTrackContext(smart.dogId);
  const training=trackEditor.canine,allowed=jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium';
  const brief=training?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(training.proposal,training.options,canineTrackContext(trackEditor.draft.dogId)),{initial:true}):'';
- const preview=trackEditor.preview,selectedContext=canineTrackContext(preview?.dogId||trackEditor.draft.dogId);missionDog=selectedContext.dog;missionSourceBrief=preview?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(preview.proposal,preview.options,selectedContext),{initial:true}):brief;const mission=missionContext();
- return TrackBuilderScreen({editorDraft:trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
+ const preview=trackEditor.preview,selectedContext=canineTrackContext(preview?.dogId||trackEditor.draft.dogId);missionDog=selectedContext.dog;missionSourceBrief=preview?.ownerId===currentUser?.user_id&&preview?.options&&allowed?CanineBrief(buildCanineBrief(preview.proposal,preview.options,selectedContext),{initial:true}):brief;const mission=missionContext();
+ return TrackBuilderScreen({editorDraft:trackEditor.preview?.draft||trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:dogsStore.list(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
 }
 function communitySourceOptions(){
  return buildCommunitySourceOptions({sessionRecords:sessionCatalog.list(),tracks:trackLibrary.list(),dogs:dogsStore.list()});
@@ -814,8 +841,9 @@ function render(focus=false) {
  mountRexMaps();
  mountGpsMaps({livePose:ownsOperationalGps(operationalGpsContext())?operationalMission.gpsTrack:ownsDriverGps(gpsContext())?searchState.gpsSearch:ownsTracerGps(gpsContext())?tracerState.gpsPose:null,lastFix:ownsOperationalGps(operationalGpsContext())?opsGps.view().lastFix:ownsDriverGps(gpsContext())?driverGps.view().lastFix:ownsTracerGps(gpsContext())?tracerGps.view().lastFix:null});
  opsWeather.mount();
- mountTrackEditorMap({draft:trackEditor.preview?{...trackEditor.draft,basemap:trackEditor.preview.draft.basemap}:trackEditor.draft,previewReadOnly:!!trackEditor.preview,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{if(trackEditor.preview)return;try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{if(trackEditor.preview)return;try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{if(trackEditor.preview)return;trackEditor.selectedPointId=id;render();},onView:mapView=>{if(!trackEditor.preview&&trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
+ mountTrackEditorMap({draft:trackEditor.preview?.draft||trackEditor.draft,previewReadOnly:!!trackEditor.preview,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{if(trackEditor.preview)return;try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{if(trackEditor.preview)return;try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{if(trackEditor.preview)return;trackEditor.selectedPointId=id;render();},onView:mapView=>{if(!trackEditor.preview&&trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  const mission=missionContext();if(mission)missionMount=mountMissionControl({root:document.querySelector('[data-mission-control]'),controller:missionController,context:mission,draw:paintTrackMissionMap,onAction:missionAction});
+ if(consultation?.type==='track-detail'){const detail=trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),consultation.id);if(detail?.points?.every(p=>p.space==='wgs84'))mountTrackEditorMap({draft:{coordinateSpace:'wgs84',points:detail.points,basemap:'satellite'},previewReadOnly:true});}
  if(missionPanelWasOpen){const panel=document.querySelector('[data-mission-panel]');if(panel)panel.open=true;for(const [id,open] of missionSections){const section=document.querySelector(`[data-mission-section="${id}"]`);if(section)section.open=open;}const sheet=document.querySelector('.mission-panel-content');if(sheet)sheet.scrollTop=missionScroll;}
  trackRouting.reconcile();
  if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;for(const [id,open] of creatorSections){const section=document.querySelector(`[data-creator-section="${id}"]`);if(section)section.open=open;}}
@@ -903,8 +931,8 @@ function renderSessionDebrief(id){
  return DebriefScreen(record.searchState,record.preparationState,record.tracerState,debriefUI,{readOnly:true});
 }
 function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose||record?.searchState?.gpsSearch){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational),{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
-function renderTracks(){const p=new URLSearchParams(location.search);const items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self');return `<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button>`+TrackListScreen(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]),sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list()}),{category:p.get('category'),status:p.get('status'),source:p.get('source'),query:p.get('q'),returnHref:location.pathname+location.search});}
-function renderTrackDetail(id){return TrackDetailScreen(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),id));}
+function renderTracks(){const p=new URLSearchParams(location.search);const items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self').map(t=>preparedTrackForConsultation(t,{ownerId:currentUser?.user_id,consents:jumolfStore.snapshot().consents}));return `<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button>`+TrackListScreen(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]),sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list()}),{category:p.get('category'),status:p.get('status'),source:p.get('source'),query:p.get('q'),returnHref:location.pathname+location.search});}
+function renderTrackDetail(id){return TrackDetailScreen(preparedTrackForConsultation(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),id),{ownerId:currentUser?.user_id,consents:jumolfStore.snapshot().consents}));}
 function renderLive(route){
  const remote=opsLiveRemote?.view();
  const match=route.match(/^\/live(?:\/(coaching|ops)\/([^/]+))?$/);
@@ -1025,6 +1053,7 @@ document.addEventListener('click',async event=>{
   }
   return;
  }
+ const cycle=event.target.closest('[data-editor-preview-cycle]');if(cycle&&trackEditor.preview){const proposals=trackSmart.view().proposals,index=proposals.findIndex(p=>p.id===trackEditor.preview.proposal.id);if(proposals.length)previewSmartProposal(proposals[(index+(cycle.dataset.editorPreviewCycle==='next'?1:-1)+proposals.length)%proposals.length].id);return;}
  const smartCommune=event.target.closest('[data-smart-commune]');if(smartCommune&&location.pathname==='/track-builder'){try{trackSmart.chooseCommune(smartCommune.dataset.smartCommune);}catch(error){Toast(error.message);}return;}
  const smartProposal=event.target.closest('[data-smart-proposal]');if(smartProposal&&location.pathname==='/track-builder'){selectSmartProposal(smartProposal.dataset.smartProposal);return;}
  const smartPreview=event.target.closest('[data-smart-preview]');if(smartPreview&&location.pathname==='/track-builder'){previewSmartProposal(smartPreview.dataset.smartPreview);return;}
@@ -1032,9 +1061,12 @@ document.addEventListener('click',async event=>{
  const editorAction=event.target.closest('[data-editor-action]');
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
-  if(trackEditor.preview&&!['open-smart','close-smart','close-menu','cancel','geo-center','locate','recenter'].includes(action)){Toast('Aperçu en lecture seule : appliquez la piste ou gardez votre brouillon avant de modifier.');return;}
+  if(trackEditor.preview&&!['open-smart','close-smart','close-menu','cancel','geo-center','locate','recenter','save-preview','adjust-preview','dismiss-preview'].includes(action)){Toast('Aperçu en lecture seule : choisissez Ajuster pour modifier cette proposition.');return;}
   try{
-   if(action==='open-smart')openSmartTrackPanel();
+   if(action==='save-preview')openProposalSave();
+   else if(action==='adjust-preview')selectSmartProposal(trackEditor.preview.proposal.id);
+   else if(action==='dismiss-preview'){trackEditor.preview=null;render();}
+   else if(action==='open-smart')openSmartTrackPanel();
    else if(action==='close-smart'){document.querySelector('[data-smart-panel]')?.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}
    else if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
    else if(action==='close-menu'){const panel=document.querySelector('[data-creator-panel]');if(panel){panel.open=false;panel.querySelector('summary')?.focus();}}
@@ -1062,6 +1094,13 @@ document.addEventListener('click',async event=>{
  const fixture=event.target.closest('[data-editor-gpx-fixture]');if(fixture){const fixtureId=fixture.dataset.editorGpxFixture;const importFixture=()=>{try{const item=trackLibrary.importFixture(fixtureId);trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:''};history.pushState({},'',`/tracks/${encodeURIComponent(`prepared:${item.id}`)}`);render(true);}catch(error){trackEditor={...trackEditor,error:error.message};render();}};if(trackEditor.draft?.dirty)ConfirmationDialog({title:'Quitter sans enregistrer ?',description:'Les modifications de ce brouillon seront perdues.',onConfirm:importFixture});else importFixture();return;}
  const mapSvg=event.target.closest('[data-editor-map]');
  if(mapSvg){if(event.target.closest('[data-editor-point-id]')||Date.now()<trackEditorIgnoreMapClickUntil){trackEditorIgnoreMapClickUntil=0;return;}const point=svgClientPointToMap({clientX:event.clientX,clientY:event.clientY,rect:mapSvg.getBoundingClientRect()});if(point){try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});const selectedPointId=draft.points.at(-1)?.id;trackEditor={...trackEditor,draft,selectedPointId,nextPointKind:'via',error:''};render();}catch(error){trackEditor={...trackEditor,error:error.message};render();}}return;}
+ const preparedAction=event.target.closest('[data-prepared-action]');
+ if(preparedAction&&preparedAction.dataset.preparedAction!=='edit'){
+  try{const id=preparedAction.dataset.trackId,item=trackLibrary.get(id);if(item.ownerId!=='self'||!currentUser?.user_id)throw Error('Piste indisponible pour ce compte.');
+   if(preparedAction.dataset.preparedAction==='duplicate'){const copy=trackLibrary.duplicatePreparedPlan(id);history.pushState({},'',`/tracks/${encodeURIComponent('prepared:'+copy.id)}`);render(true);Toast('Copie enregistrée, original conservé.');}
+   else if(preparedAction.dataset.preparedAction==='coaching')prepareSavedTrack(item);
+  }catch(error){Toast(error.message);}return;
+ }
  const trackDetailAction=event.target.closest('[data-track-action]');
  if(trackDetailAction){const action=trackDetailAction.dataset.trackAction,id=trackDetailAction.dataset.libraryId;
   if(action==='copy-session'){history.pushState({},'',`/track-builder?copy=${encodeURIComponent(trackDetailAction.dataset.trackSource)}`);render(true);return;}
@@ -1296,7 +1335,7 @@ document.addEventListener('change',event=>{
  if(field.matches('[data-live-policy]')){const type=field.dataset.sessionType,id=field.dataset.sessionId,key=field.dataset.livePolicy;try{communityLiveStore.setSessionPolicy({sessionType:type,sessionId:id,patch:{[key]:field.checked}});}catch(error){Toast(error.message);render();return;}if(type!=='ops')render();return;}
  if(field.matches('[data-live-option]')){const id=field.dataset.sessionId,key=field.dataset.liveOption;try{const current=communityLiveStore.getSessionPolicy('ops',id);communityLiveStore.setSessionPolicy({sessionType:'ops',sessionId:id,patch:{projectionOptions:{...current.projectionOptions,[key]:field.checked}}});}catch(error){Toast(error.message);render();}return;}
  if(field.matches('[data-operational-event-type]')){operationalUI={...operationalUI,eventType:field.value};return;}
- if(field.closest?.('[data-track-editor-form]')&&field.name){try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[field.name]:field.value},{record:false});if(field.name==='dogId'){render();document.querySelector('[data-track-editor-form] select[name=dogId]')?.focus();return;}const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim()||trackHasPendingRoutes(trackEditor.draft.points);}catch(error){trackEditor={...trackEditor,error:error.message};render();}return;}
+ if(field.closest?.('[data-track-editor-form]')&&field.name){if(trackEditor.preview)return;try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[field.name]:field.value},{record:false});if(field.name==='dogId'){render();document.querySelector('[data-track-editor-form] select[name=dogId]')?.focus();return;}const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim()||trackHasPendingRoutes(trackEditor.draft.points);}catch(error){trackEditor={...trackEditor,error:error.message};render();}return;}
  if(field.matches('[data-dog-photo]')){
   const file=field.files?.[0];if(!file)return;
   const form=field.closest('form[data-dog-form]'),feedback=form.querySelector('.dog-photo-feedback');
@@ -1382,7 +1421,7 @@ document.addEventListener('input',event=>{
  if(event.target.id==='track-name')trackUI.name=event.target.value;
  if(event.target.matches('[data-smart-query]')){const busy=trackSmart.view().busy;trackSmart.setQuery(event.target.value);if(busy){render();document.querySelector('[data-smart-query]')?.focus();}document.querySelector('.smart-communes')?.replaceChildren();document.querySelector('.smart-proposals')?.replaceChildren();document.querySelector('.smart-selected')?.remove();const generate=document.querySelector('[data-smart-generate-form] button[type="submit"]');if(generate)generate.disabled=true;return;}
  if(event.target.matches('[data-editor-search]'))trackEditor.draft={...trackEditor.draft,searchQuery:event.target.value};
- if(event.target.closest?.('[data-track-editor-form]')&&event.target.name){try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[event.target.name]:event.target.value},{record:false});const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim()||trackHasPendingRoutes(trackEditor.draft.points);}catch(error){trackEditor.error=error.message;}}
+ if(event.target.closest?.('[data-track-editor-form]')&&event.target.name){if(trackEditor.preview)return;try{trackEditor.draft=updateTrackMetadata(trackEditor.draft,{[event.target.name]:event.target.value},{record:false});const root=document.querySelector('[data-track-editor]');if(root)root.dataset.dirty=String(trackEditor.draft.dirty);const save=document.querySelector('[data-track-editor-form] button[type="submit"]');if(save)save.disabled=trackEditor.draft.points.length<2||!trackEditor.draft.name.trim()||trackHasPendingRoutes(trackEditor.draft.points);}catch(error){trackEditor.error=error.message;}}
  if(event.target.matches('[data-session-query]'))filterSessions();
 });
 window.addEventListener('popstate',event=>{
@@ -1495,7 +1534,7 @@ document.addEventListener('submit',async event=>{
  if(editorForm){
   event.preventDefault();
   try{
-   if(trackEditor.preview)throw Error('Appliquez la proposition avant de sauvegarder ou de préparer une séance.');
+   if(trackEditor.preview){openProposalSave(event.submitter?.name==='prepareCanine');return;}
    if(trackHasPendingRoutes(trackEditor.draft.points))throw Error('Attendez le calcul des routes ou corrigez le segment en attente.');
    const values=Object.fromEntries(new FormData(editorForm).entries());
    const prepareCanine=event.submitter?.name==='prepareCanine';

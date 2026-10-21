@@ -57,6 +57,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
  const list=()=>items.map(copy);
  const find=id=>{const item=items.find(t=>t.id===id);if(!item)throw Error('Ce tracé n’est plus disponible.');return item;};
  const get=id=>copy(find(id));
+ const writable=id=>{const item=find(id);if(ownerId&&item.ownerId!=='self')throw Error('Ce tracé est en lecture seule pour ce compte.');return item;};
  const insert=item=>{const saved={...item,id:`track-local-${nextId}`,ownerId:'self'};commit([...items,saved]);nextId++;return copy(saved);};
  return {
   list,
@@ -72,7 +73,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
    return insert({name:validName(name),source,provenance,...(source==='gpx'&&fileName?{fileName:optionalText(fileName,240)}:{}),...(copiedFrom?{copiedFrom:copy(copiedFrom)}:{}),description:optionalText(description),category:optionalText(category,80),difficulty:optionalText(difficulty,80),dogId:optionalText(dogId,80),notes:optionalText(notes,1000),...(trainingMemory?{trainingMemory:normalizeTrainingMemory(trainingMemory,{ownerId:ownerId||trainingMemory.ownerId,dogId})}:{}),geometry:{points},start:trackDeparture(points[0])});
   },
   updatePrepared(id,patch={}) {
-   const current=find(id);
+   const current=writable(id);
    if(['pose','search','reference'].includes(current.source))throw Error('Une trace de session est en lecture seule.');
    const next={...current};
    for(const key of ['name','description','category','difficulty','dogId','notes'])if(Object.hasOwn(patch,key))next[key]=key==='name'?validName(patch[key]):optionalText(patch[key],key==='notes'?1000:key==='description'?240:80);
@@ -87,13 +88,20 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
    const {id:sourceId,ownerId,trainingMemory,...fields}=copy(current);
    return insert({...fields,name:validName(name||`${current.name} · copie`),source:'draw',provenance:'copy',copiedFrom:{id:sourceId,kind:'prepared'},geometry:{points:validPoints(current.geometry.points)}});
   },
+  duplicatePreparedPlan(id,{name}={}) {
+   const current=writable(id);
+   if(!current.geometry?.points?.length)throw Error('Aucune géométrie disponible à copier.');
+   const fields=copy(current);delete fields.id;delete fields.ownerId;
+   if(fields.trainingMemory)fields.trainingMemory={...fields.trainingMemory,id:globalThis.crypto.randomUUID(),createdAt:new Date().toISOString()};
+   return this.createPrepared({...fields,name:validName(name||`${current.name.slice(0,72)} · copie`),source:'draw',provenance:'copy',copiedFrom:{id:current.id,kind:'prepared'}});
+  },
   createCopy({name,sourceId,sourceKind,points,description='',category='',difficulty='',dogId='',notes=''}={}) {
    if(!sourceId||!['pose','search','reference'].includes(sourceKind))throw Error('Source de copie invalide.');
    return this.createPrepared({name,description,category,difficulty,dogId,notes,source:'draw',provenance:'copy',geometry:{points:validPoints(points)},copiedFrom:{id:String(sourceId),kind:sourceKind}});
   },
   importFixture(id,name) {const file=gpxFixtures.find(f=>f.id===id);if(!file)throw Error('Choisissez un fichier de démonstration.');return insert({...file,name:validName(name || file.name),description:'GPX de démonstration',provenance:'gpx-mock'});},
-  rename(id,name) {const item=find(id);commit(items.map(t=>t.id===id?{...item,name:validName(name)}:t));return get(id);},
-  remove(id) {find(id);commit(items.filter(t=>t.id!==id));}
+  rename(id,name) {const item=writable(id);commit(items.map(t=>t.id===id?{...item,name:validName(name)}:t));return get(id);},
+  remove(id) {writable(id);commit(items.filter(t=>t.id!==id));}
  };
 }
 
