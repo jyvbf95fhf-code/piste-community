@@ -1,0 +1,97 @@
+/* Lobo palette: presentation only. Keep shared Coaching and OPS tokens intact. */
+.jumolf-shell,
+.mission-map,
+.track-creator-cockpit:has(.canine-controls),
+.proposal-save-dialog {
+  --lobo-ink:#edf5fb;
+  --lobo-muted:#b8cbd9;
+  --lobo-surface:#112335;
+  --lobo-cyan:#8ce7f2;
+  --lobo-green:#94e4b8;
+  --lobo-violet:#c7b6ff;
+  --lobo-coral:#ffb4aa;
+  --lobo-dark:#092333;
+  --premium-gold:var(--lobo-violet);
+  --v3-gold:var(--lobo-cyan);
+  --v3-ink:var(--lobo-ink);
+  --v3-muted:var(--lobo-muted);
+  --v3-cyan:var(--lobo-cyan);
+}
+.jumolf-shell { --jumolf-cyan:var(--lobo-cyan); --jumolf-violet:var(--lobo-violet); --jumolf-muted:var(--lobo-muted); }
+.jumolf-shell .jumolf-header-state,
+.jumolf-shell .jumolf-eyebrow,
+.jumolf-shell .v3-kicker { color:var(--lobo-cyan); }
+.jumolf-shell .v3-handler { color:var(--lobo-muted); }
+.jumolf-shell .jumolf-button { min-height:48px; max-width:100%; white-space:normal; box-shadow:none; }
+.jumolf-shell .jumolf-button.primary,
+.jumolf-shell .jumolf-button.primary:hover { color:var(--lobo-dark); background:var(--lobo-green); border-color:var(--lobo-green); box-shadow:none; }
+/* Preparation and analysis carry the same meaning on cards and deep links. */
+.jumolf-shell :is(.jumolf-button,.v3-nav a)[href*="/jumolf/prepare"],
+.jumolf-shell .jumolf-button[href*="/track-builder"],
+.jumolf-shell [data-jumolf-v3-prepare] .v3-card-icon { color:var(--lobo-cyan); border-color:#477b89; background:#163849; }
+.jumolf-shell .jumolf-button.primary[href*="/track-builder"] { color:var(--lobo-dark); background:var(--lobo-cyan); }
+.jumolf-shell :is(.jumolf-button,.v3-nav a)[href*="/jumolf/analy"],
+.jumolf-shell :is(.jumolf-button,.v3-nav a)[href*="/jumolf/progress"],
+.jumolf-shell .jumolf-button[href*="/jumolf/exercises"],
+.jumolf-shell [data-jumolf-action*="analy"],
+.jumolf-shell .adaptive-next h3,
+.jumolf-shell .jumolf-signal strong { color:var(--lobo-violet); background:#29243f; border-color:#78659c; }
+.jumolf-shell :is(.jumolf-button.primary[data-jumolf-action*="analy"],.jumolf-button.primary[href*="/jumolf/exercises"]) { color:#201634; background:var(--lobo-violet); }
+.jumolf-shell .longitudinal-bar { background:var(--lobo-violet); }
+.jumolf-shell .v3-journeys a[aria-current=true],
+.jumolf-shell :is(.academy-paths,.binome-tabs) a[aria-current=page] { color:var(--lobo-cyan); background:#173849; border-color:#477b89; }
+.jumolf-shell .jumolf-premium-page,
+.jumolf-shell .jumolf-access-code-page { background:var(--lobo-surface); border-color:#405669; box-shadow:none; }
+.jumolf-shell .jumolf-premium-feature-grid article>span,
+.jumolf-shell .jumolf-code-examples code { color:var(--lobo-violet); }
+.jumolf-shell .jumolf-premium-simulation { color:var(--lobo-violet)!important; border-color:var(--lobo-violet); background:#29243f; }
+.jumolf-shell .jumolf-premium-gate .jumolf-access-alert,
+.jumolf-shell .jumolf-caution,
+.jumolf-shell [role=alert] { color:var(--lobo-coral); border-color:#a96b69; background:#38262e; }
+.jumolf-shell .jumolf-map-event { fill:var(--lobo-violet); }
+.jumolf-shell .jumolf-map-event-label { fill:var(--lobo-violet); }
+.jumolf-shell .jumolf-demo-map-legend .event-key::before { background:var(--lobo-violet); }
+.jumolf-shell :is(a,button,summary,input,select,textarea):focus-visible,
+.mission-map :is(a,button,summary,input,select,textarea):focus-visible,
+.proposal-save-dialog :is(a,button,input):focus-visible { outline:3px solid var(--lobo-cyan); outline-offset:3px; }
+/* Mission Control includes a Leaflet layer; exact legacy attributes catch its virtual cursor. */
+.mission-map .creator-heading>div>span,
+.mission-map .mission-hud .mission-eyebrow,
+.mission-map .mission-eyebrow,
+.mission-map .mission-compass { color:var(--lobo-cyan); }
+.mission-map .mission-control h3,
+.mission-map .canine-brief h4 { color:var(--lobo-violet); }
+.mission-map .mission-legend .champagne { background:var(--lobo-violet); }
+.mission-map .mission-poi { fill:var(--lobo-violet); filter:none; }
+.mission-map [stroke="#e4d2ab"] { stroke:var(--lobo-violet); }
+.mission-map .leaflet-tooltip { border-color:var(--lobo-violet); }
+.mission-map .mission-provenance.unknown,
+.mission-map .mission-editor-notice { border-color:var(--lobo-coral); }
+.mission-map .mission-control .mission-error { color:var(--lobo-coral); }
+.mission-map .mission-preview .mission-button:last-child { color:var(--lobo-cyan); background:#163849; border-color:#477b89; }
+.mission-map .mission-control [data-mission-action=adjust] { color:var(--lobo-dark); background:var(--lobo-cyan); border-color:var(--lobo-cyan); }
+.mission-map .mission-control :is([data-mission-action=save],[data-mission-action=prepare],[data-mission-action=coaching]) { color:var(--lobo-dark); background:var(--lobo-green); border-color:var(--lobo-green); }
+.mission-map .mission-control .mission-button[aria-pressed=true] { color:var(--lobo-violet); background:#29243f; border-color:#78659c; }
+.track-creator-cockpit:has(.canine-controls) .canine-eyebrow { color:var(--lobo-cyan); }
+.track-creator-cockpit:has(.canine-controls) .canine-brief h4 { color:var(--lobo-violet); }
+.track-creator-cockpit:has(.canine-controls) :is(.smart-advanced,.smart-map-notice)>summary { color:var(--lobo-cyan); min-height:44px; }
+.track-creator-cockpit:has(.canine-controls) .smart-criterion-status[data-criterion-status="Partiel"] { color:var(--lobo-coral); background:#38262e; }
+.proposal-save-dialog button[type=submit] { color:var(--lobo-dark); background:var(--lobo-green); border-color:var(--lobo-green); }
+.proposal-save-dialog [role=alert] { color:var(--lobo-coral); }
+/* Crisp solid surfaces replace glow and blur on these routes only. */
+.jumolf-shell::before { background:none; }
+.jumolf-shell :is(.jumolf-mark,.jumolf-header-state i,.v3-dog-portrait,.jumolf-orbit,.jumolf-constellation i) { box-shadow:none; }
+.jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav { background:#0d2031; backdrop-filter:none; }
+.mission-map :is(.mission-panel,.creator-dock,.creator-map-controls .creator-icon,.creator-layers>summary) { backdrop-filter:none; box-shadow:none; }
+.mission-map .mission-panel { background:#10243a; }
+.mission-map :is(.mission-reference,.mission-progress-line) { filter:none; animation:none; }
+@media(max-width:430px) {
+  .jumolf-shell :is(.jumolf-button,.v3-links a,.v3-tools nav a) { overflow-wrap:anywhere; }
+  .jumolf-shell .jumolf-code-form>div { grid-template-columns:minmax(0,1fr); }
+  .jumolf-shell .v3-journeys a { flex:1 1 80px; }
+  .mission-map .mission-primary-actions .mission-button { min-height:48px; font-size:12px; }
+  .mission-map .mission-playback .mission-button { flex:1 1 40%; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .jumolf-shell *, .mission-map .mission-panel-chevron { animation:none; transition:none; scroll-behavior:auto; }
+}

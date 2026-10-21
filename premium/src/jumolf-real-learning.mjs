@@ -1,3 +1,4 @@
+import {isLoboDemoSource} from './lobo-demo-data.mjs';
 // Lot B consumes only current authorized projections. No journal/cloud writes.
 import {analyzeRealJumolfSnapshot,buildRealJumolfProfile,analyzeJumolfDemoSnapshot,buildJumolfDemoProfile} from './jumolf-real-science.mjs';
 import {applyJumolfSourceConsents} from './jumolf-consent.mjs';
@@ -12,7 +13,7 @@ export function buildRealJumolfLearning(dogId,sources=[],options={}){
 }
 // Fictional history has a separate constrained entry point; account sources are never relabeled.
 export function buildJumolfDemoLearning(dogId,sources=[],options={}){
- const permitted=sources.filter(s=>s?.dataOrigin==='demo'&&s.synthetic===true&&s.demo===true&&String(s.id).startsWith('rex-demo:history:')&&s.kind==='coaching'&&s.status==='ARCHIVED');
+ const permitted=sources.filter(s=>isLoboDemoSource(s)||s?.dataOrigin==='demo'&&s.synthetic===true&&s.demo===true&&String(s.id).startsWith('rex-demo:history:')&&s.kind==='coaching'&&s.status==='ARCHIVED');
  const result=buildDocumentedLearning(dogId,permitted,options,true);
  result.dataOrigin='demo';result.synthetic=true;
  result.reason=result.history.length?'Observations calculées sur un historique entièrement fictif ; exercices suggérés, sans réalisation implicite.':'Données fictives insuffisantes pour personnaliser une proposition.';

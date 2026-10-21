@@ -1,3 +1,4 @@
+import {LOBO_DEMO_MANIFEST,LOBO_DEMO_OWNER_ID} from './lobo-demo-data.mjs';
 // Read-only bridge. Inputs must come from the current account's existing stores
 // and the server's already-authorized Coaching projections. Never fetch a peer.
 import {debriefView} from './coaching-session-flow.mjs';
@@ -17,7 +18,8 @@ const plannedPoints=g=>g?.provenance==='prepared-geographic'&&Array.isArray(g.se
 const empty=()=>({dogs:[],sessions:[],tracks:[],operational:[]});
 export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,tracksOwnerId,dogs=[],coachingRecords=[],sharedSessions=[],dogIds={},operationalMissions=[],tracks=[],weatherForMission=null}={}){
  if(!ownerId)return empty();
- const safeDogs=dogs.filter(d=>!d.isDemonstration&&!d.demo&&!d.synthetic&&(!d.ownerId||d.ownerId===ownerId)),dogById=new Map(safeDogs.map(d=>[d.id,d]));
+ const fictionalIds=new Set([...LOBO_DEMO_MANIFEST.opsIds,...LOBO_DEMO_MANIFEST.coachingIds]);const loboDemo=id=>ownerId===LOBO_DEMO_OWNER_ID&&fictionalIds.has(String(id||'').replace(/^cloud-/,''));
+ const safeDogs=dogs.filter(d=>(ownerId!==LOBO_DEMO_OWNER_ID||d.id!==LOBO_DEMO_MANIFEST.dogId)&&!d.isDemonstration&&!d.demo&&!d.synthetic&&(!d.ownerId||d.ownerId===ownerId)),dogById=new Map(safeDogs.map(d=>[d.id,d]));
  const linked=(id,name)=>dogById.has(id)?{id,name:dogById.get(id).name,breed:dogById.get(id).breed}:name?{name}:null;
  const sessions=new Map();
  if(localOwnerId===ownerId)for(const record of coachingRecords){
@@ -27,13 +29,13 @@ export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,
   sessions.set(s.id,{id:'coaching:'+s.id,kind:'coaching',mode:s.mode||null,handlerId:s.roles?.driver&&!['self','mock-current-user'].includes(s.roles.driver)?s.roles.driver:null,title:s.title||s.code||'Coaching',status:record.searchState.phase,dog,dogId:dog?.id||null,trace:trace.length?trace:null,referenceTrace:referenceTrace.length?referenceTrace:null,startedAt:iso(search?.startedAt),finishedAt:iso(search?.endedAt),terrain:s.terrain||null,metrics:{...(search?{distanceM:number(search.distanceM),durationSeconds:number(v.summary.searchSeconds)}:{})},trackAge:{seconds:number(v.temporal.trackAgeAtSearchStart),provenance:'calculated'},events:events(v.events),weather:null,provenance:{trace:trace.length?'phone_gps':null,referenceTrace:referenceTrace.length?'phone_gps':null,distance:search?'calculated':null}});
  }
  if(sharedOwnerId===ownerId)for(const p of sharedSessions){
-  if(p.synthetic||p.demo||!['DEBRIEF','ARCHIVED'].includes(p.phase))continue;
+  if(loboDemo(p.id)||p.synthetic||p.demo||!['DEBRIEF','ARCHIVED'].includes(p.phase))continue;
   const trace=points(p.search),referenceTrace=points(p.pose),dog=linked(dogIds[p.id],p.dog);
   sessions.set(p.id,{plannedReferenceTrace:plannedPoints(p.reference?.geometry),id:'coaching:'+p.id,kind:'coaching',mode:p.mode||null,handlerId:p.team?.find(m=>m.role==='driver')?.id||null,title:p.title||'Coaching · '+(p.dog||'Chien indisponible'),status:p.phase,dog,dogId:dog?.id||null,trace:trace.length?trace:null,referenceTrace:referenceTrace.length?referenceTrace:null,startedAt:iso(p.search?.startedAt),finishedAt:iso(p.search?.endedAt),terrain:p.terrain||null,weather:weatherProjection(p.weatherSnapshot),metrics:{...(p.search?{distanceM:number(p.search.distanceM)}:{}),...(Number.isFinite(p.searchActiveMs)?{durationSeconds:p.searchActiveMs/1000}:{})},trackAge:{seconds:Number.isFinite(p.pose?.endedAt)&&Number.isFinite(p.search?.startedAt)?Math.max(0,(p.search.startedAt-p.pose.endedAt)/1000):null,provenance:'calculated'},events:events(p.events),provenance:{trace:trace.length?'phone_gps':null,referenceTrace:referenceTrace.length?'phone_gps':null,distance:p.search?'calculated':null}});
  }
  const operational=[];
  for(const m of operationalMissions){
-  if(m.ownerUserId!==ownerId||!['Terminée','Archivée'].includes(m.status)||m.demo||m.synthetic)continue;
+  if(loboDemo(m.id)||m.ownerUserId!==ownerId||!['Terminée','Archivée'].includes(m.status)||m.demo||m.synthetic)continue;
   const trace=points(m.gpsTrack),dog=linked(m.dogId||m.dog?.id,m.dog?.name),weather=weatherProjection(m.weatherSnapshot||weatherForMission?.(m));
   const rawWeather=(m.weatherSnapshot||weatherForMission?.(m))?.weather;
   const end=m.gpsTrack?.endedAt||m.finishedAt;

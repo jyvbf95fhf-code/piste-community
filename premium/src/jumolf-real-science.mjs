@@ -1,3 +1,4 @@
+import {isLoboDemoSource} from './lobo-demo-data.mjs';
 // Account-only descriptive adapter. Existing synthetic learning engines stay isolated.
 import {analyzeJumolfSnapshot} from './jumolf-analysis-engine.mjs';
 import {compareJumolfSessions} from './jumolf-comparison.mjs';
@@ -55,7 +56,7 @@ const baseLimits=['Série descriptive, sans test statistique ni démonstration c
 export function buildRealJumolfProfile(dogId,sources=[],options={}){
  return buildDocumentedProfile(dogId,sources,options,real,analyzeRealJumolfSnapshot);
 }
-const historyDemo=s=>s?.dataOrigin==='demo'&&s.synthetic===true&&s.demo===true&&String(s.id).startsWith('rex-demo:history:')&&s.kind==='coaching'&&s.status==='ARCHIVED';
+const historyDemo=s=>isLoboDemoSource(s)||s?.dataOrigin==='demo'&&s.synthetic===true&&s.demo===true&&String(s.id).startsWith('rex-demo:history:')&&s.kind==='coaching'&&s.status==='ARCHIVED';
 export function buildJumolfDemoProfile(dogId,sources=[],options={}){
  return {...buildDocumentedProfile(dogId,sources,options,historyDemo,analyzeJumolfDemoSnapshot),dataOrigin:'demo',synthetic:true};
 }
@@ -83,7 +84,7 @@ function buildDocumentedProfile(dogId,sources=[],{consents={}}={},eligibleSource
 
 // Explicit fictional entry point: never relabel a demo source as an account source.
 export function analyzeJumolfDemoSnapshot(input,options={}){
- if(input?.dataOrigin!=='demo'||input.synthetic!==true||input.demo!==true||!String(input.id).startsWith('rex-demo:'))return null;
+ if(!isLoboDemoSource(input)&&(input?.dataOrigin!=='demo'||input.synthetic!==true||input.demo!==true||!String(input.id).startsWith('rex-demo:')))return null;
  const run=analyzeDocumentedSnapshot(input,options);
  run.demo_science={...run.real_science,dataOrigin:'demo'};delete run.real_science;
  run.dataOrigin='demo';run.synthetic=true;
