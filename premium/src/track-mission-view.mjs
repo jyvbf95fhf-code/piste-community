@@ -1,4 +1,4 @@
-import {MissionWeatherMarkup,MissionBriefMarkup,missionLocalTime} from './track-mission-screen.mjs';
+import {MissionWeatherMarkup,MissionBriefMarkup,missionLocalTime,missionAgeLabel} from './track-mission-screen.mjs';
 export function mountMissionControl({root,controller,context,draw,onAction=()=>{},window:win=globalThis.window,document:doc=globalThis.document}={}){
  if(!root)return {dispose(){}};
  let disposed=false,frame=null,last=0,weatherKey='',briefKey='';
@@ -8,11 +8,11 @@ export function mountMissionControl({root,controller,context,draw,onAction=()=>{
   draw({route:s.route,environment:s.environment,corridor:s.corridor,sample:s.sample,progress:s.progress,preview:!!context.preview});
   const distance=root.closest('[data-track-cockpit]')?.querySelector('[data-creator-distance]');if(distance)distance.textContent=(s.route.distanceM/1000).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' km'+(context.preview?' · aperçu':'');
   const weather=JSON.stringify([s.environment,s.error,s.busy]);if(weather!==weatherKey){weatherKey=weather;const target=root.querySelector('[data-mission-weather]');if(target)target.innerHTML=MissionWeatherMarkup(s);}
-  const brief=JSON.stringify([s.timeline.start,s.timeline.end,s.timeline.at,s.environment]);if(brief!==briefKey){briefKey=brief;const target=root.querySelector('[data-mission-brief-content]');if(target)target.innerHTML=MissionBriefMarkup(s,context);}
+  const brief=JSON.stringify([s.timeline.start,s.timeline.end,s.timeline.at,s.environment,s.route.distanceM,s.route.stations,s.route.unchanged,context.dog,context.viewer,context.options]);if(brief!==briefKey){briefKey=brief;const target=root.querySelector('[data-mission-brief-content]');if(target)target.innerHTML=MissionBriefMarkup(s,context);}
   const toggle=root.querySelector('[data-mission-action="corridor"]');toggle?.setAttribute('aria-pressed',String(s.corridor));root.dataset.corridorActive=String(s.corridor);
   const badge=root.querySelector('[data-mission-hypothesis-badge]');if(badge)badge.hidden=!s.corridor;
   const load=root.querySelector('[data-mission-action="weather"]');if(load){load.disabled=s.busy;load.textContent=s.busy?'Chargement météo…':'Charger la météo horaire';}
-  text('[data-mission-status]',s.error);text('[data-mission-age]',s.timeline.valid?new Date(s.timeline.at).toLocaleString('fr-FR')+` · âge calculé ${Math.floor(s.timeline.ageSeconds/3600)} h ${Math.floor(s.timeline.ageSeconds%3600/60)} min`:'Horaires manquants : âge inconnu.');
+  text('[data-mission-status]',s.error);text('[data-mission-age]',missionAgeLabel(s.timeline));
   text('[data-mission-play-status]',`${s.playing?'Lecture':s.progress>=1?'Parcours terminé':'En pause'} · ${Math.round(s.progress*100)} % · ${Math.round(s.sample.distanceM)} m virtuels`);
   text('[data-mission-observation]',s.sample.station?`${s.sample.station.label} · ralentissement pédagogique : observer la conduite, les aides et les conditions sans présumer leur cause.`:'Observer le contexte et les aides sans présumer une cause olfactive.');
   const reduced=root.querySelector('[data-mission-reduced]');if(reduced)reduced.hidden=!s.reducedMotion;

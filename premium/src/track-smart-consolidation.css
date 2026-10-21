@@ -1,0 +1,19 @@
+/* The intelligent generator shares the existing Premium palette and controls. */
+[data-track-cockpit] .smart-essential{display:grid;gap:14px}
+[data-track-cockpit] .smart-intro{font-size:16px;line-height:1.5;color:#f2f5f7}
+[data-track-cockpit] .smart-level-hint{margin:0;color:#dae5eb;font-size:13px;line-height:1.5}
+[data-track-cockpit] .smart-advanced,[data-track-cockpit] .smart-map-notice{border:1px solid #627989;border-radius:12px;padding:12px;color:#e1ebf0}
+[data-track-cockpit] .smart-advanced>summary,[data-track-cockpit] .smart-map-notice>summary{min-height:24px;font-weight:650;cursor:pointer;color:#f0d59a}
+[data-track-cockpit] .smart-advanced[open]>summary{margin-bottom:14px}
+[data-track-cockpit] .smart-advanced .smart-criteria{grid-template-columns:1fr}
+[data-track-cockpit] .smart-proposal-actions{display:grid;gap:8px}
+[data-track-cockpit] .smart-criterion-list{display:grid;gap:9px;list-style:none;padding:0;margin:0}
+[data-track-cockpit] .smart-criterion-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;align-items:start;font-size:13px}
+[data-track-cockpit] .smart-criterion-list small{grid-column:1/-1;line-height:1.45;color:#d7e3ea}
+[data-track-cockpit] .smart-criterion-status{font-size:11px;font-weight:700;border-radius:6px;padding:3px 6px;color:#baf3dc;background:#173c37}
+[data-track-cockpit] .smart-criterion-status[data-criterion-status="Partiel"]{color:#ffe2a4;background:#46351b}
+[data-track-cockpit] .smart-criterion-status[data-criterion-status="Non vérifiable"]{color:#e4ebf1;background:#304453}
+[data-track-cockpit] .creator-smart button,[data-track-cockpit] .creator-smart input,[data-track-cockpit] .creator-smart select{min-height:44px;max-width:100%;box-sizing:border-box}
+[data-track-cockpit] .creator-smart label{min-width:0}
+[data-track-cockpit] .creator-smart button:focus-visible,[data-track-cockpit] .creator-smart summary:focus-visible,[data-track-cockpit] .creator-smart input:focus-visible,[data-track-cockpit] .creator-smart select:focus-visible{outline:3px solid #7de0e0;outline-offset:3px}
+@media(min-width:640px){[data-track-cockpit] .smart-essential{grid-template-columns:1fr 1fr}[data-track-cockpit] .smart-essential>label:last-child{grid-column:1/-1}[data-track-cockpit] .smart-proposal-actions{grid-template-columns:1fr 1fr}}

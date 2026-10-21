@@ -2,7 +2,7 @@ import {validateSmartOptions} from './track-smart-engine.mjs';
 const finiteCenter=c=>Array.isArray(c)&&c.length===2&&Number.isFinite(c[0])&&Math.abs(c[0])<=180&&Number.isFinite(c[1])&&Math.abs(c[1])<=90;
 export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,timeoutMs=50000,getAuthorization=async()=>null}={}){
  const cache=new Map();
- async function request(url,{signal}={}){const controller=new AbortController(),abort=()=>controller.abort();
+ async function request(url,{signal}={}){if(signal?.aborted)throw Error('Recherche interrompue.');const controller=new AbortController(),abort=()=>controller.abort();
   const interrupted=new Promise((_,reject)=>controller.signal.addEventListener('abort',()=>reject(new DOMException('Recherche interrompue','AbortError')),{once:true}));
   if(signal?.aborted)abort();signal?.addEventListener('abort',abort,{once:true});const timer=setTimeout(abort,timeoutMs);
   try{return await Promise.race([interrupted,(async()=>{

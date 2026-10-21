@@ -14,3 +14,11 @@ test('deadline includes authorization lookup and never leaves a pending search',
  const service=api.createSmartTrackService({getAuthorization:()=>new Promise(()=>{}),timeoutMs:10});
  await assert.rejects(Promise.race([service.loadNetwork(commune,2),new Promise((_,reject)=>setTimeout(()=>reject(Error('unbounded wait')),100))]),/interrompue|longue/);
 });
+test('already cancelled requests never start authorization or fetch',async()=>{
+ let calls=0;const service=api.createSmartTrackService({getAuthorization:async()=>{calls++;return {};},fetch:async()=>{calls++;throw Error('must not fetch');}}),abort=new AbortController();abort.abort();
+ await assert.rejects(service.loadNetwork(commune,1,{signal:abort.signal}),/interrompue/);await assert.rejects(service.searchCommunes('Epfig',{signal:abort.signal}),/interrompue/);assert.equal(calls,0);
+});
+test('a connection failure is understandable and never cached, so explicit retry can succeed',async()=>{
+ let calls=0;const service=api.createSmartTrackService({fetch:async()=>{if(++calls===1)throw new TypeError('Failed to fetch');return {ok:true,json:async()=>({elements:[]})};}});
+ await assert.rejects(service.loadNetwork(commune,1),/Connexion.*Réessayez/);assert.deepEqual(await service.loadNetwork(commune,1),{elements:[]});assert.equal(calls,2);
+});

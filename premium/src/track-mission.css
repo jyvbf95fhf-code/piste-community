@@ -76,3 +76,12 @@
 @media(min-width:760px){.mission-panel{left:auto;right:24px;bottom:110px;width:390px;max-height:calc(100dvh - 150px)}.mission-panel-content{max-height:calc(100dvh - 228px)}.mission-map .creator-map-controls{right:28px;top:25px}.mission-hud{right:auto;max-width:400px}.mission-preview{max-width:340px}.mission-map .creator-action-area{max-width:500px;align-self:center;width:100%}}
 @media(max-width:350px){.mission-panel{left:9px;right:9px;bottom:178px}.mission-panel-content{padding:8px 12px 16px}.mission-weather-grid{grid-template-columns:1fr}.mission-hud{left:12px}.mission-panel>summary{padding:10px 12px}.mission-playback .mission-button{flex:1 1 40%}}
 @media(prefers-reduced-motion:reduce){.mission-reference{animation:none}.mission-panel-chevron{transition:none}.mission-progress-line{filter:none}}
+/* Keep the displayed track's main actions outside the optional preparation sheet. */
+.mission-primary-actions{position:absolute;left:14px;right:14px;bottom:calc(174px + env(safe-area-inset-bottom,0px));z-index:535;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:6px;border:1px solid #80cddd66;border-radius:16px;background:#091c30f5;box-shadow:0 8px 28px #0006;box-sizing:border-box}
+.mission-primary-actions .mission-button{min-width:0;padding:10px 5px;font-size:12px;overflow-wrap:anywhere}
+.mission-primary-actions .mission-button:first-child{color:#071b2c;background:#a6eef5;border-color:#c9faff}
+.mission-panel{bottom:calc(240px + env(safe-area-inset-bottom,0px));max-height:calc(100dvh - 290px)}
+.mission-panel-content{max-height:calc(100dvh - 368px)}
+.mission-control{overflow-wrap:anywhere}
+@media(min-width:760px){.mission-primary-actions{left:auto;right:24px;bottom:110px;width:390px}.mission-panel{bottom:176px;max-height:calc(100dvh - 216px)}.mission-panel-content{max-height:calc(100dvh - 294px)}}
+@media(max-width:350px){.mission-primary-actions{left:9px;right:9px}.mission-panel{bottom:calc(240px + env(safe-area-inset-bottom,0px))}}

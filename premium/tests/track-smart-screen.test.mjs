@@ -18,3 +18,22 @@ test('free and expired accounts see the existing Premium offer instead of genera
 test('all active global Premium origins keep the same generation form',()=>{
  for(const source of ['premium','gift','access_code','admin_grant'])assert.match(api.SmartTrackPanel({},{entitlement_valid:true,entitlement:'premium',entitlement_source:source}),/data-smart-generate-form/);
 });
+
+test('mobile essentials precede one collapsed advanced section and retain all pedagogic rules',()=>{
+ const html=api.SmartTrackSection({level:'diversification',canineContext:{dogs:[{id:'dog',name:'Rex <ami>'}]}},{entitlement_valid:true,entitlement:'premium'});
+ const advanced=html.indexOf('<details class="smart-advanced">'),essential=html.slice(html.indexOf('data-smart-generate-form'),advanced),rest=html.slice(advanced,html.indexOf('</details>',advanced));
+ for(const field of ['dogId','level','distanceKm'])assert.match(essential,new RegExp(`name="${field}"`));
+ for(const field of ['terrain','transitions','skill','maxTurns','minAngle']){assert.doesNotMatch(essential,new RegExp(`name="${field}"`));assert.match(rest,new RegExp(`name="${field}"`));}
+ assert.match(rest,/Règles pédagogiques éditoriales/);assert.match(rest,/2026-10-20/);assert.match(html,/Rex &lt;ami&gt;/);assert.doesNotMatch(html,/<ami>/);
+});
+test('proposal criteria distinguish partial geometry from unverifiable surfaces and access',()=>{
+ const rows=api.smartProposalCriteria({distanceM:1000,knownSurfaceRatio:.5,urbanRatio:.5,natureRatio:.5,transitions:0,transitionsSatisfied:false,geometry:{turns:0,satisfied:false}},{distanceKm:1,terrain:'mixed',transitions:'several',level:'consolidation'});
+ assert.equal(rows.find(r=>r.label==='Distance').status,'Respecté');assert.equal(rows.find(r=>r.label==='Terrain').status,'Respecté');assert.equal(rows.find(r=>r.label==='Transitions').status,'Non vérifiable');assert.equal(rows.find(r=>r.label==='Angles').status,'Partiel');assert.equal(rows.find(r=>r.label==='Accès et conditions').status,'Non vérifiable');
+});
+test('geographic proposals expose preview without mutation and errors retry the appropriate existing form',()=>{
+ const proposal={id:'real',title:'Parcours',distanceM:1000,coordinates:[[7,48],[7.01,48.01]],surfaceDistances:{},knownSurfaceRatio:0,urbanRatio:.5,natureRatio:.5};
+ const access={entitlement_valid:true,entitlement:'premium'};
+ const html=api.SmartTrackSection({proposals:[proposal],error:'Connexion impossible',retryAction:'generate'},access);
+ assert.match(html,/data-smart-preview="real"/);assert.match(html,/data-smart-proposal="real"/);assert.match(html,/form="smart-generate-form"[^>]*data-smart-retry/);
+ assert.match(api.SmartTrackSection({error:'Connexion impossible',retryAction:'search'},access),/form="smart-commune-form"[^>]*data-smart-retry/);
+});

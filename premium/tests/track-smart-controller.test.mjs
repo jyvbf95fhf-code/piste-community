@@ -9,3 +9,9 @@ test('cancel preserves selected commune and criteria, ignores stale results and 
  let finish,calls=0;const c=api.createSmartTrackController({getContext:()=>({ownerId:'u',key:'k',fingerprint:'d',access:{entitlement_valid:true,entitlement:'premium'}}),service:{searchCommunes:async()=>[commune],loadNetwork:()=>++calls===1?new Promise(r=>finish=r):Promise.resolve({elements:[]})},generate:()=>[{id:'new'}]});
  c.setQuery('Epfig');await c.search();c.chooseCommune('67125');c.setOptions({distanceKm:2,terrain:'mixed',transitions:'few'});const old=c.generate();c.cancel();assert.equal(c.view().busy,false);assert.equal(c.view().commune.code,'67125');assert.equal(c.view().transitions,'few');await c.generate();finish({elements:[]});await old;assert.equal(c.view().proposals[0].id,'new');
 });
+test('network failure keeps criteria and enables a concrete retry without stale proposals',async()=>{
+ let attempts=0;const c=api.createSmartTrackController({getContext:()=>({ownerId:'u',key:'k',fingerprint:'d',access:{entitlement_valid:true,entitlement:'premium'}}),service:{searchCommunes:async()=>[commune],loadNetwork:async()=>{if(++attempts===1)throw Error('Connexion impossible');return {elements:[]};}},generate:()=>[{id:'one'},{id:'two'},{id:'three'},{id:'four'}]});
+ c.setQuery('Epfig');await c.search();c.chooseCommune('67125');c.setOptions({distanceKm:1,terrain:'nature',transitions:'few'});await c.generate();
+ assert.equal(c.view().retryAction,'generate');assert.equal(c.view().commune.code,commune.code);assert.equal(c.view().distanceKm,1);assert.deepEqual(c.view().proposals,[]);
+ await c.generate();assert.equal(c.view().error,'');assert.equal(c.view().retryAction,'');assert.equal(c.view().proposals.length,3);assert.equal(attempts,2);
+});
