@@ -33,3 +33,9 @@ Un deuxième échec a été reproduit : une synchronisation sans données rempla
 Validation ciblée : 339 tests unitaires (dont stockage des pistes), 12 scénarios navigateur avec conservation effective de la carte/caméra aux quatre largeurs et trois modes, 1 contrôle de bibliothèque active, et 15 contrôles applicatifs existants. Capteurs et transport de compte restent simulés en test ; aucune donnée réelle n'est écrite ou supprimée. La validation physique Safari/iPhone reste nécessaire.
 
 La Preview publiée précédemment reste inchangée. Aucune nouvelle publication effectuée pour ce retour : l'autorisation initiale portait sur une seule Preview et a déjà été consommée.
+
+## Zoom au démarrage de la pose
+
+Après validation du démarrage réel sur iPhone, ajout d'un cadrage unique à la première position GPS disponible pendant la pose active (zoom 17). La vue nationale ne persiste plus au début du traçage direct. Les positions suivantes conservent les déplacements et zooms manuels ; aucun suivi forcé n'est ajouté. Les caméras Recherche et OPS sont inchangées.
+
+Validation : 62 tests unitaires ciblés, dont quatre contrôles du zoom initial/absence de position/non-régression Recherche et OPS ; trois scénarios navigateur à 390 px (Normal, Simple aveugle, Double aveugle), vérifiant le recentrage initial puis la conservation d'un zoom manuel. Aucune nouvelle publication effectuée pour cet ajustement.
