@@ -59,3 +59,9 @@ for(const role of ['driver','coach','observer'])test(`${role} cannot confirm ano
  globalThis.fetch=async(url,req)=>{if(JSON.parse(req.body).operation==='command')commands++;return Response.json({projection});};const c=createCoachingRemoteController({client,document:{addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
  try{await c.connect('s');await assert.rejects(c.command('confirm-departure'),/non autorisée/);assert.equal(commands,0);}finally{c.destroy();globalThis.fetch=original;}
 });
+test('background synchronization cannot hide a pending or failed GPS acquisition',async()=>{
+ const original=globalThis.fetch;let fix,fail;const projection={id:'s',version:0,role:'traceur',phase:'PREPARATION',recorderSequence:0};
+ const client={auth:{getUser:async()=>({data:{user:{id:'u'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};
+ globalThis.fetch=async()=>Response.json({projection});const c=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(cb,err){fix=cb;fail=err;return 1;},clearWatch(){}}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
+ try{await c.connect('s');c.start('pose');await c.flush();assert.match(c.view().status,/Acquisition/);fix({timestamp:Date.now(),coords:{latitude:48,longitude:7,accuracy:300}});await c.flush();assert.match(c.view().status,/précision/);fail({code:3});await c.flush();assert.match(c.view().status,/dépassé/);assert.equal(c.view().gpsRunning,false);}finally{c.destroy();globalThis.fetch=original;}
+});

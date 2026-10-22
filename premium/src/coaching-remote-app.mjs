@@ -121,6 +121,6 @@ listen(root,'input',event=>{const type=event.target.closest('[data-remote-form]'
 cleanups.push(bindRemotePageLifecycle({window,controller}));
 render();
 const ready=(async()=>{try{if(await auth.getUser()){if(disposed)return;profile=await controller.profile();if(disposed)return;if(opening){await enter(opening.id);}else{if(profile.coaching_team_version===1){await refreshTeam();if(disposed)return;}sessions=await controller.listSessions();if(disposed)return;onSessions(sessions);}}}catch(error){notice=error.message;if(opening)opening.error=error.message;}finally{initializing=false;if(!disposed)render();}
-})();return {ready,refreshReferences(){if(disposed||state.projection)return;if(pointerActive)deferredRender=true;else render();},destroy(){disposed=true;controller.destroy();for(const cleanup of cleanups)cleanup();authSubscription.data.subscription.unsubscribe();auth.destroy();destroyGpsMaps();}};
+})();return {ready,refreshReferences(){if(disposed||state.projection||busy||initializing||opening)return;if(pointerActive)deferredRender=true;else render();},destroy(){disposed=true;controller.destroy();for(const cleanup of cleanups)cleanup();authSubscription.data.subscription.unsubscribe();auth.destroy();destroyGpsMaps();}};
 }
 const standaloneRoot=document.querySelector('#remote-app');if(standaloneRoot)mountRemoteCoaching({root:standaloneRoot});
