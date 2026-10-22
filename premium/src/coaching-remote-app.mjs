@@ -15,11 +15,11 @@ import {createCoachingRemoteController} from './coaching-remote-controller.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {GpsMapMarkup,mountGpsMaps,destroyGpsMaps} from './coaching-gps-screen.mjs';
 import {GpsMapStage,GpsButton,GpsTouchLockMarkup} from './coaching-gps-ui.mjs';
-export function mountRemoteCoaching({root,client=createClient(config.url,config.publishableKey),preferList=false,embedded=false,dogs=[],primaryDogId=null,resumeStoredSession=true,entry='create',sessionId=null,initialTab='summary',initialWizardState=null,onWizardChange=()=>{},onProjection=()=>{},onSessions=()=>{},onCreated=()=>{},onDogLink=()=>{},associationMarkup=()=>'',resolveJumolfPreparation=p=>p}={}){
+export function mountRemoteCoaching({root,client=createClient(config.url,config.publishableKey),preferList=false,embedded=false,dogs=[],getTracks=null,primaryDogId=null,resumeStoredSession=true,entry='create',sessionId=null,initialTab='summary',initialWizardState=null,onWizardChange=()=>{},onProjection=()=>{},onSessions=()=>{},onCreated=()=>{},onDogLink=()=>{},associationMarkup=()=>'',resolveJumolfPreparation=p=>p}={}){
 const auth=createCoachingRemoteAuth({client,allowedProjectRef:config.projectRef});
 let disposed=false,pointerActive=false,deferredRender=false;const cleanups=[];const drafts={};
 function listen(target,type,fn){target.addEventListener(type,fn);cleanups.push(()=>target.removeEventListener(type,fn));}
-const tracks=()=>profile?createTrackLibrary({storage:localStorage,ownerId:profile.id}).list().filter(t=>t.ownerId==='self'&&t.geometry?.points?.every(p=>p.space==='wgs84')&&(state.projection?.traceType!=='gpx'||t.source==='gpx')):[];
+const tracks=()=>profile?(getTracks?getTracks(profile.id):createTrackLibrary({storage:localStorage,ownerId:profile.id}).list()).filter(t=>t.ownerId==='self'&&t.geometry?.points?.every(p=>p.space==='wgs84')&&(state.projection?.traceType!=='gpx'||t.source==='gpx')):[];
 const roleLabel={traceur:'Traceur',driver:'Conducteur',coach:'Coach',observer:'Observateur'},phaseLabel={PREPARATION:'Session créée · participants attendus',LAYING:'Pose en cours',TRACK_FINISHED:'Pose terminée',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',DEBRIEF:'Débrief partagé',LAYING_WAIT:'Retour au départ attendu',ARCHIVED:'Session archivée',CANCELLED:'Session annulée',INTERRUPTED:'Session interrompue',LEFT:'Participation arrêtée'};
 let wizard=null,teamCatalogue=null,teamRefresh=null,sharedSheet=null,sharedDebriefTab=initialTab;
 let opening=(sessionId||(resumeStoredSession&&!preferList&&sessionStorage.getItem('piste.remote.session')))?{id:sessionId||sessionStorage.getItem('piste.remote.session'),error:''}:null;
@@ -27,13 +27,27 @@ let initializing=true;
 let profile=null,state={projection:null,status:'',pending:false,gpsRunning:false},sessions=[],invitation=null,notice='',busy=false,rendering=false;
 const controller=createCoachingRemoteController({client,onChange:view=>{onProjection(view.projection,state?.projection?.id);state={...view,projectionAt:view.projection?.version===state.projection?.version?state.projectionAt:Date.now()};const editing=!busy&&root.contains(document.activeElement)&&document.activeElement.closest('[data-remote-form]');if(pointerActive||editing)deferredRender=true;else if(!rendering)render();}});
 const button=(id,label)=>GpsButton('remote',id,label,busy||state.pending?'disabled':'');
-function render(){if(disposed)return;if(root.querySelector('.gps-touch-lock-panel:not([hidden])')){deferredRender=true;return;}deferredRender=false;const inviteRole=root.querySelector('[data-remote-form=invite] [name=role]')?.value;const focused=root.contains(document.activeElement)?{name:document.activeElement.name,form:document.activeElement.closest('[data-remote-form]')?.dataset.remoteForm,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;root.setAttribute('aria-busy',String(busy||Boolean(opening&&!opening.error)));rendering=true;destroyGpsMaps({preserveView:embedded});const p=state.projection;root.classList.toggle('remote-shell',!embedded||Boolean(p));
+const cockpitKey=p=>p&&[profile?.id,p.id,p.role,p.mode,p.poseRecorder,p.role===p.poseRecorder&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT'].includes(p.phase)?'pose':'search'].join(':');
+function reuseCockpit(previous,next){
+ // Keep Leaflet, its camera, controls and touch guard alive. Only the authorized
+ // projection and surrounding HUD change; a GPS status is not a new map.
+ const before=previous.querySelector('[data-gps-map]'),after=next.querySelector('[data-gps-map]');
+ for(const name of ['gpsPose','gpsReference','gpsPlanned','gpsEvents','gpsContext']){
+  if(after.dataset[name]===undefined)delete before.dataset[name];else before.dataset[name]=after.dataset[name];
+ }
+ const stage=previous.querySelector('.gps-map-stage'),lock=previous.querySelector('.gps-touch-lock-panel');
+ const children=[...next.childNodes].map(node=>node.matches?.('.gps-map-stage')?stage:node.matches?.('.gps-touch-lock-panel')?lock:node);
+ previous.className=next.className;
+ for(const name of Object.keys(previous.dataset))if(!(name in next.dataset))delete previous.dataset[name];
+ Object.assign(previous.dataset,next.dataset);previous.replaceChildren(...children);return previous;
+}
+function render(){if(disposed)return;if(root.querySelector('.gps-touch-lock-panel:not([hidden])')){deferredRender=true;return;}deferredRender=false;const inviteRole=root.querySelector('[data-remote-form=invite] [name=role]')?.value;const focused=root.contains(document.activeElement)?{name:document.activeElement.name,form:document.activeElement.closest('[data-remote-form]')?.dataset.remoteForm,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;root.setAttribute('aria-busy',String(busy||Boolean(opening&&!opening.error)));rendering=true;const p=state.projection,previous=root.querySelector('.shared-terrain'),retainedCockpit=embedded&&!opening&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(p?.phase)&&previous?.dataset.remoteViewKey===cockpitKey(p)?previous:null;if(!retainedCockpit)destroyGpsMaps({preserveView:embedded});root.classList.toggle('remote-shell',!embedded||Boolean(p)&&!retainedCockpit);
  const head=`<div class="remote-topbar"><a href="/" class="back-link">← PISTE</a>${profile&&!embedded?'<button type="button" class="button button-dark" data-remote="logout">Se déconnecter</button>':''}</div><header><span class="eyebrow">PISTE · COACHING PARTAGÉ</span><h1>${p?'Vous et '+e(p.dog):embedded?(entry==='list'?'Mes sessions Coaching':'Préparer une session'):'Une session, plusieurs téléphones.'}</h1><p>${profile?e(profile.name):'Accès privé V2 · comptes autorisés uniquement'}</p>${profile?.qa?'<p class="badge cyan">Compte de test · données QA séparées</p>':''}</header><p class="remote-notice" role="status" data-remote-status>${e(notice||state.status||(profile?'Votre espace Coaching est prêt.':'Connectez-vous pour rejoindre une session.'))}</p>`;
  if(opening&&(initializing||profile||opening.error)){root.innerHTML=`<section class="card" data-remote-opening role="status" aria-live="polite"><span class="eyebrow">COACHING PARTAGÉ</span><h1>${opening.error?'Ouverture de la session impossible':'Ouverture de votre session…'}</h1><p>${e(opening.error||'Chargement de la carte et de votre rôle autorisé.')}</p>${opening.error?'<button type="button" class="button button-dark" data-remote="retry-open">Réessayer l’ouverture</button>':''}<a class="button button-dark" href="/sessions">Retour aux sessions</a></section>`;rendering=false;return;}
  if(!profile&&embedded){root.innerHTML=`<p class="remote-notice" role="status">${e(notice||'Chargement de votre espace Coaching…')}</p>`;rendering=false;return;}
  if(!profile){root.innerHTML=head+`<section class="card"><h2>Connexion privée</h2><form data-remote-form="login"><label>E-mail<input name="email" type="email" autocomplete="username" required></label><label>Mot de passe<input name="password" type="password" autocomplete="current-password" required></label><button class="button button-gold" ${busy?'disabled':''}>Se connecter</button></form><p><a href="/auth/forgot">Mot de passe oublié</a> · <a href="/auth/signup">Créer un compte PISTE</a></p><p>Les comptes de démonstration de l’application ne donnent pas accès à cet espace.</p></section>`;rendering=false;return;}
  if(!p&&embedded){
-  if(!wizard){wizard=createSharedCoachingWizard({profile,dogs,primaryDogId,initialState:initialWizardState,resolveJumolfPreparation,onChange:onWizardChange,getTracks:()=>createTrackLibrary({storage:localStorage,ownerId:profile.id}).list()});if(teamCatalogue)wizard.setTeamCatalogue(teamCatalogue);}
+  if(!wizard){wizard=createSharedCoachingWizard({profile,dogs,primaryDogId,initialState:initialWizardState,resolveJumolfPreparation,onChange:onWizardChange,getTracks:tracks});if(teamCatalogue)wizard.setTeamCatalogue(teamCatalogue);}
   const list=`<section class="card"><h2>Mes sessions</h2>${sessions.length?sessions.map(s=>`<p><button class="button button-dark" data-remote-session="${e(s.id)}">${e(s.dog)} · ${e(phaseLabel[s.phase]||s.phase)}</button></p>`).join(''):'<p>Aucune session partagée pour le moment.</p>'}<button class="button button-dark" data-remote="refresh-list">Actualiser les sessions</button></section>`;
   const join=`<details class="card"><summary>Rejoindre une session avec une invitation</summary><form data-remote-form="join"><label>Code d’invitation<textarea name="invitation" required rows="3"></textarea></label><button class="button button-gold">Rejoindre la session</button></form></details>`;
   root.innerHTML=entry==='list'?head+`<a class="button button-gold" href="/new-session">Nouvelle session Coaching</a>`+list+join:wizard.render(notice,busy)+(profile.coaching_team_version===1&&!teamCatalogue?'<button class="button button-dark" data-remote="refresh-team">Réessayer le chargement des amis</button>':'');
@@ -60,13 +74,13 @@ function render(){if(disposed)return;if(root.querySelector('.gps-touch-lock-pane
   if(associationMarkup(p))session.insertAdjacentHTML('beforeend',associationMarkup(p));
   const panels=[...session.children].filter(el=>!el.matches('.remote-row,.remote-phase,[data-remote-external],.tracer-gps'));
   const wrapper=document.createElement('div');wrapper.innerHTML=SharedCoachingCockpit(p,state,{actions,notice});
-  const cockpit=wrapper.firstElementChild;cockpit.classList.add('shared-terrain');
+  let cockpit=wrapper.firstElementChild;cockpit.classList.add('shared-terrain');cockpit.dataset.remoteViewKey=cockpitKey(p);
   const panel=document.createElement('section');panel.className='tracer-sheet shared-session-sheet remote-shell';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',sharedSheet==='messages'?'Messages de la session':'Options de la session');panel.hidden=!sharedSheet;
   panel.innerHTML='<button type="button" class="button button-dark shared-close" data-remote="close-session">Fermer</button>';
   for(const el of panels){if(sharedSheet==='messages'&&!el.querySelector('[data-remote-messages]'))continue;panel.append(el);}
   if(sharedSheet==='session')panel.insertAdjacentHTML('beforeend','<button type="button" class="button button-dark" data-remote="refresh">Actualiser la session</button>');
   const shade=document.createElement('div');shade.className='tracer-shade';shade.hidden=!sharedSheet;shade.dataset.remote='close-session';
-  cockpit.append(shade,panel);session.replaceChildren(cockpit);root.replaceChildren(session);
+  cockpit.append(shade,panel);if(retainedCockpit)cockpit=reuseCockpit(retainedCockpit,cockpit);session.replaceChildren(cockpit);root.replaceChildren(session);
  }
  const inviteSelect=root.querySelector('[data-remote-form=invite] [name=role]');if(inviteRole&&inviteSelect?.querySelector(`[value="${inviteRole}"]`))inviteSelect.value=inviteRole;mountGpsMaps({document,L:globalThis.L});if(focused?.name){const input=root.querySelector(`[data-remote-form="${focused.form}"] [name="${focused.name}"]`);input?.focus({preventScroll:true});if(input?.setSelectionRange&&focused.start!==null)try{input.setSelectionRange(focused.start,focused.end);}catch{}}rendering=false;
 }
@@ -107,6 +121,6 @@ listen(root,'input',event=>{const type=event.target.closest('[data-remote-form]'
 cleanups.push(bindRemotePageLifecycle({window,controller}));
 render();
 const ready=(async()=>{try{if(await auth.getUser()){if(disposed)return;profile=await controller.profile();if(disposed)return;if(opening){await enter(opening.id);}else{if(profile.coaching_team_version===1){await refreshTeam();if(disposed)return;}sessions=await controller.listSessions();if(disposed)return;onSessions(sessions);}}}catch(error){notice=error.message;if(opening)opening.error=error.message;}finally{initializing=false;if(!disposed)render();}
-})();return {ready,destroy(){disposed=true;controller.destroy();for(const cleanup of cleanups)cleanup();authSubscription.data.subscription.unsubscribe();auth.destroy();destroyGpsMaps();}};
+})();return {ready,refreshReferences(){if(disposed||state.projection)return;if(pointerActive)deferredRender=true;else render();},destroy(){disposed=true;controller.destroy();for(const cleanup of cleanups)cleanup();authSubscription.data.subscription.unsubscribe();auth.destroy();destroyGpsMaps();}};
 }
 const standaloneRoot=document.querySelector('#remote-app');if(standaloneRoot)mountRemoteCoaching({root:standaloneRoot});
