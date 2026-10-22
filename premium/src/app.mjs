@@ -1236,7 +1236,7 @@ document.addEventListener('click',async event=>{
    else if(action==='gps-center'){centerGpsMap();return;}
    else if(action==='enter'){terrainOpen=true;tracerUI={};}
    else if(action==='back')terrainOpen=false;
-   else if(action==='arrive'){const t=tracer.advanceTracer(tracerState,preparationState,'arrive');const p=preparation.simulate(preparationState,{phase:'arrived'});tracerState=t;preparationState=p;}
+   else if(action==='arrive'){const arrived=tracer.advanceTracer(tracerState,preparationState,'arrive');const atStart=preparation.simulate(preparationState,{phase:'arrived'});const ready=preparation.transition(atStart,'ready');tracerState=tracer.advanceTracer(arrived,ready,'ready');preparationState=ready;}
    else if(action==='ready'){const next=preparation.transition(preparationState,'ready');const t=tracer.advanceTracer(tracerState,next,'ready');preparationState=next;tracerState=t;}
    else if(action==='return-start'){tracerState=returnSelfTraceToStart(tracerState,preparationState);preparationState=preparation.simulate(preparationState,{viewerFunction:'driver'});terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
    else if(action==='external-ready'){preparationState=markExternalTraceurInPlace(preparationState,tracerState);terrainOpen=false;searchState=syncSession({...searchState,simulatedPhase:false},preparationState,tracerState);}
