@@ -16,7 +16,7 @@ export function TracerScreen(s,p,ui={}){
   if(fake&&approach)html=html.replace('data-tracer="gps-resume"','data-tracer="gps-enable"'+(ui.allowGps?'':' disabled')).replace(/<button[^>]*data-tracer="start"[\s\S]*?<\/button>/,'');
   if(approach){const fix=ui.gps?.lastFix,distance=fix?Math.round(gpsDistance(fix,v.start)):null;
    html=html.replace('data-gps-live','data-gps-live data-gps-approach="true"').replace('data-gps-corridor-allowed="true"','data-gps-corridor-allowed="false"').replace('Pose GPS réelle','Rejoindre le départ').replace(/<strong data-gps-distance>[\s\S]*?<\/strong><strong data-gps-clock>[\s\S]*?<\/strong>/,`<strong>${distance===null?'Départ sur la carte':distance+' m du départ'}</strong><strong>Pose non démarrée</strong>`).replace(/<button[^>]*data-tracer="start"[\s\S]*?<\/button>/,'');
-   html=html.replace('<div class="gps-actions">',`<div class="gps-actions">${control(s.phase==='approaching'?'arrive':'ready',s.phase==='approaching'?'Arrivé au départ':'Me déclarer prêt à tracer')}`);
+   html=html.replace('<div class="gps-actions">',`<div class="gps-actions">${control(s.phase==='approaching'?'arrive':'ready',s.phase==='approaching'?'Je suis au départ · prêt à tracer':'Me déclarer prêt à tracer')}`);
   }
   return poseScreen(html);
  }
