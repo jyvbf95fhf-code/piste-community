@@ -7,7 +7,7 @@ export function createCoachingRemoteController({client,onChange=()=>{},navigator
  let transport=null,queue=null,projection=null,status='',pending=false,user=null,kind=null,sequence=0,segment=crypto.randomUUID(),starting=false,pendingStart=null,saving=Promise.resolve(),disposed=false,poller=null,connectionEpoch=0;
  const changed=()=>{if(!disposed)onChange(view());};const note=message=>{if(status===message)return;status=message;changed();};
  const sensor=createGpsSensor({navigator,document,onStatus:s=>{if(['denied','unsupported','unavailable','hidden','stale'].includes(s)){pendingStart=null;starting=false;pending=false;}note(({denied:'Localisation refusée : autorisez Safari puis réessayez.',unsupported:'GPS indisponible dans ce navigateur.',acquiring:'Acquisition GPS en cours…',hidden:'GPS suspendu : reprise explicite nécessaire.',stale:'Délai GPS dépassé : réessayez à ciel ouvert.',unavailable:'GPS indisponible : réessayez.'})[s]||status);},onGap:()=>{segment=crypto.randomUUID();},onFix(position){if(disposed)return;if(!normalizeGpsFix(position,Date.now())){if(pendingStart||kind)note('Position GPS non retenue : précision requise ≤ 30 m et position récente. Attendez à ciel ouvert.');return;}position={timestamp:position.timestamp,coords:{latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy}};
-  if(pendingStart&&!starting){const command=pendingStart;pendingStart=null;starting=true;saving=saving.then(async()=>{try{await transport.sendCommand(command,{fix:position,segmentId:segment});starting=false;pending=false;note('GPS réel · synchronisé');}catch(e){sensor.stop();starting=false;pending=false;note(e.message);}});return;}
+  if(pendingStart&&!starting){const command=pendingStart,epoch=connectionEpoch,target=transport;pendingStart=null;starting=true;saving=saving.then(async()=>{if(disposed||epoch!==connectionEpoch)return;try{await target.sendCommand(command,{fix:position,segmentId:segment});if(disposed||epoch!==connectionEpoch)return;starting=false;pending=false;note(sensor.running()?'GPS réel · synchronisé':'GPS suspendu : reprise explicite nécessaire.');}catch(e){if(disposed||epoch!==connectionEpoch)return;sensor.stop();starting=false;pending=false;note(e.message);}});return;}
   if(kind&&transport&&(['LAYING','SEARCH_RUNNING'].includes(projection?.phase)||starting)){const point={timestamp:position.timestamp,coords:{latitude:position.coords.latitude,longitude:position.coords.longitude,accuracy:position.coords.accuracy},capturedAt:Date.now(),segmentId:segment,sequence:++sequence};saving=saving.then(()=>['LAYING','SEARCH_RUNNING'].includes(projection?.phase)?queue.appendPoint(kind,point):undefined).catch(e=>{sensor.stop();note('Sauvegarde locale impossible : '+e.message);});}
  }});
  const view=()=>({projection:projection?structuredClone(projection):null,status,pending,gpsRunning:sensor.running()});
@@ -18,7 +18,18 @@ export function createCoachingRemoteController({client,onChange=()=>{},navigator
  async invite(role,recipientId){if(!projection)throw Error('Session requise.');return transport.call({operation:'invite',sessionId:projection.id,role,...(recipientId?{recipientId}:{})});},
  start(kindValue){if(!transport||pending) return;if(kindValue==='pose'?(projection?.role!==(projection?.poseRecorder??'traceur')||projection.phase!=='PREPARATION'):(projection?.role!=='driver'||projection.phase!=='SEARCH_READY'))throw Error('Démarrage non autorisé.');if(kindValue==='pose'&&['gpx','prepared'].includes(projection.traceType)&&(projection.referenceStatus!=='available'||projection.approachPhase!=='ready'))throw Error('Importez le GPX puis rejoignez le départ avant de tracer.');kind=kindValue;pending=true;pendingStart=kind==='pose'?'start-pose':'start-search';sensor.start();changed();},
  resumeGps(){if(!projection||!(projection.role===(projection.poseRecorder??'traceur')&&projection.phase==='LAYING'||projection.role==='driver'&&projection.phase==='SEARCH_RUNNING'))throw Error('Reprise non autorisée.');kind=projection.phase==='LAYING'?'pose':'search';segment=crypto.randomUUID();sensor.start();},
- async command(type,payload={}){if(!transport)throw Error('Session requise.');pending=true;changed();try{if(['finish-pose','finish-search','cancel','interrupt','leave'].includes(type))sensor.stop();await saving;await transport.sendCommand(type,payload);note('Synchronisé');}catch(e){note(e.message);throw e;}finally{pending=false;changed();}},flush,
+ async command(type,payload={}){if(!transport)throw Error('Session requise.');pending=true;changed();try{if(['finish-pose','finish-search','cancel','interrupt','leave'].includes(type))sensor.stop();await saving;
+   if(type==='confirm-departure'){
+    // One explicit confirmation, existing server-authorized steps only. A retry
+    // resumes from the last acknowledged step; it never requests location.
+    if(projection?.role!==(projection?.poseRecorder??'traceur')||projection.phase!=='PREPARATION'||!['gpx','prepared'].includes(projection.traceType)||projection.referenceStatus!=='available')throw Error('Confirmation du départ non autorisée.');
+    await transport.getProjection();
+    for(const [from,command] of [['needed','approach-start'],['approaching','arrive-start'],['arrived','ready-pose']]){
+     if(projection?.approachPhase===from)await transport.sendCommand(command);
+    }
+    if(projection?.approachPhase!=='ready')throw Error('Départ non confirmé : actualisez la session puis réessayez.');
+   }else await transport.sendCommand(type,payload);
+   note('Synchronisé');}catch(e){note(e.message);throw e;}finally{pending=false;changed();}},flush,
  destroy(){disposed=true;connectionEpoch++;sensor.destroy();if(poller)clearInterval(poller);transport?.disconnect();api.disconnect();}
  };
 }

@@ -14,7 +14,7 @@ export function sharedCoachingEntry(p){
   if(!['prepared','gpx'].includes(p.traceType)){action='start-pose';label=p.poseRecorder==='driver'?'Enregistrer la pose':'Tracer la piste';}
   else if(status==='proposed'){action='accept-reference';label='Valider le tracé proposé';}
   else if(status==='available'){
-   [action,label]=({needed:['approach-start','Rejoindre le départ'],approaching:['arrive-start','Arrivé au départ'],arrived:['ready-pose','Me déclarer prêt à tracer'],ready:['start-pose','Tracer la piste']})[p.approachPhase]||['open-session','Vérifier le départ'];
+   [action,label]=({needed:['confirm-departure','Je suis au départ · prêt à tracer'],approaching:['confirm-departure','Je suis au départ · prêt à tracer'],arrived:['confirm-departure','Je suis au départ · prêt à tracer'],ready:['start-pose','Tracer la piste']})[p.approachPhase]||['open-session','Vérifier le départ'];
   }else{action='open-session';label='Choisir le tracé requis';}
  }
  return {reference,planned,status,action,label};

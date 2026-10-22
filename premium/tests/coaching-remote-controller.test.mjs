@@ -30,3 +30,32 @@ test('switching sessions cancels an unfulfilled GPS start',async()=>{
  globalThis.fetch=async(url,req)=>{const b=JSON.parse(req.body);return Response.json({projection:{id:b.sessionId,version:0,role:'traceur',phase:'PREPARATION'}});};
  const c=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(){return 1;},clearWatch(){}}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});try{await c.connect('a');c.start('pose');await c.connect('b');assert.equal(c.view().pending,false);assert.equal(c.view().gpsRunning,false);}finally{c.destroy();globalThis.fetch=original;}
 });
+test('departure confirmation reuses authorized transitions and never starts GPS',async()=>{
+ const original=globalThis.fetch,posted=[];let watches=0;
+ const projection={id:'s',version:0,role:'traceur',poseRecorder:'traceur',phase:'PREPARATION',traceType:'prepared',referenceStatus:'available',approachPhase:'needed'};
+ const client={auth:{getUser:async()=>({data:{user:{id:'t'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};
+ globalThis.fetch=async(url,req)=>{const b=JSON.parse(req.body);if(b.type){posted.push(b.type);projection.approachPhase={'approach-start':'approaching','arrive-start':'arrived','ready-pose':'ready'}[b.type];projection.version++;}return Response.json({projection});};
+ const c=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(){return ++watches;},clearWatch(){}}},document:{addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
+ try{await c.connect('s');await c.command('confirm-departure');assert.deepEqual(posted,['approach-start','arrive-start','ready-pose']);assert.equal(c.view().projection.approachPhase,'ready');assert.equal(watches,0);await c.command('confirm-departure');assert.equal(posted.length,3);}finally{c.destroy();globalThis.fetch=original;}
+});
+test('a GPS start queued just before a session switch cannot target the new session',async()=>{
+ const original=globalThis.fetch,starts=[];let fix;
+ const client={auth:{getUser:async()=>({data:{user:{id:'u'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};
+ globalThis.fetch=async(url,req)=>{const b=JSON.parse(req.body);if(b.type==='start-pose')starts.push(b.sessionId);return Response.json({projection:{id:b.sessionId,version:0,role:'traceur',phase:'PREPARATION'}});};
+ const c=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(cb){fix=cb;return 1;},clearWatch(){}}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
+ try{await c.connect('a');c.start('pose');fix({timestamp:Date.now(),coords:{latitude:48,longitude:7,accuracy:5}});await c.connect('b');assert.equal(c.view().status,'');await c.flush();assert.deepEqual(starts,[]);assert.equal(c.view().projection.id,'b');}finally{c.destroy();globalThis.fetch=original;}
+});
+test('interrupted departure confirmation retries only remaining acknowledged server steps',async()=>{
+ const original=globalThis.fetch,posted=[];let failOnce=true;
+ const projection={id:'s',version:0,role:'traceur',poseRecorder:'traceur',phase:'PREPARATION',traceType:'prepared',referenceStatus:'available',approachPhase:'needed'};
+ const client={auth:{getUser:async()=>({data:{user:{id:'t'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};
+ globalThis.fetch=async(url,req)=>{const b=JSON.parse(req.body);if(b.type){posted.push(b.type);if(b.type==='arrive-start'&&failOnce){failOnce=false;return Response.json({error:'Interruption réseau'},{status:503});}projection.approachPhase={'approach-start':'approaching','arrive-start':'arrived','ready-pose':'ready'}[b.type];projection.version++;}return Response.json({projection});};
+ const c=createCoachingRemoteController({client,document:{addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
+ try{await c.connect('s');await assert.rejects(c.command('confirm-departure'),/Interruption/);assert.equal(c.view().pending,false);assert.equal(c.view().projection.approachPhase,'approaching');await c.command('confirm-departure');assert.deepEqual(posted,['approach-start','arrive-start','arrive-start','ready-pose']);assert.equal(c.view().projection.approachPhase,'ready');}finally{c.destroy();globalThis.fetch=original;}
+});
+for(const role of ['driver','coach','observer'])test(`${role} cannot confirm another recorder's departure`,async()=>{
+ const original=globalThis.fetch;let commands=0;const projection={id:'s',version:0,role,poseRecorder:'traceur',phase:'PREPARATION',traceType:'prepared',referenceStatus:'available',approachPhase:'needed'};
+ const client={auth:{getUser:async()=>({data:{user:{id:'u'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this;},subscribe(){return this;}};},removeChannel:async()=>{}};
+ globalThis.fetch=async(url,req)=>{if(JSON.parse(req.body).operation==='command')commands++;return Response.json({projection});};const c=createCoachingRemoteController({client,document:{addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
+ try{await c.connect('s');await assert.rejects(c.command('confirm-departure'),/non autorisée/);assert.equal(commands,0);}finally{c.destroy();globalThis.fetch=original;}
+});
