@@ -1,0 +1,31 @@
+name: V2 editor IGN recovery
+on:
+  push:
+    branches:
+      - feature/v2-premium-editor-ign-recovery
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax and explicit fallback
+        run: |
+          node --check premium/src/app.mjs
+          node --check premium/src/track-editor.mjs
+          node --check premium/src/track-editor-cockpit.mjs
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import {createTrackDraft,addTrackPoint,recoverPendingTrackRoutes} from './premium/src/track-editor.mjs';
+          const source=createTrackDraft({coordinateSpace:'wgs84'});
+          assert.equal(typeof recoverPendingTrackRoutes,'function');
+          assert.ok(source);
+          NODE
