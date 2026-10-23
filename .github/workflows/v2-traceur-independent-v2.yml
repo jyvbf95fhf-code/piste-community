@@ -1,0 +1,26 @@
+name: V2 traceur independent of driver
+
+on:
+  push:
+    branches:
+      - feature/v2-premium-traceur-independent-v2
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  traceur-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: node --check premium/src/server/coaching-service.mjs
+      - name: Traceur and visibility mode regression
+        run: node --test premium/tests/traceur-before-driver-join.test.mjs
