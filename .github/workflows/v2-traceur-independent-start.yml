@@ -1,0 +1,37 @@
+name: V2 traceur independent start
+
+on:
+  push:
+    branches:
+      - feature/v2-premium-traceur-before-driver-join
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  traceur-independent-start:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Syntax and focused transition regression
+        run: |
+          node --check app.js
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const s=fs.readFileSync('app.js','utf8');
+          assert.match(s,/s\.status==='waiting'&&phase==='preparation'&&\(rawRole==='traceur'/);
+          assert.match(s,/s\.status==='waiting'&&!isCurrentUserLayingActor\(s\)\?'room'/);
+          assert.match(s,/activeCoachingSession\.status==='waiting'&&coachingPhase\(activeCoachingSession\)==='preparation'&&isCurrentUserLayingActor\(activeCoachingSession\)/);
+          assert.match(s,/coachingTransitionV1040\('start_coaching_laying'\)/);
+          assert.match(s,/role==='driver'/);
+          assert.match(s,/coachingDataVisibility/);
+          console.log('Traceur can access laying while driver invitation is pending; server transition and blind-mode handling remain referenced.');
+          NODE
