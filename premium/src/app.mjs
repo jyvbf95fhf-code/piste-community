@@ -32,7 +32,7 @@ import {readTrackGpxFile,createImportedGpxDraft} from './track-gpx-import.mjs';
 import {createTrackRoutingService} from './track-routing-service.mjs';
 import {createTrackRoutingController} from './track-routing-controller.mjs';
 import {trackHasPendingRoutes} from './track-route-segments.mjs';
-import {applyTrackRoute} from './track-editor.mjs';
+import {applyTrackRoute ,recoverPendingTrackRoutes} from './track-editor.mjs';
 import {removeLastTrackSegment} from './track-editor.mjs';
 import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap,paintTrackMissionMap} from './track-editor-real-map.mjs';
 import {createMissionController} from './track-mission-controller.mjs';
@@ -1137,6 +1137,7 @@ document.addEventListener('click',async event=>{
    else if(action==='close-menu'){const panel=document.querySelector('[data-creator-panel]');if(panel){panel.open=false;panel.querySelector('summary')?.focus();}}
    else if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
    else if(action==='retry-routing')trackRouting.retry();
+   else if(action==='recover-routing'){if(!confirm('Les segments sans itinéraire IGN seront reliés en ligne droite. Conserver les points et continuer ?'))return;editorChange(recoverPendingTrackRoutes(trackEditor.draft),{notice:'Segments IGN non calculés convertis en lignes droites. Vérifiez le parcours avant enregistrement.'});}
    else if(action==='remove-last-segment')editorChange(removeLastTrackSegment(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});
    else if(action==='undo')editorChange(undoTrackEdit(trackEditor.draft),{selectedPointId:null});
    else if(action==='remove-point')editorChange(removeTrackPoint(trackEditor.draft,trackEditor.selectedPointId),{selectedPointId:null});
