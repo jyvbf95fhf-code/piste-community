@@ -1,4 +1,4 @@
-import {normalizeTrackRoute,segmentDistance} from './track-route-segments.mjs';
+import {normalizeTrackRoute,segmentDistance,routeForSegment} from './track-route-segments.mjs';
 import {geographicCoordinates,geographicDistance} from './track-geographic.mjs';
 export const TRACK_MAP_BOUNDS=Object.freeze({width:360,height:300});
 export const MOCK_METERS_PER_UNIT=10;
@@ -143,3 +143,10 @@ export function trackDraftMetrics(draft){
 export function removeLastTrackSegment(draft){return draft.points.length>1?recalculate(draft,{points:clone(draft.points.slice(0,-1))}):draft;}
 
 export function applyTrackRoute(draft,pointId,route){const index=draft.points.findIndex(p=>p.id===pointId);if(index<1||draft.points[index].incomingMode!=='follow')return draft;const valid=normalizeTrackRoute(route,draft.points[index-1],draft.points[index]);const points=clone(draft.points);points[index].route=valid;return recalculate(draft,{points},false);}
+
+// Explicit fallback only: retain the user's vertices, not a fabricated pedestrian route.
+export function recoverPendingTrackRoutes(draft){
+ if(draft.coordinateSpace!=='wgs84')return draft;
+ const points=draft.points.map((point,index)=>index>0&&point.incomingMode==='follow'&&!point.breakBefore&&!routeForSegment(draft.points[index-1],point)?{...point,incomingMode:'free',route:undefined}:point);
+ return recalculate(draft,{points});
+}
