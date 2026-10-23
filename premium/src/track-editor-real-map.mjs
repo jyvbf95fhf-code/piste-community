@@ -15,7 +15,7 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  let free=[];const flushFree=()=>{if(free.length>1)L.polyline(free,lineStyle).addTo(layers);free=[];};
  for(let i=1;i<points.length;i++){
  const a=points[i-1],b=points[i];if(b.breakBefore){flushFree();continue;}
- const coordinates=segmentCoordinates(a,b);if(coordinates.length<2){flushFree();continue;}
+ const coordinates=segmentCoordinates(a,b);if(coordinates.length<2){flushFree();L.polyline([[a.y,a.x],[b.y,b.x]],{...lineStyle,dashArray:'7 7',opacity:0.85,className:'track-pending-route'}).addTo(layers);continue;}
  const routed=routeForSegment(a,b);
  if(routed){flushFree();L.polyline(routed.coordinates.map(c=>[c[1],c[0]]),lineStyle).addTo(layers);
   for(const pair of [[[a.x,a.y],routed.coordinates[0]],[routed.coordinates.at(-1),[b.x,b.y]]])L.polyline(pair.map(c=>[c[1],c[0]]),{color:'#9dd7df',weight:2,dashArray:'3 5'}).addTo(layers);
