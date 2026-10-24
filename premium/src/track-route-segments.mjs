@@ -1,7 +1,7 @@
 import {geographicCoordinates,geographicDistance} from './track-geographic.mjs';
 export const routeSegmentKey=(a,b)=>JSON.stringify([a.x,a.y,b.x,b.y]);
 export function normalizeTrackRoute(route,a,b){
- if(!route||!['IGN','OSM'].includes(route.provider)||route.key!==routeSegmentKey(a,b)||!Array.isArray(route.coordinates)||route.coordinates.length<2||route.coordinates.length>50000)throw Error('Itinéraire invalide.');
+ if(!route||!['IGN','OSM','Geoapify','ORS'].includes(route.provider)||route.key!==routeSegmentKey(a,b)||!Array.isArray(route.coordinates)||route.coordinates.length<2||route.coordinates.length>50000)throw Error('Itinéraire invalide.');
  const coordinates=route.coordinates.map(c=>{if(!Array.isArray(c)||c.length<2)throw Error('Itinéraire invalide.');geographicCoordinates({x:c[0],y:c[1]});return [c[0],c[1]];});
  if(geographicDistance(a,{x:coordinates[0][0],y:coordinates[0][1]})>100||geographicDistance(b,{x:coordinates.at(-1)[0],y:coordinates.at(-1)[1]})>100)throw Error('Choisissez des points plus proches des routes ou chemins.');
  return {key:route.key,provider:route.provider,coordinates};
