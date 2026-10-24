@@ -13,3 +13,11 @@
 4. Regression test two-account Live/Coaching, free users, Premium grants, revocations, Science and Admin. Preview only.
 
 Never change V1/main/production, SQL/RLS/Auth or existing sessions as part of the UI badge rollout.
+
+## État du lot A — 24 octobre 2026
+
+- **Déployé V2 uniquement :** fonction Supabase `coaching` version 20 ; opération `authorize-feature` reconnaît désormais `smart_routing`, `live_ops_advanced`, `coaching_advanced`, `analytics_advanced`, `export_advanced` à partir des droits protégés `app_metadata` et des cadeaux/codes vérifiés côté serveur.
+- **Déployé Preview Vercel :** `/api/route` impose une autorisation Premium serveur avant tout calcul de routage facturable ; le créateur intelligent utilise déjà le verrouillage UI Premium existant. Les tracés manuels restent gratuits.
+- **Non terminé :** découpage précis et protection des commandes avancées Live OPS et Coaching (leurs opérations de base restent libres). L'opération `authorize-feature` seule ne verrouille pas ces commandes. Analyses/exports avancés également non verrouillés.
+- **Validation :** déploiements READY/ACTIVE et présence du code confirmés ; tests bout-en-bout Gratuit/Premium/Admin avec authentification réelle non exécutés. Ne pas annoncer le lot A terminé tant que ces tests et les gardes avancées ne sont pas en place.
+- **Isolation :** V1/main/production inchangés ; aucun SQL/RLS/Auth ou migration modifiés.
