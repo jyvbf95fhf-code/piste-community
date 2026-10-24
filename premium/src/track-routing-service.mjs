@@ -11,7 +11,7 @@ export function createTrackRoutingService({fetch=globalThis.fetch,timeoutMs=1500
   if(signal?.aborted)abort();signal?.addEventListener('abort',abort,{once:true});
   const timer=setTimeout(abort,timeoutMs);
   try{
-   const params=new URLSearchParams({resource:'bdtopo-osrm',start:`${a.x},${a.y}`,end:`${b.x},${b.y}`,profile:'pedestrian',optimization:'shortest',geometryFormat:'geojson',getSteps:'false',distanceUnit:'meter',crs:'EPSG:4326'});
+   const params=new URLSearchParams({resource:'bdtopo-osrm',start:`${a.x},${a.y}`,end:`${b.x},${b.y}`,profile:'pedestrian',optimization:'shortest',geometryFormat:'geojson',getSteps:'false',distanceUnit:'meter',timeUnit:'second',crs:'EPSG:4326'});
    let lastError=null;
    for(const engine of ['bdtopo-osrm','bdtopo-valhalla']){
     params.set('resource',engine);
