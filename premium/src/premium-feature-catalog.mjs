@@ -1,6 +1,6 @@
 // V2 product catalog. Labels are informational: never use this module as server authorization.
 export const PREMIUM_FEATURES=Object.freeze({
- smart_routing:{label:'Tracé intelligent',tier:'premium',status:'candidate'},
+ smart_routing:{label:'Tracé intelligent',tier:'premium',status:'enforced'},
  jumolf:{label:'JUMOLF',tier:'premium',status:'enforced'},
  live_ops_advanced:{label:'Live OPS avancé',tier:'premium',status:'candidate'},
  coaching_advanced:{label:'Coaching avancé',tier:'premium',status:'candidate'},
