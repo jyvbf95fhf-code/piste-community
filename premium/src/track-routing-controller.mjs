@@ -11,7 +11,7 @@ export function createTrackRoutingController({service,getContext,onResult,onStat
   const r={context:contextKey(c),id:row.b.id,key:routeSegmentKey(row.a,row.b),abort:new AbortController()};current=r;
   const cached=cache.get(r.key);
   if(!cached)onStatus('Calcul routes / chemins…');
-  void (async()=>{const route=cached||await service.calculate(row.a,row.b,{signal:r.abort.signal});if(current===r&&valid(r)){if(!cached){cache.delete(r.key);cache.set(r.key,route);if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);}onStatus('');onResult(r.id,route);}})().catch(error=>{if(current===r&&valid(r)){failed.add(`${r.context}:${r.id}:${r.key}`);onStatus(`${error.message} Ouvrez Menu → Points et édition → Réessayer le calcul d’itinéraire, sans déplacer vos points.`);}}).finally(()=>{if(current===r){current=null;reconcile();}});
+  void (async()=>{const route=cached||await service.calculate(row.a,row.b,{signal:r.abort.signal});if(current===r&&valid(r)){if(!cached){cache.delete(r.key);cache.set(r.key,route);if(cache.size>MAX_CACHE)cache.delete(cache.keys().next().value);}onStatus('');onResult(r.id,route);}})().catch(error=>{if(error?.name!=='AbortError'&&current===r&&valid(r)){failed.add(`${r.context}:${r.id}:${r.key}`);onStatus(`${error.message} Ouvrez Menu → Points et édition → Réessayer le calcul d’itinéraire, sans déplacer vos points.`);}}).finally(()=>{if(current===r){current=null;reconcile();}});
  };
  return {reconcile,dispose(){current?.abort.abort();current=null;failed.clear();},retry(){failed.clear();reconcile();}};
 }
