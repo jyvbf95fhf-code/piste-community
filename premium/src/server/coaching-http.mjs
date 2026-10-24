@@ -29,7 +29,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
  }
  if(body.operation==='export-data')return respond(await exportAccountData({admin,uid,capabilities,body,clock}));
  if(body.operation==='authorize-feature'){
-  const allowed={premium:capabilities.permissions.premium,science:capabilities.permissions.research,jumolf:capabilities.jumolf_entitlement.entitlement!=='none'}[body.feature];
+  const allowed={premium:capabilities.permissions.premium,science:capabilities.permissions.research,jumolf:capabilities.jumolf_entitlement.entitlement!=='none',smart_routing:capabilities.permissions.premium,live_ops_advanced:capabilities.permissions.premium,coaching_advanced:capabilities.permissions.premium,analytics_advanced:capabilities.permissions.premium,export_advanced:capabilities.permissions.premium}[body.feature];
   if(!allowed)error('Accès non autorisé.',403);return respond({authorized:true,...capabilities});
  }
  if(['admin-snapshot','admin-command'].includes(body.operation)){
