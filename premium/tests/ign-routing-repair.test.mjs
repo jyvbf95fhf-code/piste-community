@@ -9,6 +9,7 @@ test('IGN pedestrian route persists real network geometry',async()=>{
  const route=await service.calculate(a,b);
  assert.equal(route.provider,'IGN');assert.equal(route.coordinates.length,3);
  assert.match(url,/resource=bdtopo-osrm/);assert.match(url,/profile=pedestrian/);
+ assert.match(url,/timeUnit=second/);
 });
 test('IGN temporary 503 retries before returning valid road',async()=>{
  let calls=0;
