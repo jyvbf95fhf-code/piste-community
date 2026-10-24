@@ -9,11 +9,11 @@ export default async function handler(req,res){
  const token=/^Bearer (.+)$/i.exec(req.headers.authorization||'')?.[1];
  if(!token)return res.status(401).json({error:'Authentification requise'});
  const secret=process.env.SUPABASE_V2_SERVICE_ROLE_KEY;
- if(!secret||!process.env.GEOAPIFY_API_KEY)return res.status(503).json({error:'Routage non configuré'});
+ if(!secret||!process.env.GEOAPIFY_API_KEY){console.error('[routing] missing_server_configuration');return res.status(503).json({error:'Routage non configuré',code:'CONFIG_MISSING'});}
  try{
   const auth=createClient(PROJECT,PUBLIC_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await auth.auth.getUser(token);
-  if(error||!user)return res.status(401).json({error:'Session invalide'});
+  if(error||!user){console.warn('[routing] auth_rejected');return res.status(401).json({error:'Session invalide',code:'AUTH_REJECTED'});}
   const admin=createClient(PROJECT,secret,{auth:{persistSession:false,autoRefreshToken:false}});
   const quota={reserve:async({provider})=>{
    const {data,error}=await admin.rpc('v2_reserve_routing_credit',{p_provider:provider});
@@ -27,6 +27,7 @@ export default async function handler(req,res){
   const result=await gateway.calculate(body?.a,body?.b);
   return res.status(200).json(result);
  }catch(error){
-  return res.status(503).json({error:'Calcul indisponible ; les points restent conservés'});
+  console.error('[routing] request_failed',{category:error?.cause?.message?.includes('quota')?'quota':error?.message?.includes('quota')?'quota':'provider_or_backend',providerStatus:(error?.cause?.message||'').match(/HTTP (\d{3})/)?.[1]||null});
+  return res.status(503).json({error:'Calcul indisponible ; les points restent conservés',code:'ROUTING_UNAVAILABLE'});
  }
 }
