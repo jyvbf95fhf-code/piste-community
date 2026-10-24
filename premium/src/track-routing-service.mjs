@@ -42,8 +42,8 @@ export function createTrackRoutingService({fetch=globalThis.fetch,timeoutMs=1500
    }
    throw lastError||Error('Aucun itinéraire IGN disponible.');
   }catch(error){
-   if(error.name==='AbortError')throw Error('Calcul IGN interrompu ou trop long.');
-   if(error instanceof TypeError)throw Error('Connexion au service IGN impossible (réseau ou accès navigateur).');
+   if(error.name==='AbortError')throw Object.assign(Error('Calcul interrompu ou trop long.'),{name:'AbortError'});
+   if(error instanceof TypeError)throw Error('Connexion au service de routage impossible.');
    throw error;
   }finally{clearTimeout(timer);signal?.removeEventListener('abort',abort);}
  }};
