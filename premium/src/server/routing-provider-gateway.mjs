@@ -2,7 +2,7 @@
 // The quota store MUST implement reserve({provider,day,limit}) atomically across concurrent requests.
 const limits={geoapify:3000,ors:2000};
 const valid=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Math.abs(p.x)<=180&&Math.abs(p.y)<=90;
-const route=data=>data?.features?.[0]?.geometry?.coordinates;
+const route=data=>{const g=data?.features?.[0]?.geometry;return g?.type==='LineString'?g.coordinates:g?.type==='MultiLineString'?g.coordinates.flat():null;};
 function normalize(data,provider){const coordinates=route(data);if(!Array.isArray(coordinates)||coordinates.length<2||coordinates.some(p=>!Array.isArray(p)||!valid({x:p[0],y:p[1]})))throw Error('Géométrie non valide');return {provider,coordinates};}
 export function createRoutingGateway({fetch,geoapifyKey,orsKey,quota,onWarning=()=>{}}){
  if(typeof fetch!=='function'||typeof quota?.reserve!=='function')throw Error('Compteur atomique requis : routage désactivé');
@@ -29,7 +29,7 @@ export function createRoutingGateway({fetch,geoapifyKey,orsKey,quota,onWarning=(
   let error;
   for(const provider of ['geoapify','ors']){
    if(provider==='geoapify'&&!geoapifyKey||provider==='ors'&&!orsKey)continue;
-   try{return await call(provider,a,b);}catch(e){error=e;if(!e.retryable)break;}
+   try{return await call(provider,a,b);}catch(e){error=e;if(!e.retryable&&!(e.message||'').includes('Géométrie'))break;}
   }
   throw Object.assign(Error('Calcul indisponible ; conserver les points et proposer le tracé libre'),{cause:error});
  }};
