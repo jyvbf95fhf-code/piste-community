@@ -1,0 +1,21 @@
+name: V2 IGN routing repair
+on:
+  push:
+    branches:
+      - feature/v2-premium-ign-routing-repair
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  routing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node --check premium/src/track-routing-service.mjs
+      - run: node --test premium/tests/ign-routing-repair.test.mjs
