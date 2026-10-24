@@ -1,0 +1,10 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {resolvePremiumAccess,canUsePremiumFeature} from '../src/premium-access-policy.mjs';
+const now='2026-10-24T12:00:00.000Z';
+test('free accounts are denied',()=>assert.equal(resolvePremiumAccess({},now).premium,false));
+test('active gifts unlock Premium',()=>assert.equal(resolvePremiumAccess({grants:[{source:'gift',status:'Actif',expires_at:'2026-11-01T00:00:00Z'}]},now).premium,true));
+test('expired and revoked grants fail closed',()=>{for(const g of [{source:'gift',expires_at:'2026-10-01T00:00:00Z'},{source:'premium',revoked_at:'2026-10-23T00:00:00Z'},{source:'gift',status:'Révoqué'}])assert.equal(resolvePremiumAccess({grants:[g]},now).premium,false)});
+test('owner admin remains Premium',()=>assert.equal(resolvePremiumAccess({adminRole:'owner_admin'},now).premium,true));
+test('separate science status never grants Premium',()=>assert.equal(resolvePremiumAccess({adminRole:'science'},now).premium,false));
+test('feature policy fails closed',()=>{assert.equal(canUsePremiumFeature('smart_routing',{premium:false}).allowed,false);assert.equal(canUsePremiumFeature('smart_routing',{premium:true}).allowed,true);assert.equal(canUsePremiumFeature('jumolf',{premium:true}).allowed,false)});
