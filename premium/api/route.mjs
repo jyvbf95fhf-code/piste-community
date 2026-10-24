@@ -14,6 +14,21 @@ export default async function handler(req,res){
   const auth=createClient(PROJECT,PUBLIC_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await auth.auth.getUser(token);
   if(error||!user){console.warn('[routing] auth_rejected');return res.status(401).json({error:'Session invalide',code:'AUTH_REJECTED'});}
+  // Server-authoritative entitlement check: the V2 Coaching Edge Function reads
+  // protected app_metadata and current gifts/codes. Never trust client flags.
+  let premiumResponse;
+  try{
+   premiumResponse=await fetch(PROJECT+'/functions/v1/coaching',{
+    method:'POST',headers:{'Content-Type':'application/json',apikey:PUBLIC_KEY,Authorization:'Bearer '+token},
+    body:JSON.stringify({operation:'authorize-feature',feature:'premium'}),signal:AbortSignal.timeout(8000)
+   });
+  }catch{
+   return res.status(503).json({error:'Vérification Premium temporairement indisponible',code:'ENTITLEMENT_UNAVAILABLE'});
+  }
+  if(premiumResponse.status===403)return res.status(403).json({error:'Tracé intelligent réservé aux membres Premium',code:'PREMIUM_REQUIRED'});
+  if(!premiumResponse.ok)return res.status(503).json({error:'Vérification Premium indisponible',code:'ENTITLEMENT_UNAVAILABLE'});
+  const premiumResult=await premiumResponse.json().catch(()=>null);
+  if(premiumResult?.authorized!==true||premiumResult?.permissions?.premium!==true)return res.status(403).json({error:'Tracé intelligent réservé aux membres Premium',code:'PREMIUM_REQUIRED'});
   const admin=createClient(PROJECT,secret,{auth:{persistSession:false,autoRefreshToken:false}});
   const quota={reserve:async({provider})=>{
    const {data,error}=await admin.rpc('v2_reserve_routing_credit',{p_provider:provider});
