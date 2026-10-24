@@ -13,3 +13,9 @@ export function premiumFeatureBadge(key){
  const feature=premiumFeature(key);
  return feature?.tier==='premium'&&feature.status==='enforced'?'<span class="premium-feature-badge" aria-label="Fonction Premium">✦ Premium</span>':'';
 }
+
+// Candidate badges are intentionally not padlocks: server-side authorization is not yet active.
+export function premiumRoadmapBadge(key){
+ const feature=premiumFeature(key);
+ return feature?.tier==='premium'&&feature.status==='candidate'?'<span class="premium-feature-badge" aria-label="Fonction Premium envisagée, accès actuel inchangé">✦ Premium prévu</span>':'';
+}
