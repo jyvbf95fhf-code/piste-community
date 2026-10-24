@@ -19,7 +19,7 @@ export function createTrackRoutingService({fetch=globalThis.fetch,timeoutMs=1500
     for(let attempt=0;attempt<3;attempt++){
      const response=await fetch(url,{signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer',headers:{Accept:'application/json'}});
      if(!response.ok){
-      lastError=Error(`Calcul IGN ${engine} indisponible (HTTP ${response.status}).`);
+      let detail='';try{const body=await response.text();let parsed;try{parsed=JSON.parse(body);}catch{}const raw=parsed?.message||parsed?.error?.message||parsed?.error||parsed?.detail||parsed?.description||'';detail=typeof raw==='string'?raw.slice(0,220):'';}catch{}lastError=Error(`Calcul IGN ${engine} indisponible (HTTP ${response.status})${detail?' : '+detail:''}.`);
       if([429,500,502,503,504].includes(response.status)&&attempt<2){await sleep(450*(attempt+1),controller.signal);continue;}
       break;
      }
