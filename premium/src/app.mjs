@@ -196,7 +196,7 @@ function showCoachingHistoryWarning(){
 let operationalStore=createOperationalMissionStore();
 let operationalGpsOwnerId=null;
 function restoreOperationalGpsForUser(){const ownerId=currentUser?.user_id||null;if(ownerId===operationalGpsOwnerId)return;opsGps.pause();operationalGpsOwnerId=ownerId;operationalStore=createOperationalMissionStore({storage,ownerId});operationalUI={mode:'',eventType:'Départ',note:''};}
-const adminStore=auth.assurance==='supabase-auth'?createRemoteAdminStore({actor:()=>currentUser,call:body=>accountApi.call(body),onChange:()=>render()}):createAdminStore();
+const adminStore=auth.assurance==='supabase-auth'?createRemoteAdminStore({actor:()=>currentUser,call:body=>accountApi.call(body),onChange:()=>render(),loadRoutingQuotas:async()=>{const {data,error}=await accountClient.auth.getSession();if(error||!data?.session?.access_token)throw Error('Connexion requise');const response=await fetch('/api/routing-quotas',{headers:{Authorization:'Bearer '+data.session.access_token},cache:'no-store'});if(!response.ok)throw Error('Quotas indisponibles');return response.json();}}):createAdminStore();
 function accountJumolfStore(){const record=auth.assurance==='supabase-auth'?currentUser?.jumolf_entitlement:null;return createJumolfStore({entitlement:record?.entitlement||'none',entitlementRecord:record,accessCodeCatalog:auth.assurance==='supabase-auth'?null:adminStore.codeCatalog(),currentUserId:currentUser?.user_id||null,storage:auth.assurance==='supabase-auth'?(storage||{getItem(){throw Error('Stockage indisponible');},setItem(){throw Error('Stockage indisponible');}}):null});}
 let jumolfStore=accountJumolfStore();
 let jumolfVerifiedOwnerId=currentUser?.user_id||null;
