@@ -9,7 +9,7 @@ export function createTrackRoutingController({service,getContext,onResult,onStat
   if(!c)return;const row=pending(c).find(({a,b})=>!failed.has(`${contextKey(c)}:${b.id}:${routeSegmentKey(a,b)}`));if(!row)return;
   const r={context:contextKey(c),id:row.b.id,key:routeSegmentKey(row.a,row.b),abort:new AbortController()};current=r;onStatus('Calcul routes / chemins…');
   const delay=Math.max(0,220-(Date.now()-lastStarted));
-  void (async()=>{if(delay)await new Promise(resolve=>setTimeout(resolve,delay));if(current!==r||!valid(r))return;lastStarted=Date.now();const route=await service.calculate(row.a,row.b,{signal:r.abort.signal});if(current===r&&valid(r)){onStatus('');onResult(r.id,route);}})().catch(error=>{if(current===r&&valid(r)){failed.add(`${r.context}:${r.id}:${r.key}`);onStatus(`${error.message} Ouvrez Menu → Points et édition → Réessayer le calcul IGN, sans déplacer vos points.`);}}).finally(()=>{if(current===r){current=null;reconcile();}});
+  void (async()=>{if(delay)await new Promise(resolve=>setTimeout(resolve,delay));if(current!==r||!valid(r))return;lastStarted=Date.now();const route=await service.calculate(row.a,row.b,{signal:r.abort.signal});if(current===r&&valid(r)){onStatus('');onResult(r.id,route);}})().catch(error=>{if(current===r&&valid(r)){failed.add(`${r.context}:${r.id}:${r.key}`);onStatus(`${error.message} Ouvrez Menu → Points et édition → Réessayer le calcul d’itinéraire, sans déplacer vos points.`);}}).finally(()=>{if(current===r){current=null;reconcile();}});
  };
  return {reconcile,dispose(){current?.abort.abort();current=null;failed.clear();},retry(){failed.clear();reconcile();}};
 }
