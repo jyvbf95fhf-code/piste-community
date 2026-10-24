@@ -4,13 +4,23 @@ import {normalizeTrackRoute,routeSegmentKey} from './track-route-segments.mjs';
 const API='https://data.geopf.fr/navigation/itineraire';
 const sleep=(ms,signal)=>new Promise((resolve,reject)=>{if(signal?.aborted)return reject(Object.assign(Error('Calcul interrompu.'),{name:'AbortError'}));const t=setTimeout(()=>{signal?.removeEventListener('abort',stop);resolve();},ms);const stop=()=>{clearTimeout(t);reject(Object.assign(Error('Calcul interrompu.'),{name:'AbortError'}));};signal?.addEventListener('abort',stop,{once:true});});
 const geometryOf=data=>data?.geometry?.type==='LineString'?data.geometry:data?.route?.geometry?.type==='LineString'?data.route.geometry:data?.features?.[0]?.geometry?.type==='LineString'?data.features[0].geometry:null;
-export function createTrackRoutingService({fetch=globalThis.fetch,timeoutMs=15000}={}){
+export function createTrackRoutingService({fetch=globalThis.fetch,timeoutMs=15000,getAccessToken}={}){
  return {async calculate(a,b,{signal}={}){
   geographicCoordinates(a);geographicCoordinates(b);
   const controller=new AbortController(),abort=()=>controller.abort();
   if(signal?.aborted)abort();signal?.addEventListener('abort',abort,{once:true});
   const timer=setTimeout(abort,timeoutMs);
   try{
+   if(getAccessToken){
+    const token=await getAccessToken();
+    if(!token)throw Error('Connectez-vous pour calculer un itinéraire.');
+    const response=await fetch('/api/route',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${token}`},body:JSON.stringify({a,b}),signal:controller.signal,credentials:'same-origin'});
+    if(!response.ok)throw Error('Calcul piéton indisponible. Réessayez ou conservez les points.');
+    const data=await response.json();
+    const provider=data.provider==='geoapify'?'Geoapify':data.provider==='ors'?'ORS':null;
+    if(!provider)throw Error('Fournisseur de routage invalide.');
+    return normalizeTrackRoute({key:routeSegmentKey(a,b),provider,coordinates:data.coordinates},a,b);
+   }
    const params=new URLSearchParams({resource:'bdtopo-osrm',start:`${a.x},${a.y}`,end:`${b.x},${b.y}`,profile:'pedestrian',optimization:'shortest',geometryFormat:'geojson',getSteps:'false',distanceUnit:'meter',timeUnit:'second',crs:'EPSG:4326'});
    let lastError=null;
    for(const engine of ['bdtopo-osrm','bdtopo-valhalla']){
