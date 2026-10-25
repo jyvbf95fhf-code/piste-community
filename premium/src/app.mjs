@@ -34,7 +34,7 @@ import {createTrackRoutingController} from './track-routing-controller.mjs';
 import {trackHasPendingRoutes} from './track-route-segments.mjs';
 import {applyTrackRoute ,recoverPendingTrackRoutes} from './track-editor.mjs';
 import {removeLastTrackSegment} from './track-editor.mjs';
-import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap,paintTrackMissionMap} from './track-editor-real-map.mjs';
+import {mountTrackEditorMap,recenterTrackEditorMap,centerTrackEditorMap,paintTrackMissionMap,switchTrackEditorBasemap} from './track-editor-real-map.mjs';
 import {createMissionController} from './track-mission-controller.mjs';
 import {MissionControlPanel} from './track-mission-screen.mjs';
 import {mountMissionControl} from './track-mission-view.mjs';
@@ -1124,6 +1124,7 @@ document.addEventListener('click',async event=>{
  const smartProposal=event.target.closest('[data-smart-proposal]');if(smartProposal&&location.pathname==='/track-builder'){selectSmartProposal(smartProposal.dataset.smartProposal);return;}
  const smartPreview=event.target.closest('[data-smart-preview]');if(smartPreview&&location.pathname==='/track-builder'){previewSmartProposal(smartPreview.dataset.smartPreview);return;}
  if(event.target.closest('[data-smart-cancel]')&&location.pathname==='/track-builder'){trackSmart.cancel();return;}
+ const detailBasemap=event.target.closest('[data-detail-basemap-choice]');if(detailBasemap){const selector=document.querySelector('[data-detail-basemap]');if(selector&&switchTrackEditorBasemap(detailBasemap.dataset.detailBasemapChoice)){selector.dataset.detailBasemap=detailBasemap.dataset.detailBasemapChoice;selector.querySelectorAll('[data-detail-basemap-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button===detailBasemap)));}return;}
  const editorAction=event.target.closest('[data-editor-action]');
  if(editorAction&&location.pathname==='/track-builder'){
   const action=editorAction.dataset.editorAction;
