@@ -148,3 +148,9 @@
 .tracer-gps[data-gps-live] .remote-scent-controls button{pointer-events:auto;background:#302447;border:2px solid #ac8dd6;border-radius:40px;color:#eee0ff;min-height:48px;padding:8px 12px;box-shadow:0 3px 12px #06131c99;font-size:12px}
 .tracer-gps[data-gps-live] .remote-scent-controls small{background:#0b1e2ddd;border-radius:8px;color:#e2eaf2;padding:5px 7px;font-size:10px;max-width:175px;text-align:right}
 @media(max-width:430px){.tracer-gps[data-gps-live] .remote-scent-controls{right:12px;top:58%}}
+
+/* Shared Coaching debrief: separate read-only scent review map. */
+.coaching-scent-review .gps-map{height:330px;min-height:280px;border-radius:14px;overflow:hidden}
+.coaching-scent-review .remote-scent-controls{position:static;display:flex;flex-direction:row;align-items:center;background:#102637;padding:9px;margin-top:10px;max-width:none;transform:none}
+.coaching-scent-review .remote-scent-controls button{min-height:42px;white-space:nowrap}
+.coaching-scent-review .remote-scent-controls small{flex:1 1 160px}
