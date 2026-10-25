@@ -15,13 +15,17 @@ export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,t
  }
 
  return {
-  async communeAt(point,{signal}={}){if(!finiteCenter(point))throw Error('Point de départ invalide.');const [lon,lat]=point;
-   const reverse=await request('https://data.geopf.fr/geocodage/reverse?'+new URLSearchParams({lon:String(lon),lat:String(lat),type:'municipality',limit:'1'}),{signal});
-   const match=reverse?.features?.[0],code=match?.properties?.citycode||match?.properties?.id;
-   if(!/^(?:\d{5}|2[AB]\d{3})$/.test(String(code||'')))throw Error('Commune introuvable pour ce départ. Recherchez-la manuellement.');
-   const data=await request('https://geo.api.gouv.fr/communes/'+encodeURIComponent(code)+'?fields=nom,code,centre,departement',{signal});
-   if(!data?.nom||!finiteCenter(data?.centre?.coordinates))throw Error('Informations de commune indisponibles.');
-   return {code:data.code,name:data.nom,center:data.centre.coordinates,department:data.departement?.nom||data.code.slice(0,2)};
+  async communeAt(point,{signal}={}){
+   if(!finiteCenter(point))throw Error('Point de départ invalide.');
+   const [lon,lat]=point;
+   // L'API Découpage administratif détermine la commune contenant ce point GPS.
+   // Contrairement à un géocodeur d'adresse, elle fonctionne aussi hors voirie.
+   const params=new URLSearchParams({lat:String(lat),lon:String(lon),fields:'nom,code,centre,departement'});
+   const communes=await request('https://geo.api.gouv.fr/communes?'+params,{signal});
+   const commune=Array.isArray(communes)?communes[0]:null;
+   if(!commune?.nom||!/^(?:\\d{5}|2[AB]\\d{3})$/.test(String(commune.code||''))||!finiteCenter(commune.centre?.coordinates))
+    throw Error('Aucune commune française reconnue à cet emplacement. Vérifiez le point D ou recherchez une commune manuellement.');
+   return {code:commune.code,name:commune.nom,center:commune.centre.coordinates,department:commune.departement?.nom||commune.code.slice(0,2)};
   },
   async searchCommunes(query,{signal}={}){const q=String(query||'').trim();if(q.length<2||q.length>80)throw Error('Renseignez un nom de commune ou un code postal.');const params=new URLSearchParams({fields:'nom,code,centre,codesPostaux,departement',limit:'8',boost:'population',...(/^\d{5}$/.test(q)?{codePostal:q}:{nom:q})});const data=await request('https://geo.api.gouv.fr/communes?'+params,{signal});if(!Array.isArray(data))throw Error('Réponse commune invalide.');return data.slice(0,8).filter(c=>typeof c.nom==='string'&&/^(?:\d{5}|2[AB]\d{3})$/.test(c.code)&&finiteCenter(c.centre?.coordinates)).map(c=>({code:c.code,name:c.nom,center:c.centre.coordinates,department:c.departement?.nom||c.code.slice(0,2)}));},
   async loadNetwork(commune,distanceKm,{signal,center=null}={}){const options=validateSmartOptions({commune:center&&finiteCenter(center)?{...commune,center}:commune,distanceKm,terrain:'mixed',transitions:'any'}),radius=Math.round(Math.min(6000,Math.max(1200,options.distanceKm*700+1000))),key=JSON.stringify([commune.code,options.commune.center,radius]),saved=cache.get(key);if(saved&&clock()-saved.at<900000)return saved.data;
