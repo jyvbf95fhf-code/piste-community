@@ -9,7 +9,7 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  if(!L){element.textContent='Carte indisponible. Le brouillon reste conservé.';return;}
  const points=route?.points||[],view=route?.mapView;const map=L.map(element,{doubleClickZoom:false,zoomControl:!element.closest?.('[data-track-cockpit]')}).setView(view?.center||[46.6,2.5],view?.zoom||6),layers=L.layerGroup().addTo(map),row={map,layers,L,element,disposed:false};mounted=row;
  const notice=message=>{const status=element.parentElement.querySelector('[data-editor-map-status]');if(status)status.textContent=message;};
- const basemap=route?.basemap==='satellite'?'aerial':'plan';const base=id=>{const def=GPS_BASE_LAYERS[id],tiles=L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution}).addTo(map);row.tiles=tiles;tiles.on('tileerror',()=>{if(row.disposed||row.tiles!==tiles)return;if(id==='aerial'){map.removeLayer(tiles);base('plan');notice('Vue aérienne indisponible · fond Plan affiché.');}else notice('Fond indisponible · vérifiez la connexion. Les points restent conservés.');});};base(basemap);
+ const basemap=route?.basemap==='satellite'?'aerial':'plan';const base=id=>{const def=GPS_BASE_LAYERS[id],tiles=L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution}).addTo(map);row.tiles=tiles;tiles.on('tileerror',()=>{if(row.disposed||row.tiles!==tiles)return;if(id==='aerial'){map.removeLayer(tiles);base('plan');notice('Vue aérienne indisponible · fond Plan affiché.');}else notice('Fond indisponible · vérifiez la connexion. Les points restent conservés.');});};row.setBasemap=base;base(basemap);
  if(points.length&&!view)map.fitBounds(points.map(p=>[p.y,p.x]),{padding:[30,30],maxZoom:17});
  const lineStyle={color:'#63ff70',weight:6,opacity:1,className:'premium-neon-track'};
  const addTrackLine=(coordinates,options={})=>{L.polyline(coordinates,{...lineStyle,...options}).addTo(layers);};
@@ -57,3 +57,5 @@ export function paintTrackMissionMap({route,environment,corridor=false,sample,pr
  for(let i=0;i<m.progress.length;i++){const coordinates=route.samples.filter(p=>p.segment===i&&p.distanceM<=sample?.distanceM).map(p=>p.coordinate);if(sample?.coordinate&&sample.segment===i)coordinates.push(sample.coordinate);m.progress[i].setLatLngs(coordinates.map(xy));}
  if(sample?.coordinate)m.cursor.setLatLng(xy(sample.coordinate));
 }
+
+export function switchTrackEditorBasemap(id){if(!mounted||!['standard','satellite'].includes(id))return false;if(mounted.tiles)mounted.map.removeLayer(mounted.tiles);mounted.setBasemap(id==='satellite'?'aerial':'plan');return true;}
