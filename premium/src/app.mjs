@@ -707,6 +707,7 @@ function ensureTrackEditor(){
   if(!source){trackEditor={...trackEditor,draft:createTrackDraft(),notice:'Géométrie indisponible : aucune copie créée.',routeKey:key,copySource:null};}
   else {const copySource={...source,sourceId:row.id,name:row.name};trackEditor={draft:createTrackDraft({copySource}),selectedPointId:null,nextPointKind:'via',results:[],notice:'Copie locale créée · la source reste en lecture seule.',error:'',routeKey:key,copySource};}
  }else trackEditor={draft:createTrackDraft({geographic:true}),selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:key,copySource:null};
+ if(jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium'&&trackEditor.draft?.coordinateSpace==='wgs84'&&!trackEditor.draft.points?.length)trackEditor.draft=setTrackMode(trackEditor.draft,'follow');
  if(!trackEditor.draft.dogId)trackEditor.draft.dogId=defaultTrackingDog()?.id||'';
  trackEditorActive=true;trackEditorHref=key;
 }
@@ -1135,13 +1136,13 @@ document.addEventListener('click',async event=>{
    else if(action==='close-smart'){document.querySelector('[data-smart-panel]')?.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}
    else if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
    else if(action==='close-menu'){const panel=document.querySelector('[data-creator-panel]');if(panel){panel.open=false;panel.querySelector('summary')?.focus();}}
-   else if(action==='toggle-route')editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});
+   else if(action==='toggle-route'){if(trackEditor.draft.activeMode!=='follow'&&!(jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium')){trackEditor={...trackEditor,notice:'Le suivi de route est réservé aux membres Premium. Le tracé libre reste disponible.',error:''};render();}else editorChange(setTrackMode(trackEditor.draft,trackEditor.draft.activeMode==='follow'?'free':'follow'),{notice:''});}
    else if(action==='retry-routing')trackRouting.retry();
    else if(action==='recover-routing'){if(!confirm('Les segments sans itinéraire IGN seront reliés en ligne droite. Conserver les points et continuer ?'))return;editorChange(recoverPendingTrackRoutes(trackEditor.draft),{notice:'Segments IGN non calculés convertis en lignes droites. Vérifiez le parcours avant enregistrement.'});}
    else if(action==='remove-last-segment')editorChange(removeLastTrackSegment(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});
    else if(action==='undo')editorChange(undoTrackEdit(trackEditor.draft),{selectedPointId:null});
    else if(action==='remove-point')editorChange(removeTrackPoint(trackEditor.draft,trackEditor.selectedPointId),{selectedPointId:null});
-   else if(action==='clear')ConfirmationDialog({title:'Effacer tout le tracé ?',description:'Tous les points du brouillon seront retirés. Cette action peut être annulée avec Undo.',onConfirm:()=>{try{editorChange(clearTrackDraft(trackEditor.draft),{selectedPointId:null});}catch(error){trackEditor={...trackEditor,error:error.message};render();}}});
+   else if(action==='clear')ConfirmationDialog({title:'Supprimer l’ensemble du parcours ?',description:'Tous les points et segments de cette piste seront supprimés. Cette action peut être annulée.',onConfirm:()=>{try{editorChange(clearTrackDraft(trackEditor.draft),{selectedPointId:null,nextPointKind:'via'});}catch(error){trackEditor={...trackEditor,error:error.message};render();}}});
    else if(action==='cancel'){if(trackEditor.draft.dirty)requestTrackEditorExit('/tracks');else{trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:''};history.pushState({},'','/tracks');render(true);}}
    else if(action==='geo-center'){const lat=document.querySelector('[data-editor-lat]').value.trim(),lon=document.querySelector('[data-editor-lon]').value.trim();if(!lat||!lon)throw Error('Renseignez latitude et longitude.');centerTrackEditorMap(Number(lat.replace(',','.')),Number(lon.replace(',','.')));}
    else if(action==='locate'){const key=trackEditor.routeKey,mapElement=document.querySelector('[data-editor-real-map]');if(!navigator.geolocation)throw Error('Localisation indisponible.');navigator.geolocation.getCurrentPosition(position=>{if(location.pathname==='/track-builder'&&trackEditor.routeKey===key&&document.querySelector('[data-editor-real-map]')===mapElement)centerTrackEditorMap(position.coords.latitude,position.coords.longitude);},()=>Toast('Localisation indisponible ou refusée. Déplacez la carte manuellement.'),{enableHighAccuracy:true,timeout:15000,maximumAge:0});}
@@ -1153,7 +1154,7 @@ document.addEventListener('click',async event=>{
  }
  const place=event.target.closest('[data-editor-place]');
  if(place){const result=trackEditor.results[Number(place.dataset.editorPlace)];if(result){trackEditor={...trackEditor,draft:{...trackEditor.draft,center:result.center,searchQuery:result.name},notice:`${result.name} · position fictive`,results:[]};render();}return;}
- const mode=event.target.closest('[data-editor-mode]');if(mode){editorChange(setTrackMode(trackEditor.draft,mode.dataset.editorMode));return;}
+ const mode=event.target.closest('[data-editor-mode]');if(mode){if(mode.dataset.editorMode==='follow'&&!(jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium')){trackEditor={...trackEditor,notice:'Le suivi de route n’est pas activé : abonnement Premium requis.',error:''};render();}else editorChange(setTrackMode(trackEditor.draft,mode.dataset.editorMode));return;}
  const basemap=event.target.closest('[data-editor-basemap-choice]');if(basemap){if(trackEditor.preview)trackEditor.preview={...trackEditor.preview,draft:{...trackEditor.preview.draft,basemap:basemap.dataset.editorBasemapChoice}};else trackEditor={...trackEditor,draft:{...trackEditor.draft,basemap:basemap.dataset.editorBasemapChoice}};render();return;}
  const placement=event.target.closest('[data-editor-placement]');if(placement){trackEditor={...trackEditor,nextPointKind:placement.dataset.editorPlacement};render();return;}
  const pointSelect=event.target.closest('[data-editor-select-point]');if(pointSelect){trackEditor={...trackEditor,selectedPointId:pointSelect.dataset.editorSelectPoint};render();return;}
