@@ -56,3 +56,7 @@
 .app-shell:has(.community-page) .community-page [data-community-action="refuse-contact"] { color:#ffb4aa; border-color:#a96b69; background:#38262e; }
 .app-shell .operational-create-mission { color:#092333; background:#94e4b8; border-color:#94e4b8; box-shadow:none; }
 .app-shell .coaching-choice[aria-pressed="true"] { color:var(--theme-text,#edf5fb); border-color:#8ce7f2; background:#163849; }
+
+/* Premium creator: arrival is a clearly red action once the first point exists. */
+[data-track-cockpit] .creator-dock .creator-icon[data-arrival-active="true"]{background:#40171f!important;border:3px solid #ff4757!important;color:#ff4757!important;box-shadow:0 0 0 3px #ff475766,0 4px 18px #0008!important;opacity:1!important}
+[data-track-cockpit] .creator-dock .creator-icon[data-arrival-active="true"] svg{stroke:#ff4757!important;color:#ff4757!important;opacity:1!important}
