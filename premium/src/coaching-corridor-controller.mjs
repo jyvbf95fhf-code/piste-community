@@ -31,7 +31,7 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
    const hour=Number.isFinite(current.observedAt)?new Date(current.observedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'heure inconnue';
    text(`Couloir estimé · confiance ${confidence}. ${current.source==='Correction manuelle'?'Correction manuelle':'Météo modélisée · Open-Meteo'} · ${hour}${result.weather.stale?' · donnée ancienne':''}. Vent venant de ${current.wind_direction_deg}° · ${current.wind_speed_kmh} km/h.${ops?' Calcul autour du trajet GPS du binôme ; trajectoire de la personne recherchée inconnue.':''}`);
   }else text(historicalReview()?'Couloir historique indisponible : aucun relevé de vent daté de la séance n’est archivé. La pose GPS reste consultable.':result.state==='weather-unavailable'&&!automaticAuthorized?'Météo automatique inactive · renseignez les conditions manuellement.':labels[result.state]);
-  const f=form();if(f){f.hidden=!allowed();if(!f.contains?.(root.ownerDocument?.activeElement))for(const input of f.querySelectorAll?.('[data-corridor-field]')||[])input.value=current?.[input.name]??'';}
+  const f=form();if(f){f.hidden=!allowed()||historicalReview();if(!f.contains?.(root.ownerDocument?.activeElement))for(const input of f.querySelectorAll?.('[data-corridor-field]')||[])input.value=current?.[input.name]??'';}
   return result;
  }
  async function update(){
@@ -44,7 +44,7 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
  }
  function setEnabled(value){if(!allowed()||historicalReview())return;enabled=!!value;save();paint();if(enabled)void update();}
  function correct(patch){if(historicalReview()||!alive()||!allowed())throw Error('Correction non autorisée dans cette vue.');manual=applyWeatherCorrection(manual||automatic,patch,clock());save();paint();}
- async function useAutomatic(){if(!allowed())return;manual=null;save();paint();await update();}
+ async function useAutomatic(){if(!allowed()||historicalReview())return;manual=null;save();paint();await update();}
  const click=event=>{if(event.target.closest?.('[data-corridor-toggle]'))setEnabled(!enabled);else if(event.target.closest?.('[data-corridor-auto]'))void useAutomatic();};
  const submit=event=>{const f=event.target.closest?.('[data-corridor-form]');if(!f)return;event.preventDefault();try{const patch=Object.fromEntries([...f.querySelectorAll('[data-corridor-field]')].map(input=>[input.name,input.value]));correct(patch);}catch(error){text(error.message);}};
  root.addEventListener?.('click',click);root.addEventListener?.('submit',submit);
