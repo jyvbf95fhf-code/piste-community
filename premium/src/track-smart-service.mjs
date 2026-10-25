@@ -23,7 +23,7 @@ export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,t
    const params=new URLSearchParams({lat:String(lat),lon:String(lon),fields:'nom,code,centre,departement'});
    const communes=await request('https://geo.api.gouv.fr/communes?'+params,{signal});
    const commune=Array.isArray(communes)?communes[0]:null;
-   if(!commune?.nom||!/^(?:\\d{5}|2[AB]\\d{3})$/.test(String(commune.code||''))||!finiteCenter(commune.centre?.coordinates))
+   if(!commune?.nom||!/^(?:\d{5}|2[AB]\d{3})$/.test(String(commune.code||''))||!finiteCenter(commune.centre?.coordinates))
     throw Error('Aucune commune française reconnue à cet emplacement. Vérifiez le point D ou recherchez une commune manuellement.');
    return {code:commune.code,name:commune.nom,center:commune.centre.coordinates,department:commune.departement?.nom||commune.code.slice(0,2)};
   },
