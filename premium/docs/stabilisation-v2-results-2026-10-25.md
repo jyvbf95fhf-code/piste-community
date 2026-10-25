@@ -24,6 +24,22 @@ One full-gate attempt hit the invitation fixture's 12-second navigation deadline
 
 Public provider probes also succeeded against IGN geocoding and Open-Meteo, with a dated weather response. This verifies public service reachability from the execution environment, not iPhone connectivity.
 
+## Final automated results
+
+The complete gate exited **0**: **2,420 / 2,420 unit/SQL tests passing, 0 failed, 0 skipped**, plus all seven browser campaigns below. This full run includes the review fixes, invitation navigation deadline and full Coaching viewport assertions. Its runtime was about five minutes.
+
+| Campaign | Result | Coverage |
+| --- | --- | --- |
+| OPS GPS / weather | PASS | 320/390/430 and 844×390 landscape, no invented center, actual-coordinate center, terrain zoom, denial/retry, distance, pause, reload, separated GPS gaps, forced refresh, HTTP 503 recovery, closed read-only weather |
+| Mes pistes | PASS | catalogue, archives/search, seven read-only dossier tabs, PDF, three mobile widths, blind exclusion, revoked access |
+| Bulk history | PASS | three mobile widths, modal, filter/selection consistency, missing receipt and network failure, shared hide/reload, isolated prepared deletion, backup |
+| JUMOLF / rights | PASS | 18 checks, three accounts, four widths, preferences and entitlement boundaries |
+| Live OPS | PASS | three accounts, verified friendship, real-GPS segment projection, no dossier leak, read-only observer, denied outsider, revocation |
+| Coaching invitations | PASS | real local HTTP handler/reducer/Postgres, two accounts, both role directions, refuse, reload, foreground and mobile widths |
+| Coaching GPS | PASS | 12 scenarios: normal/simple-blind/full-blind × 320/390/430/1280, full viewport, map node continuity, acquisition/accuracy/retry, actual first-fix zoom, controls, no horizontal overflow |
+
+GitHub Actions also completed successfully on code commit `4508ae193cbe097518484a9d4efcc9e3e8327204`: [run 40212565530](https://github.com/jyvbf95fhf-code/piste-community/actions/runs/40212565530). Subsequent final commit records this report and the execution ledger only; production source and tests are unchanged from the tested code commit.
+
 ## Safety and remaining real-device validation
 
 All destructive tests use isolated PGlite databases or synthetic browser accounts. This stabilization makes no Supabase schema, Edge, Auth, RLS, user or business-data changes, and performs no real deletion. The 40 LOBO demonstrations are untouched. V1 runtime code, main and production are unchanged; the root Vercel configuration adds only a no-automatic-deployment entry for the V2 branch.
