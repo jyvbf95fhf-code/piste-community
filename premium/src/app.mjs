@@ -807,7 +807,7 @@ function openSmartTrackPanel({focus=true}={}){
  const panel=document.querySelector('[data-smart-panel]'),menu=document.querySelector('[data-creator-panel]');
  if(!panel)return;
  if(menu)menu.open=false;if(!panel.open)panel.showModal();
- const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];if(start?.space==='wgs84'&&Number.isFinite(Number(start.x))&&Number.isFinite(Number(start.y))){const point=[Number(start.x),Number(start.y)];const previous=trackSmart.view();if(!previous.startPoint||previous.startPoint.some((v,i)=>v!==point[i]))void trackSmart.detectCommune(point);}
+ const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];if(trackEditor.draft?.coordinateSpace==='wgs84'&&Number.isFinite(Number(start.x))&&Number.isFinite(Number(start.y))){const point=[Number(start.x),Number(start.y)];const previous=trackSmart.view();if(!previous.startPoint||previous.startPoint.some((v,i)=>v!==point[i]))void trackSmart.detectCommune(point);}
 
  if(focus)panel.querySelector('[data-smart-query], [data-smart-discover]')?.focus({preventScroll:true});
 }
@@ -1625,7 +1625,7 @@ document.addEventListener('submit',async event=>{
  }
 
  if(event.target.matches('[data-smart-commune-form]')){event.preventDefault();trackSmart.setQuery(event.target.elements.communeQuery.value);void trackSmart.search();return;}
- if(event.target.matches('[data-smart-generate-form]')){event.preventDefault();trackSmart.setOptions(Object.fromEntries(new FormData(event.target).entries()));const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];if(start?.space==='wgs84'&&!trackSmart.view().startPoint)trackSmart.setStartPoint([Number(start.x),Number(start.y)]);void trackSmart.generate();return;}
+ if(event.target.matches('[data-smart-generate-form]')){event.preventDefault();trackSmart.setOptions(Object.fromEntries(new FormData(event.target).entries()));const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];if(trackEditor.draft?.coordinateSpace==='wgs84'&&!trackSmart.view().startPoint)trackSmart.setStartPoint([Number(start.x),Number(start.y)]);void trackSmart.generate();return;}
  const editorForm=event.target.closest('form[data-track-editor-form]');
  if(editorForm){
   event.preventDefault();
