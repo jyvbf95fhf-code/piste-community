@@ -125,7 +125,7 @@ listen(root,'input',event=>{const slider=event.target.closest?.('[data-scent-rep
  if(!element||review?.dataset.gpsCorridorAllowed!=='true')return;
  try{const full=JSON.parse(element.dataset.gpsFullPose||element.dataset.gpsPose);if(!element.dataset.gpsFullPose)element.dataset.gpsFullPose=JSON.stringify(full);
  let remaining=Math.max(2,Math.min(Number(slider.value),Number(slider.max)));const segments=[];
- for(const segment of full.segments||[]){if(remaining<=0)break;const take=segment.slice(0,remaining);if(take.length)segments.push(take);remaining-=take.length;}
+ for(const segment of full.segments||[]){if(remaining<=0)break;if(!Array.isArray(segment))continue;const valid=segment.filter(point=>Number.isFinite(point?.timestamp)&&point.timestamp>1e12&&Number.isFinite(point?.latitude)&&Number.isFinite(point?.longitude));const take=valid.slice(0,remaining);if(take.length)segments.push(take);remaining-=take.length;}
  element.dataset.gpsPose=JSON.stringify({...full,segments});const label=review.querySelector('[data-scent-replay-label]');if(label)label.textContent=slider.value+' / '+slider.max+' points GPS';mountGpsMaps({document,L:globalThis.L});
  }catch{}return;}}
  );
