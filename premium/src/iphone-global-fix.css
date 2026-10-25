@@ -100,3 +100,22 @@
 .track-detail-page .prepared-action-delete::before{content:"▤";font-size:23px;color:#ff7d86;margin-right:14px}
 .track-detail-page .prepared-action-delete::after{color:#ff8e9a}
 @media(max-width:420px){.track-detail-page .prepared-stat{padding:13px 10px}.track-detail-page .prepared-basemap-button{padding:9px 13px!important}}
+
+/* Saved track: compact premium hierarchy, clear commune and clean map controls. */
+.track-detail-page .sessions-heading{margin-bottom:20px}
+.track-detail-page .sessions-heading h1{font-size:clamp(30px,8vw,43px)!important;line-height:1.12!important}
+.track-detail-page .track-detail-card{padding:clamp(15px,4vw,24px)!important}
+.track-detail-page .prepared-provenance{display:grid!important;grid-template-columns:1fr!important;gap:0!important;margin:0 0 16px!important;padding:0!important}
+.track-detail-page .prepared-provenance>div{display:flex!important;justify-content:space-between;align-items:center;gap:16px;padding:12px 14px;border:1px solid #304e5e;border-radius:13px;background:#132b3b}
+.track-detail-page .prepared-provenance dt{font-size:11px!important;letter-spacing:.08em;text-transform:uppercase;color:#98b9c7!important}
+.track-detail-page .prepared-provenance dd{font-size:13px!important;text-align:right;margin:0!important;color:#e7f5fa!important}
+.track-detail-page .prepared-map-summary{margin:16px 0 20px!important}
+.track-detail-page .prepared-stat{min-height:93px;justify-content:center;background:linear-gradient(145deg,#0b3040,#082336)!important;border:1px solid #315f70!important}
+.track-detail-page .prepared-stat-commune{border-color:#315f70!important}
+.track-detail-page .prepared-stat-value{font-size:clamp(17px,4.8vw,23px)!important}
+.track-detail-page .prepared-basemap-selector{margin:4px 0 17px!important;width:auto;max-width:100%}
+.track-detail-page .prepared-basemap-button{min-width:95px!important;text-align:center}
+.track-detail-page .prepared-action{min-height:58px!important;margin:10px 0!important}
+.track-detail-page .prepared-action-share{margin-top:20px!important}
+.track-detail-page .prepared-action-delete{margin-top:24px!important}
+@media(max-width:380px){.track-detail-page .prepared-map-summary{gap:8px!important}.track-detail-page .prepared-stat{padding:12px 9px!important}.track-detail-page .prepared-stat-value{font-size:17px!important}}
