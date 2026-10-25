@@ -23,7 +23,7 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
   if(result.state==='available')for(const feature of result.features){
    for(const [boundary,opacity] of [['outerBoundary',.09],['innerBoundary',.18]])L.polygon(feature[boundary].map(p=>[p.lat,p.lon]),{...(pane?{pane}:{}),color:'#bca7ef',weight:1,opacity:.45,fillColor:'#bca7ef',fillOpacity:opacity,interactive:false}).addTo(layer);
   }
-  const toggle=root.querySelector?.('[data-corridor-toggle]');if(toggle){toggle.disabled=!allowed();toggle.setAttribute('aria-pressed',String(enabled&&result.state==='available'));toggle.textContent=enabled?'Masquer le couloir':'Afficher le couloir';}
+  const toggle=root.querySelector?.('[data-corridor-toggle]');if(toggle){toggle.disabled=!allowed()||historicalReview();toggle.setAttribute('aria-pressed',String(enabled&&result.state==='available'));toggle.textContent=enabled?'Masquer le couloir':'Afficher le couloir';}
   const summary=root.querySelector?.('[data-corridor-summary]');if(summary){summary.setAttribute('aria-label',result.state==='available'?'Couloir olfactif estimé · actif':'Couloir olfactif estimé');summary.dataset.active=String(result.state==='available');}
   const current=manual||automatic;
   if(result.state==='available'){
@@ -42,7 +42,7 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
   try{const weather=await weatherService.get({latitude:segments[0][0].lat,longitude:segments[0][0].lon});if(alive()&&ticket===generation&&allowed()){automatic=weather;paint();}}
   catch{if(alive()&&ticket===generation)paint();}finally{busy=false;}
  }
- function setEnabled(value){if(!allowed())return;enabled=!!value;save();paint();if(enabled)void update();}
+ function setEnabled(value){if(!allowed()||historicalReview())return;enabled=!!value;save();paint();if(enabled)void update();}
  function correct(patch){if(historicalReview()||!alive()||!allowed())throw Error('Correction non autorisée dans cette vue.');manual=applyWeatherCorrection(manual||automatic,patch,clock());save();paint();}
  async function useAutomatic(){if(!allowed())return;manual=null;save();paint();await update();}
  const click=event=>{if(event.target.closest?.('[data-corridor-toggle]'))setEnabled(!enabled);else if(event.target.closest?.('[data-corridor-auto]'))void useAutomatic();};
