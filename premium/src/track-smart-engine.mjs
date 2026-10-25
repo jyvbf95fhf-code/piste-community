@@ -50,8 +50,9 @@ function score(stats,options){const terrain=options.terrain==='urban'?stats.urba
 export function generateSmartTracks(data,input){
  const options=validateSmartOptions(input),target=options.distanceKm*1000,{nodes,adj}=networkGraph(data);if(!adj.size)return [];
  const pool=[...adj.keys()].filter(id=>options.terrain==='mixed'||(adj.get(id)||[]).some(e=>e.terrain===(options.terrain==='urban'?'urban':'nature')));
- const nearest=pool.sort((a,b)=>meters(coord(nodes.get(a)),options.commune.center)-meters(coord(nodes.get(b)),options.commune.center));
- const starts=[];for(const id of nearest){if(starts.every(other=>meters(coord(nodes.get(id)),coord(nodes.get(other)))>120))starts.push(id);if(starts.length===8)break;}
+ const origin=options.startPoint||options.commune.center;
+ const nearest=pool.sort((a,b)=>meters(coord(nodes.get(a)),origin)-meters(coord(nodes.get(b)),origin));
+ const starts=[];for(const id of nearest){if(options.startPoint){if(meters(coord(nodes.get(id)),origin)>120)break;if(starts.length===1)break;}else if(starts.some(other=>meters(coord(nodes.get(id)),coord(nodes.get(other)))<=Math.max(180,target*.25)))continue;starts.push(id);if(starts.length===(options.startPoint?1:12))break;}
  let beam=starts.map(id=>({node:id,ids:new Set([id]),edges:[],length:0,start:coord(nodes.get(id))})),candidates=[],expanded=0;
  for(let step=0;beam.length&&step<250&&expanded<30000;step++){
   const next=[];for(const s of beam){for(const e of adj.get(s.node)||[]){expanded++;if(e.nodeIds.slice(1).some(id=>s.ids.has(id)))continue;const remainder=target-s.length,edge=trimmedEdge(e,remainder),edges=[...s.edges,edge],length=s.length+edge.distanceM,ids=new Set([...s.ids,...e.nodeIds]);
@@ -64,7 +65,7 @@ export function generateSmartTracks(data,input){
   if(candidates.length>500)break;
  }
  const selected=[];candidates.sort((a,b)=>Number(b.geometry?.satisfied??true)-Number(a.geometry?.satisfied??true)||Number(b.transitionsSatisfied)-Number(a.transitionsSatisfied)||b.rank-a.rank);
- for(const c of candidates){if(selected.some(p=>{let shared=0;for(const key of c.signature)if(p.signature.has(key))shared++;return shared/Math.min(c.signature.size,p.signature.size)>.7;}))continue;selected.push(c);if(selected.length===3)break;}
+ for(const c of candidates){if(selected.some(p=>{for(const key of c.signature)if(p.signature.has(key))return true;return false;}))continue;selected.push(c);if(selected.length===3)break;}
  return selected.map(({signature,rank,...p},i)=>({...p,id:`proposal-${i+1}`,title:`Proposition ${i+1}`}));
 }
 export function smartTrackDraft(proposal,commune){
