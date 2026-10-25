@@ -36,24 +36,29 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  if(ResizeObserver){row.observer=new ResizeObserver(()=>{if(!row.disposed)map.invalidateSize();});row.observer.observe(element);}
 }
 // Illustrative scent dispersion only: not a forecast or validated plume model.
-export function paintIllustrativeScentCorridor({enabled=false,windDegrees=0}={}){
+// Approximate visual indication of downwind drift, not an odor dispersion forecast.
+export function paintIllustrativeScentCorridor({enabled=false,windDegrees=0,windSpeed=0}={}){
  const row=mounted;if(!row||row.disposed||!row.L)return;
  row.scentGroup?.remove();row.scentGroup=null;
  if(!enabled)return;
  const points=row.routePoints||[];if(points.length<2)return;
  const L=row.L,group=L.layerGroup().addTo(row.map);row.scentGroup=group;
- const wind=(Number(windDegrees)||0)*Math.PI/180;
+ const wind=Number(windDegrees)*Math.PI/180;
  const offset=([lon,lat],meters)=>[lon+Math.sin(wind)*meters/(111320*Math.max(.2,Math.cos(lat*Math.PI/180))),lat+Math.cos(wind)*meters/111320];
- const center=[];
+ const spread=Math.min(32,Math.max(8,Number(windSpeed)*.9));
+ const centers=[];
  for(let i=1;i<points.length;i++){
   const a=points[i-1],b=points[i];if(b.breakBefore)continue;
-  const coords=segmentCoordinates(a,b);
-  const line=coords.length>=2?coords:[[a.x,a.y],[b.x,b.y]];
-  for(const p of line)center.push(offset(p,14));
+  const coords=segmentCoordinates(a,b),line=coords.length>=2?coords:[[a.x,a.y],[b.x,b.y]];
+  for(const p of line)centers.push(p);
  }
- if(center.length<2)return;
- for(const [weight,opacity] of [[58,.07],[38,.12],[22,.19]])L.polyline(center.map(p=>[p[1],p[0]]),{color:'#b88aff',weight,opacity,interactive:false,className:'scent-corridor-glow'}).addTo(group);
- L.polyline(center.map(p=>[p[1],p[0]]),{color:'#d7adff',weight:3,opacity:.5,dashArray:'5 13',interactive:false,className:'scent-corridor-flow'}).addTo(group);
+ if(centers.length<2)return;
+ // Separate translucent wisps suggest motion without painting a solid corridor.
+ for(const [drift,width,opacity] of [[.4,38,.075],[.85,28,.1],[1.35,17,.13],[1.7,7,.15]]){
+  const line=centers.map((p,i)=>{const ripple=Math.sin(i*.72+drift*5)*spread*.2;return offset(p,spread*drift+ripple);});
+  L.polyline(line.map(p=>[p[1],p[0]]),{color:'#b68aff',weight:width,opacity,interactive:false,className:'scent-corridor-glow'}).addTo(group);
+ }
+ L.polyline(centers.map(p=>{const q=offset(p,spread);return[q[1],q[0]];}),{color:'#e1c5ff',weight:2,opacity:.65,dashArray:'2 16',interactive:false,className:'scent-corridor-flow'}).addTo(group);
 }
 export function recenterTrackEditorMap(){if(!mounted)return false;if(mounted.mission?.preview){mounted.map.fitBounds(mounted.mission.route.segments.flat().map(p=>[p[1],p[0]]),{padding:[65,65],maxZoom:17});return true;}const markers=[];mounted.layers.eachLayer(layer=>{if(layer.getLatLng)markers.push(layer.getLatLng());});if(markers.length)mounted.map.fitBounds(markers,{padding:[30,30],maxZoom:17});else mounted.map.setView([46.6,2.5],6);return true;}
 export function centerTrackEditorMap(latitude,longitude){if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180)throw Error('Coordonnées de centrage invalides.');if(mounted)mounted.map.setView([latitude,longitude],16);}
