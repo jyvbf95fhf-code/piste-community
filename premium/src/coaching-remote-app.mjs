@@ -120,6 +120,15 @@ listen(root,'click',event=>{
 const authSubscription=client.auth.onAuthStateChange((event,session)=>{if(remoteIdentityInvalidated(event,profile?.id,session)){controller.destroy();profile=null;state.projection=null;render();if(event==='SIGNED_IN')location.reload();}});
 listen(window,'online',()=>{void controller.flush().catch(()=>{});void refreshTeam();});
 listen(document,'visibilitychange',()=>{if(document.visibilityState==='visible')void refreshTeam();});
+listen(root,'input',event=>{const slider=event.target.closest?.('[data-scent-replay]');if(slider){
+ const review=slider.closest('.coaching-scent-review'),element=review?.querySelector('[data-gps-map]');
+ if(!element||review?.dataset.gpsCorridorAllowed!=='true')return;
+ try{const full=JSON.parse(element.dataset.gpsFullPose||element.dataset.gpsPose);if(!element.dataset.gpsFullPose)element.dataset.gpsFullPose=JSON.stringify(full);
+ let remaining=Math.max(2,Math.min(Number(slider.value),Number(slider.max)));const segments=[];
+ for(const segment of full.segments||[]){if(remaining<=0)break;const take=segment.slice(0,remaining);if(take.length)segments.push(take);remaining-=take.length;}
+ element.dataset.gpsPose=JSON.stringify({...full,segments});const label=review.querySelector('[data-scent-replay-label]');if(label)label.textContent=slider.value+' / '+slider.max+' points GPS';mountGpsMaps({document,L:globalThis.L});
+ }catch{}return;}}
+ );
 listen(root,'input',event=>{const type=event.target.closest('[data-remote-form]')?.dataset.remoteForm;if(event.target.name==='text'&&['message','note'].includes(type)){if(type==='note'&&drafts.noteRevision===undefined)drafts.noteRevision=Number(event.target.closest('form').elements.expectedRevision.value);drafts[type]=event.target.value;}});
 cleanups.push(bindRemotePageLifecycle({window,controller}));
 render();
