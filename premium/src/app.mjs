@@ -642,7 +642,22 @@ function renderSessionExitMenu(){return SessionExitMenu(sessionControlView(exitS
 const newTrackUI=()=>({view:'list',selectedId:null,fileId:null,name:'',notice:'',error:''});
 let trackUI=newTrackUI();
 let trackEditor={draft:null,selectedPointId:null,nextPointKind:'via',results:[],notice:'',error:'',routeKey:'',copySource:null};
-let scentCorridorVisible=false,scentWindDegrees=0;
+let scentCorridorVisible=false,scentWindDegrees=0,scentWind=null,scentWindKey='',scentWindPending=null;
+async function refreshScentWind(){
+ const p=trackEditor.draft?.points?.[0];if(!scentCorridorVisible||!p||trackEditor.draft?.coordinateSpace!=='wgs84')return;
+ const key=[p.y.toFixed(3),p.x.toFixed(3)].join(',');if(scentWindKey===key&&(scentWind||scentWindPending))return;
+ scentWindKey=key;scentWind=null;
+ const task=(async()=>{try{
+  const url='https://api.open-meteo.com/v1/forecast?'+new URLSearchParams({latitude:String(p.y),longitude:String(p.x),current:'wind_speed_10m,wind_direction_10m',wind_speed_unit:'kmh',timezone:'auto'});
+  const response=await fetch(url,{credentials:'omit'});if(!response.ok)throw Error('Météo indisponible');
+  const data=await response.json(),speed=Number(data?.current?.wind_speed_10m),from=Number(data?.current?.wind_direction_10m);
+  if(!Number.isFinite(speed)||!Number.isFinite(from))throw Error('Vent indisponible');
+  if(scentWindKey!==key||!scentCorridorVisible)return;
+  scentWind={speed,from,observedAt:data.current.time,source:'Open-Meteo'};scentWindDegrees=(from+180)%360;
+ }catch{if(scentWindKey===key)scentWind={error:true};}
+ finally{if(scentWindKey===key&&scentCorridorVisible&&location.pathname==='/track-builder')render();}})();
+ scentWindPending=task;await task;if(scentWindPending===task)scentWindPending=null;
+}
 let smartDogHydrationKey='';
 let smartEntryOpenedKey=null;
 let trackEditorActive=false,trackEditorHref='/track-builder',trackEditorDrag=null,trackEditorExitDialog=false,trackEditorIgnoreMapClickUntil=0;
@@ -717,7 +732,7 @@ function renderTrackEditor(){
  const training=trackEditor.canine,allowed=jumolfAccess().entitlement_valid&&jumolfAccess().entitlement==='premium';
  const brief=training?.ownerId===currentUser?.user_id&&allowed?CanineBrief(buildCanineBrief(training.proposal,training.options,canineTrackContext(trackEditor.draft.dogId)),{initial:true}):'';
  const preview=trackEditor.preview,selectedContext=canineTrackContext(preview?.dogId||trackEditor.draft.dogId);missionDog=selectedContext.dog;missionSourceBrief=preview?.ownerId===currentUser?.user_id&&preview?.options&&allowed?CanineBrief(buildCanineBrief(preview.proposal,preview.options,selectedContext),{initial:true}):brief;const mission=missionContext();
- return TrackBuilderScreen({editorDraft:trackEditor.preview?.draft||trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,scentCorridorVisible,scentWindDegrees,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:trackingDogs(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
+ return TrackBuilderScreen({editorDraft:trackEditor.preview?.draft||trackEditor.draft,missionMarkup:mission?MissionControlPanel(missionController.snapshot(),{...mission,editorNotice:trackEditor.notice}):'',smartState:{...smart,scentCorridorVisible,scentWindDegrees,scentWind,previewing:!!trackEditor.preview,previewBasemap:trackEditor.preview?.draft.basemap,canineContext:context},canineBrief:brief,canPrepareCanine:!!brief&&auth.assurance==='supabase-auth',premiumAccess:jumolfAccess(),dogs:trackingDogs(),results:trackEditor.results,fixtures:gpxFixtures,selectedPointId:trackEditor.selectedPointId,nextPointKind:trackEditor.nextPointKind,notice:trackEditor.notice,error:trackEditor.error},trackLibrary.list());
 }
 function communitySourceOptions(){
  return buildCommunitySourceOptions({sessionRecords:sessionCatalog.list(),tracks:trackLibrary.list(),dogs:dogsStore.list()});
@@ -910,6 +925,7 @@ function render(focus=false) {
  opsWeather.mount();
  mountTrackEditorMap({draft:trackEditor.preview?.draft||trackEditor.draft,previewReadOnly:!!trackEditor.preview,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{if(trackEditor.preview)return;try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{if(trackEditor.preview)return;try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{if(trackEditor.preview)return;trackEditor.selectedPointId=id;render();},onView:mapView=>{if(!trackEditor.preview&&trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  paintIllustrativeScentCorridor({enabled:scentCorridorVisible,windDegrees:scentWindDegrees});
+ if(scentCorridorVisible&&!scentWindPending)void refreshScentWind();
  const mission=missionContext();if(mission)missionMount=mountMissionControl({root:document.querySelector('[data-mission-control]'),controller:missionController,context:mission,draw:paintTrackMissionMap,onAction:missionAction});
  if(consultation?.type==='track-detail'){const detail=trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),consultation.id);if(detail?.points?.length&&detail.points.every(p=>p.space==='wgs84')){mountTrackEditorMap({draft:{coordinateSpace:'wgs84',points:detail.points,basemap:document.querySelector('[data-detail-basemap]')?.dataset.detailBasemap||'standard'},previewReadOnly:true});void resolveTrackStartCommune(detail);}}
  if(missionPanelWasOpen){const panel=document.querySelector('[data-mission-panel]');if(panel)panel.open=true;for(const [id,open] of missionSections){const section=document.querySelector(`[data-mission-section="${id}"]`);if(section)section.open=open;}const sheet=document.querySelector('.mission-panel-content');if(sheet)sheet.scrollTop=missionScroll;}
@@ -1160,7 +1176,7 @@ document.addEventListener('click',async event=>{
    else if(action==='adjust-preview')selectSmartProposal(trackEditor.preview.proposal.id);
    else if(action==='dismiss-preview'){trackEditor.preview=null;render();}
    else if(action==='confirm-save-track')ConfirmationDialog({title:'Avez-vous terminé votre tracé ?',description:'Souhaitez-vous enregistrer ce parcours dans Mes pistes ? Vous pourrez encore le modifier ensuite.',onConfirm:()=>{try{submitCurrentTrack();}catch(error){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;Toast('Pour enregistrer, indiquez un nom et vérifiez que tous les segments sont calculés dans Menu.');document.querySelector('#track-editor-name')?.focus();}}});
-   else if(action==='toggle-scent'){scentCorridorVisible=!scentCorridorVisible;render();}
+   else if(action==='toggle-scent'){scentCorridorVisible=!scentCorridorVisible;if(scentCorridorVisible){scentWindKey='';scentWind=null;}render();}
    else if(action==='open-smart')openSmartTrackPanel();
    else if(action==='close-smart'){document.querySelector('[data-smart-panel]')?.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}
    else if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
