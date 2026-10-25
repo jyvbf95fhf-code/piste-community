@@ -18,7 +18,7 @@ export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,t
   async communeAt(point,{signal}={}){if(!finiteCenter(point))throw Error('Point de départ invalide.');const [lon,lat]=point;
    const reverse=await request('https://data.geopf.fr/geocodage/reverse?'+new URLSearchParams({lon:String(lon),lat:String(lat),type:'municipality',limit:'1'}),{signal});
    const match=reverse?.features?.[0],code=match?.properties?.citycode||match?.properties?.id;
-   if(!/^(?:\\d{5}|2[AB]\\d{3})$/.test(String(code||'')))throw Error('Commune introuvable pour ce départ. Recherchez-la manuellement.');
+   if(!/^(?:\d{5}|2[AB]\d{3})$/.test(String(code||'')))throw Error('Commune introuvable pour ce départ. Recherchez-la manuellement.');
    const data=await request('https://geo.api.gouv.fr/communes/'+encodeURIComponent(code)+'?fields=nom,code,centre,departement',{signal});
    if(!data?.nom||!finiteCenter(data?.centre?.coordinates))throw Error('Informations de commune indisponibles.');
    return {code:data.code,name:data.nom,center:data.centre.coordinates,department:data.departement?.nom||data.code.slice(0,2)};
