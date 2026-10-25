@@ -125,3 +125,14 @@
 .scent-corridor-flow{animation:scent-corridor-drift 2.8s linear infinite;pointer-events:none}
 @keyframes scent-corridor-drift{from{stroke-dashoffset:0}to{stroke-dashoffset:-72}}
 @media(prefers-reduced-motion:reduce){.scent-corridor-flow{animation:none}}
+
+/* Compact iPhone scent controls and readable map attribution. */
+.track-creator-cockpit .creator-menu-row{display:flex;align-items:stretch;gap:8px}
+.track-creator-cockpit .creator-scent-toggle{display:flex;align-items:center;justify-content:center;gap:5px;min-width:0;flex:0 0 auto;padding:8px 10px;border:1px solid #5a92a1;border-radius:15px;background:#102c3c;color:#d5f5f6;font-size:12px;font-weight:700;cursor:pointer}
+.track-creator-cockpit .creator-scent-toggle[aria-pressed=true]{border-color:#b88aff;color:#ebd9ff;background:#302444}
+.track-creator-cockpit .creator-scent-toggle b{font-size:10px;opacity:.85}
+.track-creator-cockpit .creator-menu-row .creator-smart-shortcut{min-width:0;flex:1 1 auto}
+.track-creator-cockpit .creator-wind-status{position:absolute;z-index:650;bottom:170px;left:14px;right:14px;pointer-events:none;text-align:center;color:#e2ebf3;font-size:11px;line-height:1.3;text-shadow:0 1px 4px #07131f;background:rgba(7,25,39,.68);border-radius:9px;padding:5px 8px;max-width:360px;margin:auto}
+.track-creator-cockpit .creator-instruction{background:rgba(7,25,39,.86);border-radius:8px;padding:5px 8px;text-shadow:none;max-width:calc(100% - 24px);margin-left:auto;margin-right:auto;line-height:1.3}
+.track-creator-cockpit .leaflet-control-attribution{font-size:9px!important;opacity:.8;max-width:55%;white-space:normal;text-align:right}
+@media(max-width:430px){.track-creator-cockpit .creator-scent-toggle{padding:7px 8px;font-size:11px}.track-creator-cockpit .creator-wind-status{bottom:183px;max-width:290px}.track-creator-cockpit .creator-menu-row{gap:6px}}
