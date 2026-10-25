@@ -15,6 +15,14 @@ export function createSmartTrackService({fetch=globalThis.fetch,clock=Date.now,t
  }
 
  return {
+  async communeAt(point,{signal}={}){if(!finiteCenter(point))throw Error('Point de départ invalide.');const [lon,lat]=point;
+   const reverse=await request('https://data.geopf.fr/geocodage/reverse?'+new URLSearchParams({lon:String(lon),lat:String(lat),type:'municipality',limit:'1'}),{signal});
+   const match=reverse?.features?.[0],code=match?.properties?.citycode||match?.properties?.id;
+   if(!/^(?:\\d{5}|2[AB]\\d{3})$/.test(String(code||'')))throw Error('Commune introuvable pour ce départ. Recherchez-la manuellement.');
+   const data=await request('https://geo.api.gouv.fr/communes/'+encodeURIComponent(code)+'?fields=nom,code,centre,departement',{signal});
+   if(!data?.nom||!finiteCenter(data?.centre?.coordinates))throw Error('Informations de commune indisponibles.');
+   return {code:data.code,name:data.nom,center:data.centre.coordinates,department:data.departement?.nom||data.code.slice(0,2)};
+  },
   async searchCommunes(query,{signal}={}){const q=String(query||'').trim();if(q.length<2||q.length>80)throw Error('Renseignez un nom de commune ou un code postal.');const params=new URLSearchParams({fields:'nom,code,centre,codesPostaux,departement',limit:'8',boost:'population',...(/^\d{5}$/.test(q)?{codePostal:q}:{nom:q})});const data=await request('https://geo.api.gouv.fr/communes?'+params,{signal});if(!Array.isArray(data))throw Error('Réponse commune invalide.');return data.slice(0,8).filter(c=>typeof c.nom==='string'&&/^(?:\d{5}|2[AB]\d{3})$/.test(c.code)&&finiteCenter(c.centre?.coordinates)).map(c=>({code:c.code,name:c.nom,center:c.centre.coordinates,department:c.departement?.nom||c.code.slice(0,2)}));},
   async loadNetwork(commune,distanceKm,{signal,center=null}={}){const options=validateSmartOptions({commune:center&&finiteCenter(center)?{...commune,center}:commune,distanceKm,terrain:'mixed',transitions:'any'}),radius=Math.round(Math.min(6000,Math.max(1200,options.distanceKm*700+1000))),key=JSON.stringify([commune.code,options.commune.center,radius]),saved=cache.get(key);if(saved&&clock()-saved.at<900000)return saved.data;
    const [lon,lat]=options.commune.center;const data=await request('/api/track-network?'+new URLSearchParams({lon:String(lon),lat:String(lat),distanceKm:String(options.distanceKm)}),{signal});if(!Array.isArray(data?.elements)||data.elements.length>150000||data.remark)throw Error('Données cartographiques incomplètes. Réessayez plus tard.');if(signal?.aborted)throw Error('Recherche interrompue.');cache.set(key,{at:clock(),data});while(cache.size>2)cache.delete(cache.keys().next().value);return data;
