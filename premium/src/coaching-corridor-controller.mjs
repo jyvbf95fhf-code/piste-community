@@ -23,7 +23,7 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
   if(result.state==='available')for(const feature of result.features){
    for(const [boundary,opacity] of [['outerBoundary',.09],['innerBoundary',.18]])L.polygon(feature[boundary].map(p=>[p.lat,p.lon]),{...(pane?{pane}:{}),color:'#bca7ef',weight:1,opacity:.45,fillColor:'#bca7ef',fillOpacity:opacity,interactive:false}).addTo(layer);
   }
-  const toggle=root.querySelector?.('[data-corridor-toggle]');if(toggle){toggle.disabled=!allowed()||historicalReview();toggle.setAttribute('aria-pressed',String(enabled&&result.state==='available'));toggle.textContent=enabled?'Masquer le couloir':'Afficher le couloir';}
+  const toggle=root.querySelector?.('[data-corridor-toggle]');if(toggle){toggle.disabled=!allowed()||historicalReview();toggle.setAttribute('aria-pressed',String(enabled&&result.state==='available'));toggle.textContent=historicalReview()?'Météo historique indisponible':enabled?'Masquer le couloir':'Afficher le couloir';}
   const summary=root.querySelector?.('[data-corridor-summary]');if(summary){summary.setAttribute('aria-label',result.state==='available'?'Couloir olfactif estimé · actif':'Couloir olfactif estimé');summary.dataset.active=String(result.state==='available');}
   const current=manual||automatic;
   if(result.state==='available'){
