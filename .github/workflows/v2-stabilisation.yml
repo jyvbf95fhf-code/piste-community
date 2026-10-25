@@ -1,0 +1,33 @@
+name: V2 consolidated non-regression gate
+on:
+  push:
+    branches: ['feature/v2-premium-stabilisation-*']
+    paths: ['premium/src/**', 'premium/tests/**', 'premium/scripts/**', 'premium/package*.json', '.github/workflows/v2-stabilisation.yml']
+  pull_request:
+    branches: ['feature/v2-premium-stabilisation-*']
+    paths: ['premium/src/**', 'premium/tests/**', 'premium/scripts/**', 'premium/package*.json', '.github/workflows/v2-stabilisation.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v2-stabilisation-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: premium
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: premium/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run test:stabilisation

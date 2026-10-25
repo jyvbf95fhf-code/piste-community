@@ -123,10 +123,10 @@ listen(document,'visibilitychange',()=>{if(document.visibilityState==='visible')
 listen(root,'input',event=>{const slider=event.target.closest?.('[data-scent-replay]');if(slider){
  const review=slider.closest('.coaching-scent-review'),element=review?.querySelector('[data-gps-map]');
  if(!element||review?.dataset.gpsCorridorAllowed!=='true')return;
- try{const full=JSON.parse(element.dataset.gpsFullPose||element.dataset.gpsPose);if(!element.dataset.gpsFullPose)element.dataset.gpsFullPose=JSON.stringify(full);
+ try{const field=review.dataset.scentReplayTarget==='reference'?'gpsReference':'gpsPose';const full=JSON.parse(element.dataset.gpsFullPose||element.dataset[field]);if(!element.dataset.gpsFullPose)element.dataset.gpsFullPose=JSON.stringify(full);
  let remaining=Math.max(2,Math.min(Number(slider.value),Number(slider.max)));const segments=[];
  for(const segment of full.segments||[]){if(remaining<=0)break;if(!Array.isArray(segment))continue;const valid=segment.filter(point=>Number.isFinite(point?.timestamp)&&point.timestamp>1e12&&Number.isFinite(point?.latitude)&&Number.isFinite(point?.longitude));const take=valid.slice(0,remaining);if(take.length)segments.push(take);remaining-=take.length;}
- element.dataset.gpsPose=JSON.stringify({...full,segments});const label=review.querySelector('[data-scent-replay-label]');if(label)label.textContent=slider.value+' / '+slider.max+' points GPS';mountGpsMaps({document,L:globalThis.L});
+ element.dataset[field]=JSON.stringify({...full,segments});const label=review.querySelector('[data-scent-replay-label]');if(label)label.textContent=slider.value+' / '+slider.max+' points GPS';mountGpsMaps({document,L:globalThis.L});
  }catch{}return;}}
  );
 listen(root,'input',event=>{const type=event.target.closest('[data-remote-form]')?.dataset.remoteForm;if(event.target.name==='text'&&['message','note'].includes(type)){if(type==='note'&&drafts.noteRevision===undefined)drafts.noteRevision=Number(event.target.closest('form').elements.expectedRevision.value);drafts[type]=event.target.value;}});

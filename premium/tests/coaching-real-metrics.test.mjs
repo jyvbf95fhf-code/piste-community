@@ -62,5 +62,5 @@ test('single debrief map fits both recorded routes, keeps red/cyan and endpoint 
  const element={dataset:{gpsPose:JSON.stringify(v.map.gpsSearch),gpsReference:JSON.stringify(v.map.gpsPose)},closest:s=>s==='[data-real-map-reader]'?root:null};
  const layer=()=>({addTo(){return this;},clearLayers(){},on(){}});
  const L={map:()=>({setView(){return this;},fitBounds:p=>bounds=p,remove(){}}),tileLayer:layer,layerGroup:layer,circle:layer,circleMarker:layer,polyline:(p,o)=>({addTo:()=>lines.push(o.color)}),divIcon:x=>x,marker:(p,o)=>({addTo:()=>markers.push(o.title)})};
- try{mountGpsMaps({document:{querySelectorAll:()=>[element]},L});assert.equal(bounds.length,4);assert.deepEqual(lines,['#ff585f','#62c6e5']);assert.deepEqual(markers,['Départ','Arrivée','Départ','Arrivée']);}finally{destroyGpsMaps();}
+ try{mountGpsMaps({document:{querySelectorAll:()=>[element]},L});assert.equal(bounds.length,4);assert.deepEqual(lines,['#ff405d','#62c6e5']);assert.deepEqual(markers,['Départ','Arrivée','Départ','Arrivée']);}finally{destroyGpsMaps();}
 });

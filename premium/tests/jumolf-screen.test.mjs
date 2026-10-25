@@ -28,10 +28,10 @@ test('missing entitlement state is denied by default',()=>{
  assert.match(JumolfScreen({route:{type:'dashboard'},state:{}}),/JUMOLF est une fonctionnalité Premium/);
 });
 
-test('Premium discovery and code entry are dedicated screens with clear mock feedback',()=>{
+test('Premium discovery cannot grant simulated entitlements or create a payment; code entry is separate',()=>{
  const premium=JumolfScreen({route:{type:'premium'},state:{jumolf_entitlement:'none'}});
- assert.match(premium,/Simulation Premium — aucun paiement réel/);
- assert.match(premium,/Simuler un accès Premium/);
+ assert.match(premium,/pc-premium-landing/);assert.match(premium,/Aucun paiement réel/);
+ assert.match(premium,/href="\/jumolf\/access-code"/);assert.doesNotMatch(premium,/data-jumolf-action="simulate-premium"|<form/);
  assert.doesNotMatch(premium,/€|checkout|Stripe/i);
  const code=JumolfScreen({route:{type:'access-code'},state:{jumolf_entitlement:'none'},codeFeedback:'Ce code a atteint son nombre maximal d’utilisations.'});
  assert.match(code,/Utiliser un code JUMOLF/);

@@ -27,6 +27,15 @@ test('dock contains one segment back arrow and a pressed route toggle',async()=>
 });
 test('actual dock command toggles routes on and off',async()=>{
  const {readFile}=await import('node:fs/promises'),{runInNewContext}=await import('node:vm');const source=await readFile(new URL('../src/app.mjs',import.meta.url),'utf8'),start=source.indexOf(" if(editorAction&&location.pathname==='/track-builder')"),end=source.indexOf(' const place=',start),body=source.slice(start,end);
- const state={draft:editor.createTrackDraft({geographic:true})},context={editorAction:{dataset:{editorAction:'toggle-route'}},location:{pathname:'/track-builder'},trackEditor:state,setTrackMode:editor.setTrackMode,editorChange:next=>state.draft=next};
+ const state={draft:editor.createTrackDraft({geographic:true})},context={editorAction:{dataset:{editorAction:'toggle-route'}},location:{pathname:'/track-builder'},trackEditor:state,jumolfAccess:()=>({entitlement_valid:true,entitlement:'premium'}),setTrackMode:editor.setTrackMode,editorChange:next=>state.draft=next,render:()=>assert.fail('Premium route toggle must update through editorChange')};
  runInNewContext(`(()=>{${body}})()`,context);assert.equal(state.draft.activeMode,'follow');runInNewContext(`(()=>{${body}})()`,context);assert.equal(state.draft.activeMode,'free');
+});
+
+test('route entitlement gate preserves free geometry while allowing an existing follow mode to turn off',async()=>{
+ const {readFile}=await import('node:fs/promises'),{runInNewContext}=await import('node:vm');
+ const source=await readFile(new URL('../src/app.mjs',import.meta.url),'utf8'),start=source.indexOf(" if(editorAction&&location.pathname==='/track-builder')"),end=source.indexOf(' const place=',start);
+ let renders=0,updates=0;const context={editorAction:{dataset:{editorAction:'toggle-route'}},location:{pathname:'/track-builder'},trackEditor:{draft:editor.createTrackDraft({geographic:true})},jumolfAccess:()=>({entitlement_valid:false,entitlement:'premium'}),setTrackMode:editor.setTrackMode,editorChange:next=>{context.trackEditor.draft=next;updates++;},render:()=>renders++};
+ const body=`(()=>{${source.slice(start,end)}})()`;
+ runInNewContext(body,context);assert.equal(context.trackEditor.draft.activeMode,'free');assert.match(context.trackEditor.notice,/réservé aux membres Premium/);assert.equal(updates,0);assert.equal(renders,1);
+ context.trackEditor.draft=editor.setTrackMode(context.trackEditor.draft,'follow');runInNewContext(body,context);assert.equal(context.trackEditor.draft.activeMode,'free');assert.equal(updates,1);assert.equal(renders,1);
 });

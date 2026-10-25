@@ -57,7 +57,7 @@
 [data-gps-live]>.tracer-sheet{z-index:70}
 [data-gps-live]>.tracer-shade{z-index:60}
 @media(max-width:360px){[data-gps-live]>.gps-actions{gap:9px}[data-gps-live]>.gps-actions .gps-round{width:48px;height:48px;min-width:48px;min-height:48px}[data-gps-live]>.gps-actions .gps-action-finish{width:70px;height:70px;min-width:70px;min-height:70px}[data-gps-live] .gps-layer-options{width:175px}}
-@media(max-height:500px){[data-gps-live].tracer-gps{overflow:auto;min-height:400px}[data-gps-live] .gps-map-controls{top:175px}.app-shell [data-gps-live]>.gps-hud strong{font-size:18px}[data-gps-live] .gps-hud>.gps-precision{display:none}[data-gps-live]>.coaching-heading>p{display:none}}
+@media(max-height:500px){[data-gps-live].tracer-gps{overflow:auto;min-height:0}[data-gps-live] .gps-map-controls{top:175px}.app-shell [data-gps-live]>.gps-hud strong{font-size:18px}[data-gps-live] .gps-hud>.gps-precision{display:none}[data-gps-live]>.coaching-heading>p{display:none}}
 [data-gps-live]>.gps-actions [data-gps="touch-lock"]{order:-1}
 [data-gps-live]>.gps-touch-lock-panel{position:absolute;inset:0;z-index:90;background:#07151ff5;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;padding:30px;text-align:center}
 [data-gps-live]>.gps-touch-lock-panel[hidden]{display:none}

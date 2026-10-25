@@ -12,23 +12,19 @@ test('chaque accès accueil et chaque navigation résout une route',()=>{
  for(const match of HomeScreen().matchAll(/href="([^"]+)"/g)) assert.ok(routes[match[1]],match[1]);
  for(const route of Object.keys(routes)) assert.ok((route==='/'?HomeScreen():PlaceholderScreen(route)).length>100);
 });
-test('aucun moteur V1 ni transport réseau ; capteur GPS limité à son adaptateur dédié',async()=>{
- for(const file of await readdir(new URL('../src/',import.meta.url))) {
-  if(!file.endsWith('.mjs'))continue;
-  const source=await readFile(new URL(`../src/${file}`,import.meta.url),'utf8');
-  const withoutAdminServiceLabel=file==='admin-services.mjs'?source.replace("id:'supabase'", "id:'fixture-service'").replace("name:'Supabase'", "name:'Service fixture'"):source;
-  const boundedCapability=withoutAdminServiceLabel.replaceAll('device-geolocation','device-position');
-  const isolatedCapability=file==='coaching-gps-sensor.mjs'?boundedCapability.replaceAll('geolocation','devicePosition'):boundedCapability;
-  assert.doesNotMatch(isolatedCapability,/\b(fetch|XMLHttpRequest|WebSocket|EventSource|geolocation|supabase|serviceWorker|indexedDB)\b/,file);
-  if(file!=='app.mjs')assert.doesNotMatch(source,/\blocalStorage\b/,file);
-  assert.doesNotMatch(source,/\b(sessionStorage|document\.cookie)\b/,file);
-  for(const [,name] of source.matchAll(/from ['"]([^'"]+)['"]/g))assert.match(name,/^\.\/[^/]+\.mjs$/,file);
+test('production adapters and content policy remain confined to V2 and declared service origins',async()=>{
+ const {COACHING_REMOTE}=await import('../src/coaching-remote-config.mjs');
+ assert.equal(COACHING_REMOTE.projectRef,'shnwqdkiapgcftbnhilh');assert.equal(new URL(COACHING_REMOTE.endpoint).hostname,'shnwqdkiapgcftbnhilh.supabase.co');
+ for(const file of await readdir(new URL('../src/',import.meta.url))){
+  if(!file.endsWith('.mjs'))continue;const source=await readFile(new URL('../src/'+file,import.meta.url),'utf8');
+  for(const [,name] of source.matchAll(/from ['"]([^'"]+)['"]/g)){assert.match(name,/^\.\/[a-z0-9_./-]+\.mjs$/i,file);assert.ok(!name.includes('..'),file+' must not import V1 outside Premium');}
+  for(const url of source.matchAll(/https:\/\/([a-z0-9]+)\.supabase\.co/g))assert.equal(url[1],'shnwqdkiapgcftbnhilh',file);
+  assert.doesNotMatch(source,/navigator\.mediaDevices|navigator\.contacts|document\.cookie\s*=/,file);
  }
- const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
- assert.match(html,/connect-src 'none'/);
- assert.match(html,/img-src 'self' data: https:\/\/tile\.openstreetmap\.org/);
- assert.doesNotMatch(html.replace('https://tile.openstreetmap.org','').replace('https://data.geopf.fr',''),/https?:\/\//);
- assert.match(html,/img-src 'self' data: https:\/\/tile\.openstreetmap\.org https:\/\/data\.geopf\.fr;/);
- assert.match(html,/referrer" content="strict-origin-when-cross-origin/);
+ const html=await readFile(new URL('../index.html',import.meta.url),'utf8');const csp=html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
+ const connect=csp.match(/connect-src ([^;]+)/)[1].split(' ');
+ assert.deepEqual(connect,["'self'",'https://shnwqdkiapgcftbnhilh.supabase.co','wss://shnwqdkiapgcftbnhilh.supabase.co','https://api.open-meteo.com','https://data.geopf.fr','https://geo.api.gouv.fr']);
+ assert.match(csp,/script-src 'self';/);assert.match(csp,/object-src 'none';/);assert.match(csp,/img-src 'self' data: https:\/\/tile\.openstreetmap\.org https:\/\/data\.geopf\.fr;/);
+ assert.doesNotMatch(csp,/\*|'unsafe-eval'|'unsafe-inline'/);assert.match(html,/referrer" content="strict-origin-when-cross-origin/);
 });
 test('les chaînes de composants sont échappées',()=>assert.equal(escapeHTML('<script>"&'), '&lt;script&gt;&quot;&amp;'));

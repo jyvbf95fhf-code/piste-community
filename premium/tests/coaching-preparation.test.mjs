@@ -77,7 +77,7 @@ test('Solo and successive functions do not retain tracer permissions after chang
 test('an absent participant never receives a fallback point and masked geometry does not change viewport',()=>{
  const s=state({viewerRole:'driver',mode:'simple_blind',missingActors:['camille','lea']});
  const v=preparationView(s);assert.equal(v.markers.some(m=>['camille','lea'].includes(m.id)),false);
- const html=PreparationScreen(s);assert.match(html,/viewBox="0 0 360 300"/);assert.ok(!html.includes('data-map-actor="alex"'));
+ const html=PreparationScreen(s);assert.match(html,/data-real-map-reader/);assert.match(html,/Fond de carte de contexte uniquement/);assert.doesNotMatch(html,/data-map-actor=|prep-map-canvas|viewBox="0 0 360 300"/);
 });
 test('displayed GPS availability matches absent own positions even if simulator freshness remains selected',()=>{
  for(const patch of [{positionsPresent:false},{missingActors:['self']}]){

@@ -1,7 +1,7 @@
 import {generateSmartTracks,validateSmartOptions} from './track-smart-engine.mjs';
 import {canineOptions} from './track-canine.mjs';
 export const canUseSmartTracks=access=>access?.entitlement_valid===true&&access.entitlement==='premium';
-const initial=()=>({query:'',communes:[],commune:null,distanceKm:2,terrain:'mixed',transitions:'any',proposals:[],busy:false,error:'',notice:'',retryAction:''});
+const initial=()=>({startPoint:null,query:'',communes:[],commune:null,distanceKm:2,terrain:'mixed',transitions:'any',proposals:[],busy:false,error:'',notice:'',retryAction:''});
 export function createSmartTrackController({service,getContext,onChange=()=>{},generate:build=generateSmartTracks}={}){
  let state=initial(),request=null,scope=null;
  const scopeKey=c=>c?JSON.stringify([c.ownerId,c.key]):null;

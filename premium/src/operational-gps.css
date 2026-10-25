@@ -128,3 +128,6 @@
 .operational-weather-panel [data-ops-weather-form] input{box-sizing:border-box;width:100%;min-height:44px;padding:10px;border:1px solid #9dbad642;border-radius:12px;background:#10263b;color:#f3f7fb;font:inherit}
 .ops-weather-places{display:grid;gap:8px}.ops-weather-places button{min-height:44px;padding:10px;border:1px solid #9dbad642;border-radius:12px;background:#132b42;color:#f3f7fb;font:inherit;text-align:left}
 .operational-weather-panel .ops-weather-note{font-size:10px;line-height:1.5;color:#b8c9d3}
+
+/* Acquisition and interruptions remain visible without covering the terrain. */
+[data-gps-kind="ops"]>.ops-gps-status{position:relative;z-index:4;align-self:flex-start;max-width:calc(100% - 60px);margin:0;padding:6px 10px;background:#102536e6;border-radius:10px;color:#e2edf2;font-size:11px;line-height:1.4}

@@ -84,7 +84,7 @@ test('debrief, replay, detail and history expose available age without inventing
  const report=debriefView(flow.s,driver,flow.t);
  assert.equal(report.summary.trackAgeAtSearchStart,4500);
  assert.equal(report.summary.trackAgeAtSearchEnd,6300);
- assert.equal(report.science.trackAge.status,'calculé');
+ assert.equal(report.science.trackAge.status,'Horodatages locaux');
  const html=DebriefScreen(flow.s,driver,flow.t);
  assert.match(html,/Âge de piste au départ/);
  assert.match(html,/01:15:00/);

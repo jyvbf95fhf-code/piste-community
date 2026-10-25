@@ -79,15 +79,16 @@ test('historical debrief uses the existing report but suppresses current-session
  assert.doesNotMatch(html,/data-debrief="archive"/);
 });
 
-test('static replay uses available pose and search paths from debriefView only',()=>{
+test('static replay retains model paths but never interprets drawing fixtures as geographic GPS',()=>{
  const record=terminalRecord('DEBRIEF');
  record.tracerState={...record.tracerState,segments:[[{x:65,y:240},{x:95,y:210}]]};
  record.searchState={...record.searchState,layingSegments:record.tracerState.segments,actorId:'self',segments:[[{x:70,y:242},{x:100,y:220}]]};
  const view=sessionReplayView(record);
  const html=SessionReplayScreen(view);
  assert.deepEqual(view.map.paths.map(path=>path.kind).filter(kind=>['pose','search'].includes(kind)),['pose','search']);
- assert.match(html,/data-map-path="pose"/);
- assert.match(html,/data-map-path="search"/);
+ assert.match(html,/data-real-map-reader/);
+ assert.match(html,/Fond de carte de contexte uniquement/);
+ assert.doesNotMatch(html,/data-map-path=|65[, ]240|70[, ]242/);
  assert.match(html,/Lecture seule/);
 });
 

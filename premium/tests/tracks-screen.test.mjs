@@ -73,17 +73,24 @@ test('copy source preserves interrupted session segments without joining their g
  const pose=trackListView([],catalog.list()).find(row=>row.kind==='pose');
  assert.equal(pose.copySource.points[2].breakBefore,true);
  const map=TrackEditorMap(createTrackDraft({copySource:{...pose.copySource,name:pose.name}}));
- assert.equal((map.match(/data-editor-segment=/g)||[]).length,2);
- assert.doesNotMatch(map,/M92 214 L180 170/);
+ const draft=createTrackDraft({copySource:{...pose.copySource,name:pose.name}});
+ assert.equal(draft.coordinateSpace,'mock-map');assert.equal(draft.points[2].breakBefore,true);
+ assert.match(map,/sans coordonnées géographiques/);
+ const payload=JSON.parse(map.match(/data-route="([^"]+)"/)[1].replaceAll('&quot;','"'));
+ assert.deepEqual(payload.points,[]);assert.equal(payload.readOnly,true);
+ assert.doesNotMatch(map,/data-editor-segment=|M92 214 L180 170/);
 });
 
-test('prepared copy detail renders each interrupted trace as a separate segment',()=>{
+test('prepared geographic copy detail preserves interrupted segments in its read-only real map',()=>{
  const library=createTrackLibrary();
- const copy=library.createPrepared({name:'Copie interrompue',geometry:{points:[{x:70,y:242},{x:92,y:214},{x:180,y:170,breakBefore:true},{x:205,y:145}]}});
+ const copy=library.createPrepared({name:'Copie interrompue',geometry:{points:[{space:'wgs84',x:7.01,y:48.01},{space:'wgs84',x:7.02,y:48.02},{space:'wgs84',x:7.03,y:48.03,breakBefore:true},{space:'wgs84',x:7.04,y:48.04}]}});
  const row=trackListView(library.list(),[]).find(item=>item.libraryId===copy.id);
  const html=TrackDetailScreen(row);
- assert.equal((html.match(/data-map-path="reference"/g)||[]).length,2);
- assert.doesNotMatch(html,/L 92 214 L 180 170/);
+ assert.match(html,/data-editor-real-map/);assert.match(html,/data-readonly="true"/);
+ const route=JSON.parse(html.match(/data-route="([^"]+)"/)[1].replaceAll('&quot;','"'));
+ assert.equal(route.coordinateSpace,'wgs84');assert.equal(route.points.length,4);assert.equal(route.points[2].breakBefore,true);
+ assert.deepEqual(route.points.map(({x,y})=>[x,y]),[[7.01,48.01],[7.02,48.02],[7.03,48.03],[7.04,48.04]]);
+ assert.doesNotMatch(html,/data-map-path=|prep-map-canvas/);
 });
 
 test('track detail keeps unavailable geometry explicit and never invents session traces',()=>{
@@ -107,12 +114,18 @@ test('archived session provenance is marked and detail preserves source session'
  assert.match(TrackListScreen(rows),/Mes pistes/);
 });
 
-test('Mes pistes preserves its prepared tracks in a secondary section without a creator shortcut',()=>{
- const html=TrackListScreen([], [{id:'done-1',kind:'coaching',title:'Sous les pins',status:'Terminée',dogName:'Nox',date:'Aujourd’hui · 08:30',href:'/sessions/done-1'}]);
- assert.match(html,/OPS et Coaching/);
- assert.match(html,/href="\/sessions\/done-1">Ouvrir le dossier/);
- assert.match(html,/Tracés consultables/);
- assert.doesNotMatch(html,/href="\/track-builder"/);
+test('Mes pistes separates operational sessions, training and prepared records in explicit categories',()=>{
+ const sessions=[{id:'done-1',kind:'coaching',title:'Sous les pins',status:'Terminée',dogName:'Nox',date:'Aujourd’hui · 08:30',href:'/sessions/done-1'}];
+ const library=createTrackLibrary(),rows=trackListView(library.list(),[]);
+ const html=TrackListScreen(rows,sessions);
+ assert.match(html,/OPS et Coaching/);assert.match(html,/href="\/sessions\/done-1">Ouvrir le dossier/);
+ for(const category of ['operational','training','prepared'])assert.match(html,new RegExp(`href="/tracks\\?category=${category}&amp;`));
+ assert.match(html,/data-piste-group="coaching"/);assert.doesNotMatch(html,/data-prepared-library|href="\/track-builder"/);
+ const prepared=TrackListScreen(rows,sessions,{category:'prepared'});
+ assert.match(prepared,/data-prepared-library/);assert.match(prepared,/Préparations et brouillons enregistrés/);assert.match(prepared,/data-track-id="/);
+ assert.doesNotMatch(prepared,/data-history-session="done-1"/);
+ const training=TrackListScreen(rows,sessions,{category:'training'});
+ assert.match(training,/Séances d’entraînement/);assert.doesNotMatch(training,/data-history-session="done-1"|data-prepared-library/);
 });
 
 test('Mes pistes keeps summary-only history without fabricating a replay',()=>{

@@ -9,5 +9,10 @@
     "esbuild": "0.28.2",
     "https-proxy-agent": "9.1.0",
     "ws": "8.22.0"
+  },
+  "scripts": {
+    "test": "node scripts/test-stabilisation.mjs --unit",
+    "test:stabilisation": "node scripts/test-stabilisation.mjs",
+    "test:browser": "node scripts/test-stabilisation.mjs --browser"
   }
 }

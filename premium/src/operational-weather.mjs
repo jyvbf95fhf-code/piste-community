@@ -16,7 +16,7 @@ export async function geocodeIntervention(address,{fetch:fetcher=globalThis.fetc
   const url=new URL('https://data.geopf.fr/geocodage/search');
   url.search=new URLSearchParams({q,index:'address',limit:'3'}).toString();
   const response=await fetcher(url.href,{signal:controller.signal,credentials:'omit',referrerPolicy:'no-referrer'});
-  if(!response.ok)throw Error('Localisation indisponible');
+  if(!response.ok)throw Error('Localisation IGN indisponible : HTTP '+response.status);
   const data=await response.json(),seen=new Set(),out=[];
   for(const f of (Array.isArray(data.features)?data.features:[]).slice(0,3)){
    const [longitude,latitude]=f.geometry?.coordinates||[],p=f.properties||{};
@@ -30,10 +30,12 @@ export async function geocodeIntervention(address,{fetch:fetcher=globalThis.fetc
 
 export function OperationalWeatherMarkup(v={}){
  const weather=v.weather,notices={'missing-address':'Renseignez une adresse ou une commune dans la fiche mission pour obtenir la météo du lieu.','loading':'Récupération de la météo du lieu…','choose-place':'Plusieurs lieux correspondent. Choisissez le lieu d’intervention.','unavailable':'Météo automatique indisponible. Précisez le lieu, réessayez ou renseignez les conditions manuellement.','idle':'Météo du lieu en attente.'};
+ const fetched=Number.isFinite(weather?.fetchedAt)?new Date(weather.fetchedAt).toLocaleString('fr-FR'):null;
  const time=Number.isFinite(weather?.observedAt)?new Date(weather.observedAt).toLocaleString('fr-FR'):'Heure indisponible';
  return '<h2>Vent et conditions</h2><span class="eyebrow">MÉTÉO DU LIEU</span>'+
   (v.location?'<p class="ops-weather-location">'+e(v.location.label)+'</p>':'')+
-  (weather?'<p>'+e(weather.manual?'Correction manuelle':'Météo modélisée · Open-Meteo')+' · '+e(time)+(weather.stale?' · donnée ancienne':'')+'</p><dl class="ops-weather-values">'+Object.entries(labels).map(([key,label])=>'<div><dt>'+e(label)+'</dt><dd>'+e(Number.isFinite(weather[key])?String(weather[key]):'Indisponible')+'</dd></div>').join('')+'</dl>':'<p role="status">'+e(notices[v.state]||notices.unavailable)+'</p>')+
+  (v.state==='loading'?'<p role="status" data-ops-weather-loading>Actualisation météo en cours…</p>':'')+(v.error?'<p role="alert" data-ops-weather-error>'+e(v.error)+(weather?' Dernière observation conservée.':'')+'</p>':'')+
+  (weather?'<p>'+ e(weather.manual?'Correction manuelle':'Météo modélisée · Open-Meteo')+' · '+e(time)+(weather.stale?' · donnée ancienne':'')+(fetched?' · dernière actualisation : '+e(fetched):'')+'</p><dl class="ops-weather-values">'+Object.entries(labels).map(([key,label])=>'<div><dt>'+e(label)+'</dt><dd>'+e(Number.isFinite(weather[key])?String(weather[key]):'Indisponible')+'</dd></div>').join('')+'</dl>':'<p role="status">'+e(notices[v.state]||notices.unavailable)+'</p>')+
   (v.state==='choose-place'?'<div class="ops-weather-places">'+(v.candidates||[]).map((p,i)=>'<button type="button" data-ops-weather-place="'+i+'">'+e(p.label)+'</button>').join('')+'</div>':'')+
   (v.readOnly?'':'<button type="button" class="button button-dark" data-ops-weather-auto '+(v.state==='loading'?'disabled':'')+'>'+(weather?.manual?'Revenir à la météo automatique':'Actualiser la météo')+'</button><details data-ops-weather-correction><summary>Corriger les conditions météo</summary><form data-ops-weather-form>'+Object.entries(labels).map(([key,label])=>{const [min,max]=CORRIDOR_WEATHER_FIELDS[key];return '<label>'+e(label)+'<input type="number" name="'+key+'" min="'+min+'" max="'+max+'" step="any" inputmode="decimal" value="'+(Number.isFinite(weather?.[key])?weather[key]:'')+'"></label>';}).join('')+'<p>Les champs vides conservent les valeurs disponibles.</p><button class="button button-dark" type="submit">Appliquer les corrections</button></form></details>')+
   '<p class="ops-weather-note">L’adresse est localisée par IGN ; les coordonnées du lieu servent à la météo Open-Meteo. Aucune identité ni position GPS du téléphone n’est transmise par ce bloc.</p>';
@@ -48,7 +50,7 @@ export function createOperationalWeatherController({getContext,document=globalTh
   if(current?.signature===signature)return current;
   ticket++;request?.abort();request=null;
   let record=records.get(signature);
-  if(!record){record={key,signature,address,state:key?(address?'idle':'missing-address'):'unavailable',weather:null,location:null,candidates:[],attempted:false};
+  if(!record){record={key,signature,address,state:key?(address?'idle':'missing-address'):'unavailable',weather:null,error:null,location:null,candidates:[],attempted:false};
    if(key)try{const saved=JSON.parse(storage?.getItem(storageKey(key))||'null');if(saved?.version===1&&saved.address===address&&Number.isFinite(saved.weather?.observedAt)&&saved.weather.observedAt<=clock()+300000){
     record.weather=cleanCorridorWeather(saved.weather);record.state='available';
     const p=saved.location;if(p&&Number.isFinite(p.latitude)&&Math.abs(p.latitude)<=90&&Number.isFinite(p.longitude)&&Math.abs(p.longitude)<=180&&typeof p.label==='string')record.location={...p,label:p.label.slice(0,300)};
@@ -68,23 +70,23 @@ export function createOperationalWeatherController({getContext,document=globalTh
   panel.innerHTML=OperationalWeatherMarkup(view());if(opened){const details=panel.querySelector('[data-ops-weather-correction]');if(details)details.open=true;}
  }
  const alive=(r,n)=>sync()===r&&ticket===n;
- async function fetchWeather(r,n){
-  try{const weather=await weatherService.get(r.location);if(!alive(r,n))return;
-   r.weather=cleanCorridorWeather(weather);r.state=r.weather?'available':'unavailable';save(r);
-  }catch{if(alive(r,n))r.state='unavailable';}
+ async function fetchWeather(r,n,{force=false}={}){
+  try{const weather=await weatherService.get(r.location,{force,throwOnError:true});if(!alive(r,n))return;
+   const clean=cleanCorridorWeather(weather);if(!clean)throw Error('Aucune donnée météo reçue.');r.weather=clean;r.error=null;r.state='available';save(r);
+  }catch(error){if(alive(r,n)){if(!r.weather&&error.previous)r.weather=cleanCorridorWeather(error.previous);if(r.weather)r.weather={...r.weather,stale:true};r.state='unavailable';r.error=error.message||'Météo indisponible : réessayez.';}}
   if(alive(r,n))paint();
  }
  async function load(force=false){
   const r=sync();if(!r.key||readOnly()||(!force&&r.attempted))return;
   if(!r.address){r.state='missing-address';paint();return;}
   if(!force&&r.weather?.manual)return;
-  request?.abort();request=new AbortController();const n=++ticket;r.attempted=true;r.state='loading';paint();
+  request?.abort();request=new AbortController();const n=++ticket;r.attempted=true;r.error=null;r.state='loading';paint();
   try{const candidates=await geocode(r.address,{signal:request.signal});if(!alive(r,n))return;
-   r.candidates=candidates;if(!candidates.length){r.weather=null;r.location=null;r.state='unavailable';paint();return;}
+   r.candidates=candidates;if(!candidates.length){r.location=null;r.state='unavailable';r.error='Aucun lieu reconnu par IGN. Précisez l’adresse ou la commune.';paint();return;}
    const first=candidates[0],confident=first.score>=.75&&(candidates.length===1||first.score-candidates[1].score>=.1);
    if(!confident){r.weather=null;r.location=null;r.state='choose-place';paint();return;}
-   r.location=first;await fetchWeather(r,n);
-  }catch{if(alive(r,n)){r.state='unavailable';paint();}}
+   r.location=first;await fetchWeather(r,n,{force});
+  }catch(error){if(alive(r,n)){r.state='unavailable';r.error=error.name==='AbortError'?'Délai de localisation dépassé : réessayez.':error.message.includes('IGN')?error.message:'Localisation IGN injoignable : vérifiez le réseau.';paint();}}
  }
  async function select(index){
   const r=sync();if(!r.key||readOnly()||r.state!=='choose-place'||!Number.isInteger(index)||!r.candidates[index])return;
@@ -97,7 +99,7 @@ export function createOperationalWeatherController({getContext,document=globalTh
  }
  async function automatic(){
   const r=sync();if(!r.key||readOnly())return;
-  r.weather=null;r.attempted=false;try{storage?.removeItem(storageKey(r.key));}catch{}
+  r.attempted=false;r.error=null;
   await load(true);
  }
  function mount(){

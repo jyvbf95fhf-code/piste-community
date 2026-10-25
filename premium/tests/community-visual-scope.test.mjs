@@ -7,7 +7,9 @@ const [tokens,styles]=await Promise.all([
  readFile(new URL('../src/styles.css',import.meta.url),'utf8'),
 ]);
 const communityTheme=tokens.match(/\.app-shell\[data-module-theme="community"\]:not\(\.notifications-shell\)\s*\{[^}]*\}/s)?.[0]||'';
-const communityRules=styles.slice(styles.indexOf('/* Community color pass:'));
+const start=styles.indexOf('/* Community color pass:');
+const end=styles.indexOf('\n/*',start+3);
+const communityRules=styles.slice(start,end===-1?undefined:end);
 
 test('Community uses an integrated slate palette and keeps its visual treatment scoped',()=>{
  assert.match(communityTheme,/--theme-canvas:\s*#14222f/i);

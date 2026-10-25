@@ -5,11 +5,12 @@ import {createCommunityLiveStore} from '../src/community-live-store.mjs';
 
 const relationships=()=>createCommunityStore({profiles:[{id:'self',displayName:'Moi'},{id:'alex',displayName:'Alex'},{id:'lea',displayName:'Léa'}],contacts:[{userIds:['self','alex'],live_access_authorized:true}],contactRequests:[{id:'pending',fromUserId:'self',toUserId:'lea',status:'pending'}],follows:[{fromUserId:'self',toUserId:'lea'}],posts:[],notifications:[]});
 
-test('Coaching and OPS sessions start unshared with conservative projection options',()=>{
+test('Coaching and OPS start unshared; enabled OPS display options alone never authorize access',()=>{
  const live=createCommunityLiveStore({communityStore:relationships()});
  assert.equal(live.getSessionPolicy('coaching','c-1').share_live,false);
  assert.equal(live.getSessionPolicy('ops','o-1').share_live,false);
- assert.deepEqual(live.getSessionPolicy('ops','o-1').projectionOptions,{showDog:false,showHandler:false,showEvents:false,showTrackAge:false,showCorridor:false});
+ assert.equal(live.canViewSession('ops','o-1','alex'),false);assert.equal(live.canViewSession('ops','o-1','lea'),false);
+ assert.deepEqual(live.getSessionPolicy('ops','o-1').projectionOptions,{showDog:true,showHandler:true,showEvents:true,showTrackAge:true,showCorridor:true});
 });
 
 test('accepted Contact Live permission and explicit session sharing are both required',()=>{
@@ -36,6 +37,6 @@ test('Follow, pending requests, notification preference and shared state are ind
 test('only the owner can change policy and snapshots are detached',()=>{
  const live=createCommunityLiveStore({communityStore:relationships()});
  assert.throws(()=>live.setSessionPolicy({sessionType:'ops',sessionId:'o-3',ownerUserId:'alex',patch:{share_live:true}}),/propriétaire|owner/i);
- const policy=live.getSessionPolicy('ops','o-3');policy.projectionOptions.showDog=true;
- assert.equal(live.getSessionPolicy('ops','o-3').projectionOptions.showDog,false);
+ const policy=live.getSessionPolicy('ops','o-3');policy.projectionOptions.showDog=false;
+ assert.equal(live.getSessionPolicy('ops','o-3').projectionOptions.showDog,true);
 });

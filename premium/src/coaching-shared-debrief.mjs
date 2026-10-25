@@ -1,4 +1,3 @@
-import {GpsMapMarkup} from './coaching-gps-screen.mjs';
 import {DataExportsPanel} from './data-exports-client.mjs';
 import {formatElapsed} from './coaching-time.mjs';
 import {DebriefScreen} from './coaching-debrief-screen.mjs';
@@ -23,9 +22,20 @@ export function SharedCoachingDebrief(p,{tab='summary',profile={},drafts={},busy
  const corridorAllowed=!!pose?.segments?.some(segment=>segment.length>=2)&&(p.mode==='normal'||(p.mode==='simple_blind'&&['traceur','coach'].includes(p.role)));
  const replayPoints=corridorAllowed?pose.segments.flat().filter(point=>Number.isFinite(point?.timestamp)&&point.timestamp>1e12&&Number.isFinite(point?.latitude)&&Number.isFinite(point?.longitude)):[];
  const replayControls=replayPoints.length>=2?`<div class="coaching-scent-replay"><label>Relecture progressive de la pose <input type="range" data-scent-replay min="2" max="${replayPoints.length}" value="${replayPoints.length}" step="1" aria-label="Progression de la pose GPS"></label><output data-scent-replay-label>${replayPoints.length} / ${replayPoints.length} points GPS</output><p>Relecture de la géométrie enregistrée. Le tracé GPS est historique ; le couloir olfactif exige un relevé météo historique fiable, non disponible pour cette séance.</p></div>`:'';
- const corridorReview=corridorAllowed?`<section class="card coaching-scent-review" data-real-map-reader data-gps-kind="pose" data-gps-session-id="${e(p.id)}" data-gps-corridor-allowed="true" data-gps-corridor-basis="coaching-pose" data-gps-corridor-review="true"><h2>Couloir olfactif · débriefing</h2><p>Relecture de la pose GPS enregistrée. Le vent historique n’est pas archivé : le couloir météo reste indisponible pour cette séance, afin de ne pas présenter le vent actuel comme celui de la pose.</p>${GpsMapMarkup(pose,search)}${replayControls}<div class="remote-scent-controls"><button type="button" data-corridor-toggle disabled aria-disabled="true">Météo historique indisponible</button><small data-corridor-status>Couloir historique indisponible : aucun relevé de vent daté de cette séance n’est archivé.</small></div></section>`:'';
+ // Reuse the canonical two-track map. The replay slider edits the recorded
+ // pose reference, leaving the driver's recorded search unchanged.
+ if(corridorAllowed&&tab==='map'){
+  const marker='class="real-map-reader"',at=html.indexOf(marker);
+  if(at!==-1){
+   html=html.replace(marker,`class="real-map-reader coaching-scent-review" data-gps-session-id="${e(p.id)}" data-gps-corridor-allowed="true" data-gps-corridor-basis="coaching-pose" data-gps-corridor-review="true" data-scent-replay-target="${search?'reference':'pose'}"`);
+   const end=html.indexOf('</section>',at);
+   const controls=`<h2>Couloir olfactif · débriefing</h2><p>Relecture de la pose GPS enregistrée. Le vent historique n’est pas archivé : le couloir météo reste indisponible pour cette séance.</p>${replayControls}<div class="remote-scent-controls"><button type="button" data-corridor-toggle disabled aria-disabled="true">Météo historique indisponible</button><small data-corridor-status>Couloir historique indisponible : aucun relevé de vent daté de cette séance n’est archivé.</small></div>`;
+   html=html.slice(0,end)+controls+html.slice(end);
+  }
+ }
+
  const action=(id,label)=>`<button type="button" class="button button-${id==='archive'?'gold debrief-archive':'dark'}" data-remote="${id}" ${busy?'disabled':''}>${label}</button>`;
  const permission=p.archivePermission||{};
  const archive=p.phase==='DEBRIEF'?(permission.canManageArchive?action(permission.status==='active'?'revoke-archive':'grant-archive',permission.status==='active'?'Retirer l’autorisation d’archiver au Coach':'Autoriser le Coach à archiver'):'')+(permission.canArchive?action('archive','Archiver la session'):''):'';
- return html+corridorReview+DataExportsPanel({user:{user_id:profile?.id},domain:'coaching'})+`<div class="coaching-shared-debrief-actions">${archive}${action('home','Retour aux sessions')}</div>`;
+ return html+DataExportsPanel({user:{user_id:profile?.id},domain:'coaching'})+`<div class="coaching-shared-debrief-actions">${archive}${action('home','Retour aux sessions')}</div>`;
 }

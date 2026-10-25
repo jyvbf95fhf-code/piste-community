@@ -10,7 +10,7 @@ test('GPS endpoints use actual first and last fixes, with arrival only after fin
 });
 test('Premium badges expose accessible D and A without accepting other letters',()=>{
  assert.match(api.endpointBadge('D'),/Départ/);assert.match(api.endpointBadge('A'),/Arrivée/);
- assert.match(api.endpointBadge('D'),/#e5c17c/);assert.throws(()=>api.endpointBadge('X'));
+ assert.match(api.endpointBadge('D'),/stroke="#63ff70"/);assert.match(api.endpointBadge('A'),/stroke="#ff806d"/);assert.match(api.endpointBadge('D'),/role="img" aria-label="Départ"/);assert.match(api.endpointBadge('A'),/role="img" aria-label="Arrivée"/);assert.throws(()=>api.endpointBadge('X'));
 });
 test('Leaflet places accessible badges at recorded endpoint coordinates',()=>{
  const drawn=[],L={divIcon:options=>options,marker:(coordinates,options)=>({addTo:layer=>drawn.push({coordinates,options,layer})})},layer={};
