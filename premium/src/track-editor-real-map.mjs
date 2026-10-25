@@ -11,8 +11,8 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  const notice=message=>{const status=element.parentElement.querySelector('[data-editor-map-status]');if(status)status.textContent=message;};
  const basemap=route?.basemap==='satellite'?'aerial':'plan';const base=id=>{const def=GPS_BASE_LAYERS[id],tiles=L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution}).addTo(map);row.tiles=tiles;tiles.on('tileerror',()=>{if(row.disposed||row.tiles!==tiles)return;if(id==='aerial'){map.removeLayer(tiles);base('plan');notice('Vue aérienne indisponible · fond Plan affiché.');}else notice('Fond indisponible · vérifiez la connexion. Les points restent conservés.');});};base(basemap);
  if(points.length&&!view)map.fitBounds(points.map(p=>[p.y,p.x]),{padding:[30,30],maxZoom:17});
- const lineStyle={color:'#63ff70',weight:5,opacity:1,className:'premium-neon-track'};
- const addTrackLine=(coordinates,options={})=>{L.polyline(coordinates,{color:'#030908',weight:12,opacity:.96,interactive:false,lineJoin:'round',lineCap:'round'}).addTo(layers);L.polyline(coordinates,{...lineStyle,...options}).addTo(layers);};
+ const lineStyle={color:'#63ff70',weight:6,opacity:1,className:'premium-neon-track'};
+ const addTrackLine=(coordinates,options={})=>{L.polyline(coordinates,{...lineStyle,...options}).addTo(layers);};
  let free=[];const flushFree=()=>{if(free.length>1)addTrackLine(free);free=[];};
  for(let i=1;i<points.length;i++){
  const a=points[i-1],b=points[i];if(b.breakBefore){flushFree();continue;}
@@ -43,7 +43,7 @@ export function paintTrackMissionMap({route,environment,corridor=false,sample,pr
  const row=mounted;if(!row||!row.L||!route?.valid)return;const {map,L}=row;
  const xy=p=>[p[1],p[0]];
  if(row.mission?.route!==route){row.mission?.group.remove();const group=L.layerGroup().addTo(map),progress=[];row.mission={route,group,progress,preview,environmentKey:null};
-  if(preview){for(const segment of route.segments)L.polyline(segment.map(xy),{color:'#030908',weight:12,interactive:false}).addTo(group);for(const segment of route.segments)L.polyline(segment.map(xy),{color:'#63ff70',weight:5,className:'mission-reference'}).addTo(group);map.fitBounds(route.segments.flat().map(xy),{padding:[65,65],maxZoom:17});}
+  if(preview){for(const segment of route.segments)L.polyline(segment.map(xy),{color:'#63ff70',weight:5,className:'mission-reference'}).addTo(group);map.fitBounds(route.segments.flat().map(xy),{padding:[65,65],maxZoom:17});}
   for(const s of route.stations){const mark=L.circleMarker(xy(s.coordinate),{radius:s.kind==='angle'?6:5,color:'#15283d',weight:2,fillColor:'#e4d2ab',fillOpacity:1,className:'mission-poi',bubblingMouseEvents:false});mark.bindTooltip(s.label+' · point d’observation prévu, cause olfactive inconnue.');mark.addTo(group);}
   for(const segment of route.segments)progress.push(L.polyline([],{color:'#aaffb0',weight:6,opacity:.95,interactive:false,className:'mission-progress-line'}).addTo(group));
   row.mission.cursor=L.circleMarker(xy(route.segments[0][0]),{radius:7,color:'#e4d2ab',weight:3,fillColor:'#0d2237',fillOpacity:1,interactive:false}).addTo(group);row.mission.cursor.bindTooltip('Repère virtuel du parcours prévu · aucun déplacement réel du chien.');
