@@ -80,22 +80,22 @@ export function createOperationalWeatherController({getContext,document=globalTh
   const r=sync();if(!r.key||readOnly()||(!force&&r.attempted))return;
   if(!r.address){r.state='missing-address';paint();return;}
   if(!force&&r.weather?.manual)return;
-  request?.abort();request=new AbortController();const n=++ticket;r.attempted=true;r.error=null;r.state='loading';paint();
+  request?.abort();request=new AbortController();const n=++ticket;r.attempted=true;r.forceRefresh=force;r.error=null;r.state='loading';paint();
   try{const candidates=await geocode(r.address,{signal:request.signal});if(!alive(r,n))return;
    r.candidates=candidates;if(!candidates.length){r.location=null;r.state='unavailable';r.error='Aucun lieu reconnu par IGN. Précisez l’adresse ou la commune.';paint();return;}
    const first=candidates[0],confident=first.score>=.75&&(candidates.length===1||first.score-candidates[1].score>=.1);
-   if(!confident){r.weather=null;r.location=null;r.state='choose-place';paint();return;}
+   if(!confident){r.state='choose-place';paint();return;}
    r.location=first;await fetchWeather(r,n,{force});
   }catch(error){if(alive(r,n)){r.state='unavailable';r.error=error.name==='AbortError'?'Délai de localisation dépassé : réessayez.':error.message.includes('IGN')?error.message:'Localisation IGN injoignable : vérifiez le réseau.';paint();}}
  }
  async function select(index){
   const r=sync();if(!r.key||readOnly()||r.state!=='choose-place'||!Number.isInteger(index)||!r.candidates[index])return;
-  r.location=r.candidates[index];r.state='loading';paint();await fetchWeather(r,++ticket);
+  r.location=r.candidates[index];r.state='loading';paint();await fetchWeather(r,++ticket,{force:r.forceRefresh===true});
  }
  function correct(patch){
   const r=sync();if(!r.key||readOnly())throw Error('Correction météo non autorisée.');
   const corrected=applyWeatherCorrection(r.weather,patch,clock());if(!corrected.manual)throw Error('Renseignez au moins une condition météo.');
-  ticket++;request?.abort();r.weather=corrected;r.state='available';r.attempted=true;save(r);paint();
+  ticket++;request?.abort();r.weather=corrected;r.error=null;r.state='available';r.attempted=true;save(r);paint();
  }
  async function automatic(){
   const r=sync();if(!r.key||readOnly())return;

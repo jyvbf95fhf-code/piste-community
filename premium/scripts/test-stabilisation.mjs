@@ -10,6 +10,6 @@ if(mode!=='--browser')run('unit-sql',['--test','--test-concurrency=2',...readdir
 if(mode!=='--unit'){
  let executable=process.env.PISTE_CHROMIUM_PATH;if(!executable){const {default:chromium}=await import('@sparticuz/chromium');executable=await chromium.executablePath();}if(!existsSync(executable))throw Error('Chromium unavailable: set PISTE_CHROMIUM_PATH.');
  const browserTests=['stabilisation-gps','mes-pistes','piste-bulk','jumolf-preferences','ops-live-3bc','coaching-invitations','tracer-iphone'];
- for(const test of browserTests)run(test,['tests/'+test+'.browser.mjs'],{PISTE_CHROMIUM_PATH:executable,QUICK:'1'});
+ for(const test of browserTests)run(test,['tests/'+test+'.browser.mjs'],{PISTE_CHROMIUM_PATH:executable,QUICK:test==='tracer-iphone'?'':'1'});
 }
 console.log(JSON.stringify({status:'PASS',runs:runs.length,report:path.join(directory,'summary.json')}));

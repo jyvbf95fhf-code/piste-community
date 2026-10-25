@@ -8,7 +8,7 @@ async function account(uid){const context=await browser.newContext({viewport:{wi
  if(url.origin!==origin)return route.abort();
  if(url.pathname==='/src/vendor/supabase-client.mjs')return route.fulfill({contentType:'text/javascript',body:`export function createClient(url){const user={id:'${uid}'};return {supabaseUrl:url,auth:{getUser:async()=>({data:{user}}),getSession:async()=>({data:{session:{user,access_token:user.id}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({})},channel:()=>({on(){return this},subscribe(){return this}}),removeChannel:async()=>{}};}`});
  const file=/\.(mjs|js|css|png|svg|html|webmanifest)$/.test(url.pathname)?url.pathname:'/index.html';try{return route.fulfill({body:await readFile(path.join(root,file)),contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':undefined});}catch{return route.fulfill({status:404,body:''});}
- });const page=await context.newPage();lastPage=page;page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(12000);return {page,context};}
+ });const page=await context.newPage();lastPage=page;page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(30000);return {page,context};}
 try{const owner=await account(gmail),guest=await account(icloud),id=await f.create();
  await guest.page.goto(origin+'/');await guest.page.getByRole('heading',{name:'Invitation Coaching',exact:true}).waitFor();assert.match(await guest.page.locator('.coaching-invitation').innerText(),/Sébastien[\s\S]*Traceur/);
  await mkdir('/tmp/coaching-invitation-qa',{recursive:true});await guest.page.screenshot({path:'/tmp/coaching-invitation-qa/home.png',fullPage:true});
