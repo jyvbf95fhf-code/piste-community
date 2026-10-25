@@ -7,7 +7,7 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  disposeTrackEditorMap();const element=document?.querySelector('[data-editor-real-map]');if(!element)return;
  let route=draft;const storedReadOnly=element.dataset.readonly==='true',readOnly=storedReadOnly||previewReadOnly;if(storedReadOnly){try{route=JSON.parse(element.dataset.route);}catch{return;}}
  if(!L){element.textContent='Carte indisponible. Le brouillon reste conservé.';return;}
- const points=route?.points||[],view=route?.mapView;const map=L.map(element,{doubleClickZoom:false,zoomControl:!element.closest?.('[data-track-cockpit]')}).setView(view?.center||[46.6,2.5],view?.zoom||6),layers=L.layerGroup().addTo(map),row={map,layers,L,element,disposed:false};mounted=row;
+ const points=route?.points||[],view=route?.mapView;const map=L.map(element,{doubleClickZoom:false,zoomControl:!element.closest?.('[data-track-cockpit]')}).setView(view?.center||[46.6,2.5],view?.zoom||6),layers=L.layerGroup().addTo(map),row={map,layers,L,element,disposed:false};mounted=row;row.routePoints=points;
  const notice=message=>{const status=element.parentElement.querySelector('[data-editor-map-status]');if(status)status.textContent=message;};
  const basemap=route?.basemap==='satellite'?'aerial':'plan';const base=id=>{const def=GPS_BASE_LAYERS[id],tiles=L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution}).addTo(map);row.tiles=tiles;tiles.on('tileerror',()=>{if(row.disposed||row.tiles!==tiles)return;if(id==='aerial'){map.removeLayer(tiles);base('plan');notice('Vue aérienne indisponible · fond Plan affiché.');}else notice('Fond indisponible · vérifiez la connexion. Les points restent conservés.');});};row.setBasemap=base;base(basemap);
  if(points.length&&!view)map.fitBounds(points.map(p=>[p.y,p.x]),{padding:[30,30],maxZoom:17});
@@ -34,6 +34,26 @@ export function mountTrackEditorMap({document=globalThis.document,L=globalThis.L
  map.on('moveend',()=>{if(row.disposed||readOnly)return;const center=map.getCenter();onView({center:[center.lat,center.lng],zoom:map.getZoom()});});
  if(!readOnly){const center=map.getCenter();onView({center:[center.lat,center.lng],zoom:map.getZoom()});}
  if(ResizeObserver){row.observer=new ResizeObserver(()=>{if(!row.disposed)map.invalidateSize();});row.observer.observe(element);}
+}
+// Illustrative scent dispersion only: not a forecast or validated plume model.
+export function paintIllustrativeScentCorridor({enabled=false,windDegrees=0}={}){
+ const row=mounted;if(!row||row.disposed||!row.L)return;
+ row.scentGroup?.remove();row.scentGroup=null;
+ if(!enabled)return;
+ const points=row.routePoints||[];if(points.length<2)return;
+ const L=row.L,group=L.layerGroup().addTo(row.map);row.scentGroup=group;
+ const wind=(Number(windDegrees)||0)*Math.PI/180;
+ const offset=([lon,lat],meters)=>[lon+Math.sin(wind)*meters/(111320*Math.max(.2,Math.cos(lat*Math.PI/180))),lat+Math.cos(wind)*meters/111320];
+ const center=[];
+ for(let i=1;i<points.length;i++){
+  const a=points[i-1],b=points[i];if(b.breakBefore)continue;
+  const coords=segmentCoordinates(a,b);
+  const line=coords.length>=2?coords:[[a.x,a.y],[b.x,b.y]];
+  for(const p of line)center.push(offset(p,14));
+ }
+ if(center.length<2)return;
+ for(const [weight,opacity] of [[58,.07],[38,.12],[22,.19]])L.polyline(center.map(p=>[p[1],p[0]]),{color:'#b88aff',weight,opacity,interactive:false,className:'scent-corridor-glow'}).addTo(group);
+ L.polyline(center.map(p=>[p[1],p[0]]),{color:'#d7adff',weight:3,opacity:.5,dashArray:'5 13',interactive:false,className:'scent-corridor-flow'}).addTo(group);
 }
 export function recenterTrackEditorMap(){if(!mounted)return false;if(mounted.mission?.preview){mounted.map.fitBounds(mounted.mission.route.segments.flat().map(p=>[p[1],p[0]]),{padding:[65,65],maxZoom:17});return true;}const markers=[];mounted.layers.eachLayer(layer=>{if(layer.getLatLng)markers.push(layer.getLatLng());});if(markers.length)mounted.map.fitBounds(markers,{padding:[30,30],maxZoom:17});else mounted.map.setView([46.6,2.5],6);return true;}
 export function centerTrackEditorMap(latitude,longitude){if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||Math.abs(latitude)>90||Math.abs(longitude)>180)throw Error('Coordonnées de centrage invalides.');if(mounted)mounted.map.setView([latitude,longitude],16);}
