@@ -1132,6 +1132,7 @@ document.addEventListener('click',async event=>{
    if(action==='save-preview')openProposalSave();
    else if(action==='adjust-preview')selectSmartProposal(trackEditor.preview.proposal.id);
    else if(action==='dismiss-preview'){trackEditor.preview=null;render();}
+   else if(action==='confirm-save-track')ConfirmationDialog({title:'Avez-vous terminé votre tracé ?',description:'Souhaitez-vous enregistrer ce parcours dans Mes pistes ? Vous pourrez encore le modifier ensuite.',onConfirm:()=>{try{submitCurrentTrack();}catch(error){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;Toast('Pour enregistrer, indiquez un nom et vérifiez que tous les segments sont calculés dans Menu.');document.querySelector('#track-editor-name')?.focus();}}});
    else if(action==='open-smart')openSmartTrackPanel();
    else if(action==='close-smart'){document.querySelector('[data-smart-panel]')?.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}
    else if(action==='import-gpx')document.querySelector('[data-editor-gpx-file]')?.click();
