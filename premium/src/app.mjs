@@ -907,7 +907,7 @@ function render(focus=false) {
  opsWeather.mount();
  mountTrackEditorMap({draft:trackEditor.preview?.draft||trackEditor.draft,previewReadOnly:!!trackEditor.preview,mission:!!missionContext(),selectedPointId:trackEditor.selectedPointId,onAdd:point=>{if(trackEditor.preview)return;try{const draft=addTrackPoint(trackEditor.draft,{...point,kind:trackEditor.nextPointKind});editorChange(draft,{selectedPointId:draft.points.at(-1).id,nextPointKind:'via'});}catch(error){Toast(error.message);}},onMove:(id,point)=>{if(trackEditor.preview)return;try{editorChange(moveTrackPoint(trackEditor.draft,id,point),{selectedPointId:id});}catch(error){Toast(error.message);}},onSelect:id=>{if(trackEditor.preview)return;trackEditor.selectedPointId=id;render();},onView:mapView=>{if(!trackEditor.preview&&trackEditor.draft&&location.pathname==='/track-builder')trackEditor.draft={...trackEditor.draft,mapView};}});
  const mission=missionContext();if(mission)missionMount=mountMissionControl({root:document.querySelector('[data-mission-control]'),controller:missionController,context:mission,draw:paintTrackMissionMap,onAction:missionAction});
- if(consultation?.type==='track-detail'){const detail=trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),consultation.id);if(detail?.points?.length&&detail.points.every(p=>p.space==='wgs84'))mountTrackEditorMap({draft:{coordinateSpace:'wgs84',points:detail.points,basemap:document.querySelector('[data-detail-basemap]')?.dataset.detailBasemap||'standard'},previewReadOnly:true});}
+ if(consultation?.type==='track-detail'){const detail=trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),consultation.id);if(detail?.points?.length&&detail.points.every(p=>p.space==='wgs84')){mountTrackEditorMap({draft:{coordinateSpace:'wgs84',points:detail.points,basemap:document.querySelector('[data-detail-basemap]')?.dataset.detailBasemap||'standard'},previewReadOnly:true});void resolveTrackStartCommune(detail);}}
  if(missionPanelWasOpen){const panel=document.querySelector('[data-mission-panel]');if(panel)panel.open=true;for(const [id,open] of missionSections){const section=document.querySelector(`[data-mission-section="${id}"]`);if(section)section.open=open;}const sheet=document.querySelector('.mission-panel-content');if(sheet)sheet.scrollTop=missionScroll;}
  trackRouting.reconcile();
  if(creatorPanelWasOpen){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;for(const [id,open] of creatorSections){const section=document.querySelector(`[data-creator-section="${id}"]`);if(section)section.open=open;}}
@@ -997,6 +997,28 @@ function renderSessionDebrief(id){
 }
 function renderSessionReplay(id){const record=sessionCatalog.get(id);if(record?.tracerState?.gpsPose||record?.searchState?.gpsSearch){if(isExitClosure(record.searchState.phase))return CoachingClosureScreen(coachingClosureView(record));if(!['DEBRIEF','ARCHIVED'].includes(record.searchState.phase))return SessionDetailScreen(null);return DebriefScreen(record.searchState,record.preparationState,record.tracerState,{tab:'map'},{readOnly:true});}const operational=operationalStore.get(id);if(operational)return OperationalReplayScreen(operationalReplayView(operational),{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return SessionReplayScreen(sessionReplayView(sessionCatalog.get(id)));}
 function renderTracks(){const p=new URLSearchParams(location.search);const items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self').map(t=>preparedTrackForConsultation(t,{ownerId:currentUser?.user_id,consents:jumolfStore.snapshot().consents}));return `<p role="status">${escapeHTML(sharedIndex?.error()||'')}</p><button type="button" class="button button-dark" data-refresh-shared-sessions>Actualiser les sessions</button>`+TrackListScreen(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]),sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list()}),{category:p.get('category'),status:p.get('status'),source:p.get('source'),query:p.get('q'),returnHref:location.pathname+location.search});}
+const trackStartCommuneCache=new Map();
+async function resolveTrackStartCommune(detail){
+ const points=detail?.points;
+ const first=points?.find(point=>point.kind==='start')||points?.[0];
+ if(!first||first.space!=='wgs84'||!Number.isFinite(Number(first.x))||!Number.isFinite(Number(first.y)))return;
+ const el=document.querySelector('[data-track-detail] [data-track-start-commune]');
+ if(!el||!el.textContent.includes('Recherche de la commune'))return;
+ const key=Number(first.y).toFixed(5)+','+Number(first.x).toFixed(5);
+ if(trackStartCommuneCache.has(key)){el.textContent=trackStartCommuneCache.get(key);return;}
+ try{
+  const url='https://data.geopf.fr/geocodage/reverse?lon='+encodeURIComponent(first.x)+'&lat='+encodeURIComponent(first.y)+'&type=street';
+  const response=await fetch(url,{headers:{Accept:'application/json'}});
+  if(!response.ok)throw new Error('Geocoding unavailable');
+  const data=await response.json();
+  const name=data?.features?.[0]?.properties?.city||data?.features?.[0]?.properties?.municipality||null;
+  if(!name)throw new Error('Unknown commune');
+  trackStartCommuneCache.set(key,name);
+  if(el.isConnected&&el.textContent.includes('Recherche de la commune'))el.textContent=name;
+ }catch{
+  if(el.isConnected&&el.textContent.includes('Recherche de la commune'))el.textContent='Non disponible';
+ }
+}
 function renderTrackDetail(id){return TrackDetailScreen(preparedTrackForConsultation(trackDetailView(trackListView(trackLibrary.list(),sessionCatalog.list(),sharedIndex?.list()||[]),id),{ownerId:currentUser?.user_id,consents:jumolfStore.snapshot().consents}));}
 function renderLive(route){
  const remote=opsLiveRemote?.view();
