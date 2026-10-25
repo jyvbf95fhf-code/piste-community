@@ -23,6 +23,7 @@ try{
   if(path==='/auth/v1/token')json={access_token:token,refresh_token:'synthetic',expires_in:3600,token_type:'bearer',user};
   if(path==='/auth/v1/signup')json={...user,id:'22222222-2222-4222-8222-222222222222',identities:[]};
   if(path==='/auth/v1/recover'){status=429;json={code:'over_email_send_rate_limit',msg:'email rate limit exceeded'};}
+  if(path==='/functions/v1/piste-history'){const data=req.postDataJSON();if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json={sessions:data.domain==='coaching'?[projection]:[],hidden:[],records:[],cursor:null};}
   if(path==='/functions/v1/coaching'){const data=req.postDataJSON();assert.ok(['profile','list','invitations','notifications','read','coaching-inbox'].includes(data.operation),'unexpected operation '+data.operation);if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json=data.operation==='coaching-inbox'?{invitations:[],notifications:[]}:data.operation==='profile'?{id:user.id,name:'Compte réel',qa:false}:data.operation==='list'?{sessions:[projection]}:{projection};}
   await route.fulfill({status,headers,json});
  });
@@ -61,7 +62,7 @@ try{
  await page.goto('https://piste.test/tracks');await page.getByRole('link',{name:'Ouvrir le cockpit',exact:true}).waitFor();
  await page.goto('https://piste.test/sessions/'+sessionId+'?tab=report');await page.getByRole('heading',{name:'Dossier indisponible',exact:true}).waitFor();
  assert.equal(await page.locator('[data-dossier-print],[data-gps-map]').count(),0);
- enabled=false;const denied=page.waitForResponse(r=>r.url().endsWith('/functions/v1/coaching')&&r.status()===403);await page.goto('https://piste.test/sessions/'+sessionId);await denied;assert.equal(await page.locator('[data-session-dossier]').count(),0);
+ enabled=false;const denied=page.waitForResponse(r=>r.url().includes('/functions/v1/')&&r.status()===403);await page.goto('https://piste.test/sessions/'+sessionId);await denied;assert.equal(await page.locator('[data-session-dossier]').count(),0);
  assert.deepEqual(errors,[]);
  assert.equal(calls.filter(([,path])=>path.includes('command')).length,0);
  console.log('PASS Mes pistes: authenticated catalogue, archives/search, readonly seven tabs, PDF, widths 320/390/430, active blind exclusion and revoked access. No live writes.');

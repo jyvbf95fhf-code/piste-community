@@ -31,6 +31,7 @@ function liveRow(record,currentSessionId){
   status:statusFor(phase),phase,
   dogId:dog.id||null,dogName:dog.name||unavailable,
   modeLabel:modeLabel(mode),roleLabel:viewer?.team?.find(person=>person.id===viewer.viewerId)?.roleLabel||unavailable,
+  sortAt:session.createdAt??searchState?.search_started_at??null,
   date:session.date||(isFinished(statusFor(phase))&&Number.isFinite(Date.parse(searchState?.search_started_at||''))?formatTimestamp(searchState.search_started_at):unavailable),
   distance:phase==='DEBRIEF'||phase==='ARCHIVED'?debriefView(searchState,preparationState,tracerState||{}).summary.searchDistance:unavailable,
   duration:phase==='DEBRIEF'||phase==='ARCHIVED'?debriefView(searchState,preparationState,tracerState||{}).summary.searchSeconds+' s · mock':unavailable,
@@ -125,7 +126,7 @@ export function sessionReplayView(record){
 
 export function trackListView(libraryItems=[],sessionRecords=[],sharedSessions=[]){
  const prepared=(libraryItems||[]).map(item=>({
-  id:`prepared:${item.id}`,libraryId:item.id,name:item.name,kind:item.source==='gpx'?'gpx':'prepared',
+  cloudOnly:!!item.cloudOnly,cloudId:item.cloudId,cloudRevision:item.cloudRevision,createdAt:item.createdAt||item.trainingMemory?.createdAt||null,updatedAt:item.updatedAt||null,dogName:item.dogName||'',id:`prepared:${item.id}`,libraryId:item.id,name:item.name,kind:item.source==='gpx'?'gpx':'prepared',
   realGpx:item.provenance==='gpx-import'||Boolean(item.fileName&&item.geometry?.points?.every(p=>p.space==='wgs84')),provenance:item.provenance==='gpx-import'?'Import GPX · fichier réel':item.provenance==='copy'?`Copie d’un tracé · ${item.copiedFrom?.kind||'source'}`:item.source==='gpx'?'Import GPX · démonstration':'Préparé manuellement',
   lifecycle:item.geometry?.points?.length>1?'prepared':'draft',ownerId:item.ownerId,description:item.description||'',category:item.category||'',difficulty:item.difficulty||'',dogId:item.dogId||'',notes:item.notes||'',trainingMemory:item.trainingMemory?structuredClone(item.trainingMemory):null,
   fileName:item.fileName||null,geometryAvailable:Array.isArray(item.geometry?.points)&&item.geometry.points.length>1,

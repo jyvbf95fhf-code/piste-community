@@ -27,15 +27,15 @@ const validPoints=value=>{
 };
 const optionalText=(value,max=240)=>String(value??'').trim().slice(0,max);
 export function createTrackLibrary({storage,ownerId=null}={}) {
- let items=seed.map(copy),nextId=1,warning='',blocked=false;
+ let items=seed.map(copy),nextId=1,warning='',blocked=false,observedRaw=null;
  const key=ownerId?`piste-v2-prepared-tracks:${encodeURIComponent(ownerId)}`:null;
  if(key&&storage){try{
-  const raw=storage.getItem(key);
+  const raw=storage.getItem(key);observedRaw=raw;
   if(raw){const snapshot=JSON.parse(raw);
    if(snapshot.version!==1||snapshot.ownerId!==ownerId||!Array.isArray(snapshot.items)||snapshot.items.length>1000)throw Error('Sauvegarde incompatible');
    const ids=new Set();const restored=snapshot.items.map(item=>{
     if(!item||item.ownerId!=='self'||!(/^(track-local-[1-9][0-9]*|track-cloud-[0-9a-f-]{36})$/.test(item.id))||item.id.startsWith('track-local-')&&!Number.isSafeInteger(Number(item.id.slice(12)))||ids.has(item.id)||!['draw','gpx'].includes(item.source))throw Error('Tracé invalide');
-    ids.add(item.id);const normalized={id:item.id,ownerId:'self',source:item.source,name:validName(item.name),provenance:optionalText(item.provenance,80),description:optionalText(item.description),category:optionalText(item.category,80),difficulty:optionalText(item.difficulty,80),dogId:optionalText(item.dogId,80),notes:optionalText(item.notes,1000)};
+    ids.add(item.id);const normalized={...(item.createdAt?{createdAt:item.createdAt}:{}),...(item.updatedAt?{updatedAt:item.updatedAt}:{}),id:item.id,ownerId:'self',source:item.source,name:validName(item.name),provenance:optionalText(item.provenance,80),description:optionalText(item.description),category:optionalText(item.category,80),difficulty:optionalText(item.difficulty,80),dogId:optionalText(item.dogId,80),notes:optionalText(item.notes,1000)};
     if(item.trainingMemory&&ownerId)try{normalized.trainingMemory=normalizeTrainingMemory(item.trainingMemory,{ownerId,dogId:normalized.dogId});}catch{warning='Préparation pédagogique incompatible : tracé conservé sans rattachement.';}
     if(item.fileName)normalized.fileName=optionalText(item.fileName,240);
     if(item.copiedFrom?.id&&['prepared','pose','search','reference'].includes(item.copiedFrom.kind))normalized.copiedFrom={id:optionalText(item.copiedFrom.id,240),kind:item.copiedFrom.kind};
@@ -49,8 +49,8 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
  if(key&&!storage)warning='Sauvegarde locale indisponible dans ce navigateur.';
  const commit=next=>{
   if(key){if(blocked)throw Error(warning);if(!storage)throw Error('Tracé non enregistré : sauvegarde locale indisponible.');
-   try{storage.setItem(key,JSON.stringify({version:1,ownerId,items:next.filter(item=>item.ownerId==='self')}));warning='';}
-   catch{warning='Tracé non enregistré : sauvegarde locale impossible (stockage plein ou bloqué).';throw Error(warning);}
+   try{if(storage.getItem(key)!==observedRaw)throw Error('Tracés modifiés dans un autre onglet : rechargez avant de supprimer.');const raw=JSON.stringify({version:1,ownerId,items:next.filter(item=>item.ownerId==='self')});storage.setItem(key,raw);observedRaw=raw;warning='';}
+   catch(error){if(error.message?.includes('autre onglet'))throw error;warning='Tracé non enregistré : sauvegarde locale impossible (stockage plein ou bloqué).';throw Error(warning);}
   }
   items=next;
  };
@@ -58,7 +58,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
  const find=id=>{const item=items.find(t=>t.id===id);if(!item)throw Error('Ce tracé n’est plus disponible.');return item;};
  const get=id=>copy(find(id));
  const writable=id=>{const item=find(id);if(ownerId&&item.ownerId!=='self')throw Error('Ce tracé est en lecture seule pour ce compte.');return item;};
- const insert=item=>{const saved={...item,id:`track-local-${nextId}`,ownerId:'self'};commit([...items,saved]);nextId++;return copy(saved);};
+ const insert=item=>{const saved={...item,createdAt:new Date().toISOString(),id:`track-local-${nextId}`,ownerId:'self'};commit([...items,saved]);nextId++;return copy(saved);};
  return {
   list,
   get,
@@ -75,7 +75,7 @@ export function createTrackLibrary({storage,ownerId=null}={}) {
   updatePrepared(id,patch={}) {
    const current=writable(id);
    if(['pose','search','reference'].includes(current.source))throw Error('Une trace de session est en lecture seule.');
-   const next={...current};
+   const next={...current,updatedAt:new Date().toISOString()};
    for(const key of ['name','description','category','difficulty','dogId','notes'])if(Object.hasOwn(patch,key))next[key]=key==='name'?validName(patch[key]):optionalText(patch[key],key==='notes'?1000:key==='description'?240:80);
    if(Object.hasOwn(patch,'dogId')&&patch.dogId!==current.dogId||Object.hasOwn(patch,'geometry')&&JSON.stringify(patch.geometry)!==JSON.stringify(current.geometry))delete next.trainingMemory;
    if(patch.trainingMemory)next.trainingMemory=normalizeTrainingMemory(patch.trainingMemory,{ownerId:ownerId||patch.trainingMemory.ownerId,dogId:next.dogId});
