@@ -1623,7 +1623,7 @@ document.addEventListener('submit',async event=>{
  }
 
  if(event.target.matches('[data-smart-commune-form]')){event.preventDefault();trackSmart.setQuery(event.target.elements.communeQuery.value);void trackSmart.search();return;}
- if(event.target.matches('[data-smart-generate-form]')){event.preventDefault();trackSmart.setOptions(Object.fromEntries(new FormData(event.target).entries()));void trackSmart.generate();return;}
+ if(event.target.matches('[data-smart-generate-form]')){event.preventDefault();trackSmart.setOptions(Object.fromEntries(new FormData(event.target).entries()));const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];trackSmart.setStartPoint(start?.space==='wgs84'?[Number(start.x),Number(start.y)]:null);void trackSmart.generate();return;}
  const editorForm=event.target.closest('form[data-track-editor-form]');
  if(editorForm){
   event.preventDefault();
