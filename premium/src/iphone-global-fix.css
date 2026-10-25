@@ -60,3 +60,43 @@
 /* Premium creator: arrival is a clearly red action once the first point exists. */
 [data-track-cockpit] .creator-dock .creator-icon[data-arrival-active="true"]{background:#40171f!important;border:3px solid #ff4757!important;color:#ff4757!important;box-shadow:0 0 0 3px #ff475766,0 4px 18px #0008!important;opacity:1!important}
 [data-track-cockpit] .creator-dock .creator-icon[data-arrival-active="true"] svg{stroke:#ff4757!important;color:#ff4757!important;opacity:1!important}
+
+/* V2 Premium visual polish — track creator and saved-track detail only. */
+[data-track-cockpit] .creator-menu-sheet{background:linear-gradient(165deg,#10283a,#091b2c 80%)!important;border:1px solid #2b5363!important;box-shadow:0 22px 65px #0009!important}
+[data-track-cockpit] .creator-menu-heading small{color:#83cbd0!important;letter-spacing:.16em}
+[data-track-cockpit] .creator-menu-heading h2{color:#f1f9fb!important;font-weight:750;letter-spacing:-.035em}
+[data-track-cockpit] .creator-menu-section{border-color:#2d5262!important;background:#0c2234!important;border-radius:19px!important;overflow:hidden}
+[data-track-cockpit] .creator-menu-section>summary{color:#e8f5f9!important}
+[data-track-cockpit] .creator-menu-section>summary span{color:#f2f8fa!important}
+[data-track-cockpit] .creator-menu-section>summary small{color:#9fbecb!important}
+[data-track-cockpit] .creator-menu-content input:not([type=checkbox]),[data-track-cockpit] .creator-menu-content textarea,[data-track-cockpit] .creator-menu-content select{background:#0a1c2c!important;color:#f4fbff!important;border:1px solid #38586a!important;border-radius:13px!important;box-shadow:none!important}
+[data-track-cockpit] .creator-menu-content input:focus,[data-track-cockpit] .creator-menu-content textarea:focus{outline:2px solid #65d9d6!important;outline-offset:1px;background:#102b3d!important}
+[data-track-cockpit] .creator-menu-content input:-webkit-autofill{-webkit-text-fill-color:#f4fbff!important;-webkit-box-shadow:0 0 0 100px #10283a inset!important}
+[data-track-cockpit] .creator-menu-content details>summary{color:#cde9ee!important;padding:12px 0}
+[data-track-cockpit] .creator-save-submit{background:linear-gradient(120deg,#58dfbc,#31bfae)!important;color:#06232a!important;border:1px solid #73e7d3!important;border-radius:15px!important;box-shadow:0 7px 22px #1bc6ad24!important;font-weight:750!important}
+[data-track-cockpit] .creator-gpx-placeholder{background:#112c3d!important;border-color:#2b5363!important}
+[data-track-cockpit] .creator-gpx-placeholder b{color:#a6cbd6!important;border-color:#46677b!important}
+[data-track-cockpit] .creator-smart-shortcut{border-color:#4e8390!important;background:#102b3c!important}
+[data-track-cockpit] .creator-smart-shortcut svg,[data-track-cockpit] .creator-smart-shortcut b{color:#84e0df!important}
+[data-track-cockpit] .creator-icon[data-editor-action="confirm-save-track"]{border:2px solid #65e7ba!important;color:#73efc9!important;background:#0c302e!important;box-shadow:0 0 0 3px #39e6ad20!important}
+[data-track-cockpit] .creator-icon[data-editor-action="confirm-save-track"] svg{stroke:#73efc9!important}
+.track-detail-page{padding-bottom:110px}
+.track-detail-page .sessions-heading .eyebrow{color:#85cbd5!important}
+.track-detail-page .sessions-heading h1{letter-spacing:-.045em;font-weight:760}
+.track-detail-page>.track-detail-card,.track-detail-page>section.track-detail-card{background:linear-gradient(165deg,#172c3a,#102333)!important;border:1px solid #365366!important;border-radius:24px!important;box-shadow:0 12px 32px #0003!important}
+.track-detail-page .prepared-map-summary{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;padding:0!important;margin:20px 0 14px!important;background:transparent!important}
+.track-detail-page .prepared-stat{display:flex;flex-direction:column;gap:6px;min-width:0;padding:16px 12px;border:1px solid #326075;border-radius:17px;background:#092235}
+.track-detail-page .prepared-stat small{color:#9bb9c9!important;text-transform:uppercase;letter-spacing:.09em;font-size:10px}
+.track-detail-page .prepared-stat-value{display:block!important;font-size:clamp(17px,4.5vw,24px)!important;font-weight:760!important;color:#eafcff!important;overflow-wrap:anywhere;line-height:1.25}
+.track-detail-page .prepared-basemap-selector{display:inline-flex!important;align-items:center;gap:4px!important;margin:12px 0!important;padding:5px;border:1px solid #31576c;border-radius:14px;background:#071d2c}
+.track-detail-page .prepared-basemap-button{border:1px solid transparent!important;border-radius:10px!important;padding:10px 16px!important;background:transparent!important;color:#a8c5d4!important;font:inherit;font-size:13px!important;cursor:pointer}
+.track-detail-page .prepared-basemap-button[aria-pressed="true"]{background:#153d4d!important;color:#a5f5f1!important;border-color:#3ca6b6!important;box-shadow:0 0 0 1px #3ca6b622!important}
+.track-detail-page .prepared-action{display:flex!important;align-items:center;justify-content:flex-start;text-align:left;min-height:62px;margin:12px 0!important;padding:17px 19px!important;background:#092438!important;border:1px solid #2c5d73!important;color:#e6f6fb!important;border-radius:16px!important;font-weight:650!important;box-shadow:none!important;text-decoration:none!important}
+.track-detail-page .prepared-action::after{content:"›";font-size:23px;color:#8cdae0;margin-left:auto}
+.track-detail-page .prepared-action-edit::before{content:"✎";font-size:23px;color:#70d9e5;margin-right:14px}
+.track-detail-page .prepared-action-share::before{content:"↥";font-size:24px;color:#70d9e5;margin-right:14px}
+.track-detail-page .prepared-action-coaching::before{content:"◎";font-size:24px;color:#70d9e5;margin-right:14px}
+.track-detail-page .prepared-action-delete{color:#ff9e9e!important;border-color:#944550!important;background:#331e2b!important}
+.track-detail-page .prepared-action-delete::before{content:"▤";font-size:23px;color:#ff7d86;margin-right:14px}
+.track-detail-page .prepared-action-delete::after{color:#ff8e9a}
+@media(max-width:420px){.track-detail-page .prepared-stat{padding:13px 10px}.track-detail-page .prepared-basemap-button{padding:9px 13px!important}}
