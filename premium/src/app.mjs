@@ -807,7 +807,7 @@ function openSmartTrackPanel({focus=true}={}){
  const panel=document.querySelector('[data-smart-panel]'),menu=document.querySelector('[data-creator-panel]');
  if(!panel)return;
  if(menu)menu.open=false;if(!panel.open)panel.showModal();
- const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];if(start?.space==='wgs84'&&Number.isFinite(Number(start.x))&&Number.isFinite(Number(start.y))){const point=[Number(start.x),Number(start.y)];const previous=trackSmart.view();if(!previous.commune||!previous.startPoint||previous.startPoint.some((v,i)=>v!==point[i]))void trackSmart.detectCommune(point);}
+ const start=trackEditor.draft?.points?.find(p=>p.kind==='start')||trackEditor.draft?.points?.[0];if(start?.space==='wgs84'&&Number.isFinite(Number(start.x))&&Number.isFinite(Number(start.y))){const point=[Number(start.x),Number(start.y)];const previous=trackSmart.view();if(!previous.startPoint||previous.startPoint.some((v,i)=>v!==point[i]))void trackSmart.detectCommune(point);}
 
  if(focus)panel.querySelector('[data-smart-query], [data-smart-discover]')?.focus({preventScroll:true});
 }
