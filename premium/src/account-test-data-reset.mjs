@@ -64,7 +64,7 @@ export async function inventoryAccountTestData(options={}){
 /** Requires an inventory from this page and an explicitly verified backup export. */
 export async function resetAccountTestData(options={}){
  let removedLocalKeys=0,removedJournalRecords=0,removedJournalCommands=0,removedQueueEntries=0;
- try{const {inventory}=options,receipt=issued.get(inventory);if(!verified(options)||options.backupVerified!==true||!receipt||inventory.ok!==true)throw Error('Compte ou sauvegarde non vérifié.');
+ try{const {inventory}=options,receipt=issued.get(inventory);if(!verified(options)||(options.backupVerified!==true&&options.discardConfirmed!==true)||!receipt||inventory.ok!==true)throw Error('Compte ou sauvegarde non vérifié.');
  if(inventory.backupJson!==receipt.backupJson||inventory.checksum!==receipt.checksum||await digest(inventory.backupJson)!==receipt.checksum)throw Error('Sauvegarde modifiée.');
  if(options.storage&&options.storage!==receipt.storage||options.indexedDB!==undefined&&options.indexedDB!==receipt.indexedDB)throw Error('Stockage différent de l’inventaire.');
  const current=localSnapshot(receipt.storage,options.ownerId);if(!same(current.eligible,receipt.localStorage.eligible)||!same(await readJournal(receipt.indexedDB,options.ownerId),receipt.journal)||!same(await readQueues(receipt.indexedDB,options.ownerId),receipt.queues))throw Error('Données modifiées depuis la sauvegarde. Refaire l’export.');

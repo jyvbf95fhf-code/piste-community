@@ -24,7 +24,7 @@ try{
   await createCoachingRemoteQueue({userId:ownerId,sessionId:'session'}).enqueue({batchId:'target',kind:'pose',points:[{lat:1,lng:2}]});
   await createCoachingRemoteQueue({userId:'other',sessionId:'session'}).enqueue({batchId:'other',kind:'pose',points:[{lat:1,lng:2}]});
   const options={storage:localStorage,indexedDB,ownerId,email,ownerVerified:true};
-  const inventory=await inventoryAccountTestData(options),backup=JSON.parse(inventory.backupJson),result=await resetAccountTestData({...options,inventory,backupVerified:true});
+  const inventory=await inventoryAccountTestData(options),backup=JSON.parse(inventory.backupJson),result=await resetAccountTestData({...options,inventory,discardConfirmed:true});
   let after,otherAfter;await adapter.update(key,s=>{after=structuredClone(s);return s});await adapter.update(otherKey,s=>{otherAfter=structuredClone(s);return s});adapter.close();journal.dispose();other.dispose();
   const targetQueue=await createCoachingRemoteQueue({userId:ownerId,sessionId:'session'}).listPending(),otherQueue=await createCoachingRemoteQueue({userId:'other',sessionId:'session'}).listPending();
   return {targetQueue,otherQueue,inventory:{ok:inventory.ok,journal:inventory.journal},result,before,after,otherBefore,otherAfter,backup,auth:localStorage.getItem('sb-project-auth-token'),consent:localStorage.getItem('piste-v2-jumolf-preferences:'+ownerId)};

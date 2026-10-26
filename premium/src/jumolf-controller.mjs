@@ -164,7 +164,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='premium'||route.type==='access-code'||!currentAccess.entitlement_valid||(!currentAccess.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'))return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
    if(!state.jumolf_onboarding_completed&&route.type!=='onboarding'&&!route.replay&&route.type!=='activate')return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
    const accountDemo=!isDemo()?getAccountDemo():null;
-   if(accountDemo&&['entry','analyze','progress','exercises','compare','lobo'].includes(route.type))return LoboDemoScreen(accountDemo,path,{consents:state.consents,section:route.type==='lobo'?'analyze':route.type});
+   if(accountDemo&&accountDemo.status!=='empty'&&['entry','analyze','progress','exercises','compare','lobo'].includes(route.type))return LoboDemoScreen(accountDemo,path,{consents:state.consents,section:route.type==='lobo'?'analyze':route.type});
    if(route.type==='device-reset')return deviceResetScreen();
    const sources=consentedSources();
    if(!isDemo()){const ids=new Set([...sources.sessions,...sources.tracks,...sources.operational].map(s=>s.id));state.analysis_runs=state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)).map(r=>latestFor(r.source_snapshot_id,state.consents)).filter(Boolean);if(comparison&&!comparison.demo){if(!state.consents.session_comparison)comparison=null;else try{compare(comparison.sessions.map(s=>s.id));}catch{comparison=null;}}}
