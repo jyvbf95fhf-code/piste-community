@@ -26,8 +26,8 @@ const validPoints=value=>{
  });
 };
 const optionalText=(value,max=240)=>String(value??'').trim().slice(0,max);
-export function createTrackLibrary({storage,ownerId=null}={}) {
- let items=seed.map(copy),nextId=1,warning='',blocked=false,observedRaw=null;
+export function createTrackLibrary({storage,ownerId=null,includeDemo=true}={}) {
+ let items=includeDemo?seed.map(copy):[],nextId=1,warning='',blocked=false,observedRaw=null;
  const key=ownerId?`piste-v2-prepared-tracks:${encodeURIComponent(ownerId)}`:null;
  if(key&&storage){try{
   const raw=storage.getItem(key);observedRaw=raw;

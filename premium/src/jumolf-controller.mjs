@@ -147,7 +147,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   deactivate(){store.deactivate();navigate('/jumolf');render();},
   screen(path=routePath()){
    reconcileProfileDrafts();
-   if(String(path).split('?')[0]==='/jumolf/demo-history')return JumolfDemoHistoryScreen(path);
+   if(String(path).split('?')[0]==='/jumolf/demo-history')return isDemo()?JumolfDemoHistoryScreen(path):'<section class="jumolf-panel"><h1>Votre espace personnel</h1><p>Aucune donnée fictive dans votre compte.</p><a href="/jumolf">Retour à JUMOLF</a></section>';
    const route=resolveJumolfRoute(path)||{type:'entry'};
    const query=new URLSearchParams(String(path).split('?')[1]||'');
    const requestedJourney=query.get('journey');
@@ -156,11 +156,12 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     const a=access(),dogs=a.entitlement_valid&&a.jumolf_enabled?consentedSources().dogs:[];
     selectedDogId=dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';
    }
-   if(route.type==='rex')return RexDemoScreen(path);
+   if(route.type==='rex')return isDemo()?RexDemoScreen(path):'<section class="jumolf-panel"><h1>Votre espace personnel</h1><p>Aucune donnée fictive dans votre compte.</p><a href="/jumolf">Retour à JUMOLF</a></section>';
    const state=store.snapshot(),currentAccess=access();
    route.replay=query.get('replay')==='1';
    route.advanced=query.get('view')==='advanced';
    route.demo=route.demo===true||query.get('demo')==='1';
+   if(!isDemo()&&route.demo)return '<section class="jumolf-panel"><h1>Votre espace personnel</h1><p>Aucune donnée fictive dans votre compte.</p><a href="/jumolf">Retour à JUMOLF</a></section>';
    if(route.type==='premium'||route.type==='access-code'||!currentAccess.entitlement_valid||(!currentAccess.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'))return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
    if(!state.jumolf_onboarding_completed&&route.type!=='onboarding'&&!route.replay&&route.type!=='activate')return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
    const accountDemo=!isDemo()?getAccountDemo():null;
@@ -186,7 +187,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='entry'&&!route.advanced){
     // Presentation metadata stays out of the scientific source contracts.
     const dog=presentationFor(selectedDog);
-    return JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()})+JumolfDemoHistoryEntry();
+    return JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()})+(isDemo()?JumolfDemoHistoryEntry():'');
    }
    if(isDemo()&&route.type==='analyze')route.type='dashboard';
    if(route.type==='prepare')return JumolfV3Prepare({dogs,dog:selectedDog,state,journey});

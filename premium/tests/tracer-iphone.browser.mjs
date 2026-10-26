@@ -1,5 +1,5 @@
 // Full application with simulated account transport; no backend writes.
-import {chromium} from '@playwright/test';
+import {chromium,expect} from '@playwright/test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import path from 'node:path';
@@ -69,7 +69,7 @@ try{
   await page.evaluate(()=>{window.qaMapNode=document.querySelector('[data-gps-map]');window.qaCurrentMap=qaMaps.find(m=>m.getContainer()===qaMapNode);qaCurrentMap.setView([48.31,7.42],15,{animate:false});});await confirm.click();const start=page.getByRole('button',{name:'Tracer la piste',exact:true});await start.waitFor();assert.equal(await page.evaluate(()=>document.querySelector('[data-gps-map]')===qaMapNode),true,'departure must retain the existing map node');
   assert.deepEqual(commands.filter(c=>['approach-start','arrive-start','ready-pose'].includes(c)),['approach-start','arrive-start','ready-pose']);assert.equal(await page.evaluate(()=>qaGPS.callbacks.size),0);
   await start.click();await page.locator('.gps-start-status').filter({hasText:'Acquisition'}).waitFor();assert.equal(commands.includes('start-pose'),false);assert.equal(await start.isDisabled(),true);
-  await page.evaluate(()=>[...qaGPS.callbacks.values()].at(-1).error({code:1}));await start.waitFor();assert.equal(await start.isDisabled(),false);await page.locator('.gps-start-status').filter({hasText:'refusée'}).waitFor();
+  await page.evaluate(()=>[...qaGPS.callbacks.values()].at(-1).error({code:1}));await page.locator('.gps-start-status').filter({hasText:'refusée'}).waitFor();await expect(start).toBeEnabled();
   await start.click();await page.evaluate(()=>[...qaGPS.callbacks.values()].at(-1).cb({timestamp:Date.now(),coords:{latitude:48.3,longitude:7.4,accuracy:300}}));await page.locator('.gps-start-status').filter({hasText:'précision'}).waitFor();assert.equal(commands.includes('start-pose'),false);
   await page.evaluate(()=>[...qaGPS.callbacks.values()].at(-1).error({code:3}));await start.click();await page.evaluate(()=>[...qaGPS.callbacks.values()].at(-1).cb({timestamp:Date.now(),coords:{latitude:48.3,longitude:7.4,accuracy:5}}));
   await page.locator('[data-remote-phase="LAYING"]').waitFor({state:'attached'});assert.equal(commands.filter(c=>c==='start-pose').length,1);await page.getByRole('button',{name:'Terminer la piste',exact:true}).waitFor();assert.equal(await page.evaluate(()=>document.querySelector('[data-gps-map]')===qaMapNode),true,'GPS start must retain the map');assert.equal(await page.evaluate(()=>Math.abs(qaCurrentMap.getCenter().lat-48.3)<1e-6&&Math.abs(qaCurrentMap.getCenter().lng-7.4)<1e-6&&qaCurrentMap.getZoom()===17),true,'first recording fix must zoom to the real position');await page.evaluate(()=>qaCurrentMap.setView([48.31,7.42],15,{animate:false}));
