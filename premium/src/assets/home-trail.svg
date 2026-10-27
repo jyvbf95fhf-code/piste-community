@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 1500" preserveAspectRatio="none" fill="none">
+ <defs><linearGradient id="trail" x1="0" y1="0" x2="0" y2="1500" gradientUnits="userSpaceOnUse"><stop stop-color="#e5c17c" stop-opacity="0"/><stop offset=".07" stop-color="#e5c17c" stop-opacity=".8"/><stop offset=".85" stop-color="#e5c17c" stop-opacity=".65"/><stop offset="1" stop-color="#e5c17c" stop-opacity="0"/></linearGradient></defs>
+ <path id="route" d="M 112 0 C 102 65 25 56 25 140 S 365 205 365 295 S 195 354 195 460 S 23 505 23 610 S 366 668 366 780 S 26 835 26 955 S 363 1035 363 1140 S 116 1230 116 1320 S 240 1410 235 1500" stroke="url(#trail)" stroke-width="1.4" vector-effect="non-scaling-stroke"/>
+ <use href="#route" stroke="#e5c17c" stroke-opacity=".055" stroke-width="7" vector-effect="non-scaling-stroke"/>
+ <g fill="#e5c17c" fill-opacity=".7"><circle cx="25" cy="140" r="2.5"/><circle cx="195" cy="460" r="2.5"/><circle cx="366" cy="780" r="2.5"/><circle cx="363" cy="1140" r="2.5"/></g>
+</svg>

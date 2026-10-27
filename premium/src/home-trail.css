@@ -1,0 +1,16 @@
+/* Home-only decorative variant. Revert this stylesheet/link to restore the previous canvas. */
+.app-shell.home-shell[data-module-theme] {
+ background:radial-gradient(ellipse at 50% 42%,#21465a 0%,#142e40 38%,#091725 78%,#07121f 100%);
+}
+.home-shell::before {
+ content:'';
+ position:absolute;
+ inset:220px 0 115px;
+ z-index:-1;
+ pointer-events:none;
+ background:url('/src/assets/home-trail.svg') center / 100% 100% no-repeat;
+ opacity:.65;
+}
+.home-shell .header-terrain {
+ background:linear-gradient(90deg,#091725de 2%,#09172599 43%,#0917251f 82%),linear-gradient(0deg,#122a3b 0%,#09172514 48%,#09172570 100%),url('/src/assets/hero-terrain-sunset.png') 65% 44% / cover;
+}
