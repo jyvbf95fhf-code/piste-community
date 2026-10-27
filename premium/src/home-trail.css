@@ -18,3 +18,24 @@
  mask-image:linear-gradient(180deg,#000 0%,#000 48%,#000b 65%,#0004 83%,transparent 100%);
  background:linear-gradient(90deg,#091725de 2%,#09172599 43%,#0917251f 82%),linear-gradient(0deg,#122a3b 0%,#09172514 48%,#09172570 100%),url('/src/assets/hero-terrain-sunset.png') 65% 44% / cover;
 }
+/* Compact home inbox; shared invitation behavior remains unchanged. */
+.home-shell .coaching-invitations {
+ margin:10px 0 22px;
+ padding:14px 16px;
+ border:1px solid #9bbbc333;
+ border-radius:18px;
+ background:linear-gradient(125deg,#193343cc,#0b1c2bd9);
+ box-shadow:inset 0 1px 0 #e5c17c0d;
+}
+.home-shell .coaching-invitations>.section-title { gap:12px; margin:0; align-items:center; }
+.home-shell .coaching-invitations>.section-title h2 { font-size:14px; line-height:1.4; margin:0; color:#e7d3aa; }
+.home-shell .coaching-invitations [data-refresh-coaching-invitations] { min-height:36px; padding:6px 10px; font-size:12px; color:#c9dbe3; border-color:#8bbac933; background:#102331; }
+.home-shell .coaching-invitations>p { margin:8px 0 0; font-size:13px; line-height:1.5; color:#b8cbd7; }
+.home-shell .coaching-invitations .coaching-invitation { margin-top:12px; }
+.app-shell.home-shell .discovery-hero .discovery-cta {
+ color:#ecd5a4;
+ background:linear-gradient(135deg,#1c3849,#0b1d2d);
+ border:1px solid #d9b97699;
+ box-shadow:inset 0 1px 0 #f4dcad17,0 4px 12px #0003;
+}
+.app-shell.home-shell .discovery-hero .discovery-cta:hover { background:#234456; border-color:#e5c17c; }
