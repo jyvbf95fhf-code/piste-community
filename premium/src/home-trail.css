@@ -9,8 +9,12 @@
  z-index:-1;
  pointer-events:none;
  background:url('/src/assets/home-trail.svg') center / 100% 100% no-repeat;
- opacity:.65;
+ opacity:.55;
+ -webkit-mask-image:linear-gradient(180deg,transparent 0,transparent 180px,#000 380px,#000 92%,transparent 100%);
+ mask-image:linear-gradient(180deg,transparent 0,transparent 180px,#000 380px,#000 92%,transparent 100%);
 }
 .home-shell .header-terrain {
+ -webkit-mask-image:linear-gradient(180deg,#000 0%,#000 48%,#000b 65%,#0004 83%,transparent 100%);
+ mask-image:linear-gradient(180deg,#000 0%,#000 48%,#000b 65%,#0004 83%,transparent 100%);
  background:linear-gradient(90deg,#091725de 2%,#09172599 43%,#0917251f 82%),linear-gradient(0deg,#122a3b 0%,#09172514 48%,#09172570 100%),url('/src/assets/hero-terrain-sunset.png') 65% 44% / cover;
 }
