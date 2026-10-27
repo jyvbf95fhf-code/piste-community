@@ -27,7 +27,7 @@ export function SharedCoachingDebrief(p,{tab='summary',profile={},drafts={},busy
  if(corridorAllowed&&tab==='map'){
   const marker='class="real-map-reader"',at=html.indexOf(marker);
   if(at!==-1){
-   html=html.replace(marker,`class="real-map-reader coaching-scent-review" data-gps-session-id="${e(p.id)}" data-gps-corridor-allowed="true" data-gps-corridor-basis="coaching-pose" data-gps-corridor-review="true" data-scent-replay-target="${search?'reference':'pose'}"`);
+   html=html.replace(marker,`class="real-map-reader coaching-scent-review" data-gps-session-id="${e(p.id)}" data-gps-corridor-allowed="true" data-gps-corridor-basis="coaching-pose" data-gps-corridor-review="true" data-gps-corridor-history="${e(JSON.stringify(p.weatherHistory||[]))}" data-scent-replay-target="${search?'reference':'pose'}"`);
    const end=html.indexOf('</section>',at);
    const controls=`<h2>Couloir olfactif · débriefing</h2><p>Relecture de la pose GPS enregistrée. Le vent historique n’est pas archivé : le couloir météo reste indisponible pour cette séance.</p>${replayControls}<div class="remote-scent-controls"><button type="button" data-corridor-toggle disabled aria-disabled="true">Météo historique indisponible</button><small data-corridor-status>Couloir historique indisponible : aucun relevé de vent daté de cette séance n’est archivé.</small></div>`;
    html=html.slice(0,end)+controls+html.slice(end);

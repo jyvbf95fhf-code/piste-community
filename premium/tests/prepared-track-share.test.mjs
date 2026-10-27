@@ -1,0 +1,4 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {publicPreparedTrack} from '../src/prepared-track-share.mjs';
+const input={name:'Piste',ownerId:'secret',dogId:'secret',notes:'confidentiel',geometry:{coordinateSpace:'wgs84',points:[{space:'wgs84',x:7,y:48},{space:'wgs84',x:7.01,y:48.01}]}};
+test('public share is an independent geographic copy excluding personal fields',()=>{const out=publicPreparedTrack(input);assert.equal(out.name,'Piste');assert.equal(out.ownerId,undefined);assert.equal(out.dogId,undefined);assert.equal(out.notes,undefined);out.geometry.points[0].x=8;assert.equal(input.geometry.points[0].x,7);});
+test('mock, empty and invalid geometry cannot be shared',()=>{for(const geometry of [null,{coordinateSpace:'mock-map',points:[]},{coordinateSpace:'wgs84',points:[{space:'wgs84',x:999,y:48},{space:'wgs84',x:7,y:48}]}])assert.throws(()=>publicPreparedTrack({...input,geometry}));});

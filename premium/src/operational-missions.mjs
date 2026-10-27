@@ -39,7 +39,7 @@ const DETAIL_FIELDS = new Set([
 const PERSON_FIELDS = new Set(['identity', 'age', 'ageRange', 'sex', 'description', 'clothing', 'footwear', 'mobility', 'vulnerability', 'expectedBehavior', 'movementMethod']);
 const TIME_FIELDS = new Set(['disappearanceAt', 'lastContactAt', 'timePrecision']);
 const PLACE_FIELDS = new Set(['interventionAddress', 'interventionCommune', 'interventionSector', 'lastKnownDescription', 'probableTrackStart', 'confirmedTrackStart']);
-const CONTEXT_FIELDS = new Set(['circumstances', 'environmentType', 'risks', 'observations', 'additionalInfo']);
+const CONTEXT_FIELDS = new Set(['circumstances', 'environmentType', 'risks', 'observations', 'additionalInfo','callAt','callerName','callerPhone','callerRelation','callInstructions']);
 
 const clone = value => structuredClone(value);
 const formatSimulationTime = elapsedMs => {

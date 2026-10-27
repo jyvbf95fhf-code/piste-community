@@ -1,0 +1,8 @@
+// Offline package: retain every live file, replacing only the dependency closure of the tested handler.
+import {readFile,writeFile} from 'node:fs/promises';import path from 'node:path';
+const [input,output]=process.argv.slice(2);if(!input||!output)throw Error('Usage: node prepare-pilot-edge.mjs live.json output.json');
+const live=JSON.parse(await readFile(input,'utf8'));if(live.slug!=='coaching'||live.version!==20||live.ezbr_sha256!=='c4b08113e2001989dd142d8f16108b044a6a9e3375d6e89001daea2eb462b796')throw Error('Live Edge base changed: reconcile before packaging.');
+const root=new URL('..',import.meta.url),files=new Map(live.files.map(f=>[f.name,f]));const visited=new Set();
+async function add(name){if(visited.has(name))return;visited.add(name);const content=await readFile(new URL(name,root),'utf8');files.set(name,{name,content});for(const match of content.matchAll(/(?:from\s*|import\s*)['"](\.[^'"]+)['"]/g)){const target=path.posix.normalize(path.posix.join(path.posix.dirname(name),match[1]));if(target.startsWith('../'))throw Error('Dependency outside Premium.');await add(target);}}
+await add('src/server/coaching-http.mjs');files.set('index.ts',{name:'index.ts',content:await readFile(new URL('supabase/functions/coaching/pilot-index.ts',root),'utf8')});
+await writeFile(output,JSON.stringify({project_id:'shnwqdkiapgcftbnhilh',name:'coaching',entrypoint_path:'index.ts',verify_jwt:live.verify_jwt,files:[...files.values()]}));console.log(JSON.stringify({files:files.size,changed:[...visited],preservedVerifyJWT:live.verify_jwt}));

@@ -1,3 +1,8 @@
+import {configureWebPush,reconcileWebPushOwner} from './web-push-client.mjs';
+import {openPreparedTrackShare} from './prepared-track-share-ui.mjs';
+import {registerOfflineShell} from './offline-shell.mjs';
+registerOfflineShell();
+import {openReportEditor} from './report-editor.mjs';
 import {createForegroundRefresh} from './foreground-refresh.mjs';
 import {classifyPisteSessions,createPisteSelection,backupPisteLocal} from './piste-bulk.mjs';
 import {createPisteHistoryClient} from './piste-history-client.mjs';
@@ -143,7 +148,7 @@ let pisteHidden=new Set(),pisteCanonical=new Map(),pisteCloudRecords=[],pisteHid
 const pisteSelection=createPisteSelection();
 const pisteHistory=createPisteHistoryClient({client:accountClient,getOwnerId:()=>auth.getSession().user?.user_id});
 let authNotice='';
-const auth=createPisteAccount({client:accountClient,storage,loadProfile:()=>accountApi.call({operation:'profile'}),onInvalidated:()=>{if(!location.pathname.startsWith('/auth'))location.replace('/auth/login');}});
+const auth=createPisteAccount({client:accountClient,storage,loadProfile:()=>accountApi.call({operation:'profile'}),onInvalidated:()=>{for(const dialog of document.querySelectorAll('dialog[data-piste-owner]')){dialog.close();dialog.remove();}void reconcileWebPushOwner('__signed-out__').finally(()=>{if(!location.pathname.startsWith('/auth'))location.replace('/auth/login');});}});
 try{await auth.initialize();if(auth.getSession().access==='pending')authNotice='Votre compte est connecté. L’accès au Coaching V2 attend une autorisation.';}catch(error){authNotice=error.message;}
 let currentUser=auth.getSession().user;
 const newCoachingDraft=()=>coaching.createDraft(currentUser,[{id:'nox',...mock.dog}]);
@@ -167,11 +172,12 @@ function updateNotificationBadge(){
 }
 function renderCoachingUpdates(){
  updateNotificationBadge();
+ if(document.querySelector('dialog[open][data-piste-owner]'))return;
  if(location.pathname!=='/jumolf/rex'&&(['/','/sessions','/tracks','/notifications'].includes(location.pathname)||location.pathname.startsWith('/sessions/')||location.pathname.startsWith('/jumolf')||location.pathname.startsWith('/scientific'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
 }
 function coachingInvitationCards(){return coachingInvitations?CoachingInvitations(coachingInvitations.view()):'';}
 let sharedIndex=dogsOwnerId?createSharedSessionIndex({ownerId:dogsOwnerId,storage}):null,sharedAttempt=0;
-function reconcileSharedIdentity(){const ownerId=currentUser?.user_id||null;if(ownerId===dogsOwnerId)return;sharedIndex?.dispose();dogsOwnerId=ownerId;sharedIndex=ownerId?createSharedSessionIndex({ownerId,storage}):null;sharedAttempt=0;pisteReadyOwner=null;pisteHistoryReadAt=0;pisteHistoryGeneration++;pisteCanonical.clear();pisteHidden.clear();pisteCloudRecords=[];dogsStore=createDogsStore({ownerId,storage});}
+function reconcileSharedIdentity(){const ownerId=currentUser?.user_id||null;void reconcileWebPushOwner(ownerId);if(ownerId===dogsOwnerId)return;sharedIndex?.dispose();dogsOwnerId=ownerId;sharedIndex=ownerId?createSharedSessionIndex({ownerId,storage}):null;sharedAttempt=0;pisteReadyOwner=null;pisteHistoryReadAt=0;pisteHistoryGeneration++;pisteCanonical.clear();pisteHidden.clear();pisteCloudRecords=[];dogsStore=createDogsStore({ownerId,storage});}
 function sharedOptions(){const sharedSessions=sharedIndex?.list()||[],dogIds=Object.fromEntries(sharedSessions.map(p=>[p.id,sharedIndex.dogId(p.id)]));return {sharedSessions,dogIds,demoRows:auth.assurance!=='supabase-auth'};}
 function refreshSharedCatalog(force=false){
  if(auth.assurance!=='supabase-auth'||!sharedIndex||pisteBusy)return;
@@ -896,7 +902,8 @@ function render(focus=false) {
  const creatorSections=[...(document.querySelectorAll?.('[data-creator-section]')||[])].map(section=>[section.dataset.creatorSection,section.open]);
  document.querySelector('[data-coaching-help-dialog]')?.close();
  currentUser=auth.getSession().user;
- if(currentUser&&auth.assurance!=='supabase-auth'&&!adminStore.accountIsActive(currentUser.user_id)){auth.signOut();currentUser=null;history.replaceState({},'','/auth');return render(focus);}
+ for(const dialog of document.querySelectorAll('dialog[data-piste-owner]'))if(dialog.dataset.pisteOwner!==currentUser?.user_id||dialog.dataset.pisteRoute!==location.pathname+location.search){dialog.close();dialog.remove();}
+ if(currentUser&&auth.assurance!=='supabase-auth'&&!adminStore.accountIsActive(currentUser.user_id)){(void reconcileWebPushOwner('__signed-out__'),auth.signOut());currentUser=null;history.replaceState({},'','/auth');return render(focus);}
  const requested=location.pathname.replace(/\/$/,'') || '/';
  const scientificEntry=canonicalScientificPath(requested);
  if(scientificEntry!==requested)history.replaceState({},'',`${scientificEntry}${location.search}${location.hash}`);
@@ -1204,6 +1211,8 @@ function filterSessions() {
  document.querySelector('#session-results').innerHTML=SessionListResults(rows);
 }
 document.addEventListener('click',async event=>{
+ if(event.target.closest('[data-web-push]')){const button=event.target.closest('[data-web-push]'),target=document.querySelector('[data-web-push-status]');button.disabled=true;void configureWebPush({call:body=>accountApi.call(body),enable:button.dataset.webPush==='enable',ownerId:currentUser?.user_id,getOwnerId:()=>auth.getSession().user?.user_id}).then(message=>{if(target)target.textContent=message;}).catch(error=>{if(target)target.textContent=error.message;}).finally(()=>{button.disabled=false;});return;}
+ if(event.target.closest('[data-dossier-edit]')){const dossier=event.target.closest('[data-session-dossier]');openReportEditor({article:dossier?.querySelector('.dossier-report'),ownerId:currentUser?.user_id,sessionId:dossier?.dataset.sessionDossier,getOwnerId:()=>auth.getSession().user?.user_id,storage});return;}
  if(event.target.closest('[data-dossier-print]')){window.print();return;}
  const loboAction=event.target.closest('[data-lobo-action]');if(loboAction){event.preventDefault();await loboAccount.action(loboAction.dataset.loboAction,{backupVerified:document.querySelector('[data-lobo-backup-verified]')?.checked===true,discardConfirmed:document.querySelector('[data-lobo-discard-confirmed]')?.checked===true,download:raw=>{const url=URL.createObjectURL(new Blob([raw],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='piste-lobo-safari-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}});return;}
  if(personalCloud?.controller.handleClick(event))return;
@@ -1327,7 +1336,8 @@ document.addEventListener('click',async event=>{
  const preparedAction=event.target.closest('[data-prepared-action]');
  if(preparedAction&&preparedAction.dataset.preparedAction!=='edit'){
   try{const id=preparedAction.dataset.trackId,item=trackLibrary.get(id);if(item.ownerId!=='self'||!currentUser?.user_id)throw Error('Piste indisponible pour ce compte.');
-   if(preparedAction.dataset.preparedAction==='duplicate'){const copy=trackLibrary.duplicatePreparedPlan(id);history.pushState({},'',`/tracks/${encodeURIComponent('prepared:'+copy.id)}`);render(true);Toast('Copie enregistrée, original conservé.');}
+   if(preparedAction.dataset.preparedAction==='share')openPreparedTrackShare({track:item,call:body=>accountApi.call(body),ownerId:currentUser.user_id,getOwnerId:()=>auth.getSession().user?.user_id});
+   else if(preparedAction.dataset.preparedAction==='duplicate'){const copy=trackLibrary.duplicatePreparedPlan(id);history.pushState({},'',`/tracks/${encodeURIComponent('prepared:'+copy.id)}`);render(true);Toast('Copie enregistrée, original conservé.');}
    else if(preparedAction.dataset.preparedAction==='coaching')prepareSavedTrack(item);
   }catch(error){Toast(error.message);}return;
  }
@@ -1479,7 +1489,7 @@ document.addEventListener('click',async event=>{
   return;
  }
  const action=event.target.closest('[data-action]')?.dataset.action;
- if(action==='logout') {persistentCommunity?.dispose();persistentCommunity=null;communityOwnerId=null;communityEntryKey='';coachingWizardState=null;opsGps.pause();cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; await auth.signOut(); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
+ if(action==='logout') {persistentCommunity?.dispose();persistentCommunity=null;communityOwnerId=null;communityEntryKey='';coachingWizardState=null;opsGps.pause();cleanupCoachingExit();exitSavePending=false;normalCoachingBeforeQa=null;qaInitialized=false;searchState=search.createSearch();searchUI={};debriefUI={tab:'summary'};terrainOpen=false;tracerState=tracer.createTracer();tracerUI={}; await (void reconcileWebPushOwner('__signed-out__'),auth.signOut()); preparationState=null;preparationUI={simulatorOpen:false,feedback:''};coachingDraft=newCoachingDraft();notifiedCoachingStarts=new Set();trackLibraryOwnerId=null;trackLibrary=createTrackLibrary();sessionCatalog.clear();operationalStore.clear();operationalStore=createOperationalMissionStore();operationalUI={mode:'',eventType:'Départ',note:''};trackUI=newTrackUI();dogsStore=createDogsStore();communityStore=createCommunityStore();communityLiveStore=createCommunityLiveStore({communityStore});communityController=makeCommunityController();jumolfStore=createJumolfStore({entitlement:'none',accessCodeCatalog:adminStore.codeCatalog(),currentUserId:null});jumolfController=makeJumolfController(); history.replaceState({},'','/auth'); render(true); return; }
  const sessionRemove=event.target.closest('[data-session-remove]');if(sessionRemove){const id=sessionRemove.dataset.sessionId,scope=sessionRemove.dataset.sessionRemove,ownerId=currentUser?.user_id,confirmation=SessionRemovalConfirmation(sessionPolicy(id),{scope});if(!confirmation){Toast('Suppression indisponible pour cette session.');return;}ConfirmationDialog({...confirmation,onConfirm:()=>{void removeSession(id,scope,ownerId).catch(error=>Toast(error.message));}});return;}
  const dogDefault=event.target.closest('[data-dog-set-default]');if(dogDefault){try{const dog=sessionDog(dogDefault.dataset.dogSetDefault);if(!dog)throw Error('Chien pisteur indisponible.');profileStore.setPrimaryDog(dog.id);jumolfController=makeJumolfController();render();Toast('Chien pisteur par défaut enregistré sur cet appareil.');}catch(error){Toast(error.message);}return;}
  const dogRemove=event.target.closest('[data-dog-remove]');if(dogRemove){const id=dogRemove.dataset.dogRemove,ownerId=currentUser?.user_id,dog=localDog(id);if(!dog||isProtectedDog(dog)){Toast('LOBO et sa démonstration sont protégés.');return;}ConfirmationDialog({title:'Supprimer ce chien ?',description:'Seule cette fiche sera retirée. Les pistes, séances et historiques, y compris partagés, restent conservés. Le prochain chien pisteur disponible deviendra le choix par défaut. Une sauvegarde cloud associée sera également supprimée si elle est identifiée.',onConfirm:()=>{void removeAccountDog(id,ownerId).catch(error=>Toast(error.message));}});return;}
@@ -1714,7 +1724,7 @@ document.addEventListener('submit',async event=>{
    const person={identity:text(raw.searchedPerson),age:text(raw.age),ageRange:text(raw.ageRange),sex:text(raw.sex),description:text(raw.searchedPersonDescription),clothing:text(raw.clothing),footwear:text(raw.footwear),mobility:text(raw.mobility),vulnerability:text(raw.vulnerability),expectedBehavior:text(raw.expectedBehavior),movementMethod:text(raw.movementMethod)};
    const time={disappearanceAt:dateValue(raw.disappearanceAt),lastContactAt:dateValue(raw.lastContactAt),timePrecision:text(raw.timePrecision)};
    const places={interventionAddress:text(raw.interventionAddress),interventionCommune:text(raw.interventionCommune),interventionSector:text(raw.interventionSector),lastKnownDescription:text(raw.lastKnownDescription),probableTrackStart:text(raw.probableTrackStart)};
-   const context={circumstances:text(raw.circumstances),environmentType:text(raw.environmentType),risks:text(raw.risks),observations:text(raw.observations),additionalInfo:text(raw.additionalInfo)};
+   const context={callAt:dateValue(raw.callAt),callerName:text(raw.callerName)?.slice(0,160)||null,callerPhone:text(raw.callerPhone)?.slice(0,40)||null,callerRelation:text(raw.callerRelation)?.slice(0,160)||null,callInstructions:text(raw.callInstructions)?.slice(0,3000)||null,circumstances:text(raw.circumstances),environmentType:text(raw.environmentType),risks:text(raw.risks),observations:text(raw.observations),additionalInfo:text(raw.additionalInfo)};
    const draft=operationalStore.createDraft({dog,handler,entryMode:prepared?'prepared':'quick',details,person,time,places,context});
    operationalUI={mode:'',eventType:'Départ',note:''};
    history.pushState({},'',`/operational/missions/${encodeURIComponent(draft.id)}`);

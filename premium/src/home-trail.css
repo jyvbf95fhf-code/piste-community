@@ -39,3 +39,11 @@
  box-shadow:inset 0 1px 0 #f4dcad17,0 4px 12px #0003;
 }
 .app-shell.home-shell .discovery-hero .discovery-cta:hover { background:#234456; border-color:#e5c17c; }
+.report-edit-dialog { width:min(92vw,760px); max-height:88dvh; overflow:auto; border:1px solid #66859a; border-radius:18px; color:#e4eff5; background:#0c2030; }
+.report-edit-dialog::backdrop { background:#020810cc; }
+.report-edit-dialog label { display:block; margin:12px 0; }
+.report-edit-dialog textarea,.report-edit-dialog input[name=title] { width:100%; box-sizing:border-box; padding:10px; background:#142e40; color:#edf5fa; border:1px solid #708a9b; border-radius:8px; font:inherit; }
+.report-edit-dialog button { min-height:40px; padding:8px 12px; margin:5px; background:#19394a; color:#ecd5a4; border:1px solid #8c805e; border-radius:8px; }
+.report-edit-dialog [data-report-photo-list] img { max-width:140px; max-height:100px; }
+.dossier-report p { white-space:pre-wrap; }
+.coaching-briefing-photo { max-width:100%; height:auto; border-radius:12px; }

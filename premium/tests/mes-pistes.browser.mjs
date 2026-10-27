@@ -24,7 +24,7 @@ try{
   if(path==='/auth/v1/signup')json={...user,id:'22222222-2222-4222-8222-222222222222',identities:[]};
   if(path==='/auth/v1/recover'){status=429;json={code:'over_email_send_rate_limit',msg:'email rate limit exceeded'};}
   if(path==='/functions/v1/piste-history'){const data=req.postDataJSON();if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json={sessions:data.domain==='coaching'?[projection]:[],hidden:[],records:[],cursor:null};}
-  if(path==='/functions/v1/coaching'){const data=req.postDataJSON();assert.ok(['profile','list','invitations','notifications','read','coaching-inbox'].includes(data.operation),'unexpected operation '+data.operation);if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json=data.operation==='coaching-inbox'?{invitations:[],notifications:[]}:data.operation==='profile'?{id:user.id,name:'Compte réel',qa:false}:data.operation==='list'?{sessions:[projection]}:{projection};}
+  if(path==='/functions/v1/coaching'){const data=req.postDataJSON();assert.ok(['profile','list','invitations','notifications','read','coaching-inbox','community-friendship-snapshot'].includes(data.operation),'unexpected operation '+data.operation);if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json=data.operation==='community-friendship-snapshot'?{version:1,ownerId:user.id,contacts:[],received:[],sent:[],relations:[]}:data.operation==='coaching-inbox'?{invitations:[],notifications:[]}:data.operation==='profile'?{id:user.id,name:'Compte réel',qa:false}:data.operation==='list'?{sessions:[projection]}:{projection};}
   await route.fulfill({status,headers,json});
  });
 
