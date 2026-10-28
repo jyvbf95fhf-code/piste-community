@@ -1,10 +1,11 @@
+import {canJoinCoaching,targetedCoachingExpiresAt} from '../coaching-invitation-policy.mjs';
 // Targeted invitations use the existing private table and coaching_commit.
 // No pending assignment grants session membership before explicit acceptance.
 const refusedAt='1970-01-01T00:00:00.000Z';
 const hash=async value=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)))].map(n=>n.toString(16).padStart(2,'0')).join('');
 const denied=()=>{throw Object.assign(Error('Invitation indisponible, expirée ou non autorisée.'),{status:403});};
 export function createCoachingInboxService({admin,contacts,clock=Date.now,result}){
- const eligible=(row,a)=>row.state.search.phase==='PREPARATION'&&a.status==='pending'&&!row.state.members.some(m=>m.id===a.recipientId)&&['traceur','driver','coach','observer'].includes(a.role)&&!row.state.members.some(m=>m.role===a.role&&a.role!=='observer');
+ const eligible=(row,a)=>canJoinCoaching(row.state.search.phase)&&a.status==='pending'&&!row.state.members.some(m=>m.id===a.recipientId)&&['traceur','driver','coach','observer'].includes(a.role)&&!row.state.members.some(m=>m.role===a.role&&a.role!=='observer');
  async function ensure(row,a){
   if(!eligible(row,a)||!(await contacts(row.owner_id)).some(c=>c.id===a.recipientId))return null;
   const existing=result(await admin.from('coaching_remote_invites').select('*').eq('session_id',row.id).eq('recipient_id',a.recipientId).eq('role',a.role).order('expires_at',{ascending:false}).limit(100));
@@ -12,7 +13,7 @@ export function createCoachingInboxService({admin,contacts,clock=Date.now,result
   const key=await hash(`targeted-coaching-v1:${row.id}:${a.recipientId}:${a.role}`);
   // One deterministic key prevents duplicate issuance on concurrent refreshes.
   // It is never returned to a client; recipient authentication is still mandatory.
-  const expires=new Date(row.state.createdAt+86400000).toISOString();
+  const expires=targetedCoachingExpiresAt; // Nominative, until refusal or contact authorization withdrawal.
   result(await admin.from('coaching_remote_invites').upsert({token_hash:key,session_id:row.id,recipient_id:a.recipientId,role:a.role,expires_at:expires},{onConflict:'token_hash',ignoreDuplicates:true}));
   return result(await admin.from('coaching_remote_invites').select('*').eq('token_hash',key).maybeSingle());
  }

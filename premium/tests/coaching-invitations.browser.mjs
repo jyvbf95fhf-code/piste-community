@@ -11,6 +11,9 @@ async function account(uid){const context=await browser.newContext({viewport:{wi
  });const page=await context.newPage();lastPage=page;page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(30000);return {page,context};}
 try{const owner=await account(gmail),guest=await account(icloud),id=await f.create();
  await guest.page.goto(origin+'/');await guest.page.getByRole('heading',{name:'Invitation Coaching',exact:true}).waitFor();assert.match(await guest.page.locator('.coaching-invitation').innerText(),/Sébastien[\s\S]*Traceur/);
+ assert.match(await guest.page.locator('.header-actions a.notification').getAttribute('aria-label'),/1 non lue/);
+ await guest.page.getByRole('button',{name:'Actualiser',exact:true}).click();await guest.page.getByText(/Actualisé à/).waitFor();
+ await guest.page.goto(origin+'/notifications');await guest.page.locator('.coaching-invitation').waitFor();await guest.page.goto(origin+'/');await guest.page.locator('.coaching-invitation').waitFor();
  await mkdir('/tmp/coaching-invitation-qa',{recursive:true});await guest.page.screenshot({path:'/tmp/coaching-invitation-qa/home.png',fullPage:true});
  await owner.page.goto(origin+'/');await owner.page.locator(`a[href="/coaching/session?session=${id}"]`).first().waitFor();
  await guest.page.reload();await guest.page.getByRole('button',{name:'Rejoindre la session',exact:true}).waitFor();await guest.page.getByRole('button',{name:'Rejoindre la session',exact:true}).click();await guest.page.waitForURL('**/coaching/session?session='+id);await guest.page.locator(`[data-remote-session-id="${id}"]`).waitFor({state:'attached'});await guest.page.getByRole('heading',{name:'Pose GPS · Nox'}).waitFor();
@@ -20,5 +23,25 @@ try{const owner=await account(gmail),guest=await account(icloud),id=await f.crea
  const foreground=await f.create();await guest.page.evaluate(()=>window.dispatchEvent(new Event('focus')));await guest.page.locator(`[data-coaching-invitation][data-session-id="${foreground}"]`).first().waitFor();
  for(const width of [320,390,430]){await guest.page.setViewportSize({width,height:844});assert.ok(await guest.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  await guest.page.goto(origin+'/dogs/new');const dogName=guest.page.locator('[name=name]');await dogName.fill('Brouillon conservé');await guest.page.evaluate(()=>window.dispatchEvent(new Event('focus')));await guest.page.waitForTimeout(350);assert.equal(await dogName.inputValue(),'Brouillon conservé');
- assert.deepEqual(errors,[]);console.log('PASS: home, organizer shortcut, reload, accept both directions, Sessions, refuse, foreground, mobile widths; no live writes.');
+ // Full creation from an account with no dog, followed by pose before guest acceptance.
+ await owner.page.goto(origin+'/new-session');await owner.page.locator('[data-wizard-step="mode"]').waitFor();
+ await owner.page.locator('[data-coaching="creator"][data-role="traceur"]').click();
+ await owner.page.locator('[data-coaching-choice="mode"][data-value="full_blind"]').click();
+ await owner.page.locator('[data-coaching-choice="traceType"][data-value="direct"]').click();
+ await owner.page.getByRole('button',{name:'Continuer',exact:true}).click();
+ await owner.page.locator('[data-wizard-step="roles"]').waitFor();
+ await owner.page.locator('[data-coaching-role="driver"]').selectOption(icloud);
+ await owner.page.getByRole('button',{name:'Continuer',exact:true}).click();
+ await owner.page.getByRole('button',{name:'Créer la session',exact:true}).click();
+ await owner.page.locator('[data-remote-session-id]').waitFor({state:'attached'});
+ const created=await owner.page.locator('[data-remote-session-id]').getAttribute('data-remote-session-id');
+ let p=(await f.call(gmail,{operation:'read',sessionId:created})).projection;
+ assert.equal(p.dog,'Chien non renseigné');
+ const at=Date.now();await f.call(gmail,{operation:'command',sessionId:created,commandId:crypto.randomUUID(),expectedVersion:p.version,type:'start-pose',payload:{fix:{timestamp:at,coords:{latitude:48,longitude:7,accuracy:5}}}});
+ await guest.page.goto(origin+'/');await guest.page.locator(`[data-coaching-invitation][data-session-id="${created}"]`).first().waitFor();
+ await guest.page.locator(`[data-coaching-invitation="accept"][data-session-id="${created}"]`).click();
+ await guest.page.waitForURL('**/coaching/session?session='+created);
+ await guest.page.locator('[data-remote-phase="LAYING"]').waitFor({state:'attached'});
+ p=(await f.call(icloud,{operation:'read',sessionId:created})).projection;assert.equal(p.pose,null);assert.equal(p.mode,'full_blind');
+ assert.deepEqual(errors,[]);console.log('PASS: home, organizer shortcut, reload, accept both directions, Sessions, refuse, foreground, mobile widths, refresh feedback, bell + notifications, no-dog Traceur creation, late Double blind driver join; no live writes.');
 }catch(e){if(lastPage){await lastPage.screenshot({path:'/tmp/coaching-invitation-failure.png',fullPage:true});console.log(await lastPage.locator('body').innerText());console.log(errors);}throw e;}finally{await browser.close();await f.db.close();}

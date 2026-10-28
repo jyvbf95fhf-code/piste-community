@@ -1,3 +1,4 @@
+import {canJoinCoaching,targetedCoachingExpiresAt} from '../coaching-invitation-policy.mjs';
 import {createWebPushService} from './web-push-service.mjs';
 import {createPreparedTrackShareService} from './prepared-track-share-service.mjs';
 import {createCommunityFriendshipService} from './community-friendship-service.mjs';
@@ -93,13 +94,13 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
   row=await load();return respond({acknowledgedVersion:accepted,projection:projectRemoteSession(row.state,uid,clock())});
  }
  if(body.operation==='read'){if(!row)error('Session inaccessible.',403);return respond({projection:projectRemoteSession(row.state,uid,clock())});}
- if(body.operation==='invite'){if(!row||row.owner_id!==uid||row.state.search.phase!=='PREPARATION'||row.state.members.some(m=>m.role===body.role&&body.role!=='observer')||!['traceur','driver','coach','observer'].includes(body.role)||body.role==='traceur'&&row.state.session.scenario!=='connected_traceur')error('Invitation refusée.',403);let recipientId=null;
+ if(body.operation==='invite'){if(!row||row.owner_id!==uid||!canJoinCoaching(row.state.search.phase)||row.state.members.some(m=>m.role===body.role&&body.role!=='observer')||!['traceur','driver','coach','observer'].includes(body.role)||body.role==='traceur'&&row.state.session.scenario!=='connected_traceur')error('Invitation refusée.',403);let recipientId=null;
  if(body.recipientId!==undefined){
   const pending=row.state.pendingTeam?.find(a=>a.status==='pending'&&a.recipientId===body.recipientId&&a.role===body.role);
   if(!uuid(body.recipientId)||!pending||!(await teamContacts(uid)).some(c=>c.id===body.recipientId))error('Destinataire ou affectation indisponible.',403);recipientId=body.recipientId;
   if(coachingInboxEnabled)await inbox.find({...row,id},recipientId,body.role);
  }else if(row.state.pendingTeam?.some(a=>a.status==='pending'&&a.role===body.role))error('Choisissez l’invitation du participant déjà affecté.',403);
- const token=crypto.randomUUID()+crypto.randomUUID();assertResult(await admin.from('coaching_remote_invites').insert({token_hash:await hash(token),session_id:id,role:body.role,...(recipientId?{recipient_id:recipientId}:{})}));if(recipientId)background(push.notify(recipientId,{body:'Vous avez reçu une invitation Coaching.',tag:'piste-coaching'}));return respond({token,sessionId:id,role:body.role,...(recipientId?{recipientId}:{})});}
+ const token=crypto.randomUUID()+crypto.randomUUID();assertResult(await admin.from('coaching_remote_invites').insert({token_hash:await hash(token),session_id:id,role:body.role,...(recipientId?{recipient_id:recipientId,expires_at:targetedCoachingExpiresAt}:{})}));if(recipientId)background(push.notify(recipientId,{body:'Vous avez reçu une invitation Coaching.',tag:'piste-coaching'}));return respond({token,sessionId:id,role:body.role,...(recipientId?{recipientId}:{})});}
  if(!uuid(body.commandId))error('Identifiant de commande invalide.');const payload=body.payload||{},fingerprint=await hash(JSON.stringify({operation:body.operation,type:body.type,payload,token:body.token||null}));
  if(row){const previous=assertResult(await admin.from('coaching_remote_commands').select('actor_id,fingerprint,accepted_version').eq('session_id',id).eq('command_id',body.commandId).maybeSingle());if(previous){if(previous.actor_id!==uid||previous.fingerprint!==fingerprint)error('Identifiant de commande réutilisé.',409);return respond({acknowledgedVersion:previous.accepted_version,projection:projectRemoteSession(row.state,uid,clock())});}}
  if(row&&body.operation==='command'&&(!Number.isSafeInteger(body.expectedVersion)||body.expectedVersion!==row.version))error('Session mise à jour ailleurs : actualisez puis réessayez.',409);
