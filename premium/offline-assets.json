@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "b71f35113b700ab8",
+  "revision": "de8e1d96b3b4529d",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -114,6 +114,7 @@
     "/src/dogs-screen.mjs",
     "/src/dogs.mjs",
     "/src/foreground-refresh.mjs",
+    "/src/friend-live-client.mjs",
     "/src/home-harmony.css",
     "/src/home-logo-transparent.css",
     "/src/home-photo-swap.css",
@@ -310,5 +311,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4050501
+  "bytes": 4059076
 }

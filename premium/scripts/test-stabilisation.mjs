@@ -9,7 +9,7 @@ function run(name,args,env={}){const started=Date.now(),log=path.join(directory,
 if(mode!=='--browser')run('unit-sql',['--test','--test-concurrency=2',...readdirSync('tests').filter(f=>f.endsWith('.test.mjs')).sort().map(f=>'tests/'+f)]);
 if(mode!=='--unit'){
  let executable=process.env.PISTE_CHROMIUM_PATH;if(!executable){const {default:chromium}=await import('@sparticuz/chromium');executable=await chromium.executablePath();}if(!existsSync(executable))throw Error('Chromium unavailable: set PISTE_CHROMIUM_PATH.');
- const browserTests=['stabilisation-gps','mes-pistes','piste-bulk','jumolf-preferences','ops-live-3bc','coaching-invitations','tracer-iphone','account-test-data-reset','lobo-account','home-trail','report-editor','offline-shell'];
+ const browserTests=['stabilisation-gps','mes-pistes','piste-bulk','jumolf-preferences','ops-live-3bc','coaching-invitations','social-live','tracer-iphone','account-test-data-reset','lobo-account','home-trail','report-editor','offline-shell'];
  for(const test of browserTests)run(test,['tests/'+test+'.browser.mjs'],{PISTE_CHROMIUM_PATH:executable,QUICK:test==='tracer-iphone'?'':'1'});
 }
 console.log(JSON.stringify({status:'PASS',runs:runs.length,report:path.join(directory,'summary.json')}));

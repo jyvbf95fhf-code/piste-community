@@ -4552,3 +4552,5 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 @media(max-width:430px){.tracks-page .piste-search>div{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}.piste-selection-tools .button{flex:1 1 130px}.piste-bulk-bar .button{width:100%}.tracks-session-card:has(.piste-checkbox)>nav{width:100%}.piste-checkbox{width:100%}.piste-confirmation .button{width:100%}}
 .piste-categories a {gap:8px}
 .piste-categories b {display:inline-flex;align-items:center;justify-content:center;min-width:22px;padding:2px 5px;border-radius:8px;background:#07121c66}
+
+.bottom-nav a{position:relative}.bottom-nav .live-nav-badge{position:absolute;top:3px;right:calc(50% - 25px);min-width:18px;height:18px;border-radius:10px;background:#e6c984;color:#102331;font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 4px}

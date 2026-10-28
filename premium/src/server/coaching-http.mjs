@@ -1,3 +1,4 @@
+import {createCommunityLiveService} from './community-live-service.mjs';
 import {canJoinCoaching,targetedCoachingExpiresAt} from '../coaching-invitation-policy.mjs';
 import {createWebPushService} from './web-push-service.mjs';
 import {createPreparedTrackShareService} from './prepared-track-share-service.mjs';
@@ -13,8 +14,8 @@ const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',n
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 function error(message,status=400){throw Object.assign(Error(message),{status});}
 const assertResult=result=>{if(result.error){const code=result.error.code;error(['40001','PT409'].includes(code)?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',['40001','PT409'].includes(code)?409:code==='42501'?403:400);}return result.data;};
-export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null,friendshipsEnabled=false,coachingInboxEnabled=false,pushDelivery=null,background=work=>{void work.catch(()=>{});}}={}){
- const friendships=createCommunityFriendshipService(admin);
+export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null,friendshipsEnabled=false,socialLiveEnabled=false,coachingInboxEnabled=false,pushDelivery=null,background=work=>{void work.catch(()=>{});}}={}){
+ const friendships=createCommunityFriendshipService(admin,{socialLiveEnabled});
  const push=createWebPushService(admin,pushDelivery);
  return async request=>{
  const origin=request.headers.get('origin')||'',allowed=!origin||/^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(origin)||/^https:\/\/piste-community-v2-premium(?:-[a-z0-9-]+-mw2f59b8p2-4030s-projects)?\.vercel\.app$/.test(origin);const headers={'Content-Type':'application/json','Cache-Control':'no-store','Vary':'Origin',...(allowed&&origin?{'Access-Control-Allow-Origin':origin}:{}),'Access-Control-Allow-Headers':'authorization,apikey,content-type,x-client-info','Access-Control-Allow-Methods':'POST,OPTIONS'};
@@ -78,6 +79,14 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
    return respond({id:peer.id,displayName:peer.display_name});
   }
   const friendshipResult=await (body.operation==='community-friendship-snapshot'?friendships.snapshot(uid):friendships.command(uid,body));if(body.operation==='community-friendship-command'&&body.action==='contact-request'&&body.peerId!==uid)background(push.notify(body.peerId,{body:'Vous avez reçu une demande de contact.',tag:'piste-contact'}));return respond(friendshipResult);
+ }
+ if(['community-live-list','community-live-read','community-member-search'].includes(body.operation)){
+  if(!socialLiveEnabled)error('Live social en attente d’activation serveur.',503);
+  if(body.operation==='community-member-search')return respond(await friendships.search(uid,body.query));
+  const live=createCommunityLiveService(admin);
+  if(body.operation==='community-live-list')return respond(await live.list(uid));
+  if(!uuid(body.sessionId))error('Identifiant de session invalide.');
+  return respond(await live.read(uid,body.sessionId));
  }
  if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...capabilities,coaching_invitations_version:coachingInboxEnabled?1:0,coaching_team_version:typeof teamContactsProvider==='function'?1:0});
  if(body.operation==='list'){const rows=assertResult(await admin.from('coaching_remote_sessions').select('id,state').contains('state',{members:[{id:uid}]}).order('updated_at',{ascending:false}).limit(30));return respond({sessions:rows.map(r=>projectRemoteSession(r.state,uid,clock()))});}

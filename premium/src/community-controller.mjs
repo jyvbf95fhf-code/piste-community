@@ -68,7 +68,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
    const query=String(payload.query||'').trim();const path=query?`/community/search?q=${encodeURIComponent(query)}`:'/community/search';navigate(path);return path;
   }
   if(kind==='contact-search'){
-   const query=String(payload.query||'').trim();const path=query?`/community/contacts?q=${encodeURIComponent(query)}`:'/community/contacts';navigate(path);if(store.resolveProfile&&/^[0-9a-f-]{36}$/i.test(query))return finish(store.resolveProfile(query));return path;
+   const query=String(payload.query||'').trim();const path=query?`/community/contacts?q=${encodeURIComponent(query)}`:'/community/contacts';navigate(path);if(store.findMembers&&query.length>=2)return finish(store.findMembers(query));if(store.resolveProfile&&/^[0-9a-f-]{36}$/i.test(query))return finish(store.resolveProfile(query));return path;
   }
   if(kind==='post-create'){
    let source=null;
