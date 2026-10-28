@@ -1,3 +1,4 @@
+import {createNotificationReceipts} from './notification-receipts.mjs';
 import {flushCoachingLiveEnds} from './coaching-live-exit.mjs';
 import {createFriendLiveClient} from './friend-live-client.mjs';
 import {configureWebPush,reconcileWebPushOwner} from './web-push-client.mjs';
@@ -143,6 +144,7 @@ import {adminCurrentVersion} from './admin-deployments.mjs';
 let segment='Toutes';
 let storage;
 try { storage=window.localStorage; } catch {}
+const notificationReceipts=createNotificationReceipts(storage);
 document.querySelector('#app').textContent='Vérification de votre connexion PISTE…';
 const accountClient=createClient(accountConfig.url,accountConfig.publishableKey);
 const accountApi=createCoachingRemoteTransport({client:accountClient});
@@ -174,7 +176,7 @@ function liveNotices(){const count=availableLiveCount();return count?`<section c
 function updateNotificationBadge(){
  updateLiveBadge();
  const link=document.querySelector('.header-actions a.notification');
- if(link){const count=(friendLive?.view().sessions.filter(r=>!r.isOwner&&r.ownerId!==currentUser?.user_id).length||0)+selectedCommunityNotifications().filter(n=>!n.read).length+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0);link.setAttribute('aria-label',count?'Notifications, '+count+' non lues':'Notifications');link.querySelector('.notification-count,.notification-dot')?.remove();if(count){const badge=document.createElement('span');badge.className='notification-count';badge.textContent=String(count);link.append(badge);}}
+ if(link){const count=notificationUnreadCount();link.setAttribute('aria-label',count?'Notifications, '+count+' non lues':'Notifications');link.querySelector('.notification-count,.notification-dot')?.remove();if(count){const badge=document.createElement('span');badge.className='notification-count';badge.textContent=String(count);link.append(badge);}}
 }
 function renderCoachingUpdates(){
  updateNotificationBadge();
@@ -314,9 +316,24 @@ async function tickOpsLive(force=false){
 setInterval(()=>{void tickOpsLive();},5000);
 window.addEventListener('online',()=>{void tickOpsLive(true);});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')void tickOpsLive(true);});
+function notificationGroups(){
+ const prefs=communityStore.getNotificationStore().getPreferences(communityStore.viewerId);
+ return [
+  {source:'community',items:selectedCommunityNotifications()},
+  {source:'ops',items:prefs.notify_live_in_app?opsLiveRemote?.view().notifications||[]:[]},
+  {source:'friend-live',items:(friendLive?.view().sessions||[]).filter(r=>!r.isOwner&&r.ownerId!==currentUser?.user_id)},
+  {source:'invitation',items:(coachingInvitations?.view().invitations||[]).map(i=>({...i,id:i.sessionId+':'+i.role}))}
+ ];
+}
+function notificationOwner(){return currentUser?.user_id||communityStore.viewerId;}
+function notificationUnreadCount(){
+ const owner=notificationOwner();
+ return notificationGroups().reduce((count,{source,items})=>count+notificationReceipts.project(owner,source,items).filter(n=>!n.read).length,0);
+}
 function renderPisteNotifications(){
- const local=communityStore.getNotificationStore(),prefs=local.getPreferences(communityStore.viewerId);
- const rows=[...selectedCommunityNotifications(),...(prefs.notify_live_in_app?opsLiveRemote?.view().notifications||[]:[])];
+ const owner=notificationOwner(),groups=notificationGroups();
+ notificationReceipts.open(owner,groups);
+ const rows=groups.filter(g=>['community','ops'].includes(g.source)).flatMap(({source,items})=>notificationReceipts.project(owner,source,items));
  return coachingInvitationCards()+liveNotices()+NotificationsScreen(rows,rows.filter(n=>!n.read).length);
 }
 let profileOwnerId=currentUser?.user_id||null;
@@ -970,7 +987,7 @@ function render(focus=false) {
  if(remoteCoachingRoot)remoteCoachingRoot.remove();
  const remoteMarkup='<div data-remote-premium-slot class="remote-shell remote-embedded"></div>';
  const content=remoteCoaching?remoteMarkup+(route==='/sessions'?renderSessions():''):adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||(auth.assurance==='supabase-auth'?'<section class="card"><h1>Contribution scientifique</h1><p>Aucun dossier réel n’est transmis à un corpus partagé. Vos analyses personnelles restent disponibles dans Science et JUMOLF, selon vos droits et autorisations.</p><a href="/scientific">Science</a></section>':scientificContributionController.screen(route)):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?(operationalRoute.type==='replay'||operationalMission?.cloudReadOnly)?OperationalReplayScreen(operationalReplayView(operationalMission),{weather:(operationalMission?.cloudReadOnly&&operationalMission.weatherSnapshot)||opsWeather.snapshot(operationalMission)}):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:trackingDogs().sort((a,b)=>Number(b.id===defaultTrackingDog()?.id)-Number(a.id===defaultTrackingDog()?.id)),view:operationalView,livePolicy:operationalMission?{...communityLiveStore.getSessionPolicy('ops',operationalMission.id),broadcastEnded:opsLiveRemote?.broadcastEnded(operationalMission.id)}:{},ui:{...operationalUI,realMode:auth.assurance==='supabase-auth',gps:opsGps.view(),weather:opsWeather.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:currentUser.user_id||'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?renderPisteNotifications():route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?renderDogs(dogsRoute):communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list(),includeDemoRows:auth.assurance!=='supabase-auth'}),jumolfAccess(),adminStore.accessFor(currentUser).allowed,coachingInvitationCards()+liveNotices()):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
- document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell(content+exportPanelForRoute(route),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),selectedCommunityNotifications().filter(n=>!n.read).length+(coachingInvitations?.view().invitations.length||0)+(communityStore.getNotificationStore().getPreferences(communityStore.viewerId).notify_live_in_app?(opsLiveRemote?.view().notifications||[]).filter(n=>!n.read).length:0),{realMode:auth.assurance==='supabase-auth'});
+ document.querySelector('#app').innerHTML=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell(content+exportPanelForRoute(route),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),notificationUnreadCount(),{realMode:auth.assurance==='supabase-auth'});
  const restoredExport=document.querySelector('[data-data-exports]');if(restoredExport&&exportUi){restoredExport.open=exportUi.open;for(const name of ['domain','format']){const field=restoredExport.querySelector(`[name=${name}]`);if([...field.options].some(o=>o.value===exportUi[name]))field.value=exportUi[name];}}
  updateNotificationBadge();
  if(remoteCoaching){const slot=document.querySelector('[data-remote-premium-slot]');if(loboAccount.snapshot()?.status==='loading'&&!trackingDogs().length){slot.innerHTML='<p role="status">Chargement de votre chien autorisé…</p>';}else if(remoteCoachingRoot){slot.replaceWith(remoteCoachingRoot);remoteCoachingMount?.refreshReferences();}else {const index=sharedIndex,ownedDogs={get:id=>localDog(id)},wizardOwnerId=currentUser.user_id;remoteCoachingRoot=slot;remoteCoachingMount=mountRemoteCoaching({root:slot,client:accountClient,embedded:true,resumeStoredSession:route!=='/new-session',initialWizardState:coachingWizardState,resolveJumolfPreparation:p=>jumolfController.currentTrainingPreparation(p),getTracks:ownerId=>currentUser?.user_id===ownerId&&trackLibraryOwnerId===ownerId?trackLibrary.list():[],onWizardChange:value=>{if(currentUser?.user_id===wizardOwnerId){coachingWizardState=value;try{index?.saveTrainingDraft(value);}catch(error){Toast(error.message);}}},dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,entry:new URLSearchParams(location.search).has('join')?'list':'create',preferList:route!=='/coaching/session'||new URLSearchParams(location.search).has('join'),sessionId:new URLSearchParams(location.search).get('session'),initialTab:new URLSearchParams(location.search).get('tab')||'summary',onProjection:(p,id)=>p?index?.accept(p):id&&index?.forget(id),onSessions:list=>list.forEach(p=>index?.accept(p)),onCreated:(p,dogId,memory)=>{if(currentUser?.user_id!==wizardOwnerId)return;index?.accept(p);const dog=ownedDogs.get(dogId);if(dog){index.linkDog(p.id,dog);if(memory)try{index.linkTraining(p.id,memory);}catch(error){Toast('Session créée, mémoire pédagogique non enregistrée : '+error.message);}}const request=coachingWizardState?.draft?.jumolfPreparation;if(currentUser?.user_id===wizardOwnerId&&(!request||resolveDogId(trackingDogs(),request.dogId)===dogId))jumolfController.confirmTrainingCreated({token:request?.token,dogId:request?.dogId||dogId,sessionId:'coaching:'+p.id});},onDogLink:(id,dogId)=>{const dog=ownedDogs.get(dogId);if(!dog)throw Error('Chien indisponible.');index.linkDog(id,dog);},associationMarkup:sharedDogAssociation});}}
