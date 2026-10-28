@@ -24,5 +24,35 @@ test('actual PostgreSQL schemas: social defaults, explicit withdrawals, idempote
  await command(a,c,'contact-request',-1);await command(c,a,'accept-contact',0);assert.equal((await live(c)).length,1);assert.equal((await db.query('select revoked_at from ops_live_access where owner_id=$1 and user_id=$2',[a,c])).rows[0].revoked_at,null);
  await command(a,c,'set-contact-permission',1,false,'live_access_authorized');await command(a,c,'remove-contact',2);await command(a,c,'contact-request',3);await command(c,a,'accept-contact',4);assert.equal((await live(c)).length,0);
  assert.equal((await rpc('community_member_search',{p_actor:b,p_query:'Alpha'}))[0].id,a);
- await db.exec('set role authenticated');await assert.rejects(db.query('select * from community_social_edges'));await assert.rejects(db.query('select community_live_sessions($1)',[b]));
+ // Additive replacement: retain grants while returning minimal authorized tombstones.
+ await db.exec(await readFile(new URL('../docs/live-end/2026-10-28-live-end.sql',import.meta.url),'utf8'));
+ await db.query("insert into ops_live_publications(id,owner_id,local_mission_id,sharing,creation_expires_at) values($1,$2,'local-secret',true,now()+interval '1 hour')",[sid,a]);
+ await db.query("insert into ops_live_access(owner_id,scope,publication_id,generation,user_id) values($1,'publication',$2,1,$3)",[a,sid,b]);
+ assert.deepEqual(await rpc('ops_live_list',{p_actor:a}),[{id:sid,version:0,generation:1,closed:false,isOwner:true}]);
+ assert.deepEqual(await rpc('ops_live_list',{p_actor:b}),[{id:sid,version:0,generation:1,closed:false,isOwner:false}]);
+ assert.deepEqual(await rpc('ops_live_list',{p_actor:c}),[]);
+ const directory=actor=>rpc('community_live_sessions',{p_actor:actor,p_session_id:null});
+ assert.equal((await directory(a)).length,0);assert.equal((await directory(b)).length,1);
+ for(const phase of ['DEBRIEF','ARCHIVED','CANCELLED','INTERRUPTED']){
+  await db.query('update coaching_remote_sessions set state=$1 where id=$2',[{session:{mode:'full_blind',participants:[{name:'secret'}]},search:{phase,gpsSearch:{secret:true}},messages:['secret']},sid]);
+  assert.equal((await directory(b)).length,0);
+  assert.deepEqual(await live(b),[{id:sid,status:'ended',ended:true,owner_id:null}]);
+  assert.deepEqual(await live(c),[]);
+ }
+ await db.query('update coaching_remote_sessions set state=$1 where id=$2',[{session:{mode:'normal',control:{departures:[{participantId:b}]}},search:{phase:'SEARCH_RUNNING'}},sid]);
+ assert.equal((await directory(b)).length,1);
+ await db.query('update coaching_remote_sessions set state=$1 where id=$2',[{session:{mode:'normal',control:{departures:[{participantId:a}]}},search:{phase:'SEARCH_RUNNING',gpsSearch:{secret:true}}},sid]);
+ for(const mode of ['normal','simple_blind','full_blind']){
+  await db.query('update coaching_remote_sessions set state=$1 where id=$2',[{liveEndedAt:12345,session:{mode},search:{phase:'SEARCH_RUNNING',gpsSearch:{secret:true}},tracer:{gpsPose:{secret:true}}},sid]);
+  assert.equal((await directory(b)).length,0);assert.deepEqual(await live(b),[{id:sid,status:'ended',ended:true,owner_id:mode==='full_blind'?null:a}]);
+ }
+ await db.query('update coaching_remote_sessions set state=$1 where id=$2',[{liveEndedAt:12345,session:{mode:'normal'},search:{phase:'SEARCH_RUNNING',gpsSearch:{secret:true}}},sid]);
+ const before=(await db.query('select state from coaching_remote_sessions where id=$1',[sid])).rows[0].state;
+ assert.equal((await directory(b)).length,0);assert.deepEqual(await live(b),[{id:sid,status:'ended',ended:true,owner_id:a}]);
+ assert.deepEqual((await db.query('select state from coaching_remote_sessions where id=$1',[sid])).rows[0].state,before);
+ await rpc('ops_live_habitual',{p_actor:a,p_owner:a,p_user:b,p_enabled:false});assert.deepEqual(await live(b),[]);
+ await rpc('ops_live_habitual',{p_actor:a,p_owner:a,p_user:b,p_enabled:true});
+ await db.query('update coaching_remote_users set enabled=false where id=$1',[a]);assert.deepEqual(await live(b),[]);await db.query('update coaching_remote_users set enabled=true where id=$1',[a]);
+ await db.exec('update private.community_friendship_control set enabled=false');await assert.rejects(live(b));await db.exec('update private.community_friendship_control set enabled=true');
+ await db.exec('set role authenticated');await assert.rejects(db.query('select * from community_social_edges'));await assert.rejects(db.query('select community_live_sessions($1)',[b]));await assert.rejects(db.query('select ops_live_list($1)',[b]));
  }finally{await db.close();}});

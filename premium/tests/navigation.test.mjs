@@ -11,9 +11,10 @@ test('terrain navigation has exact order and dedicated icons',()=>{
  assert.doesNotMatch(html,/olfactory-twin|community/);
  assert.match(html,/navigation-icon/);
 });
-test('Live has functional mock sections and nav marks one active item',()=>{
+test('Live has an empty observer directory and nav marks one active item',()=>{
  assert.ok(routes['/live']);
- assert.match(LiveScreen(),/Mes sessions en cours[\s\S]*Sessions de mes contacts autorisées[\s\S]*Invitations Live/);
+ assert.match(LiveScreen(),/À observer[\s\S]*Aucun Live disponible/);
+ assert.doesNotMatch(LiveScreen(),/Mes sessions en cours|Invitations à rejoindre/);
  assert.equal((BottomNavigation('/live').match(/aria-current="page"/g)||[]).length,1);
  assert.match(BottomNavigation('/live'),/href="\/live" aria-current/);
 });

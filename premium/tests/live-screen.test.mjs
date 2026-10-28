@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {LiveScreen,LiveDetailScreen} from '../src/live-screen.mjs';
 
-test('Live groups own, authorized contact sessions, and invitations with fixed roles',()=>{
+test('Live excludes own observer links and groups authorized contacts and invitations',()=>{
  const html=LiveScreen({ownSessions:[{sessionId:'mine',sessionType:'coaching',title:'Nox'}],contactSessions:[{sessionId:'ops-1',sessionType:'ops',title:'Trace terrain'}],invitations:[{sessionId:'invite',sessionType:'coaching'}]});
- assert.match(html,/Mes sessions en cours/);assert.match(html,/Sessions de mes contacts autorisées/);assert.match(html,/Invitations Live/);
+ assert.doesNotMatch(html,/Mes sessions en cours|Nox|href="\/live\/coaching\/mine"/);assert.match(html,/À observer/);assert.match(html,/Invitations à rejoindre/);
  assert.match(html,/Observateur de trace/);assert.match(html,/Voir le Live/);
 });
 
