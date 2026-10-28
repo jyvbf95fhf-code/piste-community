@@ -54,5 +54,12 @@ test('actual PostgreSQL schemas: social defaults, explicit withdrawals, idempote
  await rpc('ops_live_habitual',{p_actor:a,p_owner:a,p_user:b,p_enabled:true});
  await db.query('update coaching_remote_users set enabled=false where id=$1',[a]);assert.deepEqual(await live(b),[]);await db.query('update coaching_remote_users set enabled=true where id=$1',[a]);
  await db.exec('update private.community_friendship_control set enabled=false');await assert.rejects(live(b));await db.exec('update private.community_friendship_control set enabled=true');
- await db.exec('set role authenticated');await assert.rejects(db.query('select * from community_social_edges'));await assert.rejects(db.query('select community_live_sessions($1)',[b]));await assert.rejects(db.query('select ops_live_list($1)',[b]));
+ await db.exec(await readFile(new URL('../docs/contacts/2026-10-28-contact-options.sql',import.meta.url),'utf8'));
+ const d='55555555-5555-4555-8555-555555555555',e='66666666-6666-4666-8666-666666666666';for(const id of [d,e]){await db.query('insert into auth.users values($1)',[id]);await db.query('insert into coaching_remote_users values($1,$2,true,true)',[id,'Contact QA']);}
+ const beforeExisting=await snap(),requestId=crypto.randomUUID();
+ const requestArgs={p_actor:d,p_peer:e,p_action:'contact-request',p_command_id:requestId,p_expected:-1,p_live:false,p_coaching:false};await rpc('community_contact_command',requestArgs);await rpc('community_contact_command',requestArgs);await assert.rejects(rpc('community_contact_command',{...requestArgs,p_live:true}));
+ assert.equal((await db.query('select count(*)::int n from community_social_edges where owner_id=$1',[d])).rows[0].n,0);
+ await rpc('community_contact_command',{p_actor:e,p_peer:d,p_action:'accept-contact',p_command_id:crypto.randomUUID(),p_expected:0,p_live:true,p_coaching:true});
+ const ds=await rpc('community_social_snapshot',{p_actor:d}),es=await rpc('community_social_snapshot',{p_actor:e});assert.equal(ds.contacts[0].quick_coaching_invite_authorized,false);assert.equal(es.contacts[0].quick_coaching_invite_authorized,true);assert.equal(ds.livePermissions[0].enabled,false);assert.equal(es.livePermissions[0].enabled,true);assert.deepEqual(await snap(),beforeExisting);
+ await db.exec('set role authenticated');await assert.rejects(db.query('select * from community_social_edges'));await assert.rejects(db.query('select community_live_sessions($1)',[b]));await assert.rejects(db.query('select ops_live_list($1)',[b]));await assert.rejects(db.query('select community_contact_command($1,$2,$3,$4,$5,true,true)',[d,e,'contact-request',crypto.randomUUID(),-1]));
  }finally{await db.close();}});

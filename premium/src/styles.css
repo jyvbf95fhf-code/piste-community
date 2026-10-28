@@ -4564,3 +4564,23 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 @media(max-width:350px){.live-directory .live-heading{padding:17px}.live-heading-top{align-items:flex-start;gap:6px}.live-observer-chip{font-size:10px}.live-title-row h1{font-size:30px!important}}
 
 .app-shell .live-directory .live-session-card a.button.button-gold{background:linear-gradient(120deg,#294855,#19323f)!important;border:1px solid #d7bd7b88!important;color:#efdba9!important;box-shadow:none!important}
+
+/* Contacts: immediate search and explicit directional permissions. */
+.community-contacts-page .community-person-row{display:flex;flex-direction:column;align-items:stretch;gap:16px}
+.community-contacts-page .community-person-actions{display:flex;flex-direction:column;align-items:stretch;gap:16px;min-width:0}
+.community-contacts-page .community-social-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.community-contacts-page .community-contact-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.community-contacts-page .community-access-menu{width:100%;min-width:0;border-top:1px solid #839da533;padding-top:14px}
+.community-contacts-page .community-contact-permissions{margin:0;width:100%;box-sizing:border-box}
+.community-contacts-page .community-contact-search form{margin-top:12px}
+.community-contact-confirm{width:min(480px,calc(100% - 32px));max-height:calc(100dvh - 40px);box-sizing:border-box;overflow:auto;border:1px solid #74949e80;border-radius:24px;padding:24px;color:#eef4f8;background:#122532}
+.community-contact-confirm::backdrop{background:#04101bcc}
+.community-contact-confirm fieldset{display:grid;gap:18px;border:1px solid #829da555;border-radius:16px;padding:16px;margin:20px 0}
+.community-contact-confirm label{display:flex;align-items:flex-start;gap:12px;line-height:1.45}
+.community-contact-confirm input[type=checkbox]{width:24px;height:24px;flex-shrink:0;accent-color:#89dbe6}
+.community-contact-confirm form>div{display:flex;flex-wrap:wrap;gap:12px}
+.community-contact-confirm button{min-height:44px;white-space:normal}
+.community-contacts-page .community-person-row{flex-wrap:nowrap}
+.community-contacts-page .community-person-row>.community-author,.community-contacts-page .community-person-actions{flex:0 0 auto}
+.community-contacts-page .community-person-actions{width:100%;flex-wrap:nowrap;justify-items:stretch}
+.community-contacts-page .community-contact-permissions label span{min-width:0;overflow-wrap:anywhere}

@@ -28,10 +28,10 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(action==='recover-contact'){if(!confirmAction&&!globalThis.confirm||!(confirmAction||globalThis.confirm)('Vérifier ce profil et préparer une nouvelle demande ? Le destinataire devra l’accepter.'))return false;return finish(store.resolveProfile(userId));}
   if(action==='follow')return finish(store.follow(userId));
   if(action==='unfollow')return finish(store.unfollow(userId));
-  if(action==='contact-request')return finish(store.sendContactRequest(userId));
+  if(action==='contact-request')return finish(store.sendContactRequest(userId,payload.contactPreferences));
   if(action==='accept-contact'){
    const request=store.getContactRequests().received.find(item=>item.fromUserId===userId);
-   return finish(request?store.acceptContactRequest(request.id):false);
+   return finish(request?store.acceptContactRequest(request.id,payload.contactPreferences):false);
   }
   if(action==='refuse-contact'){
    const request=store.getContactRequests().received.find(item=>item.fromUserId===userId);
@@ -98,10 +98,21 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   }
   return false;
  }
+ function confirmContact(action,userId){
+  if(typeof document==='undefined')return;
+  document.querySelector('[data-contact-confirm]')?.remove();
+  const dialog=document.createElement('dialog');dialog.dataset.contactConfirm='';dialog.className='community-contact-confirm';
+  const heading=document.createElement('h2');heading.textContent=action==='accept-contact'?'Accepter ce contact':'Ajouter cet ami';const name=document.createElement('p');name.textContent=store.getProfile(userId)?.displayName||'Membre PISTE COMMUNITY';
+  const form=document.createElement('form');form.innerHTML='<fieldset><legend>Les accès que vous lui accordez</legend><label><input name="live" type="checkbox" checked><span>Accès à mes pistes partagées en Live</span></label><label><input name="coaching" type="checkbox" checked><span>Proposer cet ami dans mes invitations Coaching</span></label></fieldset><p data-contact-summary></p><p data-contact-error role="status"></p><div><button type="button" class="button button-dark" data-contact-cancel>Annuler</button><button type="submit" class="button button-gold">'+(action==='accept-contact'?'Confirmer et accepter':'Confirmer et envoyer la demande')+'</button></div>';
+  const summary=()=>{form.querySelector('[data-contact-summary]').textContent=(form.elements.live.checked?'Après acceptation, cet ami pourra voir uniquement les pistes que vous choisissez de partager en Live. ':'Accès Live désactivé pour cet ami. ')+(form.elements.coaching.checked?'Il sera proposé dans vos invitations Coaching. ':'Il ne sera pas proposé dans vos invitations Coaching. ')+'Aucun rôle Coaching ne lui sera attribué automatiquement. Ces accès restent modifiables à tout moment.';};summary();form.addEventListener('change',summary);
+  let sending=false;form.addEventListener('submit',async event=>{event.preventDefault();event.stopPropagation();if(sending)return;sending=true;const submit=form.querySelector('[type=submit]');submit.disabled=true;try{await dispatch(action,{userId,contactPreferences:{live:form.elements.live.checked,coaching:form.elements.coaching.checked}});dialog.close();toast(action==='accept-contact'?'Contact accepté. Vos accès sont enregistrés.':'Demande envoyée. Vos choix seront appliqués après acceptation.');}catch(error){form.querySelector('[data-contact-error]').textContent=error.message;}finally{sending=false;submit.disabled=false;}});
+  form.querySelector('[data-contact-cancel]').addEventListener('click',()=>dialog.close());dialog.addEventListener('cancel',event=>{if(sending)event.preventDefault();});dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.append(heading,name,form);document.body.append(dialog);dialog.showModal();
+ }
  function handleClick(event){
   const button=event.target.closest?.('[data-community-action]');if(!button)return false;
   event.preventDefault();const action=button.dataset.communityAction;
   try{
+   if(['contact-request','accept-contact'].includes(action)){confirmContact(action,button.dataset.userId);return true;}
    if(action==='delete-post'){
     const confirm=confirmAction||globalThis.confirm;
     if(confirm&&!confirm('Supprimer votre publication mock ?'))return true;

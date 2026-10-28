@@ -46,7 +46,7 @@ test('Contacts screen exposes received, sent, accepted and suggestion actions',(
 
 test('Contacts screen puts an add-contact search CTA before all relationship sections',()=>{
  const html=page({type:'contacts'},{query:'Alex'});
- const cta=html.indexOf('+ Ajouter un contact');
+ const cta=html.indexOf('Ajouter un ami');
  assert.ok(cta>=0);
  for(const section of ['Mes contacts','Demandes reçues','Demandes envoyées','Suggestions'])assert.ok(cta<html.indexOf(section),section);
  assert.match(html,/data-community-form="contact-search"/);
@@ -102,11 +102,11 @@ test('search shows matching profile and track result types with visible relation
   assert.match(trackHtml,/data-community-result="track"/);
 });
 
-test('accepted contacts keep access controls and removal inside secondary disclosure',()=>{
+test('accepted contacts expose access controls and keep removal secondary',()=>{
  const html=page({type:'contacts'});
- assert.match(html,/<details class="community-access-menu"><summary>Accès Live et Coaching<\/summary>/);
+ assert.match(html,/<section class="community-access-menu" aria-label="Accès Live et Coaching">/);
  assert.match(html,/<details class="community-contact-menu"><summary[^>]*>Options<\/summary><div><button[^>]*data-community-action="remove-contact"/);
- assert.doesNotMatch(html,/<details class="community-access-menu" open/);
+ assert.doesNotMatch(html,/<details class="community-access-menu"/);
  assert.match(html,/aucun rôle Coaching/);
 });
 
