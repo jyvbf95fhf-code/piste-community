@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "63c8c71221cd562d",
+  "revision": "3d1c1335e1daa203",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -179,6 +179,7 @@
     "/src/jumolf-training-plan.mjs",
     "/src/jumolf-v3-screen.mjs",
     "/src/jumolf-v3.css",
+    "/src/live-activity.mjs",
     "/src/live-screen.mjs",
     "/src/lobo-account-controller.mjs",
     "/src/lobo-demo-data.mjs",
@@ -312,5 +313,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4068500
+  "bytes": 4073213
 }

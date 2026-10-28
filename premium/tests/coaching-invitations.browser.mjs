@@ -43,5 +43,11 @@ try{const owner=await account(gmail),guest=await account(icloud),id=await f.crea
  await guest.page.waitForURL('**/coaching/session?session='+created);
  await guest.page.locator('[data-remote-phase="LAYING"]').waitFor({state:'attached'});
  p=(await f.call(icloud,{operation:'read',sessionId:created})).projection;assert.equal(p.pose,null);assert.equal(p.mode,'full_blind');
+ // Exit and explicitly resume the owner's broadcast through the real handler and local SQL.
+ await owner.page.goto(origin+'/coaching/session?session='+created);await owner.page.locator('[data-remote-phase="LAYING"]').waitFor({state:'attached'});
+ await owner.page.locator('[data-remote="open-session"]').first().click();await owner.page.getByRole('button',{name:'Retour aux sessions',exact:true}).click();
+ await owner.page.waitForFunction(async ({id})=>{const client=await import('/src/vendor/supabase-client.mjs');const c=client.createClient('');const {data}=await c.auth.getSession();const r=await fetch('https://shnwqdkiapgcftbnhilh.supabase.co/functions/v1/coaching',{method:'POST',headers:{authorization:'Bearer '+data.session.access_token,'Content-Type':'application/json'},body:JSON.stringify({operation:'read',sessionId:id})});return (await r.json()).projection.liveEnded===true;},{id:created});
+ await owner.page.goto(origin+'/coaching/session?session='+created);await owner.page.locator('[data-remote="start-live"]').waitFor({state:'attached'});await owner.page.locator('[data-remote="open-session"]').first().click();await owner.page.getByRole('button',{name:'Reprendre le Live',exact:true}).click();
+ await owner.page.waitForFunction(()=>!document.querySelector('[data-remote="start-live"]'));p=(await f.call(gmail,{operation:'read',sessionId:created})).projection;assert.equal(p.liveEnded,false);assert.equal(p.phase,'LAYING');assert.ok(p.pose.segments.flat().length);
  assert.deepEqual(errors,[]);console.log('PASS: home, organizer shortcut, reload, accept both directions, Sessions, refuse, foreground, mobile widths, refresh feedback, bell + notifications, no-dog Traceur creation, late Double blind driver join; no live writes.');
 }catch(e){if(lastPage){await lastPage.screenshot({path:'/tmp/coaching-invitation-failure.png',fullPage:true});console.log(await lastPage.locator('body').innerText());console.log(errors);}throw e;}finally{await browser.close();await f.db.close();}

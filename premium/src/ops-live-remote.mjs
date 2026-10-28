@@ -1,3 +1,4 @@
+import {liveActivity} from './live-activity.mjs';
 import {projectOpsGpsLive,opsLiveFreshness} from './ops-live-contract.mjs';
 import {createOpsLiveQueue} from './ops-live-sync.mjs';
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
@@ -23,9 +24,9 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   while(after<result.lastSequence){const page=await send({operation:'read',id:item.id,after,version:result.version});if(!page.points?.length)throw Error('Page GPS incomplète.');points.push(...page.points);after=points.at(-1).sequence;}return {...result,points};
  }
  async function refresh(){if(refreshing)return refreshing;const ticket=++epoch;
-  refreshing=(async()=>{try{const list=await send({operation:'list'}),next=new Map(),nextRaw=new Map();for(const item of list){try{const previous=rawRows.get(item.id),row=previous&&previous.generation===item.generation&&previous.version===item.version?previous:await readTrack(item,previous);nextRaw.set(item.id,row);const p=opsLiveProjection(row);p.isOwner=item.isOwner===true||item.ownerId===ownerId||Object.values(saved.missions).some(m=>m.id===item.id);p.ownerId=p.isOwner?ownerId:item.ownerId||null;next.set(item.id,p);}catch(e){if(![401,403].includes(e.status))throw e;}}
+  refreshing=(async()=>{try{const list=await send({operation:'list'}),next=new Map(),nextRaw=new Map();for(const item of list){try{const previous=rawRows.get(item.id),row=previous&&previous.generation===item.generation&&previous.version===item.version?previous:await readTrack(item,previous);nextRaw.set(item.id,row);const p=opsLiveProjection(row);p.activity=liveActivity({ended:p.ended,lastPositionAt:p.lastPositionAt,updatedAt:item.updatedAt||row.updatedAt});p.isOwner=item.isOwner===true||item.ownerId===ownerId||Object.values(saved.missions).some(m=>m.id===item.id);p.ownerId=p.isOwner?ownerId:item.ownerId||null;next.set(item.id,p);}catch(e){if(![401,403].includes(e.status))throw e;}}
    const notifications=await send({operation:'notifications'}),pending=await send({operation:'invitations'});if(!disposed&&ticket===epoch){sessions=list.filter(x=>next.has(x.id));projections=next;rawRows=nextRaw;notices=notifications;invitations=pending;connection='connected';onChange();}
-  }catch(e){if(!disposed&&ticket===epoch){connection=[401,403].includes(e.status)?'forbidden':'offline';projections.clear();rawRows.clear();sessions=[];notices=[];onChange();}}finally{refreshing=null;}})();return refreshing;
+  }catch(e){if(!disposed&&ticket===epoch){connection=[401,403].includes(e.status)?'forbidden':'offline';if(connection==='forbidden'){projections.clear();rawRows.clear();sessions=[];notices=[];invitations=[];}else for(const [id,p] of projections)if(!p.ended)projections.set(id,{...p,activity:{state:'disconnected',label:'Déconnecté · dernière réception conservée'}});onChange();}}finally{refreshing=null;}})();return refreshing;
  }
  async function command(state,type,payload,expected=state.version){
   if(!state.pending){state.pending={operation:'command',id:state.id,commandId:crypto.randomUUID(),expectedVersion:expected,type,payload};save();}
@@ -43,12 +44,12 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   if(!state){state=saved.missions[mission.id]={id:null,version:-1,generation:1,stopped:false,policy:{share_live:true,notify_observers:policy.notify_observers!==false,projectionOptions:structuredClone(policy.projectionOptions||{})}};save();}
   if(state.pending)await command(state);
   if(!state.id||state.stopped){
-   const ticket=await send({operation:'prepare-publication',localMissionId:mission.id,...(state.id?{id:state.id}:{})});state.id=ticket.id;save();
-   await command(state,'publish',{...ticket,id:undefined,localMissionId:mission.id,options:policy.projectionOptions,notifyObservers:policy.notify_observers,metadata:{state:frame.state==='Fin de piste'?'En cours':frame.state},captureStartedAt:new Date(frame.gpsTrack?.startedAt||Date.now()).toISOString()},ticket.creationExpectedVersion);
+   const ticket=await send({operation:'prepare-publication',localMissionId:state.wireMissionId||mission.id,...(state.id?{id:state.id}:{})});state.id=ticket.id;save();
+   await command(state,'publish',{...ticket,id:undefined,localMissionId:state.wireMissionId||mission.id,options:policy.projectionOptions,notifyObservers:policy.notify_observers,metadata:{state:frame.state==='Fin de piste'?'En cours':frame.state},captureStartedAt:new Date(frame.gpsTrack?.startedAt||Date.now()).toISOString()},ticket.creationExpectedVersion);
    state.stopped=false;state.latest=null;save();
   }
-  const queue=createOpsLiveQueue({storage,ownerId,missionId:mission.id});const encoded=JSON.stringify([frame,policy.projectionOptions,policy.notify_observers]);
-  if(state.latest!==encoded){queue.append({generation:state.generation,sequence:(state.localSequence||0)+1,frame});state.localSequence=(state.localSequence||0)+1;state.latest=encoded;save();}
+  const queue=createOpsLiveQueue({storage,ownerId,missionId:state.wireMissionId||mission.id});const encoded=JSON.stringify([frame,policy.projectionOptions,policy.notify_observers]);
+  if(state.latest!==encoded){queue.append({generation:state.generation,sequence:(state.localSequence||0)+1,frame:{...frame,sessionId:state.wireMissionId||mission.id}});state.localSequence=(state.localSequence||0)+1;state.latest=encoded;save();}
   for(const item of queue.list()){
    if(item.generation!==state.generation)continue;
    const current=await read(state.id);if(current.closed){state.closed=true;save();return;}state.version=current.version;
@@ -60,7 +61,8 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
    if(f.state==='Fin de piste'){state.closed=true;save();break;}
   }
  }
- return {view,refresh,isOwn:id=>sessions.some(s=>s.id===id&&s.isOwner===true)||Object.values(saved.missions).some(m=>m.id===id)||projections.get(id)?.isOwner===true,
+ return {view,refresh,broadcastEnded:id=>saved.missions[id]?.closed===true||saved.missions[id]?.ending===true,
+  async resumeBroadcast(mission,policy){active();if(mission.ownerUserId!==ownerId||mission.status!=='En cours'||!policy.share_live)throw Error('Reprise Live non autorisée.');const prior=busy.get(mission.id);const resume=async()=>{const raw=storage.getItem(key);if(raw){const latest=JSON.parse(raw);if(latest.ownerId!==ownerId)throw Error('Compte différent.');saved=latest;}const old=saved.missions[mission.id];if(!old?.closed)throw Error('Clôturez la diffusion avant de la reprendre.');saved.missions[mission.id]={id:null,version:-1,generation:1,stopped:true,wireMissionId:mission.id+':live:'+crypto.randomUUID(),policy:structuredClone(policy)};save();return sync(mission,policy);};const task=(async()=>{if(prior)await prior;if(locks)return locks.request('piste-ops-live:'+ownerId,resume);return resume();})();busy.set(mission.id,task);try{return await task;}finally{if(busy.get(mission.id)===task)busy.delete(mission.id);}},isOwn:id=>sessions.some(s=>s.id===id&&s.isOwner===true)||Object.values(saved.missions).some(m=>m.id===id)||projections.get(id)?.isOwner===true,
   async endBroadcast(missionId){active();const prior=busy.get(missionId);const task=(async()=>{if(prior)await prior.catch(()=>{});if(locks)return locks.request('piste-ops-live:'+ownerId,async()=>{const raw=storage.getItem(key);if(raw){const latest=JSON.parse(raw);if(latest.ownerId!==ownerId)throw Error('Compte différent.');saved=latest;}return finishBroadcast(missionId);});return finishBroadcast(missionId);})();busy.set(missionId,task);try{return await task;}finally{if(busy.get(missionId)===task)busy.delete(missionId);}},storedPolicy:id=>structuredClone(saved.missions[id]?.policy||null),publicationId:id=>saved.missions[id]?.id||id,projection:id=>{const remote=saved.missions[id]?.id||id;return projections.get(remote)||null;},freshness:id=>opsLiveFreshness(projections.get(saved.missions[id]?.id||id)),
   async loadDirectory(){if(directoryLoading)return directoryLoading;directoryLoading=send({operation:'directory'}).then(rows=>{directory=rows;onChange();return rows;}).catch(e=>{directoryLoading=null;throw e;});return directoryLoading;},
   async acceptInvite(id){return send({operation:'accept-invite',id,commandId:crypto.randomUUID()});},

@@ -25,11 +25,11 @@ test('actual PostgreSQL schemas: social defaults, explicit withdrawals, idempote
  await command(a,c,'set-contact-permission',1,false,'live_access_authorized');await command(a,c,'remove-contact',2);await command(a,c,'contact-request',3);await command(c,a,'accept-contact',4);assert.equal((await live(c)).length,0);
  assert.equal((await rpc('community_member_search',{p_actor:b,p_query:'Alpha'}))[0].id,a);
  // Additive replacement: retain grants while returning minimal authorized tombstones.
- await db.exec(await readFile(new URL('../docs/live-end/2026-10-28-live-end.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../docs/live-end/2026-10-28-live-end.sql',import.meta.url),'utf8'));await db.exec(await readFile(new URL('../docs/live-end/2026-10-28-live-activity.sql',import.meta.url),'utf8'));await db.query("update coaching_remote_sessions set state=jsonb_set(state,'{search,phase}','\"PREPARATION\"') where id=$1",[sid]);assert.deepEqual(await live(b),[]);await db.query("update coaching_remote_sessions set state=jsonb_set(state,'{search,phase}','\"SEARCH_RUNNING\"') where id=$1",[sid]);
  await db.query("insert into ops_live_publications(id,owner_id,local_mission_id,sharing,creation_expires_at) values($1,$2,'local-secret',true,now()+interval '1 hour')",[sid,a]);
  await db.query("insert into ops_live_access(owner_id,scope,publication_id,generation,user_id) values($1,'publication',$2,1,$3)",[a,sid,b]);
- assert.deepEqual(await rpc('ops_live_list',{p_actor:a}),[{id:sid,version:0,generation:1,closed:false,isOwner:true}]);
- assert.deepEqual(await rpc('ops_live_list',{p_actor:b}),[{id:sid,version:0,generation:1,closed:false,isOwner:false}]);
+ const ownerRows=await rpc('ops_live_list',{p_actor:a});assert.ok(Number.isFinite(Date.parse(ownerRows[0].updatedAt)));assert.deepEqual(ownerRows.map(({updatedAt,...row})=>row),[{id:sid,version:0,generation:1,closed:false,isOwner:true}]);
+ assert.deepEqual((await rpc('ops_live_list',{p_actor:b})).map(({updatedAt,...row})=>row),[{id:sid,version:0,generation:1,closed:false,isOwner:false}]);
  assert.deepEqual(await rpc('ops_live_list',{p_actor:c}),[]);
  const directory=actor=>rpc('community_live_sessions',{p_actor:actor,p_session_id:null});
  assert.equal((await directory(a)).length,0);assert.equal((await directory(b)).length,1);

@@ -32,6 +32,15 @@ try{
  await assertPoll(async()=>Number((await db.query('select count(*)::int n from public.ops_live_points')).rows[0].n)===3);
  const pub=(await db.query('select id from public.ops_live_publications')).rows[0].id;
  await observer.goto('https://ops3bc.test/live/ops/'+pub);await observer.locator('[data-live-role="ops_trace_observer"]').waitFor();assert.ok(!(await observer.locator('body').innerText()).includes('SECRET DOSSIER'));assert.equal(await observer.locator('[data-operational-action]').count(),0);
+ // A deliberate in-app exit closes the broadcast, then the same mission can publish again.
+ await owner.evaluate(()=>{const a=document.createElement('a');a.href='/sessions';document.body.append(a);a.click();});
+ await assertPoll(async()=>(await db.query('select closed_at is not null closed from ops_live_publications where id=$1',[pub])).rows[0].closed);
+ await observer.getByRole('heading',{name:'Live terminé',exact:true}).waitFor({timeout:15000});
+ await owner.goto('https://ops3bc.test/operational/missions/qa-mission');await owner.locator('.session-exit-menu summary').click();await owner.locator('[data-ops="details"]').first().click();await owner.getByRole('button',{name:'Reprendre le Live',exact:true}).click();
+ await assertPoll(async()=>(await db.query('select count(*)::int n from ops_live_publications where closed_at is null')).rows[0].n===1);
+ const resumed=(await db.query('select id from ops_live_publications where closed_at is null')).rows[0].id;assert.notEqual(resumed,pub);
+ await assertPoll(async()=>(await db.query('select count(*)::int n from ops_live_points where publication_id=$1',[resumed])).rows[0].n===3);
+ await observer.goto('https://ops3bc.test/live/ops/'+resumed);await observer.locator('[data-live-role="ops_trace_observer"]').waitFor();
  await stranger.goto('https://ops3bc.test/live/ops/'+pub);await stranger.getByText('Live indisponible',{exact:true}).waitFor();
  await owner.goto('https://ops3bc.test/community/profile/'+ids[1]);const revoked=owner.waitForResponse(r=>r.url().endsWith('/ops-live')&&r.request().postDataJSON()?.operation==='habitual'&&r.request().postDataJSON()?.enabled===false);await owner.locator('[data-community-permission="live_access_authorized"]').uncheck();await revoked;await observer.getByText('Live indisponible',{exact:true}).waitFor({timeout:15000});
 
