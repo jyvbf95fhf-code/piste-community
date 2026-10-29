@@ -6,3 +6,5 @@ export function validatePersistenceRecord(record){
  if(!record||Object.keys(record).some(k=>!keys.includes(k))||record.schemaVersion!==1||!PERSISTENCE_KINDS.includes(record.kind)||!persistenceUuid(record.id)||!Number.isSafeInteger(record.revision)||record.revision<1||typeof record.updatedAt!=='string'||!Number.isFinite(Date.parse(record.updatedAt))||record.deletedAt!==null&&(typeof record.deletedAt!=='string'||!Number.isFinite(Date.parse(record.deletedAt)))||!record.payload||typeof record.payload!=='object'||Array.isArray(record.payload))throw Error('Dossier de sauvegarde invalide.');
  return structuredClone(record);
 }
+
+export function persistenceTrackDates(value){const dates={};for(const field of ['createdAt','updatedAt'])if(Object.hasOwn(value,field)){const x=value[field];if(typeof x!=='string'||x.length>40||!/^\d{4}-\d\d-\d\dT/.test(x)||!Number.isFinite(Date.parse(x)))throw Error('Date du tracé invalide.');dates[field]=x;}return dates;}

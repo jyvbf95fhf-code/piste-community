@@ -1,3 +1,4 @@
+import {personalChanged} from './personal-change.mjs';
 import {sessionRemovalPolicy} from './session-removal.mjs';
 import {validatePersistenceRecord} from './persistence-contract.mjs';
 import {createGpsPose,startGpsPose,appendGpsFix,gapGpsPose,finishGpsPose,validGpsPose,normalizeGpsFix} from './coaching-gps-model.mjs';
@@ -111,19 +112,19 @@ export function createOperationalMissionStore({
   if(persistenceKey&&storage)try{
     const saved=JSON.parse(storage.getItem(persistenceKey)||'null');
     if(saved?.version===1&&saved.ownerId===ownerId&&Array.isArray(saved.missions))for(const row of saved.missions){
-      if(!row||row.kind!=='operational'||row.gpsOwnerId!==ownerId||row.ownerUserId!==ownerId||!OPERATIONAL_MISSION_STATUSES.includes(row.status)||!validGpsPose(row.gpsTrack,'ops:'+row.id,ownerId)||!Number.isFinite(row.trackingPausedMs)||row.trackingPausedMs<0)continue;
+      if(!row||row.kind!=='operational'||row.ownerUserId!==ownerId||!OPERATIONAL_MISSION_STATUSES.includes(row.status)||!Number.isFinite(row.trackingPausedMs)||row.trackingPausedMs<0)continue;if(row.gpsTrack&&(row.gpsOwnerId!==ownerId||!validGpsPose(row.gpsTrack,'ops:'+row.id,ownerId)))continue;
       const phases={ready:'before',active:'active',paused:'active',stopped:'finished'};
-      if(phases[row.trackingState]!==row.gpsTrack.phase)continue;
+      if(row.gpsTrack&&phases[row.trackingState]!==row.gpsTrack.phase)continue;
       const restored=normalizeOperationalMission(row);
-      if(['active','paused','ready'].includes(restored.trackingState)){restored.gpsTrack=gapGpsPose(restored.gpsTrack);restored.gpsNeedsResume=true;}
+      if(['active','paused','ready'].includes(restored.trackingState)){if(restored.gpsTrack)restored.gpsTrack=gapGpsPose(restored.gpsTrack);restored.gpsNeedsResume=true;}
       records.set(restored.id,restored);
     }
   }catch{persistenceError='La sauvegarde GPS locale n’a pas pu être restaurée.';}
   function persist(){
     if(!persistenceKey)return;
-    const missions=[...records.values()].filter(m=>!m.cloudReadOnly&&m.gpsTrack&&m.gpsOwnerId===ownerId);
-    if(!missions.length)return;
-    try{if(!storage)throw Error('Stockage indisponible');const json=JSON.stringify({version:1,ownerId,missions});if(json!==lastSaved){storage.setItem(persistenceKey,json);lastSaved=json;}persistenceError='';}
+    const missions=[...records.values()].filter(m=>!m.cloudReadOnly&&m.ownerUserId===ownerId);
+
+    try{if(!storage)throw Error('Stockage indisponible');const json=JSON.stringify({version:1,ownerId,missions});if(json!==lastSaved){storage.setItem(persistenceKey,json);lastSaved=json;personalChanged(ownerId);}persistenceError='';}
     catch{persistenceError='Sauvegarde locale indisponible · gardez cette page ouverte.';}
   }
 
@@ -290,7 +291,7 @@ export function createOperationalMissionStore({
       if(!mission)return {ok:false,reason:'not-found'};
       const policy=sessionRemovalPolicy(mission,{ownerId:actorId,currentSessionId});
       if(actorId!==ownerId||!policy.canRemoveLocal)return {ok:false,reason:policy.localReason||'owner'};
-      const key=mission.cloudReadOnly?cloudKey:mission.gpsTrack?persistenceKey:null;
+      const key=mission.cloudReadOnly?cloudKey:persistenceKey;
       if(key){
         try{
           if(!storage)throw Error();

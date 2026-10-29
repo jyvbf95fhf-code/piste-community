@@ -1,4 +1,7 @@
 // Local-only integration: bundled SDK and complete app; synthetic Auth, no live e-mails.
+import {createMemoryPersistenceServer} from './helpers/persistence-memory-repository.mjs';
+import {createPersonalDataHandler} from '../src/server/personal-data-http.mjs';
+import {preparePersistenceCandidate} from '../src/persistence-domain-adapters.mjs';
 import {chromium} from '@playwright/test';import chromiumBundle from '@sparticuz/chromium';
 import {createTrackLibrary} from '../src/track-library.mjs';
 import {createOperationalMissionStore} from '../src/operational-missions.mjs';
@@ -14,14 +17,19 @@ try{
  const saved=new Map(),ops=createOperationalMissionStore({ownerId:user.id,storage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},idFactory:()=> 'ops-browser',clock:()=>Date.parse('2026-10-19T10:00:00Z')});
  ops.createDraft({dog:{id:'nox',name:'Nox'},handler:{id:'u',name:'Conducteur OPS'}});ops.enableGps('ops-browser',user.id);ops.startTracking('ops-browser');ops.appendGpsPoint('ops-browser',{timestamp:Date.parse('2026-10-19T10:00:00Z'),coords:{latitude:48.2,longitude:7.3,accuracy:5}});ops.stopTracking('ops-browser');ops.complete('ops-browser');ops.archive('ops-browser');
  const library=createTrackLibrary({ownerId:user.id,storage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)}});const track=library.createPrepared({name:'Tracé isolé',geometry:{points:[{x:7,y:48,space:'wgs84'},{x:7.001,y:48.001,space:'wgs84'}]}});
+ const accountServer=createMemoryPersistenceServer(),accountRepository=accountServer.client(user.id);
+ const trackPayload=preparePersistenceCandidate({kind:'track',localId:track.id,value:track},{ownerId:user.id}).payload;
+ await accountRepository.put({kind:'track',id:'55555555-5555-4555-8555-555555555555',expectedRevision:0,commandId:crypto.randomUUID(),payload:trackPayload});
+ const accountHandler=createPersonalDataHandler({authenticate:async()=>({id:user.id}),enabled:async()=>enabled,repositoryFor:()=>accountRepository});
  cloudRecord={id:'55555555-5555-4555-8555-555555555555',kind:'track',payload:track,revision:1,updated_at:'2026-10-25T10:00:00Z'};
  await page.addInitScript(entries=>{if(!localStorage.getItem('qa-piste-bulk-seeded')){for(const [k,v] of entries)localStorage.setItem(k,v);localStorage.setItem('qa-piste-bulk-seeded','1');}},[...saved]);
- const headers={'access-control-allow-origin':'https://piste.test','access-control-allow-headers':'*','access-control-allow-methods':'GET,PUT,POST,OPTIONS'};
+ const headers={'access-control-allow-origin':'https://piste-community-v2-premium.vercel.app','access-control-allow-headers':'*','access-control-allow-methods':'GET,PUT,POST,OPTIONS'};
  page.setDefaultTimeout(12000);page.on('pageerror',e=>{errors.push(e.message);console.error('APP ERROR:',e.stack);});
- await page.route('https://piste.test/**',async route=>{const path=new URL(route.request().url()).pathname;const source=path.endsWith('.mjs')||path.endsWith('.css')||path.endsWith('.js')||path.includes('/assets/')||path.endsWith('.html')?path:'/index.html';try{const body=await readFile(new URL('..'+source,import.meta.url));await route.fulfill({body,contentType:source.endsWith('.mjs')||source.endsWith('.js')?'text/javascript':source.endsWith('.css')?'text/css':source.endsWith('.html')?'text/html':source.endsWith('.svg')?'image/svg+xml':'image/png'});}catch{await route.fulfill({status:404,body:''});}});
+ await page.route('https://piste-community-v2-premium.vercel.app/**',async route=>{const path=new URL(route.request().url()).pathname;const source=path.endsWith('.mjs')||path.endsWith('.css')||path.endsWith('.js')||path.includes('/assets/')||path.endsWith('.html')?path:'/index.html';try{const body=await readFile(new URL('..'+source,import.meta.url));await route.fulfill({body,contentType:source.endsWith('.mjs')||source.endsWith('.js')?'text/javascript':source.endsWith('.css')?'text/css':source.endsWith('.html')?'text/html':source.endsWith('.svg')?'image/svg+xml':'image/png'});}catch{await route.fulfill({status:404,body:''});}});
  await page.route('https://shnwqdkiapgcftbnhilh.supabase.co/**',async route=>{
   const req=route.request(),path=new URL(req.url()).pathname;calls.push([req.method(),path]);
   if(req.method()==='OPTIONS')return route.fulfill({status:200,headers,body:''});
+  if(path==='/functions/v1/personal-data'){const response=await accountHandler(new Request(req.url(),{method:'POST',headers:{authorization:'Bearer '+token,origin:'https://piste-community-v2-premium.vercel.app','content-type':'application/json'},body:req.postData()}));return route.fulfill({status:response.status,headers:Object.fromEntries(response.headers),body:await response.text()});}
   let json=user,status=200;
   if(path==='/auth/v1/token')json={access_token:token,refresh_token:'synthetic',expires_in:3600,token_type:'bearer',user};
   if(path==='/auth/v1/signup')json={...user,id:'22222222-2222-4222-8222-222222222222',identities:[]};
@@ -31,12 +39,12 @@ try{
   await route.fulfill({status,headers,json});
  });
 
- await page.goto('https://piste.test/auth/login');
+ await page.goto('https://piste-community-v2-premium.vercel.app/auth/login');
  await page.getByLabel('Email',{exact:true}).fill('qa@example.invalid');await page.getByLabel('Mot de passe',{exact:true}).fill('synthetic-existing');
+ await page.evaluate(async({owner,track,record,payload})=>{const {createPersistenceJournal}=await import('/src/persistence-journal.mjs');const j=createPersistenceJournal({ownerId:owner});await j.adopt({localId:track.id,record:{schemaVersion:1,kind:'track',id:record.id,revision:1,payload:payload,updatedAt:record.updated_at,deletedAt:null}});j.dispose();},{owner:user.id,track,record:cloudRecord,payload:trackPayload});
  await page.getByRole('button',{name:'Se connecter',exact:true}).click();
  await page.getByText('Prêts pour le terrain ?').waitFor();
- await page.evaluate(async({owner,track,record})=>{const {createPersistenceJournal}=await import('/src/persistence-journal.mjs');const j=createPersistenceJournal({ownerId:owner});await j.adopt({localId:track.id,record:{schemaVersion:1,kind:'track',id:record.id,revision:1,payload:track,updatedAt:record.updated_at,deletedAt:null}});j.dispose();},{owner:user.id,track,record:cloudRecord});
- await page.goto('https://piste.test/tracks');
+ await page.goto('https://piste-community-v2-premium.vercel.app/tracks');
  await page.locator('[data-history-session="'+sessionId+'"]').waitFor();
  for(const width of [320,390,430]){
   await page.setViewportSize({width,height:844});
@@ -53,10 +61,10 @@ try{
   await page.getByRole('link',{name:'Effacer les filtres',exact:true}).click();
  }
  // A missing server receipt must never be treated as a confirmed permanent deletion.
- omitReceipt=true;await page.goto('https://piste.test/tracks');await page.getByRole('button',{name:'Sélectionner',exact:true}).click();await page.locator('[data-history-session="'+sessionId+'"]').getByRole('checkbox').check();await page.locator('[data-piste-bulk="confirm"]').click();await page.locator('dialog input[value="delete"]').check();await page.locator('dialog [data-confirm]').click();await page.getByText('0 réussi(s) · 0 refusé(s) · 1 échoué(s)',{exact:true}).waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),1);assert.equal(deleted,false);omitReceipt='network';await page.locator('[data-piste-bulk="force"]').click();await page.locator('dialog [data-confirm]').click();await page.getByText('0 réussi(s) · 0 refusé(s) · 1 échoué(s)',{exact:true}).waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),1);omitReceipt=false;
+ omitReceipt=true;await page.goto('https://piste-community-v2-premium.vercel.app/tracks');await page.getByRole('button',{name:'Sélectionner',exact:true}).click();await page.locator('[data-history-session="'+sessionId+'"]').getByRole('checkbox').check();await page.locator('[data-piste-bulk="confirm"]').click();await page.locator('dialog input[value="delete"]').check();await page.locator('dialog [data-confirm]').click();await page.getByText('0 réussi(s) · 0 refusé(s) · 1 échoué(s)',{exact:true}).waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),1);assert.equal(deleted,false);omitReceipt='network';await page.locator('[data-piste-bulk="force"]').click();await page.locator('dialog [data-confirm]').click();await page.getByText('0 réussi(s) · 0 refusé(s) · 1 échoué(s)',{exact:true}).waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),1);omitReceipt=false;
  // Hide shared record, refresh/reload: it remains hidden while the server data survives.
  projection={...projection,ownerId:'22222222-2222-4222-8222-222222222222'};
- await page.goto('https://piste.test/tracks');
+ await page.goto('https://piste-community-v2-premium.vercel.app/tracks');
  await page.getByRole('button',{name:'Sélectionner',exact:true}).click();
  await page.locator('[data-history-session="'+sessionId+'"]').getByRole('checkbox').check();
  await page.locator('[data-piste-bulk="confirm"]').click();await page.locator('dialog [data-confirm]').click();
@@ -65,7 +73,7 @@ try{
  await page.waitForFunction(()=>!document.querySelector('[data-history-session="33333333-3333-4333-8333-333333333333"]'));
  assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),0);
  // Prepared tracks use the existing owner store, and their backup precedes local deletion.
- await page.goto('https://piste.test/tracks?category=prepared');await page.getByText('Tracé isolé',{exact:true}).waitFor();await page.getByRole('button',{name:'Sélectionner',exact:true}).waitFor({state:'visible'});assert.equal(await page.locator('[data-prepared-library] [data-track-id]').count(),1,'cloud/local track must count once');
+ await page.goto('https://piste-community-v2-premium.vercel.app/tracks?category=prepared');await page.getByText('Tracé isolé',{exact:true}).waitFor();await page.getByRole('button',{name:'Sélectionner',exact:true}).waitFor({state:'visible'});assert.equal(await page.locator('[data-prepared-library] [data-track-id]').count(),1,'cloud/local track must count once');
  await page.getByRole('button',{name:'Sélectionner',exact:true}).click();await page.getByRole('button',{name:'Tout sélectionner',exact:true}).click();await page.locator('[data-piste-bulk="confirm"]').click();
  await page.locator('dialog input[value="delete"]').check();await page.locator('dialog [data-confirm]').click();await page.getByText('1 réussi(s) · 0 refusé(s) · 0 échoué(s)',{exact:true}).waitFor();
  assert.equal(await page.locator('[data-track-id="prepared:track-local-1"]').count(),0);

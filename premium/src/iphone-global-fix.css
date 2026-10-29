@@ -166,3 +166,9 @@
 [data-track-cockpit][data-previewing=true]:not(.mission-map) .preview-map-actions{position:relative;inset:auto;flex:none;margin-top:auto;min-width:0}
 [data-track-cockpit][data-previewing=true]:not(.mission-map) .creator-wind-status{position:relative;inset:auto;flex:none;box-sizing:border-box;width:100%;max-width:100%;margin:0;overflow-wrap:anywhere}
 [data-track-cockpit][data-previewing=true]:not(.mission-map) .creator-action-area{flex:none;margin-top:0}
+/* Account status stays in document flow and never covers a terrain map. */
+.account-sync-status{display:block;margin:0 14px 10px;padding:7px 10px;border:1px solid #416877;border-radius:10px;background:#0d2431;color:#a9e5d7;font-size:12px;line-height:1.35;text-align:center;text-decoration:none;overflow-wrap:anywhere}
+.account-sync-status[data-sync-state=offline],.account-sync-status[data-sync-state=pending],.account-sync-status[data-sync-state=deferred]{color:#f3d599}
+.account-sync-status[data-sync-state=error],.account-sync-status[data-sync-state=conflict]{color:#ffc3b9;border-color:#b56e68}
+.app-shell:has([data-track-cockpit])>.account-sync-status,.app-shell:has([data-gps-live])>.account-sync-status{display:none}
+.account-sync-panel{margin:16px 0;overflow-wrap:anywhere}.account-sync-panel p{line-height:1.5}.account-sync-conflict{padding:12px;margin:12px 0;border:1px solid #946c56;border-radius:12px}.account-sync-conflict button{display:block;width:100%;min-height:44px;margin:8px 0;padding:10px;border:1px solid #547a87;border-radius:10px;background:#153748;color:#f0f5f7;font:inherit}.account-sync-conflict button:disabled{opacity:.5}

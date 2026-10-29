@@ -1,5 +1,6 @@
+import {personalChanged} from './personal-change.mjs';
 import {normalizeTrainingMemory} from './jumolf-training-memory.mjs';
-import {validatePersistenceRecord} from './persistence-contract.mjs';
+import {validatePersistenceRecord,persistenceTrackDates} from './persistence-contract.mjs';
 import {normalizeTrackRoute} from './track-route-segments.mjs';
 import {geographicCoordinates,trackDeparture} from './track-geographic.mjs';
 // Prepared tracks use owner-scoped local persistence when storage is supplied.
@@ -52,7 +53,7 @@ export function createTrackLibrary({storage,ownerId=null,includeDemo=true}={}) {
    try{if(storage.getItem(key)!==observedRaw)throw Error('Tracés modifiés dans un autre onglet : rechargez avant de supprimer.');const raw=JSON.stringify({version:1,ownerId,items:next.filter(item=>item.ownerId==='self')});storage.setItem(key,raw);observedRaw=raw;warning='';}
    catch(error){if(error.message?.includes('autre onglet'))throw error;warning='Tracé non enregistré : sauvegarde locale impossible (stockage plein ou bloqué).';throw Error(warning);}
   }
-  items=next;
+  items=next;personalChanged(ownerId);
  };
  const list=()=>items.map(copy);
  const find=id=>{const item=items.find(t=>t.id===id);if(!item)throw Error('Ce tracé n’est plus disponible.');return item;};
@@ -64,7 +65,7 @@ export function createTrackLibrary({storage,ownerId=null,includeDemo=true}={}) {
   get,
   persistenceWarning:()=>warning,
   restoreCloud(record,localId='track-cloud-'+record.id){
-   const r=validatePersistenceRecord(record);if(r.kind!=='track'||r.deletedAt)throw Error('Tracé distant indisponible.');if(r.payload.trainingMemory)normalizeTrainingMemory(r.payload.trainingMemory,{ownerId,dogId:r.payload.dogId});const normalized=createTrackLibrary().createPrepared(r.payload);const previous=items.find(item=>item.id===localId),retained=!normalized.trainingMemory&&previous?.trainingMemory&&previous.dogId===normalized.dogId&&JSON.stringify(previous.geometry)===JSON.stringify(normalized.geometry)?{trainingMemory:previous.trainingMemory}:{};const restored={...normalized,...retained,id:localId,ownerId:'self'};commit([...items.filter(item=>item.id!==localId),restored]);return copy(restored);
+   const r=validatePersistenceRecord(record);if(r.kind!=='track'||r.deletedAt)throw Error('Tracé distant indisponible.');if(r.payload.trainingMemory)normalizeTrainingMemory(r.payload.trainingMemory,{ownerId,dogId:r.payload.dogId});const normalized=createTrackLibrary().createPrepared(r.payload);const previous=items.find(item=>item.id===localId),retained=!normalized.trainingMemory&&previous?.trainingMemory&&previous.dogId===normalized.dogId&&JSON.stringify(previous.geometry)===JSON.stringify(normalized.geometry)?{trainingMemory:previous.trainingMemory}:{};const restored={...normalized,...retained,...persistenceTrackDates(r.payload),id:localId,ownerId:'self'};commit([...items.filter(item=>item.id!==localId),restored]);return copy(restored);
   },
   create(name) {return insert({name:validName(name),source:'draw',start:mockStart(),description:'Votre tracé mock'});},
   createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',fileName,geometry,copiedFrom,trainingMemory}={}) {

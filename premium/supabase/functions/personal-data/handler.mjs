@@ -6,6 +6,15 @@ function validatePersistenceRecord(record2) {
   if (!record2 || Object.keys(record2).some((k) => !keys.includes(k)) || record2.schemaVersion !== 1 || !PERSISTENCE_KINDS.includes(record2.kind) || !persistenceUuid(record2.id) || !Number.isSafeInteger(record2.revision) || record2.revision < 1 || typeof record2.updatedAt !== "string" || !Number.isFinite(Date.parse(record2.updatedAt)) || record2.deletedAt !== null && (typeof record2.deletedAt !== "string" || !Number.isFinite(Date.parse(record2.deletedAt))) || !record2.payload || typeof record2.payload !== "object" || Array.isArray(record2.payload)) throw Error("Dossier de sauvegarde invalide.");
   return structuredClone(record2);
 }
+function persistenceTrackDates(value) {
+  const dates = {};
+  for (const field of ["createdAt", "updatedAt"]) if (Object.hasOwn(value, field)) {
+    const x = value[field];
+    if (typeof x !== "string" || x.length > 40 || !/^\d{4}-\d\d-\d\dT/.test(x) || !Number.isFinite(Date.parse(x))) throw Error("Date du trac\xE9 invalide.");
+    dates[field] = x;
+  }
+  return dates;
+}
 
 // src/track-canine.mjs
 var CANINE_LEVELS = [
@@ -92,6 +101,11 @@ function normalizeTrainingMemory(input, { ownerId, dogId } = {}) {
   return clone(input);
 }
 
+// src/personal-change.mjs
+function personalChanged(ownerId) {
+  if (ownerId && typeof globalThis.dispatchEvent === "function" && typeof Event === "function") globalThis.dispatchEvent(new Event("piste:personal-change"));
+}
+
 // src/profile-store.mjs
 var DEFAULTS = Object.freeze({ theme: "system", distance_unit: "km", speed_unit: "km/h", time_format: "24h", map_default: "standard", density: "comfortable", language: "fr" });
 var clone2 = (value) => structuredClone(value);
@@ -128,6 +142,7 @@ function createProfileStore(initial = {}, { ownerId = null, storage = null } = {
       }
     }
     state = next;
+    personalChanged(ownerId);
     return clone2(state);
   };
   return Object.freeze({
@@ -299,6 +314,7 @@ function createDogsStore({ dogs = demoDogs, ownerId = null, storage = null, idFa
     if (unreadable) throw Error("Sauvegarde des chiens illisible : aucune donn\xE9e existante remplac\xE9e.");
     try {
       storage.setItem(key, JSON.stringify({ version: 1, ownerId, dogs: next }));
+      personalChanged(ownerId);
     } catch {
       throw Error("Profil chien non enregistr\xE9 : stockage local indisponible.");
     }
@@ -473,6 +489,7 @@ function createTrackLibrary({ storage, ownerId = null, includeDemo = true } = {}
       }
     }
     items = next;
+    personalChanged(ownerId);
   };
   const list2 = () => items.map(copy);
   const find = (id) => {
@@ -502,7 +519,7 @@ function createTrackLibrary({ storage, ownerId = null, includeDemo = true } = {}
       if (r.payload.trainingMemory) normalizeTrainingMemory(r.payload.trainingMemory, { ownerId, dogId: r.payload.dogId });
       const normalized = createTrackLibrary().createPrepared(r.payload);
       const previous = items.find((item) => item.id === localId), retained = !normalized.trainingMemory && previous?.trainingMemory && previous.dogId === normalized.dogId && JSON.stringify(previous.geometry) === JSON.stringify(normalized.geometry) ? { trainingMemory: previous.trainingMemory } : {};
-      const restored = { ...normalized, ...retained, id: localId, ownerId: "self" };
+      const restored = { ...normalized, ...retained, ...persistenceTrackDates(r.payload), id: localId, ownerId: "self" };
       commit([...items.filter((item) => item.id !== localId), restored]);
       return copy(restored);
     },
@@ -790,7 +807,7 @@ function preparePersistenceCandidate({ kind, localId, value }, { ownerId = null 
   } else if (kind === "track") {
     if (!value.geometry?.points?.every((p) => p.space === "wgs84")) throw Error("G\xE9om\xE9trie g\xE9ographique requise.");
     const normalized = createTrackLibrary().createPrepared(pick(value, ["name", "description", "category", "difficulty", "dogId", "notes", "source", "provenance", "fileName", "geometry", "copiedFrom", "trainingMemory"]));
-    payload = pick(normalized, ["name", "description", "category", "difficulty", "dogId", "notes", "source", "provenance", "fileName", "geometry", "copiedFrom", "trainingMemory"]);
+    payload = { ...persistenceTrackDates(value), ...pick(normalized, ["name", "description", "category", "difficulty", "dogId", "notes", "source", "provenance", "fileName", "geometry", "copiedFrom", "trainingMemory"]) };
   } else if (kind === "ops") {
     if (value.kind !== "operational" || !OPERATIONAL_MISSION_STATUSES.includes(value.status)) throw Error("Dossier OPS invalide.");
     if (value.gpsTrack && !validGpsPose(value.gpsTrack, "ops:" + localId, value.gpsOwnerId)) throw Error("GPS OPS invalide.");

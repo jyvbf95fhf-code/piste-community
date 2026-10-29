@@ -1,0 +1,41 @@
+// Full app, two installations, authenticated local HTTP handler and isolated memory repository.
+import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import path from 'node:path';
+import {chromium} from '@playwright/test';import {createMemoryPersistenceServer} from './helpers/persistence-memory-repository.mjs';import {createPersonalDataHandler} from '../src/server/personal-data-http.mjs';
+const root=path.resolve(new URL('..',import.meta.url).pathname),uid='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',origin='https://piste-community-v2-premium.vercel.app',server=createMemoryPersistenceServer(),errors=[];let uploads=0;
+const handler=createPersonalDataHandler({authenticate:async token=>[uid,other].includes(token)?{id:token}:null,enabled:async()=>true,repositoryFor:owner=>{const r=server.client(owner);return {...r,put:async c=>{uploads++;return r.put(c);}};}});
+const pages=[],debug=[];
+const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
+async function device(ownerId,initialOnline=true){
+ const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage(),control={online:initialOnline};pages.push(page);page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
+ await context.addInitScript(value=>{window.__pisteOnline=value;Object.defineProperty(navigator,'onLine',{get:()=>window.__pisteOnline});},initialOnline);
+ await page.route('**/*',async route=>{const req=route.request(),u=new URL(req.url());
+  if(u.hostname==='shnwqdkiapgcftbnhilh.supabase.co'){
+   if(req.method()==='OPTIONS')return route.fulfill({status:204,headers:{'access-control-allow-origin':origin,'access-control-allow-headers':'*','access-control-allow-methods':'POST,OPTIONS'}});
+   const b=req.postDataJSON()||{};
+   if(u.pathname.endsWith('/personal-data')){if(!control.online)return route.abort();const response=await handler(new Request(req.url(),{method:'POST',headers:{authorization:'Bearer '+ownerId,origin,'content-type':'application/json'},body:JSON.stringify(b)}));const text=await response.text();debug.push({operation:b.operation,kind:b.kind,status:response.status,body:response.status>=400?text:undefined});return route.fulfill({status:response.status,body:text,headers:Object.fromEntries(response.headers)});}
+   if(u.pathname.endsWith('/ops-live'))return route.fulfill({json:[]});if(u.pathname.endsWith('/piste-history'))return route.fulfill({json:{sessions:[],hidden:[],records:[],cursor:null}});
+   let json={};if(b.operation==='profile')json={id:ownerId,name:'Compte QA',qa:false,permissions:{research:true,premium:true},jumolf_entitlement:{entitlement:'admin_grant',source:'admin_grant',source_id:'qa',granted_at:'2026-01-01T00:00:00.000Z',expires_at:null,revoked_at:null}};
+   else if(b.operation==='community-friendship-snapshot')json={version:1,socialVersion:1,ownerId,contacts:[],received:[],sent:[],following:[],relations:[],livePermissions:[]};
+   else if(b.operation==='community-live-list')json={version:1,sessions:[]};else if(b.operation==='coaching-inbox')json={version:1,invitations:[]};else if(b.operation==='list')json={sessions:[]};else if(b.operation==='authorize-feature')json={allowed:true};
+   return route.fulfill({json});
+  }
+  if(u.origin!==origin)return route.abort();
+  if(u.pathname==='/src/vendor/supabase-client.mjs')return route.fulfill({contentType:'text/javascript',body:`export function createClient(url){const user={id:'${ownerId}'};return {supabaseUrl:url,auth:{getUser:async()=>({data:{user}}),getSession:async()=>({data:{session:{user,access_token:user.id}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({})},channel:()=>({on(){return this},subscribe(){return this}}),removeChannel:async()=>{}};}`});
+  const file=/\.(mjs|js|css|png|svg|html|webmanifest|json)$/.test(u.pathname)?u.pathname:'/index.html';try{return route.fulfill({body:await readFile(path.join(root,file)),contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':file.endsWith('.svg')?'image/svg+xml':'application/json'});}catch{return route.fulfill({status:404,body:''});}
+ });
+ return {context,page,async online(value){control.online=value;await page.evaluate(v=>{window.__pisteOnline=v;window.dispatchEvent(new Event(v?'online':'offline'));},value);}};
+}
+try{
+ const a=await device(uid,false);await a.page.goto(origin+'/dogs/new');await a.page.locator('[name=name]').fill('Nox synchronisé');await a.page.locator('[name=breed]').fill('Malinois');await a.page.locator('[name=disciplines][value=tracking]').check();await a.page.getByRole('button',{name:'Ajouter le chien',exact:true}).click();await a.page.waitForURL('**/dogs/**');
+ const dogId=await a.page.evaluate(owner=>JSON.parse(localStorage.getItem('piste-v2-dogs:'+owner)).dogs.find(d=>d.name==='Nox synchronisé').id,uid);
+ await a.page.evaluate(async({owner,dogId})=>{const {createTrackLibrary}=await import('/src/track-library.mjs');createTrackLibrary({ownerId:owner,storage:localStorage}).createPrepared({name:'Piste hors réseau',dogId,notes:'Notes conservées',geometry:{points:[{x:7,y:48,space:'wgs84'},{x:7.001,y:48.001,space:'wgs84'}]}});},{owner:uid,dogId});
+ await a.page.reload();await a.page.locator('[data-account-sync-status][data-sync-state=offline]').waitFor();assert.equal(uploads,0);
+ await a.online(true);await a.page.locator('[data-account-sync-status][data-sync-state=online]').waitFor();assert.equal((await server.client(uid).list({kind:'track'})).records.length,1);
+ const b=await device(uid);await b.page.goto(origin+'/tracks');await b.page.getByRole('link',{name:/Pistes préparées/}).click();await b.page.getByText('Piste hors réseau',{exact:true}).waitFor();await b.page.locator('[data-account-sync-status][data-sync-state=online]').waitFor();
+ const bDogs=await b.page.evaluate(owner=>JSON.parse(localStorage.getItem('piste-v2-dogs:'+owner)).dogs.filter(d=>!d.isDemonstration),uid);assert.equal(bDogs.length,1);assert.equal(bDogs[0].name,'Nox synchronisé');
+ const track=await b.page.evaluate(owner=>JSON.parse(localStorage.getItem('piste-v2-prepared-tracks:'+owner)).items.find(t=>t.name==='Piste hors réseau'),uid);assert.equal(track.dogId,bDogs[0].id);assert.equal(track.notes,'Notes conservées');
+ const remoteTrack=(await server.client(uid).list({kind:'track'})).records[0];await b.page.reload();await b.page.locator('[data-account-sync-status][data-sync-state=online]').waitFor();assert.equal((await server.client(uid).read({kind:'track',id:remoteTrack.id})).revision,remoteTrack.revision);
+ const c=await device(other);await c.page.goto(origin+'/tracks');await c.page.locator('[data-account-sync-status][data-sync-state=online]').waitFor();assert.equal(await c.page.getByText('Piste hors réseau',{exact:true}).count(),0);
+ for(const width of [320,390,430]){await b.page.setViewportSize({width,height:844});assert.ok(await b.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ assert.deepEqual(errors,[]);console.log('PASS automatic account sync: real app save offline/reload/reconnect, second-device hydration without duplicates, third-account isolation, mobile widths; synthetic HTTP/repository only.');
+}catch(e){console.log(JSON.stringify({errors,debug:debug.slice(-20),screens:await Promise.all(pages.map(async p=>({url:p.url(),text:(await p.locator('body').innerText()).slice(-4000)})))}));throw e;}finally{await browser.close();}

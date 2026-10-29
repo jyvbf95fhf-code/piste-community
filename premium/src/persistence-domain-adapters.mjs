@@ -1,3 +1,4 @@
+import {persistenceTrackDates} from './persistence-contract.mjs';
 import {normalizeTrainingMemory} from './jumolf-training-memory.mjs';
 import {createProfileStore} from './profile-store.mjs';
 import {createDogsStore} from './dogs.mjs';
@@ -19,7 +20,7 @@ export function preparePersistenceCandidate({kind,localId,value},{ownerId=null}=
  }
  else if(kind==='track'){
   if(!value.geometry?.points?.every(p=>p.space==='wgs84'))throw Error('Géométrie géographique requise.');
-  const normalized=createTrackLibrary().createPrepared(pick(value,['name','description','category','difficulty','dogId','notes','source','provenance','fileName','geometry','copiedFrom','trainingMemory']));payload=pick(normalized,['name','description','category','difficulty','dogId','notes','source','provenance','fileName','geometry','copiedFrom','trainingMemory']);
+  const normalized=createTrackLibrary().createPrepared(pick(value,['name','description','category','difficulty','dogId','notes','source','provenance','fileName','geometry','copiedFrom','trainingMemory']));payload={...persistenceTrackDates(value),...pick(normalized,['name','description','category','difficulty','dogId','notes','source','provenance','fileName','geometry','copiedFrom','trainingMemory'])};
  }
  else if(kind==='ops'){
   if(value.kind!=='operational'||!OPERATIONAL_MISSION_STATUSES.includes(value.status))throw Error('Dossier OPS invalide.');

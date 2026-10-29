@@ -1,10 +1,11 @@
+import {personalChanged} from './personal-change.mjs';
 import {normalizeTrainingMemory} from './jumolf-training-memory.mjs';
 // Read index only. It owns no session transitions, GPS or authorization decisions.
 export function createSharedSessionIndex({ownerId,storage=null}={}){
  if(!ownerId)throw Error('Compte requis pour le catalogue partagé.');
  const key='piste-v2-session-dogs:'+encodeURIComponent(ownerId),rows=new Map(),revisions=new Map(),forgotten=new Map();let links={},trainingDraft=null,observedRaw=null,invalid=false,revision=0,disposed=false,inflight=null,lastError='';
  try{const raw=storage?.getItem(key);observedRaw=raw??null;if(raw){const saved=JSON.parse(raw);if(saved.version!==1||saved.ownerId!==ownerId||!saved.links||typeof saved.links!=='object'||Array.isArray(saved.links))throw Error();links=saved.links;if(saved.trainingDraft?.ownerId===ownerId)trainingDraft=saved.trainingDraft;}}catch{invalid=true;lastError='Associations locales illisibles : données conservées.';}
- const persist=(next=links,draft=trainingDraft)=>{if(invalid)throw Error(lastError);if(!storage?.setItem)throw Error('Mémoire pédagogique non enregistrée : stockage local indisponible.');if((storage.getItem(key)??null)!==observedRaw)throw Error('Mémoire modifiée dans un autre onglet. Rechargez avant de continuer.');const raw=JSON.stringify({version:1,ownerId,links:next,...(draft?{trainingDraft:draft}:{})});storage.setItem(key,raw);observedRaw=raw;};
+ const persist=(next=links,draft=trainingDraft)=>{if(invalid)throw Error(lastError);if(!storage?.setItem)throw Error('Mémoire pédagogique non enregistrée : stockage local indisponible.');if((storage.getItem(key)??null)!==observedRaw)throw Error('Mémoire modifiée dans un autre onglet. Rechargez avant de continuer.');const raw=JSON.stringify({version:1,ownerId,links:next,...(draft?{trainingDraft:draft}:{})});storage.setItem(key,raw);observedRaw=raw;personalChanged(ownerId);};
  const accept=p=>{if(disposed||!p?.id||!Number.isSafeInteger(p.version))return;const previous=rows.get(p.id);if(previous&&p.version<previous.version)return;forgotten.delete(p.id);rows.set(p.id,structuredClone(p));revisions.set(p.id,++revision);};
  return {
   ownerId,accept,forget(id){rows.delete(id);revisions.delete(id);forgotten.set(id,++revision);},list:()=>[...rows.values()].map(p=>structuredClone(p)),get:id=>rows.has(id)?structuredClone(rows.get(id)):null,error:()=>lastError,

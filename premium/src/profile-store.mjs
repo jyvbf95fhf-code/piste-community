@@ -1,10 +1,11 @@
+import {personalChanged} from './personal-change.mjs';
 const DEFAULTS=Object.freeze({theme:'system',distance_unit:'km',speed_unit:'km/h',time_format:'24h',map_default:'standard',density:'comfortable',language:'fr'});
 const clone=value=>structuredClone(value);
 export function createProfileStore(initial={}, {ownerId=null,storage=null}={}){
  let state={primary_dog_id:initial.primary_dog_id??null,avatar:initial.avatar??'initials',preferences:{...DEFAULTS,...initial.preferences}};
  const key=ownerId?'piste-v2-profile:'+encodeURIComponent(ownerId):null;let blocked=false,warning='';
  if(key&&storage)try{const raw=storage.getItem(key);if(raw){const saved=JSON.parse(raw);if(saved.version!==1||saved.ownerId!==ownerId||!saved.profile)throw Error();const p=saved.profile,validator=createProfileStore();validator.setAvatar(p.avatar);if(p.primary_dog_id!==null&&typeof p.primary_dog_id!=='string')throw Error();validator.setPrimaryDog(p.primary_dog_id);validator.setPreferences(p.preferences);state=validator.snapshot();}}catch{blocked=true;warning='Sauvegarde du profil illisible : original conservé.';}
- const commit=next=>{if(key){if(blocked)throw Error(warning);try{if(!storage)throw Error();storage.setItem(key,JSON.stringify({version:1,ownerId,profile:next}));warning='';}catch{warning='Profil non enregistré : stockage local indisponible.';throw Error(warning);}}state=next;return clone(state);};
+ const commit=next=>{if(key){if(blocked)throw Error(warning);try{if(!storage)throw Error();storage.setItem(key,JSON.stringify({version:1,ownerId,profile:next}));warning='';}catch{warning='Profil non enregistré : stockage local indisponible.';throw Error(warning);}}state=next;personalChanged(ownerId);return clone(state);};
  return Object.freeze({
   persistenceWarning:()=>warning,
   restoreCloud(payload){const validator=createProfileStore();validator.setAvatar(payload.avatar);validator.setPrimaryDog(payload.primary_dog_id);validator.setPreferences(payload.preferences);return commit(validator.snapshot());},

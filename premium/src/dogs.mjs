@@ -1,3 +1,4 @@
+import {personalChanged} from './personal-change.mjs';
 import {validatePersistenceRecord} from './persistence-contract.mjs';
 import { mock } from './data.mjs';
 
@@ -122,7 +123,7 @@ export function createDogsStore({ dogs = demoDogs, ownerId = null, storage = nul
   let records = clone(dogs), unreadable = false;
   const key=ownerId?`piste-v2-dogs:${encodeURIComponent(ownerId)}`:null;
   try{const raw=key&&storage?.getItem(key);if(raw){const saved=JSON.parse(raw);if(saved.version!==1||saved.ownerId!==ownerId||!Array.isArray(saved.dogs)||saved.dogs.length>1000)throw Error();const ids=new Set();for(const dog of saved.dogs){validateDog(dog);if(typeof dog.id!=='string'||ids.has(dog.id))throw Error();ids.add(dog.id);}records=clone(saved.dogs);}}catch{unreadable=true;}
-  const persist=next=>{if(!key||!storage)return;if(unreadable)throw Error('Sauvegarde des chiens illisible : aucune donnée existante remplacée.');try{storage.setItem(key,JSON.stringify({version:1,ownerId,dogs:next}));}catch{throw Error('Profil chien non enregistré : stockage local indisponible.');}};
+  const persist=next=>{if(!key||!storage)return;if(unreadable)throw Error('Sauvegarde des chiens illisible : aucune donnée existante remplacée.');try{storage.setItem(key,JSON.stringify({version:1,ownerId,dogs:next}));personalChanged(ownerId);}catch{throw Error('Profil chien non enregistré : stockage local indisponible.');}};
   let nextId = 1;
 
   function snapshot(dog) {

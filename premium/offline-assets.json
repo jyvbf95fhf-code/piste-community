@@ -1,10 +1,12 @@
 {
   "version": 1,
-  "revision": "81ec11ed6c3679b6",
+  "revision": "058e9b14ce133722",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
+    "/src/account-auto-sync.mjs",
     "/src/account-record-removal.mjs",
+    "/src/account-sync-screen.mjs",
     "/src/account-test-data-reset.mjs",
     "/src/admin-access.mjs",
     "/src/admin-audit.mjs",
@@ -215,6 +217,7 @@
     "/src/persistence-domain-adapters.mjs",
     "/src/persistence-journal.mjs",
     "/src/persistence-sync.mjs",
+    "/src/personal-change.mjs",
     "/src/personal-cloud-client.mjs",
     "/src/personal-cloud-controller.mjs",
     "/src/piste-account-auth.mjs",
@@ -315,5 +318,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4083840
+  "bytes": 4107586
 }

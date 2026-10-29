@@ -4,7 +4,7 @@ import {Icon} from './icons.mjs';
 import {buildProfileSummary} from './profile-model.mjs';
 
 const links=[
- ['sync','Sauvegardes cloud','Retrouver vos données sur un autre appareil','shield'],
+ ['sync','Mon compte en ligne','Synchronisation automatique et récupération de mes données','shield'],
  ['account','Mon compte','Nom visible et informations personnelles','user'],['dogs','Mes chiens','Profils et chien principal','dog'],
  ['premium','Premium & JUMOLF','Votre formule et votre activation','twin'],['access','Mes accès','Accès aux espaces de PISTE Community','shield'],
  ['research','Confidentialité & recherche','Vos choix et données de contribution','science'],['notifications','Notifications','Canaux et préférences personnelles','bell'],
