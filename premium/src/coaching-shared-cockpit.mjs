@@ -1,3 +1,4 @@
+import {poseHandoffStatus} from './coaching-pose-handoff.mjs';
 import {sharedCoachingEntry} from './coaching-shared-entry.mjs';
 import {DriverGpsScreen} from './coaching-driver-gps-screen.mjs';
 import {TracerGpsScreen} from './coaching-gps-screen.mjs';
@@ -23,7 +24,7 @@ export function SharedCoachingCockpit(p,state={},ui={}){
  const status={running:state.gpsRunning};
  let html=poseView?TracerGpsScreen({phase:p.phase==='LAYING'?'active':p.phase==='TRACK_FINISHED'?'finished':p.phase==='LAYING_WAIT'?'in_place':'before',gpsPose:primary},status,{plannedReference:planned}):DriverGpsScreen({phase:p.phase,gpsSearch:primary,searchTrackingState:p.trackingState,search_started_at:new Date(0).toISOString(),searchPausedAt:new Date(p.searchActiveMs||0).toISOString(),searchTotalPausedMs:0},status,{now:p.searchActiveMs||0,pose:p.pose,corridorAllowed:!!p.pose,plannedReference:planned});
  html=html.replace(/data-gps-clock>[^<]*/,`data-gps-clock>${sharedCockpitClock(p,state,ui.now)}`);
- const heading=`<header class="coaching-heading"><span class="eyebrow">COACHING · ${role[p.role]||''}</span><h1>${poseView?'Pose GPS':p.role==='driver'?'Recherche GPS':'Suivi de la session'} · ${e(p.dog)}</h1><p class="remote-phase">${e(labels[p.phase]||p.phase)}${p.trackingState==='paused'?' · En pause':''}</p><button type="button" class="button button-dark shared-session-menu" data-remote="open-session">Session ▾</button></header>`;
+ const heading=`<header class="coaching-heading"><span class="eyebrow">COACHING · ${role[p.role]||''}</span><h1>${poseView?'Pose GPS':p.role==='driver'?'Recherche GPS':'Suivi de la session'} · ${e(p.dog)}</h1><p class="remote-phase">${e(poseHandoffStatus(p)||labels[p.phase]||p.phase)}${p.trackingState==='paused'?' · En pause':''}</p><button type="button" class="button button-dark shared-session-menu" data-remote="open-session">Session ▾</button></header>`;
  html=html.replace(/<header class="coaching-heading">[\s\S]*?<\/header>/,heading+(entry.reference?`<p class="shared-reference-status" data-shared-reference="${entry.status}">${e(entry.reference.name)} · ${entry.status==='proposed'?'Tracé proposé · à valider':'Tracé préparé · distinct de la pose GPS'}</p>`:''));
  html=html.replace(/<details class="gps-details">[\s\S]*?<\/details>/,`<details class="gps-details"><summary>Informations GPS</summary><p>${e(state.status||'Données GPS synchronisées avec la session.')}</p></details>`);
  let actions=ui.actions;

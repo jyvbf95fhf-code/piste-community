@@ -65,3 +65,12 @@ test('background synchronization cannot hide a pending or failed GPS acquisition
  globalThis.fetch=async()=>Response.json({projection});const c=createCoachingRemoteController({client,navigator:{geolocation:{watchPosition(cb,err){fix=cb;fail=err;return 1;},clearWatch(){}}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([]);}}});
  try{await c.connect('s');c.start('pose');await c.flush();assert.match(c.view().status,/Acquisition/);fix({timestamp:Date.now(),coords:{latitude:48,longitude:7,accuracy:300}});await c.flush();assert.match(c.view().status,/précision/);fail({code:3});await c.flush();assert.match(c.view().status,/dépassé/);assert.equal(c.view().gpsRunning,false);}finally{c.destroy();globalThis.fetch=original;}
 });
+for(const scenario of ['already-ready','conflict','duplicate'])test('delayed return validates authoritative phase: '+scenario,async()=>{
+ const original=globalThis.fetch,posted=[];let version=1,phase=scenario==='already-ready'?'SEARCH_READY':'TRACK_FINISHED';
+ const text='Piste tracée · je reviens plus tard. Recherche en attente de mon retour.';
+ const projection=()=>({id:'s',version,phase,role:'traceur',poseRecorder:'traceur',messages:scenario==='duplicate'?[{outgoing:true,text}]:[]});
+ const client={auth:{getUser:async()=>({data:{user:{id:'u'}}}),getSession:async()=>({data:{session:{access_token:'test'}}})},channel(){return {on(){return this},subscribe(){return this}}},removeChannel:async()=>{}};
+ globalThis.fetch=async(url,req)=>{const b=JSON.parse(req.body);if(b.operation==='command'){posted.push(b.type);if(scenario==='conflict'){phase='SEARCH_RUNNING';version++;return Response.json({error:'conflit'},{status:409})}}return Response.json({projection:projection()})};
+ const c=createCoachingRemoteController({client,document:{addEventListener(){},removeEventListener(){}},storage:{async update(k,fn){return fn([])}}});
+ try{await c.connect('s');if(scenario==='duplicate')await c.command('return-later');else await assert.rejects(c.command('return-later'),/attente|autoris/);assert.deepEqual(posted,scenario==='conflict'?['send-message']:[]);}finally{c.destroy();globalThis.fetch=original}
+});

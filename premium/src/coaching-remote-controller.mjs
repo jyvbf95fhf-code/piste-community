@@ -1,3 +1,4 @@
+import {RETURN_LATER_MESSAGE} from './coaching-pose-handoff.mjs';
 import {loadCoachingTeamCatalogue} from './coaching-team.mjs';
 import {createCoachingRemoteQueue} from './coaching-remote-queue.mjs';
 import {createCoachingRemoteTransport} from './coaching-remote-transport.mjs';
@@ -19,7 +20,12 @@ export function createCoachingRemoteController({client,onChange=()=>{},navigator
  start(kindValue){if(!transport||pending) return;if(kindValue==='pose'?(projection?.role!==(projection?.poseRecorder??'traceur')||projection.phase!=='PREPARATION'):(projection?.role!=='driver'||projection.phase!=='SEARCH_READY'))throw Error('Démarrage non autorisé.');if(kindValue==='pose'&&['gpx','prepared'].includes(projection.traceType)&&(projection.referenceStatus!=='available'||projection.approachPhase!=='ready'))throw Error('Importez le GPX puis rejoignez le départ avant de tracer.');kind=kindValue;pending=true;pendingStart=kind==='pose'?'start-pose':'start-search';sensor.start();changed();},
  resumeGps(){if(!projection||!(projection.role===(projection.poseRecorder??'traceur')&&projection.phase==='LAYING'||projection.role==='driver'&&projection.phase==='SEARCH_RUNNING'))throw Error('Reprise non autorisée.');kind=projection.phase==='LAYING'?'pose':'search';segment=crypto.randomUUID();sensor.start();},
  async command(type,payload={}){if(!transport)throw Error('Session requise.');pending=true;changed();try{if(['finish-pose','finish-search','cancel','interrupt','leave'].includes(type))sensor.stop();await saving;
-   if(type==='confirm-departure'){
+   if(type==='return-later'){
+    await transport.sendCommand('send-message',{text:RETURN_LATER_MESSAGE},{beforeSend:p=>{
+     if(p?.phase!=='TRACK_FINISHED'||p.role!==(p.poseRecorder??'traceur'))throw Error('La session n’est plus en attente de mise en place. Actualisez avant de continuer.');
+     return !(p.messages||[]).some(m=>m.outgoing&&m.text===RETURN_LATER_MESSAGE);
+    }});
+   }else if(type==='confirm-departure'){
     // One explicit confirmation, existing server-authorized steps only. A retry
     // resumes from the last acknowledged step; it never requests location.
     if(projection?.role!==(projection?.poseRecorder??'traceur')||projection.phase!=='PREPARATION'||!['gpx','prepared'].includes(projection.traceType)||projection.referenceStatus!=='available')throw Error('Confirmation du départ non autorisée.');

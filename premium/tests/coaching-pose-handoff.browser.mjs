@@ -1,0 +1,37 @@
+// Browser + actual handler/reducer/Postgres locally. All external requests intercepted.
+import {chromium} from '@playwright/test';import assert from 'node:assert/strict';import {readFile,mkdir} from 'node:fs/promises';import path from 'node:path';
+import {coachingInboxFixture,gmail,icloud} from './fixtures/coaching-inbox-db.mjs';
+const root=path.resolve(new URL('..',import.meta.url).pathname),origin='https://piste-community-v2-premium.vercel.app',f=await coachingInboxFixture();
+const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH||'/tmp/chromium',args:['--no-sandbox','--disable-dev-shm-usage'],headless:true});const errors=[];let lastPage;let blockMessages=false;
+async function account(uid){const context=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});await context.route('**/*',async route=>{const req=route.request(),url=new URL(req.url());
+ if(url.hostname==='shnwqdkiapgcftbnhilh.supabase.co'){if(url.pathname.endsWith('/coaching')){if(blockMessages&&req.postData()?.includes('send-message'))return route.fulfill({status:503,json:{error:'Réseau indisponible · réessayez.'}});const r=await f.handler(new Request(req.url(),{method:req.method(),headers:req.headers(),...(req.method()==='POST'?{body:req.postData()}:{})}));return route.fulfill({status:r.status,headers:Object.fromEntries(r.headers),body:await r.text()});}if(url.pathname.endsWith('/personal-data'))return route.fulfill({json:{records:[],version:1}});return route.fulfill({json:{sessions:[],invitations:[],notifications:[],records:[]}});}
+ if(url.origin!==origin)return route.abort();
+ if(url.pathname==='/src/vendor/supabase-client.mjs')return route.fulfill({contentType:'text/javascript',body:`export function createClient(url){const user={id:'${uid}'};return {supabaseUrl:url,auth:{getUser:async()=>({data:{user}}),getSession:async()=>({data:{session:{user,access_token:user.id}}}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}}),signOut:async()=>({})},channel:()=>({on(){return this},subscribe(){return this}}),removeChannel:async()=>{}};}`});
+ const file=/\.(mjs|js|css|png|svg|html|webmanifest)$/.test(url.pathname)?url.pathname:'/index.html';try{return route.fulfill({body:await readFile(path.join(root,file)),contentType:/\.(mjs|js)$/.test(file)?'text/javascript':file.endsWith('.css')?'text/css':file.endsWith('.html')?'text/html':undefined});}catch{return route.fulfill({status:404,body:''});}
+ });await context.addInitScript(()=>{window.gpsStarts=0;navigator.geolocation.watchPosition=()=>{window.gpsStarts++;return 1};});const page=await context.newPage();lastPage=page;page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(12000);page.setDefaultNavigationTimeout(30000);return {page,context};}
+async function cmd(uid,id,type,payload={}){const p=(await f.call(uid,{operation:'read',sessionId:id})).projection;return f.call(uid,{operation:'command',sessionId:id,type,payload,expectedVersion:p.version,commandId:crypto.randomUUID()});}
+async function decision(page,action,accept,pattern){const dialog=page.waitForEvent('dialog');const click=page.locator(`[data-remote="${action}"]`).click();const d=await dialog;assert.match(d.message(),pattern);await d[accept?'accept':'dismiss']();await click;}
+try{
+ for(const [i,mode] of ['normal','simple_blind','full_blind'].entries()){
+  const id=await f.create(gmail,icloud,'traceur',mode);await f.call(icloud,{operation:'accept-coaching-invitation',sessionId:id,role:'traceur',commandId:crypto.randomUUID()});
+  const at=Date.now();await cmd(icloud,id,'start-pose',{fix:{timestamp:at,coords:{latitude:48,longitude:7,accuracy:5}}});
+  await cmd(icloud,id,'gps-batch',{kind:'pose',points:[{timestamp:at+1000,coords:{latitude:48.001,longitude:7.001,accuracy:5},segmentId:'s',sequence:1}]});
+  const tracer=await account(icloud),driver=await account(gmail);await tracer.page.setViewportSize({width:[320,390,430][i],height:844});
+  await tracer.page.goto(origin+'/coaching/session?session='+id);await tracer.page.locator('[data-remote="finish-pose"]').waitFor();
+  await decision(tracer.page,'finish-pose',true,/Terminer cet enregistrement/);await tracer.page.locator('[data-remote="return-later"]').waitFor();await tracer.page.screenshot({path:'/tmp/handoff-'+mode+'.png',fullPage:true});
+  await decision(tracer.page,'return-later',false,/retour.*Je suis en place/i);assert.equal((await f.call(icloud,{operation:'read',sessionId:id})).projection.messages.length,0);
+  await decision(tracer.page,'in-place',false,/conducteur.*démarrer/i);assert.equal((await f.call(icloud,{operation:'read',sessionId:id})).projection.phase,'TRACK_FINISHED');
+  if(i===0){blockMessages=true;await decision(tracer.page,'return-later',true,/retour/);await tracer.page.getByText('Réseau indisponible · réessayez.',{exact:true}).first().waitFor();assert.equal((await f.call(icloud,{operation:'read',sessionId:id})).projection.messages.length,0);blockMessages=false;}
+  await decision(tracer.page,'return-later',true,/retour/);await tracer.page.locator('.pose-handoff-notice').filter({hasText:'retour différé confirmé'}).waitFor();
+  const saved=(await f.call(icloud,{operation:'read',sessionId:id})).projection;assert.equal(saved.phase,'TRACK_FINISHED');assert.equal(saved.pose.segments.flat().length,2);assert.match(saved.messages.at(-1).text,/je reviens plus tard/);
+  assert.equal(await tracer.page.evaluate(()=>gpsStarts),0);assert.ok(await tracer.page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  await driver.page.goto(origin+'/coaching/session?session='+id);await driver.page.locator('[data-remote-phase="TRACK_FINISHED"]').waitFor({state:'attached'});assert.equal(await driver.page.locator('[data-remote="start-search"]').count(),0);assert.match(await driver.page.locator('.remote-phase').first().innerText(),/en attente/);
+  const dp=(await f.call(gmail,{operation:'read',sessionId:id})).projection;if(mode!=='normal')assert.equal(dp.pose,null);if(mode==='full_blind')assert.equal(dp.messages.at(-1).sender,'Traceur — masqué');
+  await tracer.context.close();const resumed=await account(icloud);await resumed.page.goto(origin+'/sessions');await resumed.page.locator(`a[href="/coaching/session?session=${id}"]`).first().waitFor();await resumed.page.locator(`a[href="/coaching/session?session=${id}"]`).first().click();await resumed.page.locator('[data-remote="in-place"]').waitFor();assert.equal(await resumed.page.evaluate(()=>gpsStarts),0);
+  assert.deepEqual((await f.call(icloud,{operation:'read',sessionId:id})).projection.pose.segments,saved.pose.segments);
+  await decision(resumed.page,'in-place',true,/conducteur.*démarrer/i);await resumed.page.locator('[data-remote-phase="SEARCH_READY"]').waitFor({state:'attached'});
+  await driver.page.reload();await driver.page.locator('[data-remote="start-search"]').waitFor();assert.match(await driver.page.locator('.remote-phase').first().innerText(),/peut démarrer/);
+  await resumed.context.close();await driver.context.close();
+ }
+ assert.deepEqual(errors,[]);console.log('PASS: three modes 320/390/430, cancellations, network error, persisted return, fresh context recovery without GPS, blind permissions and driver gate. Real local SQL/handler only.');
+}catch(e){console.log(errors);if(lastPage&&!lastPage.isClosed()){console.log(await lastPage.locator('body').innerText());await lastPage.screenshot({path:'/tmp/handoff-failure.png',fullPage:true});}throw e;}finally{await browser.close();await f.db.close();}
