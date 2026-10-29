@@ -192,3 +192,21 @@
 .app-shell[data-module-theme="dogs"] .dogs-premium-page .dog-form-field{color:#d9e8ee;font-size:13px}.dogs-premium-page .page-heading{flex-wrap:wrap}.dogs-premium-page .page-heading h1{color:#f2f6f7}.dogs-premium-page .page-heading p{color:#abc3d0}
 .app-shell[data-module-theme="dogs"] .dogs-premium-page .button-gold{background:linear-gradient(135deg,#e1c487,#b99553);color:#102331;border:1px solid #e8d29f;box-shadow:0 5px 20px #0003}
 @media(max-width:600px){.app-shell[data-module-theme="dogs"] .dogs-premium-page .dog-form{grid-template-columns:minmax(0,1fr);gap:18px}.dogs-premium-page .dog-photo-editor{grid-template-columns:74px minmax(0,1fr)}.dogs-premium-page .dog-discipline-choices{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Declared outcomes: personal field reports, distinct from GPS measurements. */
+.search-outcome-panel,.search-outcome-statistics{box-sizing:border-box;min-width:0;width:100%;margin:20px 0;padding:22px;border:1px solid #bca67655;border-radius:22px;background:linear-gradient(135deg,#132b38,#0a1824);color:#e9f0f3;box-shadow:0 12px 30px #0002}
+.search-outcome-panel .eyebrow,.search-outcome-statistics .eyebrow{color:#93dce3;letter-spacing:.12em;font-size:11px}
+.search-outcome-badge{display:flex;flex-direction:column;gap:5px;max-width:100%;padding:14px 16px;margin:12px 0;border:1px solid #72869366;border-left:4px solid #91a8b3;border-radius:12px;background:#102330;color:#dce7ec;white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+.search-outcome-badge strong{font-size:18px;font-weight:750}.search-outcome-badge small{font-size:13px;line-height:1.5;color:inherit}
+.search-outcome-badge[data-search-outcome=positive]{border-left-color:#8ce1b7;background:#12352f;color:#a5efcb}
+.search-outcome-badge[data-search-outcome=assisted_positive]{border-left-color:#e4c983;background:#302e23;color:#f4ddaa}
+.search-outcome-badge[data-search-outcome=oriented_not_found]{border-left-color:#80d4e3;background:#143440;color:#a3e6ef}
+.search-outcome-badge[data-search-outcome=negative]{border-left-color:#d998a4;background:#33252e;color:#f0c0ca}
+.search-outcome-panel details{margin-top:16px}.search-outcome-panel summary{font-weight:650;padding:10px 0;cursor:pointer}
+.search-outcome-panel form{display:grid;gap:18px;margin-top:16px}.search-outcome-panel label{display:grid;gap:8px;color:#d4e0e6;font-size:14px;min-width:0}
+.search-outcome-panel select{box-sizing:border-box;min-width:0;width:100%;max-width:100%;padding:14px 10px;border:1px solid #6da9b466;border-radius:12px;background:#0a1b28;color:#eef4f7;font-size:16px;color-scheme:dark;white-space:normal}
+.search-outcome-panel form p,.search-outcome-statistics p{font-size:13px;line-height:1.6;color:#b5c8d3}.search-outcome-statistics h2{margin:10px 0;font-size:24px}
+.outcome-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:20px 0}.outcome-counts article{display:flex;flex-direction:column;gap:8px;padding:16px 12px;border:1px solid #7c9dab44;border-radius:14px;background:#0a1c29;min-width:0}.outcome-counts strong{font-size:30px;color:#e6d39a}.outcome-counts span{font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.session-history-copy .search-outcome-badge strong,.tracks-session-card .search-outcome-badge strong{font-size:15px}.session-history-copy .search-outcome-badge small,.tracks-session-card .search-outcome-badge small{font-size:12px;color:inherit}.search-outcome-statistics .search-outcome-statistics{box-shadow:none;border-color:#78939f33;margin-bottom:0}
+@media(max-width:600px){.outcome-counts{grid-template-columns:repeat(2,minmax(0,1fr))}.search-outcome-panel,.search-outcome-statistics{padding:18px 14px}.search-outcome-panel .button{width:100%;white-space:normal}.search-outcome-statistics .search-outcome-statistics{padding:15px 10px}.search-outcome-badge strong{font-size:17px}}
+@media print{.search-outcome-panel{display:none}.search-outcome-badge{break-inside:avoid;color:#102330!important;background:#eef3f4!important;border:1px solid #536776!important}.search-outcome-badge strong,.search-outcome-badge small{color:#102330!important}}

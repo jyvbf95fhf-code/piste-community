@@ -1,3 +1,4 @@
+import {normalizeSearchOutcome,readSearchOutcome} from './search-outcome.mjs';
 import {personalChanged} from './personal-change.mjs';
 import {normalizeTrainingMemory} from './jumolf-training-memory.mjs';
 // Read index only. It owns no session transitions, GPS or authorization decisions.
@@ -8,6 +9,10 @@ export function createSharedSessionIndex({ownerId,storage=null}={}){
  const persist=(next=links,draft=trainingDraft)=>{if(invalid)throw Error(lastError);if(!storage?.setItem)throw Error('Mémoire pédagogique non enregistrée : stockage local indisponible.');if((storage.getItem(key)??null)!==observedRaw)throw Error('Mémoire modifiée dans un autre onglet. Rechargez avant de continuer.');const raw=JSON.stringify({version:1,ownerId,links:next,...(draft?{trainingDraft:draft}:{})});storage.setItem(key,raw);observedRaw=raw;personalChanged(ownerId);};
  const accept=p=>{if(disposed||!p?.id||!Number.isSafeInteger(p.version))return;const previous=rows.get(p.id);if(previous&&p.version<previous.version)return;forgotten.delete(p.id);rows.set(p.id,structuredClone(p));revisions.set(p.id,++revision);};
  return {
+  outcome(id){return disposed?null:readSearchOutcome(links[id]?.searchOutcome);},
+  setOutcome(id,value){if(disposed||typeof id!=='string'||!id||id.length>180)throw Error('Session indisponible.');const searchOutcome=normalizeSearchOutcome(value);const next={...links,[id]:{...links[id],searchOutcome}};persist(next);links=next;},
+  annotations(){return disposed?[]:Object.entries(links).filter(([,v])=>v.searchOutcome).map(([sessionId,v])=>({sessionId,...(v.dogId?{dogId:v.dogId}:{}),searchOutcome:normalizeSearchOutcome(v.searchOutcome),...(v.trainingMemory?{trainingMemory:normalizeTrainingMemory(v.trainingMemory,{ownerId,dogId:v.dogId})}:{})}));},
+  restoreAnnotation(value){if(!value?.sessionId||!value.searchOutcome)throw Error('Bilan indisponible.');this.setOutcome(value.sessionId,value.searchOutcome);},
   ownerId,accept,forget(id){rows.delete(id);revisions.delete(id);forgotten.set(id,++revision);},list:()=>[...rows.values()].map(p=>structuredClone(p)),get:id=>rows.has(id)?structuredClone(rows.get(id)):null,error:()=>lastError,
   dogId(id){const p=rows.get(id);return typeof links[id]?.dogId==='string'?links[id].dogId:p?.dogRef?.ownerId===ownerId?p.dogRef.id:null;},
   linkDog(sessionId,dog){if(disposed||!rows.has(sessionId)||!dog?.id)throw Error('Session ou chien indisponible.');if(invalid)throw Error(lastError);const next={...links,[sessionId]:{...links[sessionId],dogId:String(dog.id)}};if(storage)persist(next);links=next;},

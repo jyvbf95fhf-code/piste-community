@@ -313,7 +313,7 @@ export function createOperationalMissionStore({
 
     restoreCloud(record){
       const r=validatePersistenceRecord(record);if(r.kind!=='ops'||r.deletedAt||!ownerId)throw Error('Dossier distant indisponible.');if(cloudBlocked)throw Error(persistenceError);
-      const mission=normalizeOperationalMission({...r.payload,id:'cloud-'+r.id,cloudReadOnly:true,cloudId:r.id,cloudRevision:r.revision,ownerUserId:ownerId,gpsNeedsResume:true});
+      const mission=normalizeOperationalMission({...r.payload,originalId:r.payload.originalId||r.payload.id,id:'cloud-'+r.id,cloudReadOnly:true,cloudId:r.id,cloudRevision:r.revision,ownerUserId:ownerId,gpsNeedsResume:true});
       if(!OPERATIONAL_MISSION_STATUSES.includes(mission.status))throw Error('Dossier OPS invalide.');const next=[...records.values()].filter(m=>m.cloudReadOnly&&m.id!==mission.id);next.push(mission);
       if(!storage)throw Error('Stockage local indisponible.');storage.setItem(cloudKey,JSON.stringify({version:1,ownerId,missions:next}));records.set(mission.id,mission);return snapshot(mission);
     },

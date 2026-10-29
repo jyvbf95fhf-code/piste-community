@@ -16,6 +16,20 @@ function persistenceTrackDates(value) {
   return dates;
 }
 
+// src/search-outcome.mjs
+var SEARCH_OUTCOMES = Object.freeze([
+  ["positive", "Positif", "Personne retrouv\xE9e par le chien."],
+  ["assisted_positive", "Orient\xE9 positif", "Personne retrouv\xE9e gr\xE2ce \xE0 une orientation du chien."],
+  ["oriented_not_found", "Orient\xE9 sans d\xE9couverte", "Orientation donn\xE9e par le chien, personne non retrouv\xE9e."],
+  ["negative", "N\xE9gatif", "Personne non d\xE9couverte, sans orientation exploitable."],
+  ["unreported", "Non renseign\xE9", "Aucun r\xE9sultat d\xE9clar\xE9."]
+]);
+function normalizeSearchOutcome(value) {
+  if (value == null) return null;
+  if (typeof value !== "object" || Array.isArray(value) || Object.keys(value).some((k) => !["code", "context", "updatedAt"].includes(k)) || !SEARCH_OUTCOMES.some(([id]) => id === value.code) || !["search", "interrupted", "no_target"].includes(value.context) || typeof value.updatedAt !== "string" || value.updatedAt.length > 40 || !/^\d{4}-\d\d-\d\dT/.test(value.updatedAt) || !Number.isFinite(Date.parse(value.updatedAt))) throw Error("R\xE9sultat de recherche invalide.");
+  return { code: value.code, context: value.context, updatedAt: value.updatedAt };
+}
+
 // src/track-canine.mjs
 var CANINE_LEVELS = [
   { id: "initiation", label: "Initiation", distanceKm: 0.15, range: "50 \xE0 300 m", terrain: "nature", transitions: "few", maxTurns: 1, criteria: "Piste courte, direction simple, r\xE9compense pr\xE9par\xE9e et objectif unique.", limits: "Adapter au jeune chien et au d\xE9butant ; r\xE9duire ou interrompre selon les observations. Aucun \xE2ge ni seuil universel." },
@@ -815,8 +829,9 @@ function preparePersistenceCandidate({ kind, localId, value }, { ownerId = null 
     payload.consultationOnly = true;
     payload.requiresExplicitResume = ["active", "paused", "ready"].includes(value.trackingState);
   } else if (kind === "session-dog-link") {
-    if (typeof value.sessionId !== "string" || !value.sessionId || typeof value.dogId !== "string" || !value.dogId) throw Error("Association invalide.");
+    if (typeof value.sessionId !== "string" || !value.sessionId || value.sessionId.length > 180 || !value.searchOutcome && (typeof value.dogId !== "string" || !value.dogId) || value.dogId !== void 0 && (typeof value.dogId !== "string" || !value.dogId)) throw Error("Association invalide.");
     payload = pick(value, ["sessionId", "dogId"]);
+    if (value.searchOutcome) payload.searchOutcome = normalizeSearchOutcome(value.searchOutcome);
   } else throw Error("Domaine de sauvegarde inconnu.");
   if (value.trainingMemory && ["track", "session-dog-link"].includes(kind)) payload.trainingMemory = normalizeTrainingMemory(value.trainingMemory, { ownerId: ownerId || value.trainingMemory.ownerId, dogId: value.dogId });
   const result = { kind, localId, payload };
@@ -924,7 +939,13 @@ var unwrap = (result) => {
   return result.data;
 };
 function createPersonalDataRepository(admin, ownerId) {
-  const write = (operation, c) => admin.rpc("v2_personal_commit", { p_owner: ownerId, p_kind: c.kind, p_id: c.id, p_expected: c.expectedRevision, p_command: c.commandId, p_operation: operation, p_payload: c.payload || {} }).then(unwrap);
+  const write = async (operation, c) => {
+    if (operation === "put" && c.kind === "session-dog-link" && !Object.hasOwn(c.payload || {}, "searchOutcome")) {
+      const prior = unwrap(await admin.from("v2_personal_records").select("payload").eq("owner_id", ownerId).eq("kind", c.kind).eq("id", c.id).maybeSingle());
+      if (prior?.payload?.searchOutcome) throw Object.assign(Error("Mettez \xE0 jour l\u2019application pour conserver le r\xE9sultat de recherche."), { status: 409 });
+    }
+    return admin.rpc("v2_personal_commit", { p_owner: ownerId, p_kind: c.kind, p_id: c.id, p_expected: c.expectedRevision, p_command: c.commandId, p_operation: operation, p_payload: c.payload || {} }).then(unwrap);
+  };
   return {
     async list({ kind, cursor = null }) {
       let query = admin.from("v2_personal_records").select(columns).eq("owner_id", ownerId).eq("kind", kind).order("id", { ascending: true });

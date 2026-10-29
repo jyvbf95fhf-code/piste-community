@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "7effa72c52df0ca2",
+  "revision": "95e90e74ba2f3024",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -272,6 +272,7 @@
     "/src/scientific-statistics.mjs",
     "/src/scientific-store.mjs",
     "/src/screens.mjs",
+    "/src/search-outcome.mjs",
     "/src/server/coaching-service.mjs",
     "/src/session-catalog.mjs",
     "/src/session-dossier.mjs",
@@ -319,5 +320,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4118273
+  "bytes": 4133952
 }

@@ -1,3 +1,4 @@
+import {readSearchOutcome} from './search-outcome.mjs';
 const clone=value=>structuredClone(value);
 const available=value=>value!==null&&value!==undefined&&value!=='';
 function projectPoints(value){
@@ -14,7 +15,7 @@ function projectSession(record){
  const referenceTrace=projectPoints(session.referenceTrace||session.reference?.geometry||record?.referenceTrace);
  const weather=session.weather||record?.weather||null;
  return {
-  id:String(session.id||record?.id||''),dataOrigin:session.dataOrigin||null,synthetic:session.synthetic===true,demo:session.demo===true,handlerId:session.handlerId||null,mode:session.mode||null,kind:'coaching',title:session.title||session.name||'Session',status:session.status||null,
+  searchOutcome:readSearchOutcome(session.searchOutcome||record?.searchOutcome),id:String(session.id||record?.id||''),dataOrigin:session.dataOrigin||null,synthetic:session.synthetic===true,demo:session.demo===true,handlerId:session.handlerId||null,mode:session.mode||null,kind:'coaching',title:session.title||session.name||'Session',status:session.status||null,
   dog:dog?{...(available(dog.id)?{id:dog.id}:{}),...(available(dog.name)?{name:dog.name}:{}),...(available(dog.breed)?{breed:dog.breed}:{}),...(available(dog.age)?{age:dog.age}:{})}:null,
   dogId:session.dogId||dog?.id||null,trackAge:session.trackAge?clone(session.trackAge):null,startedAt:session.startedAt||session.started_at||null,finishedAt:session.finishedAt||session.finished_at||null,
   terrain:session.terrain||session.environment||null,weather:weather?{...(available(weather.temperature)?{temperature:weather.temperature}:{}),...(available(weather.humidity)?{humidity:weather.humidity}:{}),...(available(weather.label)?{label:weather.label}:{}),...(available(weather.provenance)?{provenance:weather.provenance}:{}),...(weather.observedAt?{observedAt:weather.observedAt}:{}),...(weather.source?{source:weather.source}:{}),...(weather.wind?{wind:clone(weather.wind)}:{})}:null,
@@ -32,7 +33,7 @@ function projectTrack(track){
 function projectOperational(mission){
  const age=mission.time?.trackAgeAtStart||mission.time?.trackAgeAtSearchStart||null;
  return {
-  id:String(mission.id),dataOrigin:mission.dataOrigin||null,synthetic:mission.synthetic===true,demo:mission.demo===true,handlerId:mission.handlerId||null,kind:'operational',title:'Mission OPS',status:mission.status||null,trackingState:mission.trackingState||null,
+  searchOutcome:readSearchOutcome(mission.searchOutcome),id:String(mission.id),dataOrigin:mission.dataOrigin||null,synthetic:mission.synthetic===true,demo:mission.demo===true,handlerId:mission.handlerId||null,kind:'operational',title:'Mission OPS',status:mission.status||null,trackingState:mission.trackingState||null,
   dog:mission.dog?{...(available(mission.dog.id)?{id:mission.dog.id}:{}),...(available(mission.dog.name)?{name:mission.dog.name}:{}),...(available(mission.dog.breed)?{breed:mission.dog.breed}:{})}:null,
   dogId:mission.dogId||mission.dog?.id||null,
   handlerName:mission.handler?.name||null,

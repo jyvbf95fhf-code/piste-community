@@ -1,3 +1,4 @@
+import {normalizeSearchOutcome} from './search-outcome.mjs';
 import {persistenceTrackDates} from './persistence-contract.mjs';
 import {normalizeTrainingMemory} from './jumolf-training-memory.mjs';
 import {createProfileStore} from './profile-store.mjs';
@@ -27,7 +28,7 @@ export function preparePersistenceCandidate({kind,localId,value},{ownerId=null}=
   if(value.gpsTrack&&!validGpsPose(value.gpsTrack,'ops:'+localId,value.gpsOwnerId))throw Error('GPS OPS invalide.');
   payload=normalizeOperationalMission(pick(value,['id','kind','schemaVersion','entryMode','status','trackingState','dogId','dog','handler','createdAt','trackingStartedAt','trackingStoppedAt','trackingPausedMs','trackingPausedAt','trackingElapsedMs','details','person','time','places','context','olfactoryCorridor','trace','events','journal','gpsTrack','gpsOwnerId','pauseObservations','dogEvaluation','fieldEvaluation','finalization','weatherSnapshot','startedAt','fieldClosedAt','completedAt','archivedAt','lastKnownPoint','provenance','traceMetadata','dataQuality','environment','result','sourceDevice','gpxAttachment','weatherDemo','olfactoryCorridorEnabled']));payload.consultationOnly=true;payload.requiresExplicitResume=['active','paused','ready'].includes(value.trackingState);
  }
- else if(kind==='session-dog-link'){if(typeof value.sessionId!=='string'||!value.sessionId||typeof value.dogId!=='string'||!value.dogId)throw Error('Association invalide.');payload=pick(value,['sessionId','dogId']);}
+ else if(kind==='session-dog-link'){if(typeof value.sessionId!=='string'||!value.sessionId||value.sessionId.length>180||(!value.searchOutcome&&(typeof value.dogId!=='string'||!value.dogId))||(value.dogId!==undefined&&(typeof value.dogId!=='string'||!value.dogId)))throw Error('Association invalide.');payload=pick(value,['sessionId','dogId']);if(value.searchOutcome)payload.searchOutcome=normalizeSearchOutcome(value.searchOutcome);}
  else throw Error('Domaine de sauvegarde inconnu.');
  if(value.trainingMemory&&['track','session-dog-link'].includes(kind))payload.trainingMemory=normalizeTrainingMemory(value.trainingMemory,{ownerId:ownerId||value.trainingMemory.ownerId,dogId:value.dogId});
  const result={kind,localId,payload};if(new TextEncoder().encode(JSON.stringify(result)).byteLength+512>200000)throw Error('Dossier trop volumineux : original local conservé.');return result;
