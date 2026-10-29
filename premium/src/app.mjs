@@ -374,7 +374,7 @@ async function removePersonalCopy(record,localId,ownerId){
  else if(record.kind==='ops'){if(personalHasLocal('ops',localId)){const result=operationalStore.remove(localId,{ownerId});if(!result.ok)throw Error(removalError(result.reason));}}
 }
 function updateAccountSyncUi(){
- const v=accountAuto?.view(),old=document.querySelector('[data-account-sync-status]'),markup=AccountSyncStatus(v);
+ const v=accountAuto?.view(),old=document.querySelector('[data-account-sync-status]'),markup=location.pathname==='/'?'':AccountSyncStatus(v);
  if(old){if(old.outerHTML!==markup)old.outerHTML=markup;}else if(markup)document.querySelector('.app-shell>.screen-header')?.insertAdjacentHTML('afterend',markup);
  const panel=document.querySelector('[data-account-sync-panel]');if(panel){const markup=AccountSyncPanel(v);if(panel.outerHTML!==markup)panel.outerHTML=markup;}
 }
