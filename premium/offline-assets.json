@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "4c364030e985c792",
+  "revision": "81ec11ed6c3679b6",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -187,6 +187,8 @@
     "/src/lobo-demo-screen.mjs",
     "/src/manifest.webmanifest",
     "/src/map-shell.mjs",
+    "/src/notification-read-sync.mjs",
+    "/src/notification-receipts.mjs",
     "/src/notifications-screen.mjs",
     "/src/official-brand.css",
     "/src/offline-shell.mjs",
@@ -313,5 +315,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4078048
+  "bytes": 4083840
 }

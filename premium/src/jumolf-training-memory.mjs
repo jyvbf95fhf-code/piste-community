@@ -23,7 +23,7 @@ export function createTrainingMemory({ownerId,dogId,options,proposal,draft,missi
 }
 export function trainingMemoryNotes(memory,notes=''){
  const level=CANINE_LEVELS.find(l=>l.id===memory.level)?.label||memory.level;
- const brief=`JUMOLF · ${level}. Objectif : ${memory.objective} Distance préparée : ${memory.parameters.distanceM} m. ${memory.parameters.turns} angles calculés.${memory.schedule?` Âge prévu : ${memory.schedule.plannedAgeSeconds} s (horaires déclarés).`:''} Préparation, pas une séance réalisée. Métadonnées détaillées sur cet appareil ; cloud incomplet.`;
+ const brief=`JUMOLF · ${level}. Objectif : ${memory.objective} Distance préparée : ${memory.parameters.distanceM} m. ${memory.parameters.turns} angles calculés.${memory.schedule?` Âge prévu : ${memory.schedule.plannedAgeSeconds} s (horaires déclarés).`:''} Préparation, pas une séance réalisée. Fiche pédagogique enregistrée séparément des notes ; sauvegarde cloud explicite.`;
  const original=String(notes||'');return brief.length+original.length+1<=1000?`${brief}\n${original}`:original;
 }
 export function trainingMemoryView(memory,projection,{ownerId,dogId,consents={}}={}){
@@ -38,4 +38,10 @@ export function trainingMemoryView(memory,projection,{ownerId,dogId,consents={}}
 export function createRecommendationMemory(request,{ownerId,dogId,track=null,id=globalThis.crypto.randomUUID(),createdAt=new Date().toISOString()}={}){
  if(request?.dogId!==dogId||!request.protocol)fail();
  return normalizeTrainingMemory({version:1,id,ownerId,dogId,createdAt,level:null,skill:null,recommendationId:request.recommendationId,objective:request.objective,criteria:request.protocol.criteria,instructions:[...request.protocol.preparation,...request.protocol.steps,request.protocol.difficulty||'Adapter au chien.'],observations:request.protocol.criteria,limits:request.limits||['Proposition pédagogique, sans diagnostic ni réalisation attestée.','Aucune relation causale avec une évolution ultérieure ne peut être déduite.'],parameters:{distanceM:null,turns:null},schedule:null,weather:null},{ownerId,dogId});
+}
+
+// Verify the stored binding before translating a cloud dog identity to a local one.
+export function remapTrainingMemory(memory,{ownerId,fromDogId,toDogId}){
+ const valid=normalizeTrainingMemory(memory,{ownerId,dogId:fromDogId});
+ return normalizeTrainingMemory({...valid,dogId:toDogId},{ownerId,dogId:toDogId});
 }

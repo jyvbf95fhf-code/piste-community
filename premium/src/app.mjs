@@ -1,3 +1,4 @@
+import {createNotificationReadSync} from './notification-read-sync.mjs';
 import {createNotificationReceipts} from './notification-receipts.mjs';
 import {flushCoachingLiveEnds} from './coaching-live-exit.mjs';
 import {createFriendLiveClient} from './friend-live-client.mjs';
@@ -17,7 +18,7 @@ import {selectCommunityNotifications} from './community-notifications.mjs';
 import {createLoboAccountController} from './lobo-account-controller.mjs';
 import {createPersonalCloudRepository} from './personal-cloud-client.mjs';
 import {saveDisplayedProposal,preparedTrackForConsultation} from './track-proposal-save.mjs';
-import {createTrainingMemory,trainingMemoryNotes,trainingMemoryView} from './jumolf-training-memory.mjs';
+import {createTrainingMemory,trainingMemoryNotes,trainingMemoryView,remapTrainingMemory} from './jumolf-training-memory.mjs';
 import {mountRexMaps} from './jumolf-rex-map.mjs';
 import {SessionDossierScreen,sharedSessionDossier,localSessionDossier,operationalSessionDossier} from './session-dossier.mjs';
 import {createCoachingInvitations,CoachingInvitations} from './coaching-invitations.mjs';
@@ -291,12 +292,13 @@ let friendLive=null,friendLiveOwner=null;
 function reconcileFriendLive(){const owner=auth.assurance==='supabase-auth'&&persistentCommunity?.store.getSocialVersion?.()===1?currentUser?.user_id:null;if(owner===friendLiveOwner)return;friendLive?.dispose();friendLive=null;friendLiveOwner=owner;if(owner)friendLive=createFriendLiveClient({ownerId:owner,call:body=>accountApi.call(body),onChange:()=>{if(friendLiveOwner!==owner||auth.getSession().user?.user_id!==owner)return;updateNotificationBadge();if(['/','/notifications','/live'].includes(location.pathname)||location.pathname.startsWith('/live/coaching/'))renderCoachingUpdates();if(location.pathname.startsWith('/live'))render();}});}
 async function tickFriendLive(force=false){if(document.visibilityState==='hidden')return;reconcileFriendLive();await friendLive?.refresh(force);}
 
+let notificationReadSync=null;
 const opsHabitualState=new Map();
 function reconcileOpsLive(){
  const owner=auth.assurance==='supabase-auth'?currentUser?.user_id:null;
  if(owner===opsLiveRemoteOwner)return;
- opsLiveRemote?.dispose();opsLiveRemote=null;opsLiveBindings=null;opsLiveRemoteOwner=owner;opsHabitualState.clear();
- if(owner&&storage)try{opsLiveBindings=createOpsLiveBindings({ownerId:owner,storage});for(const binding of opsLiveBindings.list())communityStore.setContactPermission(binding.alias,'live_access_authorized',binding.enabled);opsLiveRemote=createOpsLiveRemote({ownerId:owner,storage,call:createOpsLiveTransport({client:accountClient,ownerId:owner}),onChange:()=>{updateLiveBadge();if(location.pathname==='/')renderCoachingUpdates();if(location.pathname.startsWith('/live')||location.pathname.startsWith('/community/profile/')||location.pathname==='/notifications')render();}});for(const m of operationalStore.list())if(m.ownerUserId===owner){const patch=opsLiveRemote.storedPolicy(m.id);if(patch)communityLiveStore.setSessionPolicy({sessionType:'ops',sessionId:m.id,patch});}}catch(error){Toast(error.message);}
+ opsLiveRemote?.dispose();opsLiveRemote=null;notificationReadSync=null;opsLiveBindings=null;opsLiveRemoteOwner=owner;opsHabitualState.clear();
+ if(owner&&storage)try{opsLiveBindings=createOpsLiveBindings({ownerId:owner,storage});for(const binding of opsLiveBindings.list())communityStore.setContactPermission(binding.alias,'live_access_authorized',binding.enabled);opsLiveRemote=createOpsLiveRemote({ownerId:owner,storage,call:createOpsLiveTransport({client:accountClient,ownerId:owner}),onChange:()=>{updateLiveBadge();if(location.pathname==='/')renderCoachingUpdates();if(location.pathname.startsWith('/live')||location.pathname.startsWith('/community/profile/')||location.pathname==='/notifications')render();}});notificationReadSync=createNotificationReadSync({ownerId:owner,getOwnerId:()=>auth.getSession().user?.user_id,receipts:notificationReceipts,remote:opsLiveRemote});for(const m of operationalStore.list())if(m.ownerUserId===owner){const patch=opsLiveRemote.storedPolicy(m.id);if(patch)communityLiveStore.setSessionPolicy({sessionType:'ops',sessionId:m.id,patch});}}catch(error){Toast(error.message);}
 }
 async function tickOpsLive(force=false){
  if(document.visibilityState==='hidden'||opsLiveTickPending||!force&&Date.now()-opsLiveAttempt<5000)return;
@@ -311,7 +313,7 @@ async function tickOpsLive(force=false){
   }
   for(const mission of operationalStore.list())if(mission.ownerUserId===opsLiveRemoteOwner)await remote.syncMission(mission,communityLiveStore.getSessionPolicy('ops',mission.id));
  }catch{/* Durable GPS and commands stay local; observers see the next verified refresh only. */}
- finally{await remote.refresh();opsLiveTickPending=false;}
+ finally{await remote.refresh();await notificationReadSync?.flush();opsLiveTickPending=false;}
 }
 setInterval(()=>{void tickOpsLive();},5000);
 window.addEventListener('online',()=>{void tickOpsLive(true);});
@@ -333,6 +335,7 @@ function notificationUnreadCount(){
 function renderPisteNotifications(){
  const owner=notificationOwner(),groups=notificationGroups();
  notificationReceipts.open(owner,groups);
+ void notificationReadSync?.flush();
  const rows=groups.filter(g=>['community','ops'].includes(g.source)).flatMap(({source,items})=>notificationReceipts.project(owner,source,items));
  return coachingInvitationCards()+liveNotices()+NotificationsScreen(rows,rows.filter(n=>!n.read).length);
 }
@@ -342,13 +345,13 @@ const makeProfileController=()=>createProfileController({store:profileStore,comm
 let profileController=makeProfileController();
 let personalCloud=null;
 function personalCloudForUser(){if(personalCloud?.ownerId===currentUser?.user_id)return personalCloud.controller;personalCloud?.controller.dispose();const ownerId=currentUser?.user_id;if(!ownerId)return null;
- const controller=createPersonalCloudController({ownerId,client:accountClient,render:()=>render(),getSources:()=>({profile:profileStore.snapshot(),dogs:dogsStore.list(),tracks:trackLibrary.list(),missions:operationalStore.list().map(m=>({...m,weatherSnapshot:m.weatherSnapshot||opsWeather.snapshot(m)})),associations:(sharedIndex?.list()||[]).flatMap(p=>{const dogId=sharedIndex.dogId(p.id);return dogId?[{sessionId:p.id,dogId}]:[];})}),restoreRecord:async(record,known,resolveDog)=>{
-  if(currentUser?.user_id!==ownerId)throw Error('Compte de restauration changé.');const r=structuredClone(record),field=r.kind==='profile'?'primary_dog_id':['track','ops','session-dog-link'].includes(r.kind)?'dogId':null;if(field&&r.payload[field])r.payload[field]=await resolveDog(r.payload[field]);if(currentUser?.user_id!==ownerId)throw Error('Compte de restauration changé.');
+ const controller=createPersonalCloudController({ownerId,client:accountClient,render:()=>render(),getSources:()=>({profile:profileStore.snapshot(),dogs:dogsStore.list(),tracks:trackLibrary.list(),missions:operationalStore.list().map(m=>({...m,weatherSnapshot:m.weatherSnapshot||opsWeather.snapshot(m)})),associations:(sharedIndex?.list()||[]).flatMap(p=>{const dogId=sharedIndex.dogId(p.id);return dogId?[{sessionId:p.id,dogId,...(sharedIndex.training(p.id)?{trainingMemory:sharedIndex.training(p.id)}:{})}]:[];})}),restoreRecord:async(record,known,resolveDog)=>{
+  if(currentUser?.user_id!==ownerId)throw Error('Compte de restauration changé.');const r=structuredClone(record),field=r.kind==='profile'?'primary_dog_id':['track','ops','session-dog-link'].includes(r.kind)?'dogId':null;const cloudDogId=r.payload.dogId;if(field&&r.payload[field])r.payload[field]=await resolveDog(r.payload[field]);if(r.payload.trainingMemory)r.payload.trainingMemory=remapTrainingMemory(r.payload.trainingMemory,{ownerId,fromDogId:cloudDogId,toDogId:r.payload.dogId});if(currentUser?.user_id!==ownerId)throw Error('Compte de restauration changé.');
   if(r.kind==='dog')return dogsStore.restoreCloud(r,known||r.id).id;
   if(r.kind==='track')return trackLibrary.restoreCloud(r,known||'track-cloud-'+r.id).id;
   if(r.kind==='ops'){if(r.payload.dog)r.payload.dog.id=r.payload.dogId;return operationalStore.restoreCloud(r).id;}
   if(r.kind==='profile'){profileStore.restoreCloud(r.payload);return 'self';}
-  if(r.kind==='session-dog-link'){const p=sharedIndex.get(r.payload.sessionId);if(!p)throw Error('Ouvrez d’abord la session Coaching autorisée, puis restaurez son association.');sharedIndex.linkDog(p.id,dogsStore.get(r.payload.dogId));return p.id;}
+  if(r.kind==='session-dog-link'){const p=sharedIndex.get(r.payload.sessionId);if(!p)throw Error('Ouvrez d’abord la session Coaching autorisée, puis restaurez son association.');sharedIndex.linkDog(p.id,dogsStore.get(r.payload.dogId));if(r.payload.trainingMemory)sharedIndex.linkTraining(p.id,r.payload.trainingMemory);return p.id;}
  }});personalCloud={ownerId,controller};return controller;}
 
 function accountDogs(){
@@ -868,7 +871,7 @@ function trainingMemoryFor(p){const memory=sharedIndex?.training(p?.id),dogId=sh
 const loboAccount=createLoboAccountController({getViewer:()=>auth.assurance==='supabase-auth'?currentUser:null,verifyUser:async()=>{const r=await accountClient.auth.getUser();if(r.error)throw r.error;return r.data?.user;},repository:ownerId=>createPersonalCloudRepository({client:accountClient,ownerId}),call:body=>accountApi.call(body),storage,indexedDB:window.indexedDB,onChange:()=>{if(document.querySelector('form[data-dog-form],form[data-profile-form],form[data-community-form="post-create"]'))return;render();},beforeReset:()=>{personalCloud?.controller.dispose();personalCloud=null;},afterReset:async bundle=>{
  const ownerId=currentUser.user_id;dogsStore=createDogsStore({dogs:[],ownerId,storage});trackLibrary=createTrackLibrary({ownerId,storage,includeDemo:auth.assurance!=='supabase-auth'});operationalStore=createOperationalMissionStore({ownerId,storage});sessionCatalog.clear();coachingDraft=newCoachingDraft();sharedIndex?.dispose();sharedIndex=createSharedSessionIndex({ownerId,storage});await sharedIndex.refresh(async()=>bundle.coachingProjections);if(currentUser?.user_id!==ownerId)throw Error('Compte modifié.');const controller=personalCloudForUser();await controller.load();if(currentUser?.user_id!==ownerId)throw Error('Compte modifié.');await controller.restore(bundle.personalRecords.map(r=>r.kind+':'+r.id));
 }});
-function makeJumolfController(){return createJumolfController({getAccountDemo:()=>loboAccount.snapshot(),deviceResetScreen:()=>loboAccount.screen(),store:jumolfStore,getPrimaryDogId:()=>defaultTrackingDog()?.id||'',getTrainingMemories:()=>sharedIndex?.list().map(trainingMemoryFor).filter(Boolean)||[],getViewer:()=>({id:currentUser?.user_id,name:currentUser?.name,role:currentUser?.role}),prepareRealTraining:auth.assurance==='supabase-auth'?prepareJumolfTraining:null,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
+function makeJumolfController(){return createJumolfController({getAccountDemo:()=>loboAccount.snapshot(),deviceResetScreen:()=>loboAccount.screen(),store:jumolfStore,getPrimaryDogId:()=>defaultTrackingDog()?.id||'',getTrainingMemories:()=>sharedIndex?.list().map(trainingMemoryFor).filter(Boolean)||[],getViewer:()=>({id:currentUser?.user_id,name:currentUser?.name,role:currentUser?.role}),canPrepareTrainingDog:id=>!!resolveDogId(trackingDogs(),id),prepareRealTraining:auth.assurance==='supabase-auth'?prepareJumolfTraining:null,getRawSources:jumolfRawSources,demoMode:()=>auth.assurance!=='supabase-auth',getVerifiedEntitlement:auth.assurance==='supabase-auth'?()=>auth.getSession().user?.jumolf_entitlement||{entitlement:'none'}:null,redeemRealCode:auth.assurance==='supabase-auth'?async code=>{const id=auth.getSession().user?.user_id;const result=await accountApi.call({operation:'premium-code-redeem',code});if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');await auth.initialize();if(auth.getSession().user?.user_id!==id)throw Error('Compte modifié.');currentUser=auth.getSession().user;syncJumolfVerifiedEntitlement();return result;}:null,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let jumolfController=makeJumolfController();
 const scientificDataset=generateJumolfSyntheticDataset();
 const scientificAnalytics=buildJumolfSyntheticAnalytics(scientificDataset.sessions);

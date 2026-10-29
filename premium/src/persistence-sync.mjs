@@ -1,4 +1,5 @@
 import {PERSISTENCE_KINDS,validatePersistenceRecord} from './persistence-contract.mjs';
+const canonical=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).sort(([a],[b])=>a.localeCompare(b))):v);
 export function createPersistenceSync({ownerId,journal,repository,onStatus=()=>{}}={}){
  if(!ownerId||!journal||!repository)throw Error('Compte et dépôt de sauvegarde requis.');
  let disposed=false,inflight=null;
@@ -10,6 +11,7 @@ export function createPersistenceSync({ownerId,journal,repository,onStatus=()=>{
     if(disposed)return;
     try{const record=validatePersistenceRecord(await repository[command.operation](command));if(disposed)return;
      if(record.id!==command.id||record.kind!==command.kind||record.revision<=command.expectedRevision)throw Error('Accusé de sauvegarde incompatible.');
+     if(command.payload?.trainingMemory&&canonical(command.payload.trainingMemory)!==canonical(record.payload.trainingMemory))throw Error('Sauvegarde pédagogique incomplète : préparation locale conservée.');
      await journal.acknowledge({commandId:command.commandId,record});if(!disposed)onStatus({state:'acknowledged',id:record.id});
     }catch(error){if(disposed)return;if(error.status===409){await journal.markConflict(command);if(!disposed)onStatus({state:'conflict',id:command.id});}else throw error;}
    }}catch(error){if(!disposed)onStatus({state:'error',message:error.message});throw error;}finally{inflight=null;}})();return inflight;

@@ -64,7 +64,7 @@ export function createTrackLibrary({storage,ownerId=null,includeDemo=true}={}) {
   get,
   persistenceWarning:()=>warning,
   restoreCloud(record,localId='track-cloud-'+record.id){
-   const r=validatePersistenceRecord(record);if(r.kind!=='track'||r.deletedAt)throw Error('Tracé distant indisponible.');const normalized=createTrackLibrary().createPrepared(r.payload);const previous=items.find(item=>item.id===localId),retained=previous?.trainingMemory&&previous.dogId===normalized.dogId&&JSON.stringify(previous.geometry)===JSON.stringify(normalized.geometry)?{trainingMemory:previous.trainingMemory}:{};const restored={...normalized,...retained,id:localId,ownerId:'self'};commit([...items.filter(item=>item.id!==localId),restored]);return copy(restored);
+   const r=validatePersistenceRecord(record);if(r.kind!=='track'||r.deletedAt)throw Error('Tracé distant indisponible.');if(r.payload.trainingMemory)normalizeTrainingMemory(r.payload.trainingMemory,{ownerId,dogId:r.payload.dogId});const normalized=createTrackLibrary().createPrepared(r.payload);const previous=items.find(item=>item.id===localId),retained=!normalized.trainingMemory&&previous?.trainingMemory&&previous.dogId===normalized.dogId&&JSON.stringify(previous.geometry)===JSON.stringify(normalized.geometry)?{trainingMemory:previous.trainingMemory}:{};const restored={...normalized,...retained,id:localId,ownerId:'self'};commit([...items.filter(item=>item.id!==localId),restored]);return copy(restored);
   },
   create(name) {return insert({name:validName(name),source:'draw',start:mockStart(),description:'Votre tracé mock'});},
   createPrepared({name,description='',category='',difficulty='',dogId='',notes='',source='draw',provenance='manual',fileName,geometry,copiedFrom,trainingMemory}={}) {

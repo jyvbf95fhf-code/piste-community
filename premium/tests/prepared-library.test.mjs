@@ -15,7 +15,7 @@ test('prepared detail exposes pedagogy and explicit reuse without marking a sess
  const row=rows.find(r=>r.libraryId===saved.id),html=TrackDetailScreen(row);
  assert.equal(row.trainingMemory.objective,memory.objective);assert.equal(row.lifecycle,'prepared');
  assert.match(html,/Travailler les angles/);assert.match(html,/Rester engagé/);assert.match(html,/data-prepared-action="coaching"/);
- assert.match(html,/Préparation enregistrée/);assert.match(html,/cloud.*incomplète/i);
+ assert.match(html,/Préparation enregistrée/);assert.match(html,/Sauvegardes cloud/);assert.match(html,/sauvegardez le tracé et son chien/);
  assert.doesNotMatch(html,/Séance terminée/);
 });
 test('prepared library category lists preparations independently of completed sessions and drafts',()=>{

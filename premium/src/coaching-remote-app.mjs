@@ -85,7 +85,7 @@ function render(){if(disposed)return;if(root.querySelector('.gps-touch-lock-pane
   const panel=document.createElement('section');panel.className='tracer-sheet shared-session-sheet remote-shell';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',sharedSheet==='messages'?'Messages de la session':'Options de la session');panel.hidden=!sharedSheet;
   panel.innerHTML='<button type="button" class="button button-dark shared-close" data-remote="close-session">Fermer</button>';
   for(const el of panels){if(sharedSheet==='messages'&&!el.querySelector('[data-remote-messages]'))continue;panel.append(el);}
-  if(sharedSheet==='session')panel.insertAdjacentHTML('beforeend','<button type="button" class="button button-dark" data-remote="refresh">Actualiser la session</button>');
+  if(sharedSheet==='session')panel.insertAdjacentHTML('beforeend','<p>Gardez PISTE visible pendant le suivi. Après verrouillage de l’iPhone ou changement d’application, vérifiez la réception GPS et utilisez Reprendre le GPS si nécessaire. Le verrouillage tactile garde la carte ouverte.</p><button type="button" class="button button-dark" data-remote="refresh">Actualiser la session</button>');
   const shade=document.createElement('div');shade.className='tracer-shade';shade.hidden=!sharedSheet;shade.dataset.remote='close-session';
   cockpit.append(shade,panel);if(retainedCockpit)cockpit=reuseCockpit(retainedCockpit,cockpit);session.replaceChildren(cockpit);root.replaceChildren(session);
  }

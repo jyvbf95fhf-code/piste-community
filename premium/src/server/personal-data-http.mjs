@@ -22,7 +22,7 @@ export function createPersonalDataHandler({authenticate,enabled,repositoryFor}={
    if(!['put','remove'].includes(body.operation)||!persistenceUuid(body.commandId)||!Number.isSafeInteger(body.expectedRevision)||body.expectedRevision<0)fail('Commande invalide.');
    if(body.kind==='profile'&&body.id!==await profileIdentity(user.id))fail('Identité de profil invalide.');
    let payload={};if(body.operation==='put'){
-    try{payload=preparePersistenceCandidate({kind:body.kind,localId:body.kind==='ops'?body.payload?.id:body.id,value:body.payload}).payload;}catch{fail('Données de sauvegarde invalides.');}
+    try{payload=preparePersistenceCandidate({kind:body.kind,localId:body.kind==='ops'?body.payload?.id:body.id,value:body.payload},{ownerId:user.id}).payload;}catch{fail('Données de sauvegarde invalides.');}
     const dogId=body.kind==='profile'?payload.primary_dog_id:payload.dogId;
     if(dogId&&!persistenceUuid(dogId))fail('Référence chien invalide.');
    }
