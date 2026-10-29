@@ -36,9 +36,9 @@ try{
  await page.getByRole('button',{name:'Se connecter',exact:true}).click();
  await page.getByText('Prêts pour le terrain ?').waitFor();
  assert.equal(await page.getByText('Bonjour Compte réel,').isVisible(),true);
- await page.getByRole('link',{name:'Ouvrir le Coaching partagé'}).click();
- await page.getByRole('heading',{name:'Créer une session Coaching'}).waitFor();
- assert.equal(new URL(page.url()).pathname,'/coaching-shared.html');
+ await page.locator('main a[href="/new-session"]').first().click();
+ await page.getByRole('heading',{name:'Configurer la session'}).waitFor();
+ assert.equal(new URL(page.url()).pathname,'/new-session');
  await page.goto('https://piste.test/auth/forgot');await page.getByRole('button',{name:'Recevoir un lien',exact:true}).waitFor();
  await page.getByLabel('Email',{exact:true}).fill('qa@example.invalid');await page.getByRole('button',{name:'Recevoir un lien',exact:true}).click();
  await page.getByText(/La limite d’envoi d’e-mails est atteinte/).waitFor();
@@ -49,5 +49,5 @@ try{
  await page.getByText(/L’accès au Coaching V2 attend une autorisation/).waitFor();
  assert.equal(await page.getByText('Prêts pour le terrain ?').isVisible(),false);
  assert.deepEqual(errors,[]);
- console.log('PASS: real SDK app login, mock cache ignored, actual identity on home, full Coaching navigation, mail quota + cooldown, pending account denied; iPhone viewport, synthetic Auth only.');
+ console.log('PASS: real SDK app login, mock cache ignored, actual identity on home, current Coaching wizard entry, mail quota + cooldown, pending account denied; iPhone viewport, synthetic Auth only.');
 }finally{await browser.close();}

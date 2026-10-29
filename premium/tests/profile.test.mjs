@@ -98,3 +98,8 @@ test('profile screens expose central controls, reuse links and keep account stat
  const standard=ProfileScreen({route:{type:'home'},...common,user:{...common.user,user_id:'member-standard-01',permissions:{admin:false,research:false}},adminAccess:{allowed:false},scientificAccess:{authorized:false}});
  assert.doesNotMatch(standard,/Administration|Espace scientifique/);
 });
+
+test('signed-in profile and account explain the real account without demonstration or visit-only storage claims',()=>{
+ for(const type of ['home','account']){const html=ProfileScreen({route:{type},realMode:true,user:{user_id:'signed-in',name:'Camille',email:'qa@example.invalid'},profileStore:createProfileStore()});assert.doesNotMatch(html,/démonstration|mock|mémoire de visite|Aucune Auth réelle/i);assert.match(html,/Compte PISTE|compte connecté/);}
+ assert.match(ProfileScreen({route:{type:'account'},profileStore:createProfileStore()}),/démonstration/);
+});

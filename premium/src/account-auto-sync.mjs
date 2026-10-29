@@ -82,7 +82,7 @@ export function createAccountAutoSync({ownerId,getOwnerId,journal,repository,get
   lastPull=clock();hydrated=true;if(restored&&active())onHydrated(restored);
  }
  async function refreshState(){
-  if(!active())return;const s=await journal.snapshot();if(!active())return;
+  if(!active())return;let s;try{s=await journal.snapshot();}catch(e){if(!active())return;errors=[...new Set([...errors,e.message])];pending=Math.max(pending,1);state='error';emit();return;}if(!active())return;
   pending=s.commands.length+waitingOps.size+(mutationEpoch!==capturedEpoch?1:0);deferred=deferredRecords.size;errors=[...new Set([...errors,...pullErrors.values()])];conflicts=s.commands.filter(c=>c.conflict).map(c=>({kind:c.kind,id:c.id,operation:c.operation}));
   conflicts=[...new Map(conflicts.map(c=>[identity(c),c])).values()];
   state=conflicts.length?'conflict':errors.length?'error':!online()?'offline':pending?'pending':deferred?'deferred':'online';
