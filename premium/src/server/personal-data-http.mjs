@@ -26,7 +26,7 @@ export function createPersonalDataHandler({authenticate,enabled,repositoryFor}={
     const dogId=body.kind==='profile'?payload.primary_dog_id:payload.dogId;
     if(dogId&&!persistenceUuid(dogId))fail('Référence chien invalide.');
    }
-   const record=await repository[body.operation]({kind:body.kind,id:body.id,commandId:body.commandId,expectedRevision:body.expectedRevision,payload});return respond({record:validatePersistenceRecord(record)});
+   const record=await repository[body.operation]({kind:body.kind,id:body.id,commandId:body.commandId,expectedRevision:body.expectedRevision,payload,...(body.kind==='ops'&&!Object.hasOwn(body.payload||{},'retrospective')?{legacyOps:true}:{})});return respond({record:validatePersistenceRecord(record)});
   }catch(error){return respond({error:error.status?error.message:'Service de sauvegarde indisponible.'},error.status||503);}
  };
 }

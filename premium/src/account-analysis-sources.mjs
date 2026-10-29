@@ -1,3 +1,4 @@
+import {retrospectiveMetrics,retrospectivePoints} from './operational-retrospective.mjs';
 import {selectHistoricalWeather} from './session-weather-history.mjs';
 import {LOBO_DEMO_MANIFEST,LOBO_DEMO_OWNER_ID} from './lobo-demo-data.mjs';
 // Read-only bridge. Inputs must come from the current account's existing stores
@@ -37,12 +38,12 @@ export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,
  const operational=[];
  for(const m of operationalMissions){
   if(loboDemo(m.id)||m.ownerUserId!==ownerId||!['Terminée','Archivée'].includes(m.status)||m.demo||m.synthetic)continue;
-  const trace=points(m.gpsTrack),dog=linked(m.dogId||m.dog?.id,m.dog?.name),weather=weatherProjection(m.weatherSnapshot||weatherForMission?.(m));
+  const imported=retrospectiveMetrics(m.retrospective),trace=imported?retrospectivePoints(m.retrospective):points(m.gpsTrack),dog=linked(m.dogId||m.dog?.id,m.dog?.name),weather=weatherProjection(m.weatherSnapshot||weatherForMission?.(m));
   const rawWeather=(m.weatherSnapshot||weatherForMission?.(m))?.weather;
-  const end=m.gpsTrack?.endedAt||m.finishedAt;
+  const end=imported?.finishedAt||m.gpsTrack?.endedAt||m.finishedAt;
   const corridor=m.olfactoryCorridorEnabled&&m.referenceGpsPose&&rawWeather&&Number.isFinite(end)?buildGpsCorridor({pose:m.referenceGpsPose,weather:rawWeather,now:end,allowed:true}):null;
   const geometry=corridor?.features?.flatMap(f=>(f.geometry?.outerBoundary||[]).map(p=>({space:'wgs84',x:p.lon,y:p.lat})))||[];
-  operational.push({id:'ops:'+m.id,kind:'operational',handlerId:m.handler?.id&&m.handler.id!=='mock-current-user'?m.handler.id:null,status:m.status,dog,dogId:dog?.id||null,trace:trace.length?trace:null,trackingStartedAt:iso(m.gpsTrack?.startedAt||m.trackingStartedAt),finishedAt:iso(end),trackingElapsedMs:m.gpsTrack?.provenance==='device-geolocation'?number(m.trackingElapsedMs):null,distanceM:trace.length?number(m.gpsTrack.distanceM):null,time:{trackAgeAtStart:m.time?.trackAgeAtStart?{seconds:number(m.time.trackAgeAtStart.seconds),label:m.time.trackAgeAtStart.label}:null},context:{environment:m.context?.environmentType||m.context?.environment||m.context?.terrain||null},events:(m.gpsTrack?.provenance==='device-geolocation'?events(m.events):[]).map(e=>({...e,shareable:true})),weather,wind:weather?.wind||null,corridor:geometry.length?{geometry,provenance:'estimated'}:null,provenance:{trace:trace.length?'phone_gps':null,distance:trace.length?'calculated':null,weather:weather?.provenance||null}});
+  operational.push({id:'ops:'+m.id,kind:'operational',handlerId:m.handler?.id&&m.handler.id!=='mock-current-user'?m.handler.id:null,status:m.status,dog,dogId:dog?.id||null,trace:trace.length?trace:null,trackingStartedAt:iso(imported?.startedAt||m.gpsTrack?.startedAt||m.trackingStartedAt),finishedAt:iso(end),trackingElapsedMs:m.gpsTrack?.provenance==='device-geolocation'?number(m.trackingElapsedMs):null,distanceM:imported?imported.distanceM:trace.length?number(m.gpsTrack.distanceM):null,time:{trackAgeAtStart:m.time?.trackAgeAtStart?{seconds:number(m.time.trackAgeAtStart.seconds),label:m.time.trackAgeAtStart.label}:null},context:{environment:m.context?.environmentType||m.context?.environment||m.context?.terrain||null},events:(m.gpsTrack?.provenance==='device-geolocation'?events(m.events):[]).map(e=>({...e,shareable:true})),weather,wind:weather?.wind||null,corridor:geometry.length?{geometry,provenance:'estimated'}:null,provenance:{trace:trace.length?(imported?'gpx_import':'phone_gps'):null,distance:trace.length?'calculated':null,weather:weather?.provenance||null}});
  }
  return {dogs:safeDogs,sessions:[...sessions.values()].map(s=>({...s,dataOrigin:'account',synthetic:false})),operational:operational.map(s=>({...s,dataOrigin:'account',synthetic:false})),tracks:tracks.filter(t=>(t.ownerId===ownerId||t.ownerId==='self'&&tracksOwnerId===ownerId)&&!t.demo&&!t.synthetic&&(t.geometry?.points||t.points)?.every(p=>p.space==='wgs84')).map(t=>({...t,geometry:t.geometry?.points||t.points,provenance:t.source==='gpx'?'gpx_import':'manual'}))};
 }

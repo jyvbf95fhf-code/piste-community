@@ -1,3 +1,4 @@
+import {retrospectiveMetrics} from './operational-retrospective.mjs';
 const encode = value => encodeURIComponent(value);
 const decode = value => {
   try {
@@ -18,6 +19,7 @@ export function resolveOperationalRoute(pathname) {
   const path = String(pathname || '').replace(/\/+$/, '') || '/';
   if (path === '/operational') return { type: 'entry' };
   if (path === '/operational/new') return { type: 'new' };
+  if (path === '/operational/after') return { type: 'after' };
   if (path === '/operational/prepare') return { type: 'prepared' };
   const match = path.match(/^\/operational\/missions\/([^/]+)(?:\/(replay))?$/);
   if (!match) return null;
@@ -56,6 +58,7 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
     trackingState,
     trackingLabel,
     trackingElapsedMs,
+    retrospective:mission.retrospective?structuredClone(mission.retrospective):null,
     gpsTrack: mission.gpsTrack ? structuredClone(mission.gpsTrack) : null,
     readOnly: finalized,
     title: `Mission terrain · ${currentDog?.name || mission.dog?.name || unavailable}`,
@@ -85,8 +88,8 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
     analysisContract: operationalAnalysisProjection(mission),
     gpxAttachment: mission.gpxAttachment ? structuredClone(mission.gpxAttachment) : null,
     weatherDemo: mission.weatherDemo ? structuredClone(mission.weatherDemo) : null,
-    distance: mission.gpsTrack?.distanceM ?? null,
-    duration: mission.gpsTrack ? mission.trackingElapsedMs ?? mission.time?.trackingActiveDurationMs ?? 0 : null,
+    distance: mission.retrospective?retrospectiveMetrics(mission.retrospective).distanceM:mission.gpsTrack?.distanceM ?? null,
+    duration: mission.retrospective?retrospectiveMetrics(mission.retrospective).elapsedMs:mission.gpsTrack ? mission.trackingElapsedMs ?? mission.time?.trackingActiveDurationMs ?? 0 : null,
     weatherLabel: mission.weatherDemo ? 'Démonstration · non mesuré' : unavailable,
     corridor: {
       enabled: corridorEnabled,
@@ -126,6 +129,7 @@ export function operationalReplayView(mission) {
     status: mission.status,
     trackingState: mission.trackingState || 'stopped',
     trackingElapsedMs: Number.isFinite(mission.trackingElapsedMs) ? mission.trackingElapsedMs : 0,
+    retrospective:mission.retrospective?structuredClone(mission.retrospective):null,
     gpsTrack: mission.gpsTrack ? structuredClone(mission.gpsTrack) : null,
     readOnly: true,
     entryMode: mission.entryMode || 'quick',
@@ -149,8 +153,8 @@ export function operationalReplayView(mission) {
     journal,
     timeline,
     gpxAttachment: mission.gpxAttachment ? structuredClone(mission.gpxAttachment) : null,
-    distance: mission.gpsTrack?.distanceM ?? null,
-    duration: mission.gpsTrack ? mission.trackingElapsedMs ?? mission.time?.trackingActiveDurationMs ?? 0 : null,
+    distance: mission.retrospective?retrospectiveMetrics(mission.retrospective).distanceM:mission.gpsTrack?.distanceM ?? null,
+    duration: mission.retrospective?retrospectiveMetrics(mission.retrospective).elapsedMs:mission.gpsTrack ? mission.trackingElapsedMs ?? mission.time?.trackingActiveDurationMs ?? 0 : null,
     weather: mission.weatherDemo ? { ...structuredClone(mission.weatherDemo), label: 'Démonstration · non mesuré' } : null,
     olfactoryCorridor: corridorEnabled
       ? { enabled: true, label: 'ESTIMÉ · simulation', geometry: 'mock-overlay' }
@@ -165,7 +169,7 @@ export function operationalSessionRows(missions = []) {
     return {
       id: mission.id,
       kind: 'operational',
-      provenance: 'Mission opérationnelle',
+      provenance: mission.retrospective?'Mission ajoutée après intervention':'Mission opérationnelle',
       href: finalized ? `/sessions/${encodedId}` : `/operational/missions/${encodedId}`,
       replayHref: finalized ? `/sessions/${encodedId}/replay` : null,
       title: `Mission terrain · ${mission.dog?.name || unavailable}`,
@@ -176,10 +180,11 @@ export function operationalSessionRows(missions = []) {
       dogName: mission.dog?.name || unavailable,
       modeLabel: 'Mission opérationnelle',
       roleLabel: mission.handler?.name ? `Conducteur · ${mission.handler.name}` : 'Conducteur',
-      date: mission.createdAt || unavailable,
+      sortAt:mission.retrospective?Date.parse(mission.retrospective.interventionDate+'T00:00:00Z'):Date.parse(mission.createdAt||''),
+      date: mission.retrospective?.interventionDate || mission.createdAt || unavailable,
       trackAge: mission.time?.trackAgeAtStart?.label || null,
-      distance: mission.gpsTrack?.distanceM ?? null,
-      duration: Number.isFinite(mission.time?.trackingActiveDurationMs) ? `${Math.floor(mission.time.trackingActiveDurationMs / 60_000)} min${mission.gpsTrack?'':' · simulation'}` : null,
+      distance: mission.retrospective?retrospectiveMetrics(mission.retrospective).distanceM:mission.gpsTrack?.distanceM ?? null,
+      duration: mission.retrospective?(retrospectiveMetrics(mission.retrospective).elapsedMs===null?null:Math.floor(retrospectiveMetrics(mission.retrospective).elapsedMs/60000)+' min écoulées · '+(retrospectiveMetrics(mission.retrospective).timeSource==='gpx'?'GPX':'déclarées')):Number.isFinite(mission.time?.trackingActiveDurationMs) ? `${Math.floor(mission.time.trackingActiveDurationMs / 60_000)} min${mission.gpsTrack?'':' · simulation'}` : null,
       canResume: false,
       readOnly: finalized
     };

@@ -1,3 +1,4 @@
+import {normalizeRetrospective,retrospectiveMetrics} from './operational-retrospective.mjs';
 import {personalChanged} from './personal-change.mjs';
 import {sessionRemovalPolicy} from './session-removal.mjs';
 import {validatePersistenceRecord} from './persistence-contract.mjs';
@@ -317,6 +318,15 @@ export function createOperationalMissionStore({
       if(!OPERATIONAL_MISSION_STATUSES.includes(mission.status))throw Error('Dossier OPS invalide.');const next=[...records.values()].filter(m=>m.cloudReadOnly&&m.id!==mission.id);next.push(mission);
       if(!storage)throw Error('Stockage local indisponible.');storage.setItem(cloudKey,JSON.stringify({version:1,ownerId,missions:next}));records.set(mission.id,mission);return snapshot(mission);
     },
+    createRetrospective({dog,handler,retrospective,address=''}={}){
+      const report=normalizeRetrospective(retrospective);if(!report)throw Error('Bilan après intervention requis.');
+      const draft=this.createDraft({dog,handler,details:{observations:report.observations},places:{interventionAddress:String(address||'').slice(0,240)}});
+      const mission=records.get(draft.id);mission.entryMode='retrospective';mission.retrospective=report;mission.gpsTrack=null;mission.status='Archivée';mission.trackingState='stopped';mission.fieldClosedAt=report.finishedAt;mission.completedAt=isoNow();mission.archivedAt=isoNow();mission.provenance.retrospective='user_declared';mission.traceMetadata={sourceType:report.gpx?'gpx_import':null,sourceDevice:null,importType:'after_intervention'};
+      mission.journal=[{id:mission.id+'-after',sequence:1,kind:'recorded_after_intervention',elapsedMs:0,timeLabel:report.recordedAt}];
+      mission.time.trackingActiveDurationMs=null;mission.time.totalMissionDurationMs=retrospectiveMetrics(report).elapsedMs;
+      return snapshot(mission);
+    },
+
     createDraft({ dog, handler, entryMode = 'quick', details = {}, person = {}, time = {}, places = {}, context = {} } = {}) {
       if (!dog?.id) throw new Error('Un chien est requis pour démarrer une mission.');
       if (!handler?.id) throw new Error('Un conducteur mock est requis pour démarrer une mission.');
@@ -327,6 +337,7 @@ export function createOperationalMissionStore({
         id,
         kind: 'operational',
         ownerUserId: ownerId,
+        retrospective:null,
         status: 'Brouillon',
         trackingState: 'ready',
         dogId: String(dog.id),

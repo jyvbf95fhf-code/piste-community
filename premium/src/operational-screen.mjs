@@ -1,3 +1,4 @@
+import {OperationalAfterScreen} from './operational-after-screen.mjs';
 import {formatOperationalGpsClock} from './operational-gps-screen.mjs';
 import {OperationalWeatherMarkup} from './operational-weather.mjs';
 import {OperationalGpsScreen} from './operational-gps-screen.mjs';
@@ -10,7 +11,7 @@ import { operationalMissionView } from './operational-views.mjs';
 import { OperationalEntryChoices, QuickStartForm, PreparedMissionForm, OperationalNavigation } from './operational-intake.mjs';
 
 const entryMission = mission => `<a class="card operational-resume-card" href="/operational/missions/${encodeURIComponent(mission.id)}"><span class="operational-resume-mark">${Icon('navLive')}</span><span><small>${StatusBadge(mission.status, mission.status === 'En cours' ? 'cyan' : 'gold')}</small><strong>Mission · ${e(mission.dog?.name || 'Chien indisponible')}</strong><em>Reprendre la mission</em></span>${Icon('arrow')}</a>`;
-const JOURNAL_LABELS = { tracking_started:'Début du pistage', tracking_paused:'Pause du suivi', tracking_resumed:'Reprise du suivi', progress:'Progression mock', terrain_event:'Événement terrain', tracking_stopped:'Arrêt du suivi', ready_to_complete:'Mission à compléter', mission_completed:'Mission terminée', mission_archived:'Mission archivée' };
+const JOURNAL_LABELS = { recorded_after_intervention:'Mission ajoutée après intervention', tracking_started:'Début du pistage', tracking_paused:'Pause du suivi', tracking_resumed:'Reprise du suivi', progress:'Progression mock', terrain_event:'Événement terrain', tracking_stopped:'Arrêt du suivi', ready_to_complete:'Mission à compléter', mission_completed:'Mission terminée', mission_archived:'Mission archivée' };
 const datetimeLocal = value => { const date=value?new Date(value):null; return date&&Number.isFinite(date.getTime())?`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}T${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`:''; };
 const evaluationFields = (scope, title, criteria, values) => `<fieldset class="operational-evaluation-group" data-operational-evaluation-group="${scope}"><legend>${e(title)} · échelle 1 à 5</legend>${criteria.map(([key,label])=>`<label>${e(label)}<select name="${scope}.${e(key)}" aria-label="${e(label)} · note de 1 à 5"><option value="">Indisponible</option>${[1,2,3,4,5].map(score=>`<option value="${score}" ${String(values?.[key]??'')===String(score)?'selected':''}>${score}</option>`).join('')}</select></label>`).join('')}<label>Commentaire libre<textarea name="${scope}.comment" rows="3">${e(values?.comment||'')}</textarea></label></fieldset>`;
 export function operationalJournalMarkup(journal = [], events = [], trace = [], handler = 'Conducteur',{realMode=false}={}) {
@@ -73,6 +74,7 @@ function OperationalMission({ view, ui = {}, livePolicy = {} } = {}) {
 }
 
 export function OperationalScreen({ route = { type: 'entry' }, missions = [], dogs = [], view = null, ui = {}, livePolicy = {} } = {}) {
+  if (route.type === 'after') return OperationalAfterScreen({dogs});
   if (route.type === 'new' || route.type === 'quick') return QuickStartForm({ dogs, handler: ui.handler,realMode:ui.realMode });
   if (route.type === 'prepared') return PreparedMissionForm({ dogs, handler: ui.handler,realMode:ui.realMode });
   if (route.type === 'mission') {

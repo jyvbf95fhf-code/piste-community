@@ -5,9 +5,10 @@ export function createPersonalDataRepository(admin,ownerId){
  const write=async(operation,c)=>{
   // Older open clients must not silently strip a newer personal result.
   // Reject rather than merge: the transactional command fingerprint stays exact.
-  if(operation==='put'&&c.kind==='session-dog-link'&&!Object.hasOwn(c.payload||{},'searchOutcome')){
+  if(operation==='put'&&(c.kind==='session-dog-link'&&!Object.hasOwn(c.payload||{},'searchOutcome')||c.kind==='ops'&&c.legacyOps)){
    const prior=unwrap(await admin.from('v2_personal_records').select('payload').eq('owner_id',ownerId).eq('kind',c.kind).eq('id',c.id).maybeSingle());
-   if(prior?.payload?.searchOutcome)throw Object.assign(Error('Mettez à jour l’application pour conserver le résultat de recherche.'),{status:409});
+   if(c.kind==='ops'&&prior?.payload?.retrospective)throw Object.assign(Error('Mettez à jour l’application pour conserver l’archive après intervention.'),{status:409});
+   if(c.kind==='session-dog-link'&&prior?.payload?.searchOutcome)throw Object.assign(Error('Mettez à jour l’application pour conserver le résultat de recherche.'),{status:409});
   }
   return admin.rpc('v2_personal_commit',{p_owner:ownerId,p_kind:c.kind,p_id:c.id,p_expected:c.expectedRevision,p_command:c.commandId,p_operation:operation,p_payload:c.payload||{}}).then(unwrap);
  };

@@ -1,3 +1,4 @@
+import {normalizeRetrospective} from './operational-retrospective.mjs';
 export const OPERATIONAL_SCHEMA_VERSION = 2;
 
 export const OPERATIONAL_PROVENANCE = Object.freeze([
@@ -53,7 +54,8 @@ export function normalizeOperationalMission(input) {
   const corridor = object(mission.olfactoryCorridor);
 
   mission.schemaVersion = OPERATIONAL_SCHEMA_VERSION;
-  mission.entryMode = mission.entryMode === 'prepared' ? 'prepared' : 'quick';
+  if(Object.hasOwn(mission,'retrospective'))mission.retrospective=normalizeRetrospective(mission.retrospective);
+  mission.entryMode = mission.retrospective?'retrospective':mission.entryMode === 'prepared' ? 'prepared' : 'quick';
   mission.details = { ...detailsDefaults(), ...oldDetails };
   mission.person = {
     identity: null,

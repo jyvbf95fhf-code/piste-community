@@ -593,6 +593,37 @@ function createTrackLibrary({ storage, ownerId = null, includeDemo = true } = {}
   };
 }
 
+// src/iso-timestamp.mjs
+function validIsoTimestamp(value) {
+  if (typeof value !== "string" || value.length > 40) return false;
+  const m = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-]\d{2}:\d{2})$/);
+  if (!m) return false;
+  const [year, month, day, hour, minute, second] = m.slice(1, 7).map(Number), leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0), days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1] && hour <= 23 && minute <= 59 && second <= 59 && Number.isFinite(Date.parse(value));
+}
+
+// src/operational-retrospective.mjs
+var iso2 = validIsoTimestamp;
+var fail2 = () => {
+  throw Error("Archive apr\xE8s intervention invalide : v\xE9rifiez la date, les horaires et le GPX.");
+};
+function normalizeRetrospective(value) {
+  if (value == null) return null;
+  if (typeof value !== "object" || Array.isArray(value) || Object.keys(value).some((k) => !["version", "interventionDate", "startedAt", "finishedAt", "recordedAt", "observations", "dogWork", "searchOutcome", "gpx"].includes(k)) || value.version !== void 0 && value.version !== 1 || typeof value.interventionDate !== "string" || !/^\d{4}-\d\d-\d\d$/.test(value.interventionDate) || !Number.isFinite(Date.parse(value.interventionDate)) || new Date(value.interventionDate).toISOString().slice(0, 10) !== value.interventionDate || !iso2(value.recordedAt)) fail2();
+  const startedAt = value.startedAt || null, finishedAt = value.finishedAt || null;
+  if (startedAt && !iso2(startedAt) || finishedAt && !iso2(finishedAt) || startedAt && finishedAt && Date.parse(finishedAt) < Date.parse(startedAt)) fail2();
+  for (const key of ["observations", "dogWork"]) if (value[key] != null && (typeof value[key] !== "string" || value[key].length > 6e3)) fail2();
+  let gpx = null;
+  if (value.gpx) {
+    const g = value.gpx;
+    if (typeof g !== "object" || Object.keys(g).some((k) => !["fileName", "name", "coordinates"].includes(k)) || typeof g.fileName !== "string" || g.fileName.length > 240 || typeof g.name !== "string" || g.name.length > 80 || !Array.isArray(g.coordinates) || g.coordinates.length < 2 || g.coordinates.length > 1e4) fail2();
+    for (const [i, p] of g.coordinates.entries()) if (!Array.isArray(p) || p.length !== 4 || !Number.isFinite(p[0]) || Math.abs(p[0]) > 180 || !Number.isFinite(p[1]) || Math.abs(p[1]) > 90 || p[2] !== null && (!Number.isFinite(p[2]) || p[2] < 0 || p[2] > 864e13) || ![0, 1].includes(p[3]) || i === 0 && p[3] !== 0) fail2();
+    if (!g.coordinates.some((p, i) => i > 0 && p[3] === 0)) fail2();
+    gpx = structuredClone(g);
+  }
+  return { version: 1, interventionDate: value.interventionDate, startedAt, finishedAt, recordedAt: new Date(value.recordedAt).toISOString(), observations: value.observations || "", dogWork: value.dogWork || "", searchOutcome: normalizeSearchOutcome(value.searchOutcome), gpx };
+}
+
 // src/operational-data.mjs
 var OPERATIONAL_SCHEMA_VERSION = 2;
 var OPERATIONAL_PROVENANCE = Object.freeze([
@@ -660,7 +691,8 @@ function normalizeOperationalMission(input) {
   const context = object(mission.context);
   const corridor = object(mission.olfactoryCorridor);
   mission.schemaVersion = OPERATIONAL_SCHEMA_VERSION;
-  mission.entryMode = mission.entryMode === "prepared" ? "prepared" : "quick";
+  if (Object.hasOwn(mission, "retrospective")) mission.retrospective = normalizeRetrospective(mission.retrospective);
+  mission.entryMode = mission.retrospective ? "retrospective" : mission.entryMode === "prepared" ? "prepared" : "quick";
   mission.details = { ...detailsDefaults(), ...oldDetails };
   mission.person = {
     identity: null,
@@ -825,7 +857,7 @@ function preparePersistenceCandidate({ kind, localId, value }, { ownerId = null 
   } else if (kind === "ops") {
     if (value.kind !== "operational" || !OPERATIONAL_MISSION_STATUSES.includes(value.status)) throw Error("Dossier OPS invalide.");
     if (value.gpsTrack && !validGpsPose(value.gpsTrack, "ops:" + localId, value.gpsOwnerId)) throw Error("GPS OPS invalide.");
-    payload = normalizeOperationalMission(pick(value, ["id", "kind", "schemaVersion", "entryMode", "status", "trackingState", "dogId", "dog", "handler", "createdAt", "trackingStartedAt", "trackingStoppedAt", "trackingPausedMs", "trackingPausedAt", "trackingElapsedMs", "details", "person", "time", "places", "context", "olfactoryCorridor", "trace", "events", "journal", "gpsTrack", "gpsOwnerId", "pauseObservations", "dogEvaluation", "fieldEvaluation", "finalization", "weatherSnapshot", "startedAt", "fieldClosedAt", "completedAt", "archivedAt", "lastKnownPoint", "provenance", "traceMetadata", "dataQuality", "environment", "result", "sourceDevice", "gpxAttachment", "weatherDemo", "olfactoryCorridorEnabled"]));
+    payload = normalizeOperationalMission(pick(value, ["retrospective", "id", "kind", "schemaVersion", "entryMode", "status", "trackingState", "dogId", "dog", "handler", "createdAt", "trackingStartedAt", "trackingStoppedAt", "trackingPausedMs", "trackingPausedAt", "trackingElapsedMs", "details", "person", "time", "places", "context", "olfactoryCorridor", "trace", "events", "journal", "gpsTrack", "gpsOwnerId", "pauseObservations", "dogEvaluation", "fieldEvaluation", "finalization", "weatherSnapshot", "startedAt", "fieldClosedAt", "completedAt", "archivedAt", "lastKnownPoint", "provenance", "traceMetadata", "dataQuality", "environment", "result", "sourceDevice", "gpxAttachment", "weatherDemo", "olfactoryCorridorEnabled"]));
     payload.consultationOnly = true;
     payload.requiresExplicitResume = ["active", "paused", "ready"].includes(value.trackingState);
   } else if (kind === "session-dog-link") {
@@ -852,7 +884,7 @@ async function profileIdentity(ownerId) {
 }
 
 // src/server/personal-data-http.mjs
-var fail2 = (message, status = 400) => {
+var fail3 = (message, status = 400) => {
   throw Object.assign(Error(message), { status });
 };
 function createPersonalDataHandler({ authenticate, enabled, repositoryFor } = {}) {
@@ -861,15 +893,15 @@ function createPersonalDataHandler({ authenticate, enabled, repositoryFor } = {}
     const headers = { "Content-Type": "application/json", "Cache-Control": "no-store", "Vary": "Origin", ...origin && allowed ? { "Access-Control-Allow-Origin": origin } : {}, "Access-Control-Allow-Headers": "authorization,apikey,content-type,x-client-info", "Access-Control-Allow-Methods": "POST,OPTIONS" };
     const respond = (body, status = 200) => new Response(JSON.stringify(body), { status, headers });
     try {
-      if (!allowed) fail2("Origine non autoris\xE9e.", 403);
+      if (!allowed) fail3("Origine non autoris\xE9e.", 403);
       if (request.method === "OPTIONS") return new Response(null, { status: 204, headers });
-      if (request.method !== "POST") fail2("M\xE9thode non autoris\xE9e.", 405);
+      if (request.method !== "POST") fail3("M\xE9thode non autoris\xE9e.", 405);
       const chunks = [];
       let length = 0;
       const reader = request.body?.getReader();
       if (Number(request.headers.get("content-length") || 0) > 2e5) {
         await reader?.cancel();
-        fail2("Requ\xEAte trop volumineuse.", 413);
+        fail3("Requ\xEAte trop volumineuse.", 413);
       }
       if (reader) for (; ; ) {
         const chunk = await reader.read();
@@ -877,7 +909,7 @@ function createPersonalDataHandler({ authenticate, enabled, repositoryFor } = {}
         length += chunk.value.byteLength;
         if (length > 2e5) {
           await reader.cancel();
-          fail2("Requ\xEAte trop volumineuse.", 413);
+          fail3("Requ\xEAte trop volumineuse.", 413);
         }
         chunks.push(chunk.value);
       }
@@ -891,39 +923,39 @@ function createPersonalDataHandler({ authenticate, enabled, repositoryFor } = {}
       try {
         body = JSON.parse(new TextDecoder().decode(bytes));
       } catch {
-        fail2("Requ\xEAte invalide.");
+        fail3("Requ\xEAte invalide.");
       }
       const token = request.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1];
-      if (!token) fail2("Connexion requise.", 401);
+      if (!token) fail3("Connexion requise.", 401);
       const user = await authenticate(token);
-      if (!user?.id) fail2("Connexion expir\xE9e.", 401);
-      if (!await enabled(user.id)) fail2("Compte non autoris\xE9 pour ce pilote.", 403);
-      if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some((k) => !["operation", "kind", "id", "cursor", "commandId", "expectedRevision", "payload"].includes(k))) fail2("Commande invalide.");
-      if (!PERSISTENCE_KINDS.includes(body.kind)) fail2("Domaine invalide.");
+      if (!user?.id) fail3("Connexion expir\xE9e.", 401);
+      if (!await enabled(user.id)) fail3("Compte non autoris\xE9 pour ce pilote.", 403);
+      if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some((k) => !["operation", "kind", "id", "cursor", "commandId", "expectedRevision", "payload"].includes(k))) fail3("Commande invalide.");
+      if (!PERSISTENCE_KINDS.includes(body.kind)) fail3("Domaine invalide.");
       const repository = repositoryFor(user.id);
       if (body.operation === "list") {
-        if (body.cursor != null && !persistenceUuid(body.cursor)) fail2("Curseur invalide.");
+        if (body.cursor != null && !persistenceUuid(body.cursor)) fail3("Curseur invalide.");
         return respond(await repository.list({ kind: body.kind, cursor: body.cursor ?? null }));
       }
-      if (!persistenceUuid(body.id)) fail2("Identifiant invalide.");
+      if (!persistenceUuid(body.id)) fail3("Identifiant invalide.");
       if (body.operation === "read") {
         const record3 = await repository.read({ kind: body.kind, id: body.id });
-        if (!record3) fail2("Dossier inaccessible.", 404);
+        if (!record3) fail3("Dossier inaccessible.", 404);
         return respond({ record: validatePersistenceRecord(record3) });
       }
-      if (!["put", "remove"].includes(body.operation) || !persistenceUuid(body.commandId) || !Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0) fail2("Commande invalide.");
-      if (body.kind === "profile" && body.id !== await profileIdentity(user.id)) fail2("Identit\xE9 de profil invalide.");
+      if (!["put", "remove"].includes(body.operation) || !persistenceUuid(body.commandId) || !Number.isSafeInteger(body.expectedRevision) || body.expectedRevision < 0) fail3("Commande invalide.");
+      if (body.kind === "profile" && body.id !== await profileIdentity(user.id)) fail3("Identit\xE9 de profil invalide.");
       let payload = {};
       if (body.operation === "put") {
         try {
           payload = preparePersistenceCandidate({ kind: body.kind, localId: body.kind === "ops" ? body.payload?.id : body.id, value: body.payload }, { ownerId: user.id }).payload;
         } catch {
-          fail2("Donn\xE9es de sauvegarde invalides.");
+          fail3("Donn\xE9es de sauvegarde invalides.");
         }
         const dogId = body.kind === "profile" ? payload.primary_dog_id : payload.dogId;
-        if (dogId && !persistenceUuid(dogId)) fail2("R\xE9f\xE9rence chien invalide.");
+        if (dogId && !persistenceUuid(dogId)) fail3("R\xE9f\xE9rence chien invalide.");
       }
-      const record2 = await repository[body.operation]({ kind: body.kind, id: body.id, commandId: body.commandId, expectedRevision: body.expectedRevision, payload });
+      const record2 = await repository[body.operation]({ kind: body.kind, id: body.id, commandId: body.commandId, expectedRevision: body.expectedRevision, payload, ...body.kind === "ops" && !Object.hasOwn(body.payload || {}, "retrospective") ? { legacyOps: true } : {} });
       return respond({ record: validatePersistenceRecord(record2) });
     } catch (error) {
       return respond({ error: error.status ? error.message : "Service de sauvegarde indisponible." }, error.status || 503);
@@ -940,9 +972,10 @@ var unwrap = (result) => {
 };
 function createPersonalDataRepository(admin, ownerId) {
   const write = async (operation, c) => {
-    if (operation === "put" && c.kind === "session-dog-link" && !Object.hasOwn(c.payload || {}, "searchOutcome")) {
+    if (operation === "put" && (c.kind === "session-dog-link" && !Object.hasOwn(c.payload || {}, "searchOutcome") || c.kind === "ops" && c.legacyOps)) {
       const prior = unwrap(await admin.from("v2_personal_records").select("payload").eq("owner_id", ownerId).eq("kind", c.kind).eq("id", c.id).maybeSingle());
-      if (prior?.payload?.searchOutcome) throw Object.assign(Error("Mettez \xE0 jour l\u2019application pour conserver le r\xE9sultat de recherche."), { status: 409 });
+      if (c.kind === "ops" && prior?.payload?.retrospective) throw Object.assign(Error("Mettez \xE0 jour l\u2019application pour conserver l\u2019archive apr\xE8s intervention."), { status: 409 });
+      if (c.kind === "session-dog-link" && prior?.payload?.searchOutcome) throw Object.assign(Error("Mettez \xE0 jour l\u2019application pour conserver le r\xE9sultat de recherche."), { status: 409 });
     }
     return admin.rpc("v2_personal_commit", { p_owner: ownerId, p_kind: c.kind, p_id: c.id, p_expected: c.expectedRevision, p_command: c.commandId, p_operation: operation, p_payload: c.payload || {} }).then(unwrap);
   };

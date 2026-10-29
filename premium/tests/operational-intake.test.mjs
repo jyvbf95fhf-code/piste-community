@@ -7,13 +7,15 @@ import { createOperationalMissionStore } from '../src/operational-missions.mjs';
 const dogs = [{ id: 'nox', name: 'Nox', breed: 'Malinois' }];
 const handler = { id: 'handler-1', name: 'Sébastien' };
 
-test('entrée OPS présente seulement les deux parcours demandés', () => {
+test('entrée OPS présente les départs terrain et le bilan après intervention', () => {
   const html = OperationalEntryChoices({ missions: [], dogs });
   assert.match(html, /Départ rapide/);
   assert.match(html, /Urgence · partir immédiatement/);
   assert.match(html, /Préparer une mission/);
+  assert.match(html,/Ajouter une mission après intervention/);
+  assert.match(html,/href="\/operational\/after"/);
   assert.match(html, /Renseigner les informations avant le départ/);
-  assert.equal((html.match(/data-operational-entry-choice/g) || []).length, 2);
+  assert.equal((html.match(/data-operational-entry-choice/g) || []).length, 3);
 });
 
 test('les formulaires rapide et préparé restent séparés de l’action de démarrage', () => {
