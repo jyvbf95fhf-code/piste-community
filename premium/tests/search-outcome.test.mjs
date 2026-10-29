@@ -64,3 +64,9 @@ test('JUMOLF progression keeps declared outcomes under history consent without r
  const html=JumolfRealLearningScreen({route:{type:'progress'},dogs:[source.dog],dog:source.dog,report});assert.match(html,/data-search-outcome="positive"/);assert.match(html,/data-outcome-count="positive"><strong>1/);
  assert.equal(buildRealJumolfLearning('d',[source],{consents:{...consents,dog_history:false}}).history.length,0);
 });
+test('result panel belongs inside the mission immediately before evaluations, without a detached trailing block',()=>{
+ const panel='<section data-outcome-panel="s">Résultat</section>',content='<section class="operational-page"><header>Mission</header><details>Fiche</details><form class="card operational-evaluation-form">Évaluation</form><aside>Météo</aside></section>';
+ assert.equal(outcome.placeOutcomePanel(content,panel),content.replace('<form class="card operational-evaluation-form">',panel+'<form class="card operational-evaluation-form">'));
+ assert.equal(outcome.placeOutcomePanel('<section><header>Archive</header><p>Suite</p></section>',panel),'<section><header>Archive</header>'+panel+'<p>Suite</p></section>');
+ assert.equal(outcome.placeOutcomePanel(content,''),content);
+});

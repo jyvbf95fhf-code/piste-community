@@ -32,3 +32,12 @@ export function OutcomeStatistics(rows=[],{title='Issues des recherches',split=t
  const s=summarizeSearchOutcomes(rows),group=(kind,label)=>{const groupRows=rows.filter(r=>r.kind===kind||kind==='coaching'&&r.kind==='training');return groupRows.length?OutcomeStatistics(groupRows,{title:label,split:false}):'';};
  return `<section class="search-outcome-statistics"><header><span class="eyebrow">BILANS DÉCLARÉS</span><h2>${e(title)}</h2><p>Résultats personnels renseignés · aucune conclusion automatique sur la qualité du chien.</p></header><div class="outcome-counts">${SEARCH_OUTCOMES.slice(0,4).map(([id,label])=>`<article data-outcome-count="${id}"><strong>${s.counts[id]}</strong><span>${label}</span></article>`).join('')}</div><p><strong>${s.discoveryRate===null?'Taux indisponible':s.discoveryRate+' % de découvertes'}</strong> · ${s.discovered} / ${s.eligible} recherches renseignées et éligibles. Inclut les positifs et orientés positifs.</p><p>${s.unreported} non renseigné(s) · ${s.excluded} hors calcul (interruption ou absence de personne à découvrir).</p>${s.months.length?`<details><summary>Évolution par mois</summary><ul>${s.months.map(m=>`<li>${e(m.month)} · ${m.discovered} découverte(s) / ${m.total} recherche(s) renseignée(s)</li>`).join('')}</ul></details>`:''}${split?group('operational','OPS')+group('coaching','Coaching'):''}</section>`;
 }
+
+// Keep the report inside its page so page min-height cannot separate it.
+export function placeOutcomePanel(content,panel){
+ if(!panel)return content;
+ const evaluation=content.indexOf('<form class="card operational-evaluation-form"');
+ const headerEnd=content.indexOf('</header>');
+ const at=evaluation>=0?evaluation:headerEnd>=0?headerEnd+'</header>'.length:0;
+ return content.slice(0,at)+panel+content.slice(at);
+}
