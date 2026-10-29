@@ -9,15 +9,15 @@ const css=(await Promise.all([...index.matchAll(/rel="stylesheet" href="([^"]+)"
 const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH||await bundled.executablePath(),args:['--no-sandbox']});
 try{
  const page=await browser.newPage();
- for(const width of [320,390,430])for(const wind of [{speed:7,from:281},{error:true},null]){
+ for(const previewing of [false,true])for(const width of [320,390,430])for(const wind of [{speed:7,from:281},{error:true},null]){
   await page.setViewportSize({width,height:844});
-  await page.setContent(`<style>${css}</style><div class="app-shell">${GeographicTrackCockpit({draft:createTrackDraft({geographic:true}),smartState:{previewing:true,scentCorridorVisible:true,scentWind:wind}})}</div>`);
-  const actions=await page.locator('.preview-map-actions').boundingBox(),weather=await page.locator('.creator-wind-status').boundingBox(),footer=await page.locator('.creator-action-area').boundingBox();
-  assert.ok(actions.y+actions.height<=weather.y+1,`weather overlaps preview actions at ${width}px`);
+  await page.setContent(`<style>${css}</style><div class="app-shell">${GeographicTrackCockpit({draft:createTrackDraft({geographic:true}),smartState:{previewing,scentCorridorVisible:true,scentWind:wind}})}</div>`);
+  const actions=previewing?await page.locator('.preview-map-actions').boundingBox():null,weather=await page.locator('.creator-wind-status').boundingBox(),footer=await page.locator('.creator-action-area').boundingBox();
+  if(actions)assert.ok(actions.y+actions.height<=weather.y+1,`weather overlaps preview actions at ${width}px`);
   assert.ok(weather.y+weather.height<=footer.y+1,`weather overlaps footer at ${width}px`);
-  if(width===390&&wind?.speed)await page.screenshot({path:'/tmp/piste-preview-layout.png'});
-  assert.ok(actions.y>=140,'preview leaves room for map heading');
+  if(width===390&&wind?.speed)await page.screenshot({path:previewing?'/tmp/piste-preview-layout.png':'/tmp/piste-editor-weather-layout.png'});
+  if(actions)assert.ok(actions.y>=140,'preview leaves room for map heading');
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no horizontal overflow');
  }
- console.log('PASS preview layout: 320/390/430px, wind available/loading/unavailable, no overlaps');
+ console.log('PASS editor and preview layout: 320/390/430px, wind available/loading/unavailable, no overlaps');
 }finally{await browser.close();}

@@ -162,6 +162,9 @@
 .coaching-scent-replay input[type=range]{width:100%;accent-color:#b88aff;min-height:32px}
 .coaching-scent-replay output{display:block;text-align:right;font-size:12px;color:#d9bbff}
 .coaching-scent-replay p{font-size:11px;line-height:1.45;margin:5px 0 0;color:#b8cbd6}
+/* Keep weather above the editor instructions and dock at every text height. */
+[data-track-cockpit]:not(.mission-map) .creator-wind-status{position:relative;inset:auto;flex:none;box-sizing:border-box;width:100%;max-width:100%;margin:auto 0 0;overflow-wrap:anywhere;background:#0b2233}
+[data-track-cockpit]:not(.mission-map) .creator-action-area{flex:none;margin-top:0}
 /* Suggested-route preview: keep controls and weather in the same flowing stack. */
 [data-track-cockpit][data-previewing=true]:not(.mission-map) .preview-map-actions{position:relative;inset:auto;flex:none;margin-top:auto;min-width:0}
 [data-track-cockpit][data-previewing=true]:not(.mission-map) .creator-wind-status{position:relative;inset:auto;flex:none;box-sizing:border-box;width:100%;max-width:100%;margin:0;overflow-wrap:anywhere}
