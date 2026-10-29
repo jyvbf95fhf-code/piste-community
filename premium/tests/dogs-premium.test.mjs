@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {DogsListScreen,DogFormScreen} from '../src/dogs-screen.mjs';
+test('real dog screens use personal wording and offer only Piste and Defense',()=>{const list=DogsListScreen([],{realMode:true}),form=DogFormScreen(null,{realMode:true});assert.doesNotMatch(list+form,/mock|démonstration|dans cette visite/i);assert.match(form,/value="tracking"/);assert.match(form,/value="defense"/);assert.doesNotMatch(form,/value="(?:search|narcotics|other)"/);});

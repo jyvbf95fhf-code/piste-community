@@ -55,11 +55,11 @@ function pageHeading(kicker, title, subtitle, action = '') {
   return `<section class="page-heading dogs-heading"><span class="eyebrow">${e(kicker)}</span><div class="dogs-heading-row"><h1>${e(title)}</h1>${action}</div><p>${e(subtitle)}</p></section>`;
 }
 
-export function DogsListScreen(dogs = [], { primaryDogId = null } = {}) {
+export function DogsListScreen(dogs = [], { primaryDogId = null, realMode = false } = {}) {
   const action = `<a class="button button-gold dogs-add-button" href="/dogs/new">${Icon('plus')}Ajouter un chien</a>`;
-  const heading = pageHeading('VOS COMPAGNONS', 'Mes chiens', 'Profils de démonstration · données conservées dans cette visite', action);
+  const heading = pageHeading('VOS COMPAGNONS', 'Mes chiens', realMode?'Votre équipe, vos chiens, votre progression.':'Profils de démonstration · données conservées dans cette visite', action);
   if (!dogs.length) {
-    return `${heading}<section class="dogs-empty-list">${EmptyState('Aucun chien pour le moment','Ajoutez un profil mock pour composer votre équipe de démonstration.','dog')}<a class="button button-gold" href="/dogs/new">Ajouter un chien</a></section>`;
+    return `${heading}<section class="dogs-empty-list">${EmptyState('Aucun chien pour le moment',realMode?'Ajoutez votre premier chien pour préparer vos prochaines pistes.':'Ajoutez un profil mock pour composer votre équipe de démonstration.','dog')}<a class="button button-gold" href="/dogs/new">Ajouter un chien</a></section>`;
   }
   const cards = dogs.map(dog => {
     const summary = summarizeDogActivity(dog);
@@ -73,7 +73,7 @@ export function DogsListScreen(dogs = [], { primaryDogId = null } = {}) {
   }).join('');
   const eligible = activeTrackingDogs(dogs), selected = resolveDefaultTrackingDog(dogs, primaryDogId);
   const preference = `<section class="card dog-default-selection" aria-label="Chien de piste par défaut"><h2>Chien de piste par défaut</h2><p>${selected ? e(selected.name) : 'Aucun chien actif en discipline Piste.'}</p><p>Utilisé à l’ouverture des outils de piste. Votre choix reste modifiable pour chaque activité.</p>${eligible.length > 1 ? eligible.filter(dog => dog.id !== selected?.id).map(dog => `<button class="button button-dark" type="button" data-dog-set-default="${e(dog.id)}">Définir ${e(dog.name)} par défaut</button>`).join('') : ''}</section>`;
-  return `${heading}${preference}<section class="dog-list" aria-label="Liste de vos chiens">${cards}</section>${dogs.every(d=>d.isDemonstration!==false)?'<p class="dogs-demo-note">Tous les profils présentés sont fictifs. Les modifications sont temporaires.</p>':'<p class="dogs-demo-note">Profils personnels du compte. Les démonstrations sont identifiées dans leur fiche ; les préférences restent modifiables.</p>'}`;
+  return `${heading}${preference}<section class="dog-list" aria-label="Liste de vos chiens">${cards}</section>${!realMode&&dogs.every(d=>d.isDemonstration!==false)?'<p class="dogs-demo-note">Tous les profils présentés sont fictifs. Les modifications sont temporaires.</p>':'<p class="dogs-demo-note">Profils personnels du compte. Les démonstrations sont identifiées dans leur fiche ; les préférences restent modifiables.</p>'}`;
 }
 
 function metric(label, value, tone = '') {
@@ -82,9 +82,9 @@ function metric(label, value, tone = '') {
 
 function disciplineSection(dog) {
   const selected = new Set(dogDisciplines(dog));
-  return `<section class="dog-section dog-disciplines"><div class="dog-section-heading"><span class="eyebrow">COMPÉTENCES</span><h2>Disciplines</h2></div><div class="dog-discipline-list">${DOG_DISCIPLINES.map(discipline => {
+  return `<section class="dog-section dog-disciplines"><div class="dog-section-heading"><span class="eyebrow">COMPÉTENCES</span><h2>Disciplines</h2></div><div class="dog-discipline-list">${DOG_DISCIPLINES.filter(d=>dog.isDemonstration!==false||['tracking','defense'].includes(d.id)).map(discipline => {
     const active = selected.has(discipline.id);
-    return `<div class="dog-discipline ${active ? 'is-listed' : ''}"><span class="dog-discipline-mark">${active ? Icon('check') : Icon('compass')}</span><strong>${e(discipline.label)}</strong><small>${active ? 'Mentionnée dans la démonstration' : 'Aucune donnée disponible'}</small></div>`;
+    return `<div class="dog-discipline ${active ? 'is-listed' : ''}"><span class="dog-discipline-mark">${active ? Icon('check') : Icon('compass')}</span><strong>${e(discipline.label)}</strong><small>${active ? (dog.isDemonstration===false?'Discipline pratiquée':'Mentionnée dans la démonstration') : 'Aucune donnée disponible'}</small></div>`;
   }).join('')}</div></section>`;
 }
 
@@ -92,7 +92,7 @@ function historySection(dog) {
   const sessions = Array.isArray(dog.sessions) ? dog.sessions : [];
   const content = sessions.length
     ? `<ol class="dog-history-list">${sessions.map(session => `<li class="dog-history-entry"><div class="dog-history-symbol">${Icon('route')}</div><div class="dog-history-copy"><strong>${e(session.title || 'Session sans intitulé')}</strong><span>${e(session.date || 'Date indisponible')}</span><span>${e(session.distance || 'Distance indisponible')} · ${e(session.duration || 'Durée indisponible')}</span></div><div class="dog-history-status">${StatusBadge(session.status || 'Statut indisponible', session.status ? 'gold' : 'neutral')}<a href="${e(session.href||'/sessions')}">Consulter</a></div></li>`).join('')}</ol>`
-    : EmptyState('Aucune session associée','L’historique de ce chien ne contient pas encore de session de démonstration.','route');
+    : EmptyState('Aucune session associée',dog.isDemonstration===false?'Les prochaines séances associées à ce chien apparaîtront ici.':'L’historique de ce chien ne contient pas encore de session de démonstration.','route');
   return `<section class="dog-section dog-history"><div class="dog-section-heading"><span class="eyebrow">ACTIVITÉ</span><h2>Sessions récentes</h2></div>${content}</section>`;
 }
 
@@ -127,7 +127,7 @@ export function DogProfileScreen(dog, { primaryDogId = null, associations = {} }
     [count(associations.tracks), 'piste(s)'], [count(associations.operational), 'mission(s) OPS']
   ].map(([amount, label]) => `${amount === null ? 'Nombre indisponible de' : amount} ${label}`).join(' · ');
   const removal = `<section class="dog-section dog-removal"><h2>Supprimer le profil chien</h2><p>Associations connues : ${e(associationsCopy)}.</p><p>Les sessions, pistes et historiques sont conservés. La suppression du profil demande une confirmation.</p>${isProtectedDog(dog) ? '<p>Ce profil chien est protégé.</p>' : `<button class="button button-dark" type="button" data-dog-remove="${e(dog.id)}">Supprimer le profil chien</button>`}</section>`;
-  return `<a class="back-link dogs-back-link" href="/dogs">← Mes chiens</a><div class="dog-profile-actions">${edit}${preference}</div>${identity}${metrics}${disciplineSection(dog)}${notes}${historySection(dog)}${sessionLink}${scienceSection()}${removal}<p class="dogs-demo-note">Profil et mesures de démonstration · aucune donnée médicale réelle.</p>`;
+  return `<a class="back-link dogs-back-link" href="/dogs">← Mes chiens</a><div class="dog-profile-actions">${edit}${preference}</div>${identity}${metrics}${disciplineSection(dog)}${notes}${historySection(dog)}${sessionLink}${scienceSection()}${removal}<p class="dogs-demo-note">${dog.isDemonstration===false?'Profil personnel · informations déclarées par son propriétaire.':'Profil et mesures de démonstration · aucune donnée médicale réelle.'}</p>`;
 }
 
 function input(name, label, value = '', type = 'text', attributes = '') {
@@ -141,12 +141,12 @@ function select(name, label, options, selected) {
 export function DogFormScreen(dog = null,{realMode=false}={}) {
   const editing = !!dog;
   const title = editing ? 'Modifier le profil' : 'Ajouter un chien';
-  const heading = pageHeading(realMode?'PROFIL CANIN · COMPTE PERSONNEL':'PROFIL MOCK · MODIFICATIONS TEMPORAIRES', title, realMode?'Les modifications sont conservées sur cet appareil pour votre compte. La sauvegarde cloud reste disponible dans Profil.':'Les photos et modifications restent dans cette visite et disparaissent au rechargement.');
+  const heading = pageHeading(realMode?'PROFIL CANIN · COMPTE PERSONNEL':'PROFIL MOCK · MODIFICATIONS TEMPORAIRES', title, realMode?'Créez son profil et préparez vos prochaines pistes. Retrouvez la synchronisation dans Profil → Mon compte en ligne.':'Les photos et modifications restent dans cette visite et disparaissent au rechargement.');
   const disciplines = new Set(dogDisciplines(dog || {}));
   const isRetired = ['retired','archived'].includes(dog?.status || 'active');
-  const disciplineFields = DOG_DISCIPLINES.map(item => `<label class="dog-discipline-choice"><input type="checkbox" name="disciplines" value="${e(item.id)}" ${disciplines.has(item.id) ? 'checked' : ''}><span>${e(item.label)}</span></label>`).join('');
+  const disciplineFields = DOG_DISCIPLINES.filter(item=>!realMode||['tracking','defense'].includes(item.id)).map(item => `<label class="dog-discipline-choice"><input type="checkbox" name="disciplines" value="${e(item.id)}" ${disciplines.has(item.id) ? 'checked' : ''}><span>${e(item.label)}</span></label>`).join('');
   const personalPhoto = !!dog?.personalPhotoDataUrl;
-  const photoEditor = `<section class="dog-photo-editor" aria-label="Photo du chien"><div class="dog-form-photo-preview" data-dog-photo-preview>${portraitMarkup(dog || { name:'Nouveau chien', portrait:'silhouette' }, 'dog-form-photo-preview-frame')}</div><div class="dog-photo-actions"><label class="button button-dark dog-photo-pick"><span>${personalPhoto ? 'Remplacer la photo' : 'Ajouter une photo'}</span><input type="file" name="photo" accept="image/png,image/jpeg,image/webp,image/gif" data-dog-photo aria-label="${personalPhoto ? 'Remplacer la photo' : 'Ajouter une photo'}"></label><button class="button button-dark dog-photo-reset" type="button" data-dog-photo-reset ${personalPhoto ? '' : 'hidden'}>Utiliser le portrait mock</button><small>Image conservée sur ce téléphone puis envoyée avec le profil. Une taille incompatible avec la synchronisation sera signalée.</small><p class="dog-photo-feedback" role="status" aria-live="polite"></p></div></section>`;
+  const photoEditor = `<section class="dog-photo-editor" aria-label="Photo du chien"><div class="dog-form-photo-preview" data-dog-photo-preview>${portraitMarkup(dog || { name:'Nouveau chien', portrait:'silhouette' }, 'dog-form-photo-preview-frame')}</div><div class="dog-photo-actions"><label class="button button-dark dog-photo-pick"><span>${personalPhoto ? 'Remplacer la photo' : 'Ajouter une photo'}</span><input type="file" name="photo" accept="image/png,image/jpeg,image/webp,image/gif" data-dog-photo aria-label="${personalPhoto ? 'Remplacer la photo' : 'Ajouter une photo'}"></label><button class="button button-dark dog-photo-reset" type="button" data-dog-photo-reset ${personalPhoto ? '' : 'hidden'}>${realMode?'Utiliser une illustration':'Utiliser le portrait mock'}</button><small>Image conservée sur ce téléphone puis envoyée avec le profil. Une taille incompatible avec la synchronisation sera signalée.</small><p class="dog-photo-feedback" role="status" aria-live="polite"></p></div></section>`;
   const retirement = `<div class="dog-retirement-field" data-dog-retirement-field ${isRetired ? '' : 'hidden'}>${input('retirementDate','Date de réforme / retraite',dog?.retirementDate || '', 'date', isRetired ? '' : 'disabled')}</div>`;
   return `<a class="back-link dogs-back-link" href="${editing ? `/dogs/${encodeURIComponent(dog.id)}` : '/dogs'}">← ${editing ? 'Profil du chien' : 'Mes chiens'}</a>${heading}<form class="dog-form card" data-dog-form="${editing ? 'update' : 'create'}" ${editing ? `data-dog-id="${e(dog.id)}"` : ''}>
     ${photoEditor}
@@ -159,7 +159,7 @@ export function DogFormScreen(dog = null,{realMode=false}={}) {
     ${input('registrationNumber','Matricule',dog?.registrationNumber || '', 'text', 'maxlength="60" autocomplete="off"')}
     ${select('status','Statut',DOG_STATUSES,dog?.status || 'active').replace('name="status"','name="status" data-dog-status')}
     ${retirement}
-    ${select('portrait','Portrait mock',DOG_PORTRAITS,dog?.portrait || 'silhouette')}
+    ${select('portrait',realMode?'Illustration du profil':'Portrait mock',DOG_PORTRAITS,dog?.portrait || 'silhouette')}
     <fieldset class="dog-discipline-fieldset"><legend>Disciplines</legend><div class="dog-discipline-choices">${disciplineFields}</div></fieldset>
     <label class="dog-form-field dog-notes-field" for="dog-notes">Notes<textarea id="dog-notes" name="notes" maxlength="1200" rows="4">${e(dog?.notes || '')}</textarea></label>
     <p class="dog-form-feedback" role="status" aria-live="polite"></p>
