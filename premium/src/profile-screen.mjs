@@ -4,6 +4,7 @@ import {Icon} from './icons.mjs';
 import {buildProfileSummary} from './profile-model.mjs';
 
 const links=[
+ ['discover','Découvrir l’application','Les fonctionnalités et les premiers pas de la bêta','info'],
  ['sync','Mon compte en ligne','Synchronisation automatique et récupération de mes données','shield'],
  ['account','Mon compte','Nom visible et informations personnelles','user'],['dogs','Mes chiens','Profils et chien principal','dog'],
  ['premium','Premium & JUMOLF','Votre formule et votre activation','twin'],['access','Mes accès','Accès aux espaces de PISTE Community','shield'],

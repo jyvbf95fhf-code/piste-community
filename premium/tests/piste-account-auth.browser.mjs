@@ -30,7 +30,7 @@ try{
  assert(calls.some(([m,p])=>m==='POST'&&p==='/auth/v1/signup'));
  await page.evaluate(()=>localStorage.removeItem('piste.v2.auth.mail-retry'));
  await page.goto('https://piste.test/auth/login');
- await page.getByRole('button',{name:'Se connecter',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Se connecter',exact:true}).waitFor();await page.locator('[data-beta-notice]').waitFor();for(const width of [320,390,430]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  assert.equal(await page.getByText('Prêts pour le terrain ?').isVisible(),false);
  await page.getByLabel('Email',{exact:true}).fill('qa@example.invalid');await page.getByLabel('Mot de passe',{exact:true}).fill('synthetic-existing');
  await page.getByRole('button',{name:'Se connecter',exact:true}).click();
