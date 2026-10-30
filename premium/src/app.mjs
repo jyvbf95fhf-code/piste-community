@@ -923,7 +923,7 @@ const scientificContributionStore=createScientificConsentStore({mockUserId:contr
 const scientificContributionActor={userId:contributionMockUserId,role:'contributor',contributorKey:scientificContributionFixtures.contributors.find(user=>user.mockUserId===contributionMockUserId)?.sourceKey,displayName:'Contributeur fictif 03',dogKey:contributionMockDogKey};
 const scientificContributionController=createScientificContributionController({store:scientificContributionStore,fixtures:scientificContributionFixtures,actor:scientificContributionActor,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),confirm:message=>window.confirm(message)});
 let scientificActor=null;
-let scientificController=createScientificController({actor:currentUser,dataset:scienceDataset(),getDataset:scienceDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});
+let scientificController=createScientificController({actor:currentUser,storage,getOwnerId:()=>auth.getSession().user?.user_id,dataset:scienceDataset(),getDataset:scienceDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});
 let scientificCorpusController=createScientificCorpusController({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])})),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
 function restoreSmartTrackEntry(){
  if(location.pathname!=='/track-builder'){smartEntryOpenedKey=null;return;}
@@ -999,7 +999,7 @@ function render(focus=false) {
  driverGps.reconcile();
  opsGps.reconcile();
  const scientificIdentity=JSON.stringify([currentUser?.user_id,currentUser?.name,currentUser?.permissions?.research,auth.assurance]);
- if(scientificActor!==scientificIdentity){scientificActor=scientificIdentity;scientificController=createScientificController({actor:currentUser,dataset:scienceDataset(),getDataset:scienceDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
+ if(scientificActor!==scientificIdentity){scientificActor=scientificIdentity;scientificController=createScientificController({actor:currentUser,storage,getOwnerId:()=>auth.getSession().user?.user_id,dataset:scienceDataset(),getDataset:scienceDataset,analytics:scientificAnalytics,anomalies:scientificAnomalies,discoveries:scientificDiscoveries,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
  scientificCorpusController.setContext({access:scientificCorpusAccessFor(currentUser),corpusService:createScientificContributionCorpusService(buildScientificContributionCorpus({fixtures:scientificContributionFixtures,consentStores:new Map([[contributionMockUserId,scientificContributionStore]])}))});
  coachingDraft=coaching.syncPreparation(coachingDraft,trackLibrary.list());
  invalidateCoachingReferenceAssignment();

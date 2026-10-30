@@ -10,7 +10,7 @@ execFileSync(process.execPath,['scripts/build-offline-assets.mjs','--check'],{st
 if(mode!=='--browser')run('unit-sql',['--test','--test-concurrency=2',...readdirSync('tests').filter(f=>f.endsWith('.test.mjs')).sort().map(f=>'tests/'+f)]);
 if(mode!=='--unit'){
  let executable=process.env.PISTE_CHROMIUM_PATH;if(!executable){const {default:chromium}=await import('@sparticuz/chromium');executable=await chromium.executablePath();}if(!existsSync(executable))throw Error('Chromium unavailable: set PISTE_CHROMIUM_PATH.');
- const browserTests=['stabilisation-gps','mes-pistes','piste-bulk','jumolf-preferences','ops-live-3bc','coaching-invitations','coaching-pose-handoff','social-live','tracer-iphone','account-test-data-reset','lobo-account','home-trail','report-editor','offline-shell','jumolf-real-learning','persistence-integration','account-auto-sync','search-outcome','operational-after','profile-persistence','piste-account-auth'];
+ const browserTests=['stabilisation-gps','mes-pistes','piste-bulk','jumolf-preferences','ops-live-3bc','coaching-invitations','coaching-pose-handoff','social-live','tracer-iphone','account-test-data-reset','lobo-account','home-trail','report-editor','offline-shell','jumolf-real-learning','persistence-integration','account-auto-sync','search-outcome','operational-after','profile-persistence','piste-account-auth','audit-corrections'];
  for(const test of browserTests)run(test,['tests/'+test+'.browser.mjs'],{PISTE_CHROMIUM_PATH:executable,QUICK:test==='tracer-iphone'?'':'1'});
  run('track-smart',['tests/track-smart.visual.mjs'],{CHROME_PATH:executable});
  run('track-preview-layout',['tests/track-preview-layout.check.mjs'],{PISTE_CHROMIUM_PATH:executable});

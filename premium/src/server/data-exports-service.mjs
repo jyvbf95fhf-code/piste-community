@@ -1,3 +1,4 @@
+import {readSearchOutcome} from '../search-outcome.mjs';
 import {buildAccountAnalysisSources,buildAccountScientificDataset} from '../account-analysis-sources.mjs';
 import {buildJumolfSources} from '../jumolf-adapter.mjs';
 import {applyJumolfSourceConsents} from '../jumolf-consent.mjs';
@@ -13,7 +14,7 @@ export async function exportAccountData({admin,uid,capabilities,body,clock=Date.
  if(domain==='science'&&!capabilities.permissions?.research||domain==='jumolf'&&!['premium','admin_grant','access_code'].includes(capabilities.jumolf_entitlement?.entitlement))fail('Accès à cet export refusé.',403);
  if(body.ids!==undefined&&(!Array.isArray(body.ids)||!body.ids.length||body.ids.length>100||body.ids.some(id=>typeof id!=='string'||id.length>120)))fail('Sélection d’export invalide.');
  const repository=createPersonalDataRepository(admin,uid),records=[];
- const kinds={backup:['profile','dog','track','ops','session-dog-link'],coaching:['dog','session-dog-link'],ops:['dog','ops'],track:['dog','track'],science:['dog','ops','session-dog-link'],jumolf:['dog','track','ops','session-dog-link']}[domain];
+ const kinds={backup:['profile','dog','track','ops','session-dog-link'],coaching:['dog','session-dog-link'],ops:['dog','ops','session-dog-link'],track:['dog','track'],science:['dog','ops','session-dog-link'],jumolf:['dog','track','ops','session-dog-link']}[domain];
  for(const kind of kinds){
   let cursor=null;do{const page=await repository.list({kind,cursor});records.push(...page.records.filter(r=>!r.deletedAt));cursor=page.cursor;if(records.length>5000)fail('Export trop volumineux. Contactez le propriétaire.',413);}while(cursor);
  }
@@ -27,8 +28,12 @@ export async function exportAccountData({admin,uid,capabilities,body,clock=Date.
   const file=serialize({domain,format,records,now:new Date(clock()).toISOString()});const data=JSON.parse(file.content);data.coachingSessions=shared;file.content=JSON.stringify(data,null,2);if(new TextEncoder().encode(file.content).byteLength>10000000)fail('Sauvegarde trop volumineuse.',413);return file;
  }
  const byKind=kind=>records.filter(r=>r.kind===kind),dogs=byKind('dog').map(r=>({...r.payload,id:r.id,ownerId:uid}));
+ const annotations=new Map(byKind('session-dog-link').map(r=>[r.payload.sessionId,r.payload]));
  const links=Object.fromEntries(byKind('session-dog-link').map(r=>[r.payload.sessionId,r.payload.dogId]));
  const raw=buildAccountAnalysisSources({ownerId:uid,sharedOwnerId:uid,tracksOwnerId:uid,dogs,sharedSessions:shared,dogIds:links,tracks:byKind('track').map(r=>({...r.payload,id:'track:'+r.id,ownerId:uid})),operationalMissions:byKind('ops').map(r=>({...r.payload,id:r.id,ownerUserId:uid}))});
+ raw.sessions=raw.sessions.map(r=>({...r,searchOutcome:readSearchOutcome(annotations.get(r.id.replace(/^coaching:/,''))?.searchOutcome)}));
+ const outcomes=new Map(byKind('ops').map(r=>[r.id,readSearchOutcome(annotations.get('ops:'+(r.payload.originalId||r.payload.id||r.id))?.searchOutcome)||readSearchOutcome(annotations.get('ops:'+r.id)?.searchOutcome)||readSearchOutcome(r.payload.retrospective?.searchOutcome)||null]));
+ raw.operational=raw.operational.map(r=>({...r,searchOutcome:outcomes.get(r.id.replace(/^ops:/,''))||null}));
  let sources=buildJumolfSources(raw);if(domain==='jumolf')sources=applyJumolfSourceConsents(sources,body.consents);
  let rows=domain==='coaching'?sources.sessions:domain==='ops'?sources.operational:domain==='track'?sources.tracks:domain==='science'?buildAccountScientificDataset(sources,uid).sessions:[...sources.sessions,...sources.operational,...sources.tracks];
  if(body.ids){const selected=new Set(body.ids);if([...selected].some(id=>!rows.some(r=>r.id===id)))fail('Dossier sélectionné inaccessible.',403);rows=rows.filter(r=>selected.has(r.id));}

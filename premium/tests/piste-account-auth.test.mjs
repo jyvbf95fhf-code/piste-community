@@ -11,3 +11,9 @@ test('mail quota error persists cooldown and blocks repeated sends without new n
 test('incorrect credentials show actionable generic error and clear active identity',async()=>{const f=fixture(),a=createPisteAccount(options(f));await a.signIn({email:'user@example.invalid',password:'existing'});f.setError({code:'invalid_credentials',message:'secret detail'});await assert.rejects(a.signIn({email:'user@example.invalid',password:'wrong'}),/E-mail ou mot de passe incorrect/);assert.equal(a.getSession().authenticated,false);});
 test('logout from another tab clears the verified local profile',async()=>{const f=fixture(),a=createPisteAccount(options(f));await a.signIn({email:'user@example.invalid',password:'existing'});f.emit('SIGNED_OUT',null);assert.equal(a.getSession().authenticated,false);});
 test('a login completing after logout cannot restore the private identity',async()=>{const f=fixture();let finish;const original=f.client.auth.signInWithPassword;f.client.auth.signInWithPassword=input=>new Promise(resolve=>finish=async()=>resolve(await original(input)));const a=createPisteAccount(options(f));const pending=a.signIn({email:'user@example.invalid',password:'existing'});await a.signOut();finish();await pending;assert.equal(a.getSession().authenticated,false);});
+test('signup and password recovery return to the public stable beta, never a protected branch preview',async()=>{
+ const expected='https://piste-community-v2-premium-beta-mw2f59b8p2-4030s-projects.vercel.app/coaching-recovery.html';
+ const f=fixture();await createPisteAccount(options(f)).signUp({firstName:'Audit',lastName:'Local',email:'person@example.invalid',password:'synthetic-test-password',confirmPassword:'synthetic-test-password'});
+ assert.equal(f.calls[0][1].options.emailRedirectTo,expected);
+ const g=fixture();await createPisteAccount(options(g)).forgot('person@example.invalid');assert.equal(g.calls[0][2].redirectTo,expected);
+});

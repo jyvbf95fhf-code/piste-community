@@ -1,15 +1,17 @@
+import {readSearchOutcome,SEARCH_OUTCOMES} from './search-outcome.mjs';
 // Serializers consume only authorized, existing account projections.
 const xml=v=>String(v??'').replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));
 const iso=v=>v!==null&&v!==undefined&&v!==''&&Number.isFinite(typeof v==='number'?v:Date.parse(v))?new Date(v).toISOString():null;
 const geographic=p=>p?.space==='wgs84'&&Number.isFinite(p.x)&&Math.abs(p.x)<=180&&Number.isFinite(p.y)&&Math.abs(p.y)<=90;
 const cell=v=>{let s=v===null||v===undefined?'':String(v);if(/^[\s\u0000-\u001f]*[=+@-]/.test(s)&&typeof v!=='number')s="'"+s;return '"'+s.replaceAll('"','""')+'"';};
+const outcomeCells=value=>{const v=readSearchOutcome(value),code=v?.code||'unreported';return [code,SEARCH_OUTCOMES.find(([id])=>id===code)[1],v?.context||null,v?.updatedAt||null];};
 export function serializeDataExport({domain,format,rows=[],records=null,now=new Date().toISOString()}){
  if(!['coaching','ops','science','jumolf','track','backup'].includes(domain)||!['json','csv','gpx'].includes(format)||domain==='backup'&&format!=='json')throw Error('Format d’export invalide.');
  let content,mime;
  if(format==='json'){mime='application/json';content=JSON.stringify({schemaVersion:1,domain,exportedAt:now,scope:'Données sauvegardées et autorisées uniquement',...(domain==='backup'?{records:records||[]}:{sessions:rows})},null,2);}
  if(format==='csv'){
-  mime='text/csv;charset=utf-8';const columns=['id','kind','title','dog_id','dog_name','started_at','finished_at','distance_m','duration_s','track_age_s','trace_provenance','weather_provenance','temperature_c','humidity_pct','wind_speed_kmh','wind_direction_deg','corridor_provenance','events_count'];
-  content='\uFEFF'+[columns.map(cell).join(';'),...rows.map(s=>[s.id,s.kind,s.title,s.dogId,s.dog?.name,s.startedAt,s.finishedAt,s.metrics?.distanceM,s.metrics?.durationSeconds,s.trackAge?.seconds,s.provenance?.trace,s.weather?.provenance,s.weather?.temperature,s.weather?.humidity,s.wind?.speed,s.wind?.direction,s.corridor?.provenance,s.events?.length].map(cell).join(';'))].join('\r\n');
+  mime='text/csv;charset=utf-8';const columns=['id','kind','title','dog_id','dog_name','started_at','finished_at','distance_m','duration_s','track_age_s','trace_provenance','weather_provenance','temperature_c','humidity_pct','wind_speed_kmh','wind_direction_deg','corridor_provenance','events_count','search_outcome_code','search_outcome_label','search_outcome_context','search_outcome_updated_at'];
+  content='\uFEFF'+[columns.map(cell).join(';'),...rows.map(s=>[s.id,s.kind,s.title,s.dogId,s.dog?.name,s.startedAt,s.finishedAt,s.metrics?.distanceM,s.metrics?.durationSeconds,s.trackAge?.seconds,s.provenance?.trace,s.weather?.provenance,s.weather?.temperature,s.weather?.humidity,s.wind?.speed,s.wind?.direction,s.corridor?.provenance,s.events?.length,...outcomeCells(s.searchOutcome)].map(cell).join(';'))].join('\r\n');
  }
  if(format==='gpx'){
   const tracks=[];

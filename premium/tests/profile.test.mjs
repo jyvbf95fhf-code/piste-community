@@ -103,3 +103,9 @@ test('signed-in profile and account explain the real account without demonstrati
  for(const type of ['home','account']){const html=ProfileScreen({route:{type},realMode:true,user:{user_id:'signed-in',name:'Camille',email:'qa@example.invalid'},profileStore:createProfileStore()});assert.doesNotMatch(html,/démonstration|mock|mémoire de visite|Aucune Auth réelle/i);assert.match(html,/Compte PISTE|compte connecté/);}
  assert.match(ProfileScreen({route:{type:'account'},profileStore:createProfileStore()}),/démonstration/);
 });
+test('real profile marks unavailable display options as disabled without discarding saved values',()=>{
+ const store=createProfileStore();store.setPreferences({theme:'light',language:'en'});const before=store.snapshot();
+ const html=ProfileScreen({route:{type:'preferences'},user:{user_id:'real',assurance:'supabase-auth'},profileStore:store,realMode:true});
+ assert.match(html,/pas encore appliqu/);for(const key of ['theme','distance_unit','time_format','map_default','density','language'])assert.match(html,new RegExp('<select(?=[^>]*data-profile-preference="'+key+'")(?=[^>]*disabled)[^>]*>'));
+ assert.deepEqual(store.snapshot(),before);
+});

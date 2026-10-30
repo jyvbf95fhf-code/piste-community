@@ -1,3 +1,4 @@
+import {escapeHTML} from './components.mjs';
 import {scientificAccessFor} from './scientific-access.mjs';
 import {resolveScientificRoute} from './scientific-routes.mjs';
 import {ScientificScreen} from './scientific-screen.mjs';
@@ -16,10 +17,10 @@ import {explainScientificAnomaly} from './scientific-anomalies.mjs';
 
 const clone=value=>structuredClone(value),all=(...values)=>values.filter(value=>value&&value!=='all');
 const readForm=form=>Object.fromEntries(new FormData(form).entries());
-export function createScientificController({actor,dataset,getDataset=null,analytics={},anomalies=null,discoveries=[],store=null,navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString()}={}){
+export function createScientificController({actor,dataset,getDataset=null,analytics={},anomalies=null,discoveries=[],store=null,storage=null,getOwnerId=null,navigate=()=>{},render=()=>{},toast=()=>{},clock=()=>new Date().toISOString()}={}){
  const access=scientificAccessFor(actor),accountId=dataset?.ownerId;
  let sourceSessions=[],derivedAnomalies=[],view,longitudinal,benchmarks;
- const scientificStore=store||createScientificStore({actor,clock,synthetic:dataset?.mode!=='account'});
+ const scientificStore=store||createScientificStore({actor,clock,synthetic:dataset?.mode!=='account',storage,getOwnerId});
  function refresh(){const next=getDataset?getDataset():dataset;dataset=accountId&&next?.ownerId!==accountId?{mode:'account',ownerId:accountId,sessions:[]}:next;sourceSessions=dataset?.sessions||[];const real=dataset?.mode==='account';derivedAnomalies=real?[]:anomalies||detectJumolfSyntheticAnomalies(sourceSessions);view=buildScientificDatasetView(dataset,analytics,derivedAnomalies,real?[]:discoveries);longitudinal=buildScientificLongitudinal(sourceSessions);benchmarks=listScientificBenchmarks(sourceSessions);}
  refresh();
  const byId=id=>sourceSessions.find(row=>row.id===id)||null,checked=()=>{if(!access.authorized)throw new Error('Accès scientifique refusé.');},notify=message=>{toast(message);render();};
@@ -39,7 +40,7 @@ export function createScientificController({actor,dataset,getDataset=null,analyt
   return{view,filters,filtered,page,pageCount,pageRows:filtered.slice((page-1)*20,page*20),filterOptions:{environments:[...new Set(view.sessions.map(row=>row.environment?.primary).filter(Boolean))].sort(),substrates:[...new Set(view.sessions.map(row=>row.surface).filter(Boolean))].sort()},cohorts:state.cohorts,annotations:state.annotations,blindRecords:state.blindRecords,evaluations:state.evaluations,runs:allRows,errors:state.errors,hypotheses:state.hypotheses,anomalies:derivedAnomalies,anomalyDetails,benchmarks,blindCandidates:view.sessions.filter(row=>row.blind_analysis_available),blindSession:selectedBlind,blindProjection:blindProjection(selectedBlind),longitudinal,comparison,runComparison:allRows.length>1?compareScientificRuns(allRows.at(-2),allRows.at(-1)):{metrics:[],caveat:''}};
  }
  const controller={actor,authorized:()=>access.authorized,sessions,createCohort,updateCohort,runAnalysis,createHypothesis:addHypothesis,snapshot,
-  screen(path='/scientific'){if(!access.authorized)return'';const url=new URL(path,'https://local.invalid'),route=resolveScientificRoute(url.pathname)||{type:'not-found'};const data=dataFor(route,url.searchParams);return ScientificScreen({route,data,session:route.type==='session'?scientificSessionDetail(byId(route.id)):null,query:Object.fromEntries(url.searchParams)});},
+  screen(path='/scientific'){if(!access.authorized)return'';const url=new URL(path,'https://local.invalid'),route=resolveScientificRoute(url.pathname)||{type:'not-found'};const data=dataFor(route,url.searchParams);return (scientificStore.persistenceWarning?.()?'<p class="scientific-panel" role="alert">'+escapeHTML(scientificStore.persistenceWarning())+'</p>':'')+ScientificScreen({route,data,session:route.type==='session'?scientificSessionDetail(byId(route.id)):null,query:Object.fromEntries(url.searchParams)});},
   reproduceRun(runId){checked();const run=snapshot().runs.find(item=>item.id===runId);if(!run)throw new Error('Run indisponible.');if(run.source_snapshot){const repeated=createScientificRun(run.source_snapshot,{store:scientificStore,engineVersion:run.engine_version,clock});return repeated;}const row=byId(run.session_id);return runAnalysis(row.id,run.engine_version);},
   compareCohorts(aId,bId){checked();const state=snapshot(),a=state.cohorts.find(item=>item.id===aId),b=state.cohorts.find(item=>item.id===bId);if(!a||!b)throw new Error('Deux cohortes sont nécessaires.');return compareScientificCohorts(resolveCohort(view.sessions,a),resolveCohort(view.sessions,b));},
   validateBlind(sessionId,input){checked();return validateBlindAnalysis(scientificStore,byId(sessionId),input);},
@@ -52,7 +53,7 @@ export function createScientificController({actor,dataset,getDataset=null,analyt
   handleClick(event){const node=event.target.closest?.('[data-scientific-action]');if(!node)return false;try{const action=node.dataset.scientificAction;if(action==='run-analysis')runAnalysis(node.dataset.sessionId);else if(action==='run-analysis-v11')runAnalysis(node.dataset.sessionId,'JUMOLF Engine 1.1.0');else if(action==='reproduce-run')controller.reproduceRun(node.dataset.runId);else if(action==='reveal-blind')controller.revealBlind(node.dataset.recordId,node.dataset.sessionId);else if(action==='duplicate-cohort'){const cohort=snapshot().cohorts.find(item=>item.id===node.dataset.cohortId);if(cohort)scientificStore.duplicateCohort(cohort.id);}
    else if(action==='delete-cohort')scientificStore.deleteCohort(node.dataset.cohortId);
    else if(action==='cohort-from-hypothesis'){const hypothesis=snapshot().hypotheses.find(item=>item.id===node.dataset.hypothesisId);if(hypothesis){const cohort=createCohort({name:`Vérification · ${hypothesis.title}`,criteria:cohortCriteriaFromHypothesis(hypothesis)});navigate(`/scientific/cohort/${encodeURIComponent(cohort.id)}`);}
-   }else return false;notify('Modification locale enregistrée.');return true;}catch(error){toast(error.message);return true;}},
+   }else return false;notify(dataset?.mode==='account'?'Travaux Science enregistrés sur cet appareil.':'Modification conservée pour cette visite.');return true;}catch(error){toast(error.message);return true;}},
   handleSubmit(event){const form=event.target.closest?.('[data-scientific-form]');if(!form)return false;const kind=form.dataset.scientificForm;try{const values=readForm(form);
     if(kind==='filter'){event.preventDefault();const params=new URLSearchParams();for(const [key,value]of Object.entries(values))if(value&&value!=='all')params.set(key,value);navigate(`/scientific/sessions${params.size?`?${params}`:''}`);render();return true;}
     event.preventDefault();
@@ -68,7 +69,7 @@ export function createScientificController({actor,dataset,getDataset=null,analyt
     else if(kind==='error')controller.addError(values);
     else if(kind==='evaluation')controller.feedback(values);
     else return false;
-    notify('Entrée scientifique locale enregistrée.');return true;
+    notify(dataset?.mode==='account'?'Travaux Science enregistrés sur cet appareil.':'Entrée scientifique conservée pour cette visite.');return true;
    }catch(error){toast(error.message);return true;}},
   handleChange(){return false;}
  };
