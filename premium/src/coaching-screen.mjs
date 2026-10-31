@@ -54,7 +54,7 @@ function traceChoices(d,integration={}){
   const byId=id=>allowed.find(t=>t.id===id);
   const later=byId('none');
   const references=allowed.filter(t=>['prepared','gpx'].includes(t.id));
-  const direct=byId('live')||byId('draw');
+  const direct=byId('direct');
   const legacy=direct&&d.traceType===direct.id?render(direct,'Terrain direct','Mode de préparation terrain conservé pour cette session.'):''; 
   return `<div class="coaching-preparation-groups"><section class="coaching-config-group"><h3>Le traceur prépare sa piste</h3><p class="coaching-local-note">Le traceur invité nominativement choisira sa méthode depuis son application.</p><div class="coaching-choices" role="group" aria-label="Préparation confiée au traceur">${later?render(later,'Confier la préparation au traceur','Aucun parcours associé maintenant ; le traceur préparera sa piste après son invitation.') : ''}${legacy}</div></section><section class="coaching-config-group"><h3>Proposer un parcours au traceur</h3><p class="coaching-local-note">Un tracé existant ou un GPX sert de référence et ne remplace pas la pose réelle.</p><div class="coaching-choices" role="group" aria-label="Référence proposée au traceur">${references.map(t=>render(t,t.id==='gpx'?'Importer un GPX':'Choisir un tracé enregistré',t.id==='gpx'?'Proposer un fichier GPX comme référence.':'Proposer une piste enregistrée comme référence.')).join('')}</div></section></div>`;
  }
