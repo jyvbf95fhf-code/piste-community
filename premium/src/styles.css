@@ -4687,3 +4687,23 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 .live-weather-grid dt{font-size:11px;color:#b2cbd6}
 .live-weather-grid dd{font-size:19px;margin:5px 0 0;color:#f3deaa;overflow-wrap:anywhere}
 .live-weather-dialog [data-live-weather-refresh]{width:100%;min-height:46px;margin-top:10px}
+.jumolf-demo-hero{position:relative;isolation:isolate;overflow:hidden;min-height:440px;border:1px solid #e8c77d9c;border-radius:24px;margin:0 0 24px;background:#0b1e2b;box-shadow:0 18px 45px #0005}
+.jumolf-demo-hero>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:65% 35%;z-index:-2}
+.jumolf-demo-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#05152120,#071b2ce8 56%,#071725 100%);z-index:-1}
+.jumolf-demo-hero-content{display:grid;align-content:end;gap:14px;min-height:440px;padding:150px 24px 24px}
+.jumolf-demo-hero .eyebrow{font-size:10px;letter-spacing:.16em;color:#f5d995}
+.jumolf-demo-hero h2{font-size:clamp(30px,8vw,44px);line-height:1.1;letter-spacing:-.035em;color:#fff7e9;margin:0}
+.jumolf-demo-hero p{color:#d0e0e7;font-size:14px;line-height:1.6;margin:0;max-width:36rem}
+.jumolf-demo-promises{display:flex;flex-wrap:wrap;gap:7px}
+.jumolf-demo-promises span{padding:5px 9px;border:1px solid #f1d39b3b;border-radius:9px;background:#09212caa;color:#e6d2aa;font-size:10px}
+.jumolf-demo-hero .jumolf-button.primary{background:linear-gradient(120deg,#f3df9e,#cea44f);border:1px solid #f1d59b;color:#14232d;min-height:50px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:750;box-shadow:0 5px 18px #0005}
+.jumolf-demo-hero small{display:block;font-size:10px;line-height:1.6;color:#b6cbd5}
+.rex-dog-photo{display:block;width:100%;height:230px;object-fit:cover;object-position:center 35%;border-radius:16px;margin:10px 0 18px}
+.rex-guide-card{display:grid;gap:9px;padding:20px;border:1px solid #80c5d457;border-radius:18px;background:linear-gradient(135deg,#163848,#0d2332);margin:16px 0}
+.rex-guide-card h2{font-size:22px;line-height:1.3;color:#f2deaa;margin:0}
+.rex-guide-card p{font-size:13px;line-height:1.7;color:#c8dce4;margin:0}
+.rex-guide-card strong{font-size:11px;color:#8fdfdf;margin-top:6px;text-transform:uppercase;letter-spacing:.1em}
+.rex-progress-label{font-size:10px;letter-spacing:.1em;color:#d6bd87}
+.rex-guided-nav{position:sticky;bottom:calc(94px + env(safe-area-inset-bottom,0px));background:#091e2af5;border:1px solid #a6cad437;border-radius:16px;padding:10px;display:flex;gap:10px;z-index:5}
+.rex-guided-nav a{min-height:48px;white-space:normal;line-height:1.4;flex:1;text-align:center;font-size:12px}
+@media(min-width:700px){.jumolf-demo-hero-content{padding-top:170px;max-width:75%}.jumolf-demo-hero:before{background:linear-gradient(90deg,#061925ed,#06192540)}}
