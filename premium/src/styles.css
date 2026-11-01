@@ -4674,3 +4674,16 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 .home-shell.premium-home .avatar{border:1px solid #e6c476;box-shadow:0 0 0 3px #e2bb5e20}
 .home-shell.premium-home .hero-panel{border:1px solid #e6c4769c;border-radius:24px}
 @media(max-width:360px){.home-premium-badge{font-size:9px;padding:4px 8px;letter-spacing:.1em}}
+.gps-map-controls .live-weather-control{display:none}
+.tracer-gps[data-gps-live] .gps-map-controls .live-weather-control{display:grid;color:#f2d58d;font-size:24px}
+.live-weather-dialog{width:min(440px,calc(100% - 28px));max-height:85dvh;overflow:auto;padding:22px;border:1px solid #7fbbc76b;border-radius:22px;background:linear-gradient(145deg,#173544,#0a1b29);color:#e9f3f3;box-shadow:0 24px 70px #0008;font:inherit}
+.live-weather-dialog::backdrop{background:#03111dc9}
+.live-weather-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.live-weather-dialog h2{margin:5px 0;font-size:26px}
+.live-weather-dialog p{font-size:12px;line-height:1.6;color:#bed1da;margin:12px 0}
+.live-weather-dialog [data-live-weather-close]{min-width:44px;min-height:44px;border:1px solid #a5cbdc40;border-radius:12px;background:#0d2331;color:#e8f1f1;font-size:20px}
+.live-weather-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:18px 0}
+.live-weather-grid>div{padding:12px;border:1px solid #9fc6d02b;border-radius:12px;background:#071c2870;min-width:0}
+.live-weather-grid dt{font-size:11px;color:#b2cbd6}
+.live-weather-grid dd{font-size:19px;margin:5px 0 0;color:#f3deaa;overflow-wrap:anywhere}
+.live-weather-dialog [data-live-weather-refresh]{width:100%;min-height:46px;margin-top:10px}
