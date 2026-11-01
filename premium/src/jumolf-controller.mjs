@@ -147,8 +147,10 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
   redeemCode(code){if(getVerifiedEntitlement){if(!redeemRealCode)throw new Error('Un code réel doit être validé côté serveur.');return redeemRealCode(code).then(result=>{formMessage='';navigate('/jumolf');render();return result;});}const result=store.redeemCode(code);if(!result.ok){const messages={invalid:'Ce code n’est pas valide.',inactive:'Ce code n’est plus actif.',expired:'Ce code n’est plus valide.',revoked:'Ce code a été révoqué.',exhausted:'Ce code a atteint son nombre maximal d’utilisations.'};safeToast(messages[result.reason]||'Ce code n’est plus valide.');}else{formMessage='';navigate('/jumolf/activate');}return result;},
   deactivate(){store.deactivate();navigate('/jumolf');render();},
   screen(path=routePath()){
+   // Explicit, read-only demonstration routes never enter personal source or consent flows.
+   if(String(path).split('?')[0]==='/jumolf/demo-history')return JumolfDemoHistoryScreen(path);
+   if(String(path).split('?')[0]==='/jumolf/rex')return RexDemoScreen(path);
    reconcileProfileDrafts();
-   if(String(path).split('?')[0]==='/jumolf/demo-history')return isDemo()?JumolfDemoHistoryScreen(path):'<section class="jumolf-panel"><h1>Votre espace personnel</h1><p>Aucune donnée fictive dans votre compte.</p><a href="/jumolf">Retour à JUMOLF</a></section>';
    const route=resolveJumolfRoute(path)||{type:'entry'};
    const query=new URLSearchParams(String(path).split('?')[1]||'');
    const requestedJourney=query.get('journey');
@@ -157,13 +159,13 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     const a=access(),dogs=a.entitlement_valid&&a.jumolf_enabled?consentedSources().dogs:[];
     selectedDogId=dogs.some(d=>d.id===query.get('dog'))?query.get('dog'):'';
    }
-   if(route.type==='rex')return isDemo()?RexDemoScreen(path):'<section class="jumolf-panel"><h1>Votre espace personnel</h1><p>Aucune donnée fictive dans votre compte.</p><a href="/jumolf">Retour à JUMOLF</a></section>';
+
    const state=store.snapshot(),currentAccess=access();
    route.replay=query.get('replay')==='1';
    route.advanced=query.get('view')==='advanced';
    route.demo=route.demo===true||query.get('demo')==='1';
    if(!isDemo()&&route.demo)return '<section class="jumolf-panel"><h1>Votre espace personnel</h1><p>Aucune donnée fictive dans votre compte.</p><a href="/jumolf">Retour à JUMOLF</a></section>';
-   if(route.type==='premium'||route.type==='access-code'||!currentAccess.entitlement_valid||(!currentAccess.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'))return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
+   if(route.type==='premium'||route.type==='access-code'||!currentAccess.entitlement_valid||(!currentAccess.jumolf_enabled&&!state.jumolf_activation_pending&&route.type!=='activate'))return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()})+JumolfDemoHistoryEntry();
    if(!state.jumolf_onboarding_completed&&route.type!=='onboarding'&&!route.replay&&route.type!=='activate')return JumolfScreen({route,state,access:currentAccess,codeFeedback:formMessage,realMode:!isDemo()});
    const accountDemo=!isDemo()?getAccountDemo():null;
    if(accountDemo&&accountDemo.status!=='empty'&&['entry','analyze','progress','exercises','compare','lobo'].includes(route.type))return LoboDemoScreen(accountDemo,path,{consents:state.consents,section:route.type==='lobo'?'analyze':route.type});
@@ -188,7 +190,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='entry'&&!route.advanced){
     // Presentation metadata stays out of the scientific source contracts.
     const dog=presentationFor(selectedDog);
-    return JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()})+(isDemo()?JumolfDemoHistoryEntry():'');
+    return JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()})+JumolfDemoHistoryEntry();
    }
    if(isDemo()&&route.type==='analyze')route.type='dashboard';
    if(route.type==='prepare')return JumolfV3Prepare({dogs,dog:selectedDog,state,journey});
@@ -279,4 +281,5 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
  };
  return Object.freeze(controller);
 }
+
 
