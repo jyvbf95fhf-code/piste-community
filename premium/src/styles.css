@@ -4633,3 +4633,34 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 .sessions-page .session-history-copy .search-outcome-badge small{font-size:11px}
 @media(max-width:360px){.app-shell .sessions-page .session-history-card{padding:14px 12px;grid-template-columns:30px minmax(0,1fr);gap:9px}.sessions-page .session-history-mark{width:30px;height:36px}.sessions-page .sessions-heading{padding:20px 16px}.sessions-page .sessions-filters button{font-size:10px}.sessions-collection-heading h2{font-size:17px}}
 @media(prefers-reduced-motion:reduce){.sessions-page .session-history-card{transition:none}}
+.app-shell .tracks-page{gap:18px;padding-bottom:24px}
+.tracks-page .sessions-heading{padding:22px 20px;border:1px solid #80d8dd28;border-radius:24px;background:radial-gradient(ellipse at 100% 0,#68d8ce20,transparent 70%),linear-gradient(135deg,#172e3b,#10212f);gap:10px}
+.tracks-page .sessions-heading h1{font-size:clamp(30px,8vw,40px);letter-spacing:-.035em;color:#f3f7f6}
+.tracks-page .sessions-heading .eyebrow{color:#91dedb;font-size:10px;letter-spacing:.16em}
+.tracks-page .sessions-heading>p{font-size:13px;color:#b4c6d0;line-height:1.6}
+.app-shell .tracks-page .piste-categories{gap:8px;padding-bottom:4px}
+.app-shell .tracks-page .piste-categories a{display:flex;align-items:center;justify-content:center;gap:6px;min-height:70px;padding:12px 8px;border:1px solid #82c8d32b;border-radius:16px;background:#102837;color:#b7cdd7;font-size:12px;line-height:1.4}
+.app-shell .tracks-page .piste-categories a[aria-current=page]{color:#eaf9f6;border-color:#86d6ce99;background:linear-gradient(135deg,#1d4d55,#15363f);box-shadow:inset 0 1px #c2fff32b}
+.tracks-page .piste-search.card{padding:16px;border:1px solid #92b7c62b;border-radius:20px;background:linear-gradient(135deg,#142c3a,#0e202d)}
+.tracks-page .piste-search input,.tracks-page .piste-search select{border-color:#92b7c637;background:#0a1d29;color:#e3edf0;border-radius:11px;min-height:44px}
+.tracks-page .tracks-history{display:grid;gap:20px}
+.tracks-page .tracks-subheading h2{font-size:21px;color:#f0f7f5;letter-spacing:-.02em}
+.tracks-page .tracks-subheading p{font-size:12px;color:#a8c1cb;margin-top:5px}
+.tracks-page [data-piste-group]{--piste-accent:#88ddd5;display:grid;gap:12px;min-width:0}
+.tracks-page [data-piste-group="operational"]{--piste-accent:#e5c38a}
+.tracks-page [data-piste-group]>h3{display:flex;align-items:center;gap:10px;margin:0;padding:5px 2px 3px;color:var(--piste-accent);font-size:16px;letter-spacing:.03em}
+.tracks-page [data-piste-group]>h3:before{content:"";width:8px;height:24px;border-radius:5px;background:var(--piste-accent)}
+.app-shell .tracks-page .tracks-session-card{margin:0;padding:17px;border:1px solid #98bdca28;border-left:3px solid var(--piste-accent);border-radius:20px;background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--piste-accent) 8%,transparent),transparent 75%),linear-gradient(135deg,#152d3b,#10212f);box-shadow:0 8px 24px #0002;gap:13px;min-width:0}
+.tracks-page .tracks-session-card>div{gap:8px}
+.tracks-page .tracks-session-card>div>strong{font-size:18px;line-height:1.4;color:#f0f6f4;letter-spacing:-.02em}
+.tracks-page .tracks-session-card>div>small{font-size:12px;line-height:1.5;color:#b5c9d2}
+.tracks-page .tracks-session-card .badge{font-size:10px;padding:4px 9px;border-radius:8px}
+.tracks-page .tracks-session-card .search-outcome-badge{padding:9px 11px;border-radius:11px;border-left-width:3px;background:#0c2531;display:grid;gap:4px;box-shadow:none}
+.tracks-page .tracks-session-card .search-outcome-badge[data-search-outcome="positive"]{background:#103a32;border-color:#82d8b7}
+.tracks-page .tracks-session-card .search-outcome-badge[data-search-outcome="negative"]{background:#342332;border-color:#db9aa9}
+.tracks-page .tracks-session-card .search-outcome-badge strong{font-size:12px;line-height:1.4;color:#e4f1f0}
+.tracks-page .tracks-session-card .search-outcome-badge small{font-size:11px;line-height:1.5;color:#b6cbd2}
+.tracks-page .tracks-session-card nav{display:flex;gap:8px;padding-top:3px}
+.tracks-page .tracks-session-card nav a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 13px;border:1px solid #83c6d246;border-radius:11px;font-size:12px;color:#b9e5e5;background:#0d2532;font-weight:600}
+.tracks-page .tracks-session-card nav a:first-child{border-color:color-mix(in srgb,var(--piste-accent) 35%,transparent);color:var(--piste-accent);background:color-mix(in srgb,var(--piste-accent) 8%,#0b202d)}
+@media(max-width:360px){.tracks-page .piste-categories a{font-size:10px;flex-direction:column}.app-shell .tracks-page .tracks-session-card{padding:14px}.tracks-page .tracks-session-card>div>strong{font-size:16px}}
