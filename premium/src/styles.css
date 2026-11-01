@@ -4664,3 +4664,13 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 .tracks-page .tracks-session-card nav a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 13px;border:1px solid #83c6d246;border-radius:11px;font-size:12px;color:#b9e5e5;background:#0d2532;font-weight:600}
 .tracks-page .tracks-session-card nav a:first-child{border-color:color-mix(in srgb,var(--piste-accent) 35%,transparent);color:var(--piste-accent);background:color-mix(in srgb,var(--piste-accent) 8%,#0b202d)}
 @media(max-width:360px){.tracks-page .piste-categories a{font-size:10px;flex-direction:column}.app-shell .tracks-page .tracks-session-card{padding:14px}.tracks-page .tracks-session-card>div>strong{font-size:16px}}
+.home-shell.premium-home{--home-premium-gold:#e9c776}
+.home-shell.premium-home .screen-header .brand{display:flex;flex-direction:column;align-items:flex-start;gap:5px;overflow:visible}
+.home-premium-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid #f5dc9c;border-radius:8px;background:linear-gradient(115deg,#f7e5af,#d6ac53 70%,#efce83);box-shadow:0 2px 15px #e2ba593d,inset 0 1px #fff7;color:#172333;font-size:10px;font-weight:800;line-height:1.2;letter-spacing:.15em;white-space:nowrap}
+.home-premium-badge>span{font-size:13px}
+.home-shell.premium-home :is(.card,.feature-tile,.hero-panel,.coaching-invitations,.active-sessions,.list-item,.track-builder-entry){border-color:#dfbb69a6;box-shadow:inset 0 1px #ffe8aa29,0 0 0 1px #e7c37114,0 7px 24px #0003,0 0 20px #d8ad4812}
+.home-shell.premium-home :is(.feature-tile,.card,.hero-panel,.list-item):focus-visible{outline:3px solid #f1d796;outline-offset:4px}
+.home-shell.premium-home .feature-tile .tile-icon{color:#f0cf84;border-color:#ebc36d88}
+.home-shell.premium-home .avatar{border:1px solid #e6c476;box-shadow:0 0 0 3px #e2bb5e20}
+.home-shell.premium-home .hero-panel{border:1px solid #e6c4769c;border-radius:24px}
+@media(max-width:360px){.home-premium-badge{font-size:9px;padding:4px 8px;letter-spacing:.1em}}
