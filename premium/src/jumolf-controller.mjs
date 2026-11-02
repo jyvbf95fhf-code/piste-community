@@ -209,7 +209,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     const dog=sources.dogs.find(item=>item.id===route.id)||null;
     const ids=new Set([...sources.sessions,...sources.operational].map(s=>s.id));dogProfile=buildJumolfDogProfile(route.id,state.analysis_runs.filter(r=>ids.has(r.source_snapshot_id)&&state.consents.gps),dog);if(!isDemo())dogProfile.realScience=buildRealJumolfProfile(route.id,[...sources.sessions,...sources.operational],{consents:state.consents});
    }
-   if(!isDemo()&&route.type==='session'&&!route.advanced&&!source?.synthetic&&!source?.demo)return JumolfSimpleResult({source,analysis,state});
+   if(!isDemo()&&route.type==='session'&&!route.advanced&&!source?.synthetic&&!source?.demo)return JumolfSimpleResult({source,analysis,state,map,learning:source?.dogId&&state.consents.dog_history&&sources.dogs.some(d=>d.id===source.dogId)?realLearning(source.dogId):null});
    if(route.type==='compare'&&route.demo)comparison=buildJumolfDemoComparison();
    if(route.type==='dataset'){
     const filters=Object.fromEntries(['type','age','environment','weather','difficulty','pollution','quality','result'].map(key=>[key,query.get(key)||'all']));
