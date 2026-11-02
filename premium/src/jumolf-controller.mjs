@@ -190,7 +190,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    if(route.type==='entry'&&!route.advanced){
     // Presentation metadata stays out of the scientific source contracts.
     const dog=presentationFor(selectedDog);
-    return JumolfDemoHistoryEntry()+JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()});
+    return JumolfV3Home({sources,state,dog,report:!isDemo()&&dog?realLearning(dog.id):null,viewer:getViewer(),journey,realMode:!isDemo()})+`<details class="jumolf-panel history-secondary"><summary>Découvrir JUMOLF avec une histoire fictive</summary>${JumolfDemoHistoryEntry()}</details>`;
    }
    if(isDemo()&&route.type==='analyze')route.type='dashboard';
    if(route.type==='prepare')return JumolfV3Prepare({dogs,dog:selectedDog,state,journey});
