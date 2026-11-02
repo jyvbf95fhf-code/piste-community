@@ -1,3 +1,4 @@
+import {JumolfStudioScreen} from './jumolf-studio-screen.mjs';
 import {LoboDemoScreen} from './lobo-demo-screen.mjs';
 import {JumolfDemoHistoryScreen,JumolfDemoHistoryEntry} from './jumolf-demo-history-screen.mjs';
 import {canineOptions,CANINE_LEVELS,CANINE_SKILLS} from './track-canine.mjs';
@@ -181,6 +182,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
     selectedDogId=dogs.some(d=>d.id===id)?id:'';
    }
    const selectedDog=dogs.find(d=>d.id===selectedDogId)||null;
+   if(!isDemo()&&(!accountDemo||accountDemo.status==='empty')&&!route.advanced&&query.get('scope')!=='unlinked'&&['entry','prepare','train','analyze','progress'].includes(route.type))return JumolfStudioScreen({route:route.type,dogs,dog:presentationFor(selectedDog),report:selectedDog?realLearning(selectedDog.id):null,consents:state.consents,canPrepare:!!prepareRealTraining&&!!selectedDog&&canPrepareTrainingDog(selectedDog.id),memories:getTrainingMemories()});
    if(route.type==='team'){
     if(isDemo())return JumolfV3Home({realMode:false});
     const viewer=getViewer(),member=PROFILE_MEMBERS.includes(query.get('member'))?query.get('member'):'team';
@@ -249,7 +251,7 @@ export function createJumolfController({store,getRawSources=()=>({}),navigate=()
    const field=event.target;
    if(field.matches?.('[data-jumolf-progress-handler],[data-jumolf-progress-level],[data-jumolf-progress-skill]')){const params=new URLSearchParams(globalThis.location?.search||'');const key=field.matches('[data-jumolf-progress-handler]')?'handler':field.matches('[data-jumolf-progress-level]')?'level':'skill';params.set(key,field.value);navigate('/jumolf/progress?'+params);return true;}
    if(field.matches?.('[data-jumolf-learning-dog]')){selectedDogId=consentedSources().dogs.some(d=>d.id===field.value)?field.value:'';navigate((globalThis.location?.pathname==='/jumolf/progress'?'/jumolf/progress':'/jumolf/exercises')+'?dog='+encodeURIComponent(selectedDogId));return true;}
-   if(field.matches?.('[data-jumolf-dog]')){selectedDogId=consentedSources().dogs.some(d=>d.id===field.value)?field.value:'';const path=globalThis.location?.pathname;const target=['/jumolf/prepare','/jumolf/analyze','/jumolf/train','/jumolf/team'].includes(path)?path:'/jumolf';const member=new URLSearchParams(globalThis.location?.search||'').get('member');navigate(target+'?dog='+encodeURIComponent(selectedDogId)+(target==='/jumolf/team'&&PROFILE_MEMBERS.includes(member)?'&member='+member:''));return true;}
+   if(field.matches?.('[data-jumolf-dog]')){selectedDogId=consentedSources().dogs.some(d=>d.id===field.value)?field.value:'';const path=globalThis.location?.pathname;const target=['/jumolf/prepare','/jumolf/analyze','/jumolf/train','/jumolf/team','/jumolf/progress'].includes(path)?path:'/jumolf';const member=new URLSearchParams(globalThis.location?.search||'').get('member');navigate(target+'?dog='+encodeURIComponent(selectedDogId)+(target==='/jumolf/team'&&PROFILE_MEMBERS.includes(member)?'&member='+member:''));return true;}
    if(field.matches?.('[data-jumolf-consent]')){store.setConsent(field.dataset.jumolfConsent,field.checked);if(!field.checked)profileDrafts.clear();if(field.dataset.jumolfConsent==='session_comparison'&&!field.checked)comparison=null;render();return true;}
    if(field.matches?.('[data-jumolf-layer]')){store.setMapLayer(field.dataset.jumolfLayer,field.checked);render();return true;}
    if(field.matches?.('[data-jumolf-timeline]')){timelineIndex=Math.max(0,Number(field.value)||0);render();return true;}
