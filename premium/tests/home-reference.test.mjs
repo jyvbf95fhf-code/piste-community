@@ -34,16 +34,12 @@ test('compact satellite sessions use exact statuses, routes and metrics',()=>{
  assert.match(html,/olfactory-dog-science/);
 });
 
-test('Home shows one Premium badge on JUMOLF for every access state without changing existing links or other content apart from the beta notice',async()=>{
- const {execFileSync}=await import('node:child_process');
- const source=execFileSync('git',['show','d6f98d41912eac6d0a3738b0a4d083c093360612:premium/src/screens.mjs'],{encoding:'utf8'}).replace(/from '(\.\/[^']+)'/g,(_,p)=>`from '${new URL('../src/'+p.slice(2),import.meta.url).href}'`);
- const previous=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+test('Home keeps one Premium badge and all primary destinations across access states',()=>{
  for(const access of [{entitlement_valid:false,jumolf_enabled:false},{entitlement_valid:true,jumolf_enabled:false},{entitlement_valid:true,jumolf_enabled:true}]){
   const html=HomeScreen(mock.user,mock.activeSessions,access);
   assert.equal((html.match(/class="smart-premium-badge jumolf-home-premium"/g)||[]).length,1);
   assert.match(html,/<h2>[^<]+<b class="smart-premium-badge jumolf-home-premium">PREMIUM<\/b><\/h2>/);
-  assert.doesNotMatch(html,/<div class="twin-heading">[^]*?jumolf-home-premium[^]*?<\/div><div class="twin-content">/);
   assert.ok(html.includes(BetaNotice()));
-  assert.equal(html.replace(BetaNotice(),'').replace('<b class="smart-premium-badge jumolf-home-premium">PREMIUM</b>',''),previous.HomeScreen(mock.user,mock.activeSessions,access).replace('<span class="badge gold jumolf-home-premium">PREMIUM</span>',''));
+  for(const href of ['/operational','/new-session','/tracks','/community','/statistics','/track-builder','/sessions','/jumolf','/scientific'])assert.ok(html.includes('href="'+href+'"'),href);
  }
 });

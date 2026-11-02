@@ -1,0 +1,39 @@
+{
+  "deployment": "dpl_6GsBX5vD5eRLZ1RoSLVohwzLnHR6",
+  "production_url": "https://piste-community-v2-premium.vercel.app/",
+  "git_base": "3042124eb768ecc1cabb373a435d5a54c9034686",
+  "excluded_commits": [
+    "6357bf5ac424aa54481fd3a56809c52385bf2a09",
+    "c776b6de376300105beb2f61df7768b02e8ca926"
+  ],
+  "production_manifest_revision": "b64ffbe633b95709",
+  "normalization": "A single trailing newline in restored text files; PWA manifest rebuilt.",
+  "files": {
+    "/src/admin-account-deletion.mjs": "78851345af839fa29590969fc028faa5f55101f6ea0b203a863cf30020b89e00",
+    "/src/admin-controller.mjs": "12d6f8b7686183e960f0da72ca1a41826cb32296b7ba02e0c5840dd246326dcb",
+    "/src/admin-remote-store.mjs": "9c3a594c95252f3d0a0471db84c9b908141ad6015d043264851438b5c2dcca6e",
+    "/src/admin-screen.mjs": "08edd6d5b2c6c276beae201db1e1368311c41d4ddd85f33cfa324d83c18d84f6",
+    "/src/coaching-gps.css": "d79f8e86af2d574b81bd85b7a93241fb6a834bb1f98394897198e61c05a33bd2",
+    "/src/coaching-remote-app.mjs": "b1e56ba353874e3c44a373f5a9abb1e423e2c6a8e9bf085b17005bacff2eefbf",
+    "/src/coaching-screen.mjs": "45140b6913232bd36c669384106fec8a4d936595c1264fbf001880ce1e24f2ed",
+    "/src/coaching-shared-review.mjs": "ca7bd2349e5b26c9144612e324f6b74ee8d0e20e86c464efaad5c0c880f4c561",
+    "/src/coaching-shared-wizard.mjs": "652f271686a0d63c0829a775ca5754afd9c2fbfc1b12f186681cf76bbaec3ef3",
+    "/src/server/account-capabilities.mjs": "c84a342ddb61fb7a73b31d597c48c7db5b6ce8b09fd00c060316d9977eb07576",
+    "/src/server/admin-account-storage.mjs": "52d178726bf16cef26cfa96c65014519e29561a33c7a4867dc7d8d31677302f9",
+    "/src/server/admin-service.mjs": "b51e6f4681832bfe45d16dfdc30fc818107f5b4fe0a8bca44eb2dd99de1f317d",
+    "/src/server/coaching-http.mjs": "a31d33d094e01ad6fac17bc08607171e3f756a4c03b2b78447469f11d5f98c5d",
+    "/src/server/coaching-inbox-service.mjs": "05ccafdf958dcfcbb4722e169179ba7f4b7e99b319145b08c44a85af6faa9336",
+    "/src/server/coaching-service.mjs": "e8777b1051b6d04a41e3a70d9961e3edf350c15a106c5118ded47099aa2daac1",
+    "/src/server/community-friendship-service.mjs": "770851028823e00908c50c3b510fa50f591ae3e196a80dec762fa6e42f025732",
+    "/src/server/community-live-service.mjs": "3f9056918a5157022fc2a50bb358f3a8270869673942434f093d9293135883f4",
+    "/src/server/data-exports-service.mjs": "5e12c1bc2245621f8b89fabe3202d6ebf3583131208d11aadd4ea8c44104cf34",
+    "/src/server/ops-live-http.mjs": "edc516c83648e2a592a8489c9d673e1c155f0e142538641fd9e919feea3f453a",
+    "/src/server/personal-data-http.mjs": "0278e7258e19478207907f8f5ef001f1015a5afdcd6955c4c948ad772b59277d",
+    "/src/server/personal-data-repository.mjs": "0b6e16012bb38440bf5d8ba8edeff4a30ae20be60d76ce73d6b4b738b1943357",
+    "/src/server/piste-history-http.mjs": "60ba7fd0735741123a7cc3144175c4350e364b329fc0579b27d366c2816db4b2",
+    "/src/server/premium-code-service.mjs": "ad0b8af0e8aa59060d6d660e1fe991e696fd7a8dd9ddc60f31c582fbd145fd1a",
+    "/src/server/prepared-track-share-service.mjs": "6ffe5c10f7fc199de73a199858ac6321811f3bf615def19abacf4c717025272c",
+    "/src/server/routing-provider-gateway.mjs": "8f0dc39b16f37dadaa77b9c8ffc696ecd025b9347385eae3ef06eb5cd2240337",
+    "/src/server/web-push-service.mjs": "e71c63048f54e78327e6107dc516e2826d843d59eeb2a3c766a881b782d5cf5a"
+  }
+}

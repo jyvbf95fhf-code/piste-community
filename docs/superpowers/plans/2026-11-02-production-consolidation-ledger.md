@@ -1,0 +1,11 @@
+# Execution ledger — 2026-11-02-production-consolidation.md
+Pre-flight: Task 1 produces exact current production baseline consumed by Tasks 2 and 3. No conflicting interfaces.
+Baseline: live snapshot 327 public resources, eight existing test failures, six passing simulated browser campaigns.
+Ruling: use an external linked worktree and execute continuously — user asked to chain all three corrections; no changes to main or existing audit working copy.
+Task 1: complete — 9686867 captures current production deltas and provenance; generated static manifest validated. Existing eight JUMOLF failures remain the Task 3 target.
+Task 2: network and 401/403/408 failure cases observed RED; hanging fetch/body/quota and cancellation cases failed under the bounded test harness. GREEN: 15 gateway cases; related client routing gates pass (21 initial combined cases).
+Task 2: provider attempts are bounded to 3000ms including quota, fetch and body read. Supplier 401/403 may use ORS only after unchanged API authentication/Premium checks. Shared quota failures remain fail-closed. Caller cancellation never reserves backup quota.
+Task 3: all eight original failures reproduced on the consolidated baseline. Ruling: preserve the approved public read-only Rex demonstration; update obsolete tests that prohibited it, while asserting it cannot read/write personal sources or unlock account features. Cost if wrong: a product-policy choice about demo visibility, not a permissions bypass.
+Task 3: keep Rex dog/journey query parameters isolated from the real dog context. Learning links continue to honor authorized explicit dog selection; a new regression assertion prevents Rex from switching it.
+Task 3: replace literal legacy headings and whole-HTML historical snapshots with measurement redaction, safe empty-state, destination and explicit demo-boundary assertions. Do not invent a duration from insufficient timestamp data.
+Task 3: complete — full npm test passes 2610/2610, zero skipped. Real-learning browser campaign passes with all external transports intercepted: analysis, recommendations, six-session progression, dog isolation, mobile widths, explicit Coaching create/draft protection, consent and entitlement withdrawal. Browser selectors now verify current assistant destinations and delegated traceur choice, without weakening privacy assertions.

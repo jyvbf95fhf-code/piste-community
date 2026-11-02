@@ -167,3 +167,13 @@
 @media(max-width:360px){
  .app-shell[data-module-theme="coaching"] [data-gps-live]>.gps-actions :is(.gps-action-in-place,.gps-action-external-ready) svg{padding:18px}
 }
+
+/* Shared end-of-session review owns the viewport, including iPhone safe areas. */
+.app-shell.app-shell:has([data-shared-review])>.screen-header,.app-shell.app-shell:has([data-shared-review])>.bottom-nav,.app-shell.app-shell:has([data-shared-review]) .prototype-note,.app-shell.app-shell:has([data-shared-review])>.account-sync-status{display:none}
+body:has([data-shared-review]){overflow:hidden}
+.shared-review{position:fixed;inset:0;z-index:60;width:100%;height:100dvh;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 24px);background:#08151e;color:#e7edf3}
+.shared-review-content{width:min(100%,1100px);min-width:0;margin-inline:auto;display:grid;gap:16px}
+.shared-review-content>*{min-width:0}.shared-review-back{display:flex;margin-bottom:4px}.shared-review .coaching-heading{margin:0}.shared-review .coaching-heading h1{margin:8px 0;font-size:clamp(26px,6vw,38px)}
+.shared-review .gps-map{height:min(48dvh,420px);min-height:220px}.shared-review :is(button,a){touch-action:manipulation}.shared-review .button{white-space:normal}
+[data-traceur-preparation] form{display:grid;gap:12px;margin:18px 0}[data-traceur-preparation] :is(input,select){width:100%;min-width:0;box-sizing:border-box}
+@media print{body:has([data-shared-review]){overflow:visible}.shared-review{position:static;height:auto;overflow:visible;padding:0}.shared-review-back{display:none}}

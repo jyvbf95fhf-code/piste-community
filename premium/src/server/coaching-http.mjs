@@ -1,3 +1,4 @@
+import {cleanAccountStorage} from './admin-account-storage.mjs';
 import {createCommunityLiveService} from './community-live-service.mjs';
 import {canJoinCoaching,targetedCoachingExpiresAt} from '../coaching-invitation-policy.mjs';
 import {createWebPushService} from './web-push-service.mjs';
@@ -14,7 +15,7 @@ const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',n
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 function error(message,status=400){throw Object.assign(Error(message),{status});}
 const assertResult=result=>{if(result.error){const code=result.error.code;error(['40001','PT409'].includes(code)?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',['40001','PT409'].includes(code)?409:code==='42501'?403:400);}return result.data;};
-export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,teamContactsProvider=null,friendshipsEnabled=false,socialLiveEnabled=false,coachingInboxEnabled=false,pushDelivery=null,background=work=>{void work.catch(()=>{});}}={}){
+export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,accountDeletionEnabled=false,teamContactsProvider=null,friendshipsEnabled=false,socialLiveEnabled=false,coachingInboxEnabled=false,pushDelivery=null,background=work=>{void work.catch(()=>{});}}={}){
  const friendships=createCommunityFriendshipService(admin,{socialLiveEnabled});
  const push=createWebPushService(admin,pushDelivery);
  return async request=>{
@@ -51,10 +52,24 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
    const snapshot=assertResult(await admin.rpc('v2_admin_snapshot',{p_actor:uid}));
    const codes=giftCodesEnabled?await loadPremiumCodeCatalogue(admin,uid,{page:body.codesPage,historyPage:body.codesHistoryPage}):null;
    if(codes)snapshot.members=(snapshot.members||[]).map(m=>({...m,premium_code_entitlement:codes.member_grants?.[m.id]||null}));
-   return respond({...projectAdminSnapshot(snapshot,clock()),...(codes?{gift_codes_version:codes.gift_codes_version,codes:codes.codes,code_history:codes.history,code_pagination:{page:codes.page,history_page:codes.history_page,total:codes.total,history_total:codes.history_total}}:{})});
+   return respond({...projectAdminSnapshot({...snapshot,account_deletion_version:accountDeletionEnabled?1:0},clock()),...(codes?{gift_codes_version:codes.gift_codes_version,codes:codes.codes,code_history:codes.history,code_pagination:{page:codes.page,history_page:codes.history_page,total:codes.total,history_total:codes.history_total}}:{})});
   }
   if(giftCodesEnabled&&['create-code','activate-code','deactivate-code'].includes(body.action))return respond(await managePremiumCode(admin,uid,body.action,body.payload,body.targetId));
   if(!uuid(body.targetId)||typeof body.action!=='string'||!body.payload||typeof body.payload!=='object'||Array.isArray(body.payload))error('Commande Admin invalide.');
+  if(body.action==='delete-account'){
+   if(!accountDeletionEnabled)error('Suppression de compte en attente d’activation serveur.',503);
+   const p=body.payload;
+   if(body.targetId===uid)error('Le compte propriétaire est protégé.',403);
+   if(p.confirmed!==true||p.confirmation!=='SUPPRIMER'||typeof p.email!=='string'||!p.email.trim()||typeof p.reason!=='string'||p.reason.trim().length<2||p.reason.length>180)error('Confirmez la suppression avec l’adresse e-mail, SUPPRIMER et un motif.');
+   const confirmed={confirmed:true,confirmation:p.confirmation,email:p.email,reason:p.reason.trim()};
+   const cleanup=await cleanAccountStorage(admin,uid,body.targetId,confirmed);
+   const deletion=cleanup.error?{error:cleanup.error}:await admin.rpc('v2_admin_delete_account',{p_actor:uid,p_target:body.targetId,p_payload:confirmed});
+   if(deletion.error){
+    const reasons={storage_cleanup_failed:'Nettoyage des fichiers incomplet. Le compte est conservé ; réessayez.',shared_coaching_data:'Ce compte est lié à un dossier Coaching partagé. Suppression bloquée pour préserver les autres membres ; vous pouvez suspendre son accès.',shared_live_data:'Ce compte est lié à un dossier Live partagé. Vous pouvez suspendre son accès.',storage_objects:'Ce compte possède des fichiers. Leur suppression doit être traitée avant celle du compte ; vous pouvez suspendre son accès.',owner_protected:'Le compte propriétaire est protégé.',owner_required:'Accès propriétaire requis.',email_confirmation_required:'L’adresse e-mail ne correspond plus au compte. Actualisez la fiche.',member_not_found:'Ce compte n’existe plus. Actualisez la liste.',confirmation_required:'La confirmation de suppression est requise.',reason_required:'Indiquez un motif de 2 à 180 caractères.'};
+    const code=deletion.error.message;if(cleanup.removed>0)error('Des fichiers ont été supprimés, mais la suppression du compte n’est pas terminée. Actualisez puis réessayez.',409);error(reasons[code]||'Suppression non effectuée. Aucune donnée n’a été supprimée ; actualisez et réessayez.',deletion.error.code==='42501'?403:['shared_coaching_data','shared_live_data','storage_objects','email_confirmation_required','member_not_found'].includes(code)?409:400);
+   }
+   return respond(deletion.data);
+  }
   return respond(assertResult(await admin.rpc('v2_admin_command',{p_actor:uid,p_action:body.action,p_target:body.targetId,p_payload:body.payload})));
  }
  const teamContacts=async ownerId=>{if(typeof teamContactsProvider!=='function')error('Les amis réels sont en attente de raccordement serveur.',503);return coachingTeamContacts(await teamContactsProvider(ownerId),ownerId);};

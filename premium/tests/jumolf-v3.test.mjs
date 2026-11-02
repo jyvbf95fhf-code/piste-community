@@ -14,9 +14,9 @@ test('presentation journeys never activate features, change consents or create s
 test('shell carries the selected dog and marks analysis, training and demo sections without losing advanced access',()=>{const h=JumolfShell('/jumolf/session/new','content',{realMode:true,dogId:'a',journey:'expert'});for(const s of ['Accueil','Préparer','S’entraîner','Analyser','Progresser','Outils avancés'])assert.ok(h.includes(s));assert.match(h,/href="\/jumolf\/analyze\?dog=a" aria-current="page"/);assert.match(h,/\/scientific/);assert.match(JumolfShell('/jumolf/rex','content',{realMode:true}),/DÉMONSTRATION · FICTIF/);});
 test('missing dates and empty history never invent a latest session, progress or score',()=>{const {controller,replace}=setup();replace({dogs:[{id:'a',name:'<img src=x onerror=alert(1)>'}],sessions:[session('undated','a',null)]});const h=controller.screen('/jumolf?dog=a');assert.match(h,/Date.*indisponible|datée/);assert.doesNotMatch(h,/<img src=x|score de progression|Séance undated/);assert.match(h,/&lt;img/);});
 test('real analysis list remains available without dog history consent and supports unlinked sessions',()=>{const {controller,store}=setup();assert.match(controller.screen('/jumolf/analyze?dog=a'),/Séance old/);assert.doesNotMatch(controller.screen('/jumolf/analyze?dog=a'),/Séance other/);store.setConsent('dog_history',false);assert.match(controller.screen('/jumolf/analyze'),/Séance other/);});
-test('public learning and Rex deep links preserve the explicitly requested authorized dog',()=>{
+test('learning deep links preserve the explicitly requested authorized dog',()=>{
  const {controller,store}=setup();
- for(const path of ['/jumolf/learn','/jumolf/rex']){
+ for(const path of ['/jumolf/learn']){
   controller.screen('/jumolf?dog=a');
   controller.screen(path+'?dog=b&journey=expert');
   assert.deepEqual(controller.navigationContext(),{dogId:'b',journey:'expert'});
@@ -49,4 +49,9 @@ test('authorized old learning deep links render preparation with the selected do
   assert.match(html,/value="b" selected/);
   assert.doesNotMatch(html,/data-academy|Académie|Votre parcours|journey=/);
  }
+});
+
+test('read-only Rex ignores personal selection parameters and leaves current dog and journey unchanged',()=>{
+ const {controller,store}=setup();controller.screen('/jumolf?dog=a&journey=coaching');const before=store.snapshot();
+ controller.screen('/jumolf/rex?dog=b&journey=expert');assert.deepEqual(controller.navigationContext(),{dogId:'a',journey:'coaching'});assert.deepEqual(store.snapshot(),before);
 });

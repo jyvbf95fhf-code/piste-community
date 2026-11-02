@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "e798d7be688e11e0",
+  "revision": "d05d1ff4f16bf2a2",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -9,6 +9,7 @@
     "/src/account-sync-screen.mjs",
     "/src/account-test-data-reset.mjs",
     "/src/admin-access.mjs",
+    "/src/admin-account-deletion.mjs",
     "/src/admin-audit.mjs",
     "/src/admin-controller.mjs",
     "/src/admin-deployments.mjs",
@@ -62,6 +63,7 @@
     "/src/coaching-invitations.mjs",
     "/src/coaching-live-exit.mjs",
     "/src/coaching-live-projection.mjs",
+    "/src/coaching-live-weather.mjs",
     "/src/coaching-pictograms.mjs",
     "/src/coaching-pose-handoff.mjs",
     "/src/coaching-preparation-screen.mjs",
@@ -91,6 +93,7 @@
     "/src/coaching-shared-cockpit.mjs",
     "/src/coaching-shared-debrief.mjs",
     "/src/coaching-shared-entry.mjs",
+    "/src/coaching-shared-review.mjs",
     "/src/coaching-shared-wizard.mjs",
     "/src/coaching-team.mjs",
     "/src/coaching-time.mjs",
@@ -136,6 +139,8 @@
     "/src/jumolf-adapter.mjs",
     "/src/jumolf-ai-engine.mjs",
     "/src/jumolf-analysis-engine.mjs",
+    "/src/jumolf-assistant-model.mjs",
+    "/src/jumolf-assistant-screen.mjs",
     "/src/jumolf-binome-model.mjs",
     "/src/jumolf-binome-screen.mjs",
     "/src/jumolf-comparison.mjs",
@@ -159,6 +164,7 @@
     "/src/jumolf-onboarding.mjs",
     "/src/jumolf-pattern-detector.mjs",
     "/src/jumolf-premium-screen.mjs",
+    "/src/jumolf-progress-overview.mjs",
     "/src/jumolf-progress-tracker.mjs",
     "/src/jumolf-provenance.mjs",
     "/src/jumolf-quality.mjs",
@@ -324,5 +330,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4162689
+  "bytes": 4212733
 }

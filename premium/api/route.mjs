@@ -10,6 +10,8 @@ export default async function handler(req,res){
  if(!token)return res.status(401).json({error:'Authentification requise'});
  const secret=process.env.SUPABASE_V2_SERVICE_ROLE_KEY;
  if(!secret||!process.env.GEOAPIFY_API_KEY){console.error('[routing] missing_server_configuration');return res.status(503).json({error:'Routage non configuré',code:'CONFIG_MISSING'});}
+ const requestAbort=new AbortController(),cancel=()=>requestAbort.abort();
+ req.on?.('aborted',cancel);res.on?.('close',cancel);
  try{
   const auth=createClient(PROJECT,PUBLIC_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
   const {data:{user},error}=await auth.auth.getUser(token);
@@ -39,10 +41,12 @@ export default async function handler(req,res){
   }};
   const gateway=createRoutingGateway({fetch:globalThis.fetch,geoapifyKey:process.env.GEOAPIFY_API_KEY,orsKey:process.env.ORS_API_KEY,quota});
   const body=typeof req.body==='string'?JSON.parse(req.body):req.body;
-  const result=await gateway.calculate(body?.a,body?.b);
+  const result=await gateway.calculate(body?.a,body?.b,{signal:requestAbort.signal});
   return res.status(200).json(result);
  }catch(error){
   console.error('[routing] request_failed',{category:error?.cause?.message?.includes('quota')?'quota':error?.message?.includes('quota')?'quota':'provider_or_backend',providerStatus:(error?.cause?.message||'').match(/HTTP (\d{3})/)?.[1]||null});
   return res.status(503).json({error:'Calcul indisponible ; les points restent conservés',code:'ROUTING_UNAVAILABLE'});
+ }finally{
+  req.off?.('aborted',cancel);res.off?.('close',cancel);
  }
 }
