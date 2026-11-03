@@ -1,8 +1,9 @@
+import {sharedCoachingEntry} from './coaching-shared-entry.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {GpsMapMarkup} from './coaching-gps-screen.mjs';
 const chooses=p=>p?.phase==='PREPARATION'&&p.role==='traceur'&&p.poseRecorder==='traceur'&&p.scenario==='connected_traceur';
 export function TraceurSourceActions(p,{busy=false}={}){
- if(!chooses(p))return '';
+ if(!chooses(p)||sharedCoachingEntry(p).reference)return '';
  return `${p.traceType!=='direct'?`<button type="button" class="button button-dark" data-remote="choose-direct" ${busy?'disabled':''}>Tracer directement</button>`:''}<button type="button" class="button button-dark" data-remote="choose-prepared" ${busy?'disabled':''}>Utiliser un tracé préparé</button>`;
 }
 export function TraceurPreparationSheet(p,tracks=[],{busy=false}={}){
