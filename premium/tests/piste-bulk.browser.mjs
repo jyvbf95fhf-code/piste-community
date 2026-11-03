@@ -50,7 +50,7 @@ try{
   await page.setViewportSize({width,height:844});
   await page.getByRole('button',{name:'Sélectionner',exact:true}).click();
   await page.getByRole('button',{name:'Tout sélectionner',exact:true}).click();
-  assert.equal(await page.locator('[data-piste-select]:checked').count(),2);if(width===390)await page.screenshot({path:'/tmp/piste-bulk-390-selected.png',fullPage:true});
+  assert.equal(await page.locator('[data-piste-select]:checked').count(),3);if(width===390)await page.screenshot({path:'/tmp/piste-bulk-390-selected.png',fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow '+width);
   await page.locator('.archive-filter-panel:not([open])>summary').click();await page.getByLabel('Type',{exact:true}).selectOption('coaching');await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();
   assert.equal(await page.locator('[data-piste-select]:checked').count(),1);

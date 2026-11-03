@@ -51,3 +51,26 @@
 .app-shell .tracks-page .archive-copy .search-outcome-badge{display:inline-flex;width:fit-content;padding:2px 6px;margin:0;border:0;border-radius:5px;background:#ffffff08;box-shadow:none}
 .tracks-page .archive-copy .search-outcome-badge>strong{font-size:10px;line-height:1.4}.tracks-page .archive-copy .search-outcome-badge>small{display:none}
 .app-shell .archive-refresh{min-height:32px;padding:5px 8px;font-size:11px;background:transparent;border:0;color:#91bdc8}
+/* Compact top and four collections; sync warnings keep their existing visibility. */
+.app-shell .tracks-page{gap:4px}
+.app-shell .tracks-page>.archive-heading{display:flex;align-items:center;gap:8px;min-height:44px;padding:0;margin:0}
+.app-shell .tracks-page>.archive-heading h1{flex:1;font-size:25px;line-height:1.15;margin:0;letter-spacing:-.035em}
+.app-shell .tracks-page .archive-heading>.back-link{display:grid;place-items:center;flex:0 0 32px;width:32px;min-height:44px;margin:0;font-size:23px;text-decoration:none}
+.app-shell .tracks-page .archive-heading>.archive-refresh{flex:0 0 40px;width:40px;height:44px;padding:0;margin:0;border:0;border-radius:12px;background:#142e3c;color:#a7dbe0;font-size:24px;cursor:pointer}
+.app-shell .tracks-page .piste-categories{display:grid;grid-template-columns:.85fr .65fr 1.4fr 1.1fr;margin:0 0 4px;overflow:visible;gap:5px}
+.app-shell .tracks-page .piste-categories a{min-width:0;min-height:40px;padding:7px 4px;font-size:10px;gap:4px}
+.archive-category-short{display:none}
+@media(max-width:430px){.archive-category-full{display:none}.archive-category-short{display:inline}.app-shell .tracks-page .piste-categories a{font-size:10px;gap:3px}.tracks-page .piste-categories b{font-size:9px;min-width:12px;padding:2px 3px}}
+.app-shell .tracks-page .archive-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;margin:0;padding:0}
+.tracks-page .archive-search-line{grid-column:1/-1}
+.tracks-page .archive-filter-panel{grid-column:1;margin:0}
+.tracks-page .archive-filter-panel[open]{grid-column:1/-1}
+.app-shell .tracks-page .archive-search>.piste-selection-tools{grid-column:2;align-self:start;max-width:230px;padding:0;margin:0;gap:2px}
+.app-shell .tracks-page .archive-search>.piste-selection-tools button{margin:0;min-height:36px;padding:5px 6px;font-size:11px}
+.tracks-page .archive-search>.piste-bulk-bar{grid-column:1/-1}
+.app-shell .tracks-page .tracks-subheading{margin:0 0 2px;gap:6px}.app-shell .tracks-page .tracks-subheading h2{font-size:14px}.tracks-page .tracks-subheading p{font-size:10px}
+.tracks-page .tracks-history>.archive-row{margin-bottom:0}
+.app-shell:has(.tracks-page)>.screen-header{padding-bottom:2px}
+.app-shell:has(.tracks-page)>main{padding-top:2px}
+.app-shell:has(.tracks-page)>.account-sync-status[data-sync-state="online"]{margin:0 16px;padding:0;border:0;border-radius:0;background:none;text-align:right;font-size:10px;line-height:1.25}
+.archive-load{margin:0 0 4px;font-size:11px;color:#9dc4ce}

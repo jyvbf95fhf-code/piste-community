@@ -119,13 +119,13 @@ test('Mes pistes separates operational sessions, training and prepared records i
  const library=createTrackLibrary(),rows=trackListView(library.list(),[]);
  const html=TrackListScreen(rows,sessions);
  assert.match(html,/OPS et Coaching/);assert.match(html,/href="\/sessions\/done-1">Ouvrir le dossier/);
- for(const category of ['operational','training','prepared'])assert.match(html,new RegExp(`href="/tracks\\?category=${category}&amp;`));
- assert.match(html,/data-piste-group="coaching"/);assert.doesNotMatch(html,/data-prepared-library|href="\/track-builder"/);
+ for(const category of ['all','operational','training','prepared'])assert.match(html,new RegExp(`href="/tracks\\?category=${category}&amp;`));
+ assert.match(html,/data-history-session="done-1"/);assert.doesNotMatch(html,/data-prepared-library|href="\/track-builder"/);
  const prepared=TrackListScreen(rows,sessions,{category:'prepared'});
  assert.match(prepared,/data-prepared-library/);assert.match(prepared,/Préparations et brouillons enregistrés/);assert.match(prepared,/data-track-id="/);
  assert.doesNotMatch(prepared,/data-history-session="done-1"/);
  const training=TrackListScreen(rows,sessions,{category:'training'});
- assert.match(training,/Séances d’entraînement/);assert.doesNotMatch(training,/data-history-session="done-1"|data-prepared-library/);
+ assert.match(training,/Entraînements/);assert.match(training,/data-history-session="done-1"/);assert.doesNotMatch(training,/data-prepared-library/);const ops=TrackListScreen(rows,sessions,{category:'operational'});assert.doesNotMatch(ops,/data-history-session="done-1"/);
 });
 
 test('Mes pistes keeps summary-only history without fabricating a replay',()=>{

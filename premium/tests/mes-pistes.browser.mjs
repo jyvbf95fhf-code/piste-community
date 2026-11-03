@@ -5,7 +5,7 @@ import {readFile} from 'node:fs/promises';import assert from 'node:assert/strict
 const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH||await chromiumBundle.executablePath(),args:chromiumBundle.args,headless:true});
 try{
  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],calls=[];
- let enabled=true; const sessionId='33333333-3333-4333-8333-333333333333'; let projection;
+ let enabled=true,holdHistory=false,releases=[]; const sessionId='33333333-3333-4333-8333-333333333333'; let projection;
  const user={id:'11111111-1111-4111-8111-111111111111',email:'qa@example.invalid',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{role:'admin'}};
  const encode=x=>Buffer.from(JSON.stringify(x)).toString('base64url');const token=encode({alg:'HS256',typ:'JWT'})+'.'+encode({sub:user.id,exp:Math.floor(Date.now()/1000)+3600})+'.'+encode('synthetic');
  const gps={provenance:'device-geolocation',phase:'finished',startedAt:100000,endedAt:160000,elapsedMs:60000,distanceM:125,segments:[[{latitude:48.2,longitude:7.3,accuracy:5},{latitude:48.201,longitude:7.301,accuracy:5}],[{latitude:48.21,longitude:7.31,accuracy:5}]]};
@@ -23,7 +23,7 @@ try{
   if(path==='/auth/v1/token')json={access_token:token,refresh_token:'synthetic',expires_in:3600,token_type:'bearer',user};
   if(path==='/auth/v1/signup')json={...user,id:'22222222-2222-4222-8222-222222222222',identities:[]};
   if(path==='/auth/v1/recover'){status=429;json={code:'over_email_send_rate_limit',msg:'email rate limit exceeded'};}
-  if(path==='/functions/v1/piste-history'){const data=req.postDataJSON();if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json={sessions:data.domain==='coaching'?[projection]:[],hidden:[],records:[],cursor:null};}
+  if(path==='/functions/v1/piste-history'){if(holdHistory)await new Promise(resolve=>releases.push(resolve));const data=req.postDataJSON();if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json={sessions:data.domain==='coaching'?[projection]:[],hidden:[],records:[],cursor:null};}
   if(path==='/functions/v1/coaching'){const data=req.postDataJSON();assert.ok(['profile','list','invitations','notifications','read','coaching-inbox','community-friendship-snapshot'].includes(data.operation),'unexpected operation '+data.operation);if(!enabled){status=403;json={error:'Compte non autorisé pour ce pilote.'};}else json=data.operation==='community-friendship-snapshot'?{version:1,ownerId:user.id,contacts:[],received:[],sent:[],relations:[]}:data.operation==='coaching-inbox'?{invitations:[],notifications:[]}:data.operation==='profile'?{id:user.id,name:'Compte réel',qa:false}:data.operation==='list'?{sessions:[projection]}:{projection};}
   await route.fulfill({status,headers,json});
  });
@@ -32,7 +32,7 @@ try{
  await page.getByLabel('Email',{exact:true}).fill('qa@example.invalid');await page.getByLabel('Mot de passe',{exact:true}).fill('synthetic-existing');
  await page.getByRole('button',{name:'Se connecter',exact:true}).click();
  await page.getByText('Prêts pour le terrain ?').waitFor();
- await page.goto('https://piste.test/tracks');
+ holdHistory=true;await page.goto('https://piste.test/tracks');await page.getByText('Chargement du catalogue complet…',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Sélectionner',exact:true}).isDisabled(),true,'bulk stays disabled before canonical catalogue is ready');holdHistory=false;for(const resolve of releases.splice(0))resolve();
  await page.locator('[data-history-session="'+sessionId+'"]').waitFor();
  assert.equal(await page.locator('[data-history-session^="demo:"]').count(),0);
  assert.equal(await page.getByRole('link',{name:'Ouvrir le créateur de tracé',exact:true}).count(),0);
@@ -56,7 +56,8 @@ try{
  await page.goto('https://piste.test/sessions/ops-browser?tab=report');
  await page.getByRole('heading',{name:'Rapport de session',exact:true}).waitFor();await page.getByText('Début du pistage',{exact:true}).waitFor();assert.equal(await page.locator('[data-operational-action]').count(),0);
  await page.goto('https://piste.test/tracks?category=training');
- await page.getByText('Aucune source de séances d’entraînement n’est actuellement raccordée en V2. Les sessions Coaching restent dans Pistes opérationnelles.').waitFor();
+ await page.locator('[data-history-session="'+sessionId+'"]').waitFor();assert.equal(await page.locator('[data-history-session="ops-browser"]').count(),0);
+ await page.goto('https://piste.test/tracks?category=operational');await page.locator('[data-history-session="ops-browser"]').waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),0);await page.goto('https://piste.test/tracks?category=all');await page.locator('[data-history-session="'+sessionId+'"]').waitFor();assert.equal(await page.locator('[data-history-session="ops-browser"]').count(),1);
  // Active sessions keep their canonical cockpit and cannot gain dossier geometry.
  projection={...projection,phase:'SEARCH_RUNNING',pose:null,search:null};
  await page.goto('https://piste.test/tracks');await page.locator('[data-history-session="'+sessionId+'"] [data-archive-menu]>summary').click();await page.getByRole('link',{name:'Ouvrir le cockpit',exact:true}).waitFor();

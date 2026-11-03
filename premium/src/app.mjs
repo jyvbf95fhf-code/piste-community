@@ -105,7 +105,7 @@ import {createCoachingSessionStorage,isRecoverableCoachingSession} from './coach
 import {sessionListView,sessionDetailView,sessionReplayView,trackListView,trackDetailView,completedSessionHistoryView,homeActiveSessionView,resolveConsultationRoute} from './session-views.mjs';
 import {SessionListScreen,SessionListResults,SessionDetailScreen} from './sessions-screen.mjs';
 import {SessionReplayScreen} from './session-replay-screen.mjs';
-import {pisteSessionRows,pistePreparedRows,TrackListScreen,TrackDetailScreen} from './tracks-screen.mjs';
+import {pisteSessionRows,pistePreparedRows,pisteVisibleRows,normalizePisteOptions,TrackListScreen,TrackDetailScreen} from './tracks-screen.mjs';
 import { createOperationalMissionStore } from './operational-missions.mjs';
 import { operationalMissionView, operationalReplayView, resolveOperationalRoute } from './operational-views.mjs';
 import { OperationalScreen, OperationalSessionDetailScreen, OperationalTerrainScreen } from './operational-screen.mjs';
@@ -1164,8 +1164,8 @@ function pisteCloudMission(id){const r=pisteCloudRecords.find(r=>r.kind==='ops'&
 function pisteTrackItem(id){const local=trackLibrary.list().find(t=>t.id===id);if(local){const cloud=pisteCloudRecords.find(r=>r.kind==='track'&&'track-cloud-'+r.id===id);return cloud?{...local,cloudId:cloud.id,cloudRevision:cloud.revision}:local;}const r=pisteCloudRecords.find(r=>r.kind==='track'&&'track-cloud-'+r.id===id);return r?{...r.payload,id,ownerId:'self',cloudOnly:true,cloudId:r.id,cloudRevision:r.revision,createdAt:r.payload.createdAt||null}:null;}
 function pisteCatalogue(){
  const owner=currentUser?.user_id;if(pisteOwner!==owner){pisteOwner=owner;pisteMode=false;pisteResults=[];pisteFailed=[];if(pisteHiddenOwner!==owner){pisteHidden=new Set();pisteCanonical.clear();pisteCloudRecords=[];pisteHiddenOwner=owner;}pisteSelection.reconcile(owner,[]);}
- const p=new URLSearchParams(location.search),category=p.get('category')||'operational';
- const options={category,status:p.get('status')||'Toutes',source:p.get('source')||'all',query:p.get('q')||'',dogId:p.get('dogId')||'',sort:p.get('sort')||'newest',returnHref:location.pathname+location.search};
+ const p=new URLSearchParams(location.search),category=['operational','training','prepared'].includes(p.get('category'))?p.get('category'):'all';
+ const options=normalizePisteOptions({category,status:p.get('status')||'Toutes',source:category==='all'?(p.get('source')||'all'):'all',query:p.get('q')||'',dogId:p.get('dogId')||'',sort:p.get('sort')||'newest',returnHref:location.pathname+location.search});
  const dogs=accountDogs(),items=trackLibrary.list().filter(t=>auth.assurance!=='supabase-auth'||t.ownerId==='self').map(t=>({...preparedTrackForConsultation(t,{ownerId:owner,consents:jumolfStore.snapshot().consents}),dogName:dogs.find(d=>d.id===t.dogId)?.name||''}));
  const extraTracks=pisteCloudRecords.filter(r=>r.kind==='track'&&!items.some(t=>t.id==='track-cloud-'+r.id||t.cloudId===r.id||pisteCanonical.get('local-track:'+t.id)?.id===r.id)).map(r=>pisteTrackItem('track-cloud-'+r.id));items.push(...extraTracks);
  const decorate=r=>{const localKey=r.libraryId?'local-track:'+r.libraryId:r.kind==='operational'?'local-ops:'+r.id:'local-coaching:'+r.id,m=pisteCanonical.get(localKey);return {...r,selectionKey:m?m.kind+':'+m.id:r.libraryId?(pisteTrackItem(r.libraryId)?.cloudId?'track:'+pisteTrackItem(r.libraryId).cloudId:'local-track:'+r.libraryId):r.source==='shared'?'coaching:'+r.id:r.kind==='operational'?((operationalStore.get(r.id)||pisteCloudMission(r.id))?.cloudId?'ops:'+(operationalStore.get(r.id)||pisteCloudMission(r.id)).cloudId:'local-ops:'+r.id):'local-coaching:'+r.id};};
@@ -1173,12 +1173,12 @@ function pisteCatalogue(){
  const unique=rows=>[...new Map(rows.map(r=>[r.selectionKey,r])).values()];
  const tracks=unique(trackListView(items,sessionCatalog.list(),sharedIndex?.list()||[]).map(decorate).filter(visible));
  const sessions=classifyPisteSessions(unique(sessionListView(sessionCatalog,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:[...operationalStore.list(),...pisteCloudRecords.filter(r=>r.kind==='ops'&&!operationalStore.list().some(m=>m.cloudId===r.id||m.id===r.payload.id||pisteCanonical.get('local-ops:'+m.id)?.id===r.id)).map(r=>pisteCloudMission('cloud-'+r.id))]}).map(decorate).filter(visible)),new Set((sharedIndex?.list()||[]).filter(p=>sharedIndex.training(p.id)).map(p=>p.id)));
- const rows=category==='prepared'?pistePreparedRows(tracks,options):pisteSessionRows(sessions,options);
+ const rows=pisteVisibleRows(tracks,sessions,options);
  pisteSelection.reconcile(owner+':'+category,rows);
  const present=r=>archivePresentation(r,{mission:r.kind==='operational'?(operationalStore.get(r.id)||pisteCloudMission(r.id)):undefined,projection:r.source==='shared'?sharedIndex?.get(r.id):undefined,record:r.source==='shared'?undefined:sessionCatalog.get(r.id)});
  return {tracks:tracks.map(r=>archivePresentation(r)),sessions:sessions.map(outcomeForRow).map(present),rows,options};
 }
-function renderTracks(){refreshSharedCatalog();const c=pisteCatalogue();return `<p role="status">${escapeHTML(sharedIndex?.error()||(auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id?'Chargement du catalogue complet…':''))}</p><button type="button" class="button button-dark archive-refresh" data-refresh-shared-sessions ${pisteBusy?'disabled':''}>↻ Actualiser</button>`+TrackListScreen(c.tracks,c.sessions,{...c.options,selectionMode:pisteMode,selectedIds:pisteSelection.ids(),busy:pisteBusy||auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id,results:pisteResultsMarkup()});}
+function renderTracks(){refreshSharedCatalog();const c=pisteCatalogue(),notice=sharedIndex?.error()||(auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id?'Chargement du catalogue complet…':'');return (notice?`<p class="archive-load" role="status">${escapeHTML(notice)}</p>`:'')+TrackListScreen(c.tracks,c.sessions,{...c.options,selectedIds:pisteSelection.ids(),selectionMode:pisteMode,busy:pisteBusy||auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id,results:pisteResultsMarkup()});}
 function pisteResultsMarkup(){
  if(!pisteResults.length)return '';
  const success=pisteResults.filter(r=>['hidden','deleted','already-deleted'].includes(r.status)).length,refused=pisteResults.filter(r=>r.status==='refused').length,failed=pisteResults.filter(r=>r.status==='failed').length;

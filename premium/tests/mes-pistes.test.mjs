@@ -4,18 +4,18 @@ import * as tracks from '../src/tracks-screen.mjs';
 const rows=[{id:'o',kind:'operational',title:'Mission Nox',status:'En cours',href:'/operational/missions/o'},{id:'c',kind:'coaching',source:'shared',title:'Coaching Nox',status:'Archivée',href:'/coaching/session?session=c'},{id:'t',kind:'training',title:'Entraînement forêt',status:'Terminée',href:'/sessions/t'}];
 test('real sessions are classified by explicit kind and filtered without changing cockpit links',()=>{
  assert.equal(typeof tracks.pisteSessionRows,'function');
- assert.deepEqual(tracks.pisteSessionRows(rows).map(r=>r.id),['o','c']);
- assert.deepEqual(tracks.pisteSessionRows(rows,{category:'training'}).map(r=>r.id),['t']);
+ assert.deepEqual(tracks.pisteSessionRows(rows).map(r=>r.id),['o','c','t']);
+ assert.deepEqual(tracks.pisteSessionRows(rows,{category:'training'}).map(r=>r.id),['c','t']);
  assert.deepEqual(tracks.pisteSessionRows(rows,{status:'Archivées',query:'nox'}).map(r=>r.id),['c']);
  assert.deepEqual(tracks.pisteSessionRows(rows,{source:'operational'}).map(r=>r.href),['/operational/missions/o']);
- assert.deepEqual(tracks.pisteSessionRows(rows,{status:'Terminées'}),[]);
+ assert.deepEqual(tracks.pisteSessionRows(rows,{status:'Terminées'}).map(r=>r.id),['t']);
 });
-test('Mes pistes has two categories, a GET search and no creator shortcut',()=>{
+test('Mes pistes has four categories, a GET search and no creator shortcut',()=>{
  const html=tracks.TrackListScreen([],rows,{category:'training',query:'<Nox>'});
- assert.match(html,/Pistes opérationnelles/);assert.match(html,/Entraînements/);
+ assert.match(html,/Opérationnelles/);assert.match(html,/category=all/);assert.match(html,/Entraînements/);
  assert.match(html,/method="get"/);assert.match(html,/&lt;Nox&gt;/);
  assert.doesNotMatch(html,/href="\/track-builder"|MOCK EN MÉMOIRE/);
- assert.match(html,/source de séances d’entraînement/);
+ const grouped=tracks.TrackListScreen([],rows,{category:'training'});assert.match(grouped,/data-history-session="c"/);assert.match(grouped,/data-history-session="t"/);assert.doesNotMatch(grouped,/data-history-session="o"/);
 });
 const dossier=await import('../src/session-dossier.mjs').catch(()=>({}));
 const gps={provenance:'device-geolocation',distanceM:123,elapsedMs:30000,startedAt:100000,endedAt:130000,segments:[[{latitude:48,longitude:7},{latitude:48.001,longitude:7.001}]]};
