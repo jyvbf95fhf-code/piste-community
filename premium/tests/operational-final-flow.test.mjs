@@ -38,9 +38,9 @@ test('replay and session summary show actual distance and precise active time',(
 });
 test('recorded reader fits the whole real route and preserves cyan segments, D/A and event position',()=>{
  const f=fixture();f.store.complete('ops');const v=operationalReplayView(f.store.get('ops')),html=OperationalMap(v);
- assert.match(html,/data-real-map-reader/);assert.match(html,/data-gps-kind="search"/);
+ assert.match(html,/data-real-map-reader/);assert.match(html,/data-gps-kind="ops"/);assert.match(html,/data-gps-corridor-basis="ops-recorded-path"/);
  let bounds;const paths=[],markers=[],events=[];
- const root={dataset:{gpsKind:'search'},matches:s=>s==='[data-real-map-reader]',querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){}};
+ const root={dataset:{gpsKind:'ops'},matches:s=>s==='[data-real-map-reader]',querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){}};
  const element={dataset:{gpsPose:JSON.stringify(v.gpsTrack),gpsEvents:JSON.stringify(v.events)},closest:s=>s==='[data-real-map-reader]'?root:null};
  const map={setView(){return this;},fitBounds:p=>bounds=p,remove(){},getZoom:()=>17};
  const layer=()=>({addTo(){return this;},on(){},clearLayers(){}});
