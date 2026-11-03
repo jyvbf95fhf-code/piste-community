@@ -11,6 +11,9 @@ try{const context=await browser.newContext({viewport:{width:390,height:844}}),pa
  });
  await page.goto(origin);await page.waitForFunction(()=>window.ready);await page.screenshot({path:'/tmp/archives-before.png',fullPage:true});await page.getByText('Lieu détecté au départ · Châtenois',{exact:true}).first().waitFor().catch(async e=>{console.log(JSON.stringify({errors,reverse,text:await page.locator('body').innerText()}));throw e;});
  await page.waitForFunction(()=>document.querySelectorAll('[data-archive-map] .leaflet-overlay-pane path').length>0);assert.ok(reverse>0);
+ // Healthy sync transitions must not move the list; warnings remain readable.
+ const positions=await page.evaluate(()=>{const shell=document.querySelector('.app-shell'),main=document.querySelector('#sample'),status=document.createElement('a');status.className='account-sync-status';shell.insertBefore(status,main);const positions={};for(const state of ['online','syncing']){status.dataset.syncState=state;status.textContent=state==='online'?'Compte à jour':'Enregistrement sur votre compte…';positions[state]=main.getBoundingClientRect().top;}status.remove();return positions;});
+ assert.equal(positions.online,positions.syncing,'sync heartbeat must not shift the archive list');
  const search=page.locator('.archive-search'),panel=page.locator('.archive-filter-panel');assert.equal(await panel.getAttribute('open'),null);assert.ok((await page.locator('.archive-search-line').boundingBox()).height<55);
  assert.equal(await page.locator('[data-piste-select="s0"]').isChecked(),true);
  await panel.locator('summary').click();await page.getByLabel('Chien',{exact:true}).selectOption('b');await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();assert.equal(await page.evaluate(()=>submitted.status),'Archivées');assert.equal(await page.evaluate(()=>submitted.dogId),'b');await panel.locator('summary').click();

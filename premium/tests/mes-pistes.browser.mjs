@@ -34,6 +34,20 @@ try{
  await page.getByText('Prêts pour le terrain ?').waitFor();
  holdHistory=true;await page.goto('https://piste.test/tracks');await page.getByText('Chargement du catalogue complet…',{exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Sélectionner',exact:true}).isDisabled(),true,'bulk stays disabled before canonical catalogue is ready');holdHistory=false;for(const resolve of releases.splice(0))resolve();
  await page.locator('[data-history-session="'+sessionId+'"]').waitFor();
+ // A background refresh must preserve nodes, open filters and maps when data is unchanged.
+ await page.waitForFunction(()=>!document.querySelector('[data-piste-bulk="mode"]')?.disabled);
+ await page.locator('.archive-filter-panel>summary').click();
+ const refreshComplete=page.waitForResponse(r=>r.url().endsWith('/functions/v1/piste-history')&&r.request().postDataJSON()?.domain==='track');
+ await page.evaluate(()=>{window.archiveNode=document.querySelector('.tracks-page');window.archiveSnapshot=window.__PISTE_PROTOTYPE__;window.dispatchEvent(new Event('focus'));});
+ await page.waitForFunction(()=>window.__PISTE_PROTOTYPE__!==window.archiveSnapshot);
+ await refreshComplete;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+ assert.equal(await page.evaluate(()=>window.archiveNode===document.querySelector('.tracks-page')),true,'unchanged background refresh preserves archive DOM');
+ assert.equal(await page.locator('.archive-filter-panel').getAttribute('open'),'');
+ await page.locator('.archive-filter-panel>summary').click();
+ projection={...projection,version:projection.version+1,dog:'Nox actualisé'};
+ await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+ await page.locator('[data-history-session="'+sessionId+'"] .archive-copy').filter({hasText:'Nox actualisé'}).waitFor();
+ assert.equal(await page.evaluate(()=>window.archiveNode===document.querySelector('.tracks-page')),false,'changed server data updates archives');
  assert.equal(await page.locator('[data-history-session^="demo:"]').count(),0);
  assert.equal(await page.getByRole('link',{name:'Ouvrir le créateur de tracé',exact:true}).count(),0);
  await page.getByLabel('Rechercher',{exact:true}).fill('coaching');

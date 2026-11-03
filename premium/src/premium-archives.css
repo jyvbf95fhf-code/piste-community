@@ -26,7 +26,7 @@
 .tracks-page [data-piste-group]>h3{font-size:11px;letter-spacing:.09em;color:#c9b58e;margin:16px 2px 8px}
 .app-shell .tracks-page .archive-row{position:relative;display:block;padding:9px;margin:0 0 8px;border:1px solid #a1c4d328;border-left:2px solid var(--archive-accent,#86d6db);border-radius:15px;background:linear-gradient(115deg,#102a36,#0b202c);box-shadow:0 4px 14px #0002;min-width:0}
 .archive-row.archive-ops{--archive-accent:#88d6dc}.archive-row.archive-coaching{--archive-accent:#c6b1e3}.archive-row.archive-prepared{--archive-accent:#e2c38d}
-.tracks-page .archive-main{display:flex;align-items:center;gap:11px;min-width:0;padding-right:27px;text-decoration:none;color:inherit}
+.tracks-page .archive-main{display:flex;flex-direction:row;align-items:center;gap:11px;min-width:0;padding-right:27px;text-decoration:none;color:inherit}
 .tracks-page .archive-thumbnail{display:block;position:relative;flex:0 0 76px;width:76px;height:86px;border-radius:10px;overflow:hidden;background:#173a42;pointer-events:none;border:1px solid #b4d6c82b;z-index:0}
 .tracks-page .archive-thumbnail-empty{display:grid;place-items:center;background:linear-gradient(135deg,#193442,#102832);color:#83a8b3;font-size:36px}
 .tracks-page .archive-copy{display:grid;gap:5px;min-width:0;flex:1;overflow:hidden}
@@ -72,5 +72,5 @@
 .tracks-page .tracks-history>.archive-row{margin-bottom:0}
 .app-shell:has(.tracks-page)>.screen-header{padding-bottom:2px}
 .app-shell:has(.tracks-page)>main{padding-top:2px}
-.app-shell:has(.tracks-page)>.account-sync-status[data-sync-state="online"]{margin:0 16px;padding:0;border:0;border-radius:0;background:none;text-align:right;font-size:10px;line-height:1.25}
+.app-shell:has(.tracks-page)>.account-sync-status:is([data-sync-state="online"],[data-sync-state="syncing"]){margin:0 16px;padding:0;border:0;border-radius:0;background:none;text-align:right;font-size:10px;line-height:1.25}
 .archive-load{margin:0 0 4px;font-size:11px;color:#9dc4ce}
