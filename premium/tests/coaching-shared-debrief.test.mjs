@@ -23,3 +23,20 @@ test('a declared shared route without device provenance cannot be drawn as recor
  const html=api.SharedCoachingDebrief({...p,mode:'full_blind',pose,search},{tab:'map'});
  assert.match(html,/Fond de carte de contexte uniquement/);assert.doesNotMatch(html,/48.123987|48.223987|data-gps-reference=/);
 });
+
+const historicalAt=Date.parse('2026-11-03T07:00:00Z');
+const historicalPose={...p.pose,segments:[[{latitude:48.123987,longitude:7,timestamp:historicalAt-60000},{latitude:48.124987,longitude:7,timestamp:historicalAt}]]};
+const historicalWeather={source:'Open-Meteo',provenance:'estimated',capturedAt:historicalAt,observedAt:historicalAt,fetchedAt:historicalAt,wind_speed_kmh:9,wind_direction_deg:270};
+test('shared debrief describes available archived wind without false unavailable labels',()=>{
+ const session={...p,pose:historicalPose,weatherHistory:[{kind:'pose',weather:historicalWeather}]};
+ const html=api.SharedCoachingDebrief(session,{tab:'map'});
+ assert.match(html,/Couloir historique estimé/);assert.doesNotMatch(html,/Météo historique indisponible|non disponible pour cette séance|n’est pas archivé|aucun relevé de vent/);
+ assert.match(html,/data-corridor-toggle(?![^>]*disabled)[^>]*>Masquer le couloir/);
+ const science=api.SharedCoachingDebrief(session,{tab:'science'});assert.doesNotMatch(science,/Conditions météo non conservées|Couloir olfactif indisponible/);
+});
+test('missing, stale or incomplete historical wind never claims an available corridor',()=>{
+ for(const weatherHistory of [[],[{weather:{...historicalWeather,observedAt:historicalAt-86400000}}],[{weather:{...historicalWeather,wind_direction_deg:undefined}}]]){
+  const html=api.SharedCoachingDebrief({...p,pose:historicalPose,weatherHistory},{tab:'map'});
+  assert.match(html,/Météo historique indisponible/);assert.match(html,/data-corridor-toggle[^>]*disabled/);
+ }
+});

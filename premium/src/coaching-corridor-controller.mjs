@@ -25,14 +25,16 @@ export function createGpsCorridorController({root,map,L,getSource,weatherService
   if(result.state==='available')for(const feature of result.features){
    for(const [boundary,opacity] of [['outerBoundary',.09],['innerBoundary',.18]])L.polygon(feature[boundary].map(p=>[p.lat,p.lon]),{...(pane?{pane}:{}),color:'#bca7ef',weight:1,opacity:.45,fillColor:'#bca7ef',fillOpacity:opacity,interactive:false}).addTo(layer);
   }
-  const toggle=root.querySelector?.('[data-corridor-toggle]');if(toggle){toggle.disabled=!allowed()||historicalReview()&&!archived;toggle.setAttribute('aria-pressed',String(enabled&&result.state==='available'));toggle.textContent=historicalReview()&&!archived?'Météo historique indisponible':enabled?'Masquer le couloir':'Afficher le couloir';}
+  const historicalAvailable=historicalReview()&&buildGpsCorridor({pose:source,weather:archived,allowed:allowed(),enabled:true,now:Number.isFinite(reviewAt)?reviewAt+1000:clock()}).state==='available';
+  const toggle=root.querySelector?.('[data-corridor-toggle]');if(toggle){toggle.disabled=!allowed()||historicalReview()&&!historicalAvailable;toggle.setAttribute('aria-pressed',String(enabled&&result.state==='available'));toggle.textContent=historicalReview()&&!historicalAvailable?'Météo historique indisponible':enabled?'Masquer le couloir':'Afficher le couloir';}
   const summary=root.querySelector?.('[data-corridor-summary]');if(summary){summary.setAttribute('aria-label',result.state==='available'?'Couloir olfactif estimé · actif':'Couloir olfactif estimé');summary.dataset.active=String(result.state==='available');}
   const current=historicalReview()?archived:manual||automatic;
   if(result.state==='available'){
    const confidence={high:'élevée',medium:'moyenne',low:'faible'}[result.confidence];
    const hour=Number.isFinite(current.observedAt)?new Date(current.observedAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'heure inconnue';
    text(`Couloir ${historicalReview()?'historique estimé':'estimé'} · confiance ${confidence}. ${current.source==='Correction manuelle'?'Correction manuelle':'Météo modélisée · Open-Meteo'} · ${hour}${result.weather.stale?' · donnée ancienne':''}. Vent venant de ${current.wind_direction_deg}° · ${current.wind_speed_kmh} km/h.${ops?' Calcul autour du trajet GPS du binôme ; trajectoire de la personne recherchée inconnue.':''}`);
-  }else text(historicalReview()?'Couloir historique indisponible : aucun relevé de vent daté de la séance n’est archivé. La pose GPS reste consultable.':result.state==='weather-unavailable'&&!automaticAuthorized?'Météo automatique inactive · renseignez les conditions manuellement.':labels[result.state]);
+  }else if(historicalReview()){text(!allowed()?labels.hidden:!enabled?'Couloir historique masqué.':archived?'Couloir historique indisponible : le relevé archivé ne contient pas de vent exploitable pour cette pose.':'Couloir historique indisponible : aucun relevé de vent daté de la séance n’est archivé. La pose GPS reste consultable.');}
+  else text(result.state==='weather-unavailable'&&!automaticAuthorized?'Météo automatique inactive · renseignez les conditions manuellement.':labels[result.state]);
   const f=form();if(f){f.hidden=!allowed()||historicalReview();if(!f.contains?.(root.ownerDocument?.activeElement))for(const input of f.querySelectorAll?.('[data-corridor-field]')||[])input.value=current?.[input.name]??'';}
   return result;
  }
