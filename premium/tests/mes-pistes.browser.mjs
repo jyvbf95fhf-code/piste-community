@@ -37,10 +37,10 @@ try{
  assert.equal(await page.locator('[data-history-session^="demo:"]').count(),0);
  assert.equal(await page.getByRole('link',{name:'Ouvrir le créateur de tracé',exact:true}).count(),0);
  await page.getByLabel('Rechercher',{exact:true}).fill('coaching');
- await page.getByLabel('Statut',{exact:true}).selectOption('Archivées');
+ await page.locator('.archive-filter-panel:not([open])>summary').click();await page.getByLabel('Statut',{exact:true}).selectOption('Archivées');
  await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();
  await page.waitForURL('**/tracks?**status=Archiv%C3%A9es**');
- await page.locator('[data-history-session="'+sessionId+'"]').getByRole('link',{name:'Ouvrir le dossier',exact:true}).click();
+ await page.locator('[data-history-session="'+sessionId+'"] [data-archive-menu]>summary').click();await page.locator('[data-history-session="'+sessionId+'"]').getByRole('link',{name:'Ouvrir le dossier',exact:true}).click();
  await page.locator('[data-session-dossier="'+sessionId+'"]').waitFor();
  for(const label of ['Carte','Statistiques','Chronologie','Débrief','Replay','Rapport PDF']){
   await page.locator('.dossier-tabs').getByRole('link',{name:label,exact:true}).click();
@@ -59,7 +59,7 @@ try{
  await page.getByText('Aucune source de séances d’entraînement n’est actuellement raccordée en V2. Les sessions Coaching restent dans Pistes opérationnelles.').waitFor();
  // Active sessions keep their canonical cockpit and cannot gain dossier geometry.
  projection={...projection,phase:'SEARCH_RUNNING',pose:null,search:null};
- await page.goto('https://piste.test/tracks');await page.getByRole('link',{name:'Ouvrir le cockpit',exact:true}).waitFor();
+ await page.goto('https://piste.test/tracks');await page.locator('[data-history-session="'+sessionId+'"] [data-archive-menu]>summary').click();await page.getByRole('link',{name:'Ouvrir le cockpit',exact:true}).waitFor();
  await page.goto('https://piste.test/sessions/'+sessionId+'?tab=report');await page.getByRole('heading',{name:'Dossier indisponible',exact:true}).waitFor();
  assert.equal(await page.locator('[data-dossier-print],[data-gps-map]').count(),0);
  enabled=false;const denied=page.waitForResponse(r=>r.url().includes('/functions/v1/')&&r.status()===403);await page.goto('https://piste.test/sessions/'+sessionId);await denied;assert.equal(await page.locator('[data-session-dossier]').count(),0);

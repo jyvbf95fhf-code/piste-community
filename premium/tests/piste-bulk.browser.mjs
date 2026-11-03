@@ -52,13 +52,13 @@ try{
   await page.getByRole('button',{name:'Tout sélectionner',exact:true}).click();
   assert.equal(await page.locator('[data-piste-select]:checked').count(),2);if(width===390)await page.screenshot({path:'/tmp/piste-bulk-390-selected.png',fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow '+width);
-  await page.getByLabel('Type',{exact:true}).selectOption('coaching');await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();
+  await page.locator('.archive-filter-panel:not([open])>summary').click();await page.getByLabel('Type',{exact:true}).selectOption('coaching');await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();
   assert.equal(await page.locator('[data-piste-select]:checked').count(),1);
   await page.locator('[data-piste-bulk="confirm"]').click();await page.locator('dialog').waitFor();
   assert.ok(await page.evaluate(()=>document.querySelector('dialog').getBoundingClientRect().width<=innerWidth),'dialog '+width);
   await page.getByRole('button',{name:'Annuler',exact:true}).click();
   await page.getByRole('button',{name:'Terminer la sélection',exact:true}).click();
-  await page.getByRole('link',{name:'Effacer les filtres',exact:true}).click();
+  await page.locator('.archive-filter-panel:not([open])>summary').click();await page.getByRole('link',{name:'Effacer les filtres',exact:true}).click();
  }
  // A missing server receipt must never be treated as a confirmed permanent deletion.
  omitReceipt=true;await page.goto('https://piste-community-v2-premium.vercel.app/tracks');await page.getByRole('button',{name:'Sélectionner',exact:true}).click();await page.locator('[data-history-session="'+sessionId+'"]').getByRole('checkbox').check();await page.locator('[data-piste-bulk="confirm"]').click();await page.locator('dialog input[value="delete"]').check();await page.locator('dialog [data-confirm]').click();await page.getByText('0 réussi(s) · 0 refusé(s) · 1 échoué(s)',{exact:true}).waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),1);assert.equal(deleted,false);omitReceipt='network';await page.locator('[data-piste-bulk="force"]').click();await page.locator('dialog [data-confirm]').click();await page.getByText('0 réussi(s) · 0 refusé(s) · 1 échoué(s)',{exact:true}).waitFor();assert.equal(await page.locator('[data-history-session="'+sessionId+'"]').count(),1);omitReceipt=false;

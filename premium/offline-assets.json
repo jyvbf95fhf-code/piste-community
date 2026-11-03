@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "cec0149acea55ddb",
+  "revision": "cd3414acdaea1453",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -25,6 +25,8 @@
     "/src/admin-shell.mjs",
     "/src/admin-store.mjs",
     "/src/app.mjs",
+    "/src/archive-presentation.mjs",
+    "/src/archive-thumbnails.mjs",
     "/src/assets/brand/icons/icon-180.png",
     "/src/assets/brand/icons/icon-192.png",
     "/src/assets/brand/icons/icon-32.png",
@@ -234,6 +236,7 @@
     "/src/piste-account-auth.mjs",
     "/src/piste-bulk.mjs",
     "/src/piste-history-client.mjs",
+    "/src/premium-archives.css",
     "/src/premium-feature-catalog.mjs",
     "/src/premium-pictograms.mjs",
     "/src/premium-showcase.css",
@@ -291,6 +294,7 @@
     "/src/session-views.mjs",
     "/src/session-weather-history.mjs",
     "/src/sessions-screen.mjs",
+    "/src/start-place.mjs",
     "/src/styles.css",
     "/src/theme.mjs",
     "/src/tokens.css",
@@ -330,5 +334,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4215553
+  "bytes": 4233102
 }
