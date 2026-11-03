@@ -1,3 +1,4 @@
+import {createArchiveThumbnailCache} from './archive-thumbnail-cache.mjs';
 // Explicitly scoped, device-local maintenance. This module never contacts a server.
 export const ACCOUNT_TEST_RESET_TARGET=Object.freeze({ownerId:'eeca6271-b459-443b-8c2f-46ce20215c8a',email:'seb.lobstein@gmail.com'});
 const issued=new WeakMap();
@@ -63,7 +64,7 @@ export async function inventoryAccountTestData(options={}){
 }
 /** Requires an inventory from this page and an explicitly verified backup export. */
 export async function resetAccountTestData(options={}){
- let removedLocalKeys=0,removedJournalRecords=0,removedJournalCommands=0,removedQueueEntries=0;
+ let removedLocalKeys=0,removedJournalRecords=0,removedJournalCommands=0,removedQueueEntries=0,removedCachedThumbnails=0;
  try{const {inventory}=options,receipt=issued.get(inventory);if(!verified(options)||(options.backupVerified!==true&&options.discardConfirmed!==true)||!receipt||inventory.ok!==true)throw Error('Compte ou sauvegarde non vérifié.');
  if(inventory.backupJson!==receipt.backupJson||inventory.checksum!==receipt.checksum||await digest(inventory.backupJson)!==receipt.checksum)throw Error('Sauvegarde modifiée.');
  if(options.storage&&options.storage!==receipt.storage||options.indexedDB!==undefined&&options.indexedDB!==receipt.indexedDB)throw Error('Stockage différent de l’inventaire.');
@@ -71,6 +72,7 @@ export async function resetAccountTestData(options={}){
  await writeJournal(receipt.indexedDB,options.ownerId,receipt.journal,receipt.plan.next);removedJournalRecords=receipt.plan.records;removedJournalCommands=receipt.plan.commands;
  await removeQueues(receipt.indexedDB,options.ownerId,receipt.queues);removedQueueEntries=receipt.queues.length;
  for(const {key,raw} of receipt.localStorage.eligible){if(receipt.storage.getItem(key)!==raw)throw Error('Données modifiées pendant la réinitialisation.');receipt.storage.removeItem(key);if(receipt.storage.getItem(key)!==null)throw Error('Suppression locale refusée.');removedLocalKeys++;}
- issued.delete(inventory);return {ok:true,removedLocalKeys,removedJournalRecords,removedJournalCommands,removedQueueEntries};
- }catch(error){return {ok:false,error:error.message,removedLocalKeys,removedJournalRecords,removedJournalCommands,removedQueueEntries,partial:removedLocalKeys+removedJournalRecords+removedJournalCommands+removedQueueEntries>0};}
+ const removed=await createArchiveThumbnailCache({indexedDB:receipt.indexedDB}).clear(options.ownerId);if(removed===null)throw Error('Effacement des miniatures locales interrompu. Réessayez la réinitialisation.');removedCachedThumbnails=removed;
+ issued.delete(inventory);return {ok:true,removedLocalKeys,removedJournalRecords,removedJournalCommands,removedQueueEntries,removedCachedThumbnails};
+ }catch(error){return {ok:false,error:error.message,removedLocalKeys,removedJournalRecords,removedJournalCommands,removedQueueEntries,removedCachedThumbnails,partial:removedLocalKeys+removedJournalRecords+removedJournalCommands+removedQueueEntries+removedCachedThumbnails>0};}
 }

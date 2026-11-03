@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "9267094193e08d0c",
+  "revision": "b826d956a6b760b3",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -27,6 +27,7 @@
     "/src/app.mjs",
     "/src/archive-presentation.mjs",
     "/src/archive-render-guard.mjs",
+    "/src/archive-thumbnail-cache.mjs",
     "/src/archive-thumbnails.mjs",
     "/src/assets/brand/icons/icon-180.png",
     "/src/assets/brand/icons/icon-192.png",
@@ -335,5 +336,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4239936
+  "bytes": 4247057
 }

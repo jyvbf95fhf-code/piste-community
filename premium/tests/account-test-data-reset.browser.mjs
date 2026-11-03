@@ -12,6 +12,7 @@ try{
   const {createCoachingRemoteQueue}=await import('/src/coaching-remote-queue.mjs');
   const {createPersistenceJournal,indexedPersistenceStorage}=await import('/src/persistence-journal.mjs');
   const {ownerId,email}=ACCOUNT_TEST_RESET_TARGET,key=JSON.stringify(['owner',ownerId]),otherKey=JSON.stringify(['owner','other']);
+  const {createArchiveThumbnailCache}=await import('/src/archive-thumbnail-cache.mjs');const thumbnailCache=createArchiveThumbnailCache(),thumbnail=new Blob(['cached image'],{type:'image/jpeg'});await thumbnailCache.put(ownerId,'test-route',thumbnail);await thumbnailCache.put('other','test-route',thumbnail);
   const journal=createPersistenceJournal({ownerId}),other=createPersistenceJournal({ownerId:'other'});
   await journal.stage({kind:'profile',localId:'profile',payload:{display_name:'Seb',primary_dog_id:null}});
   await journal.stage({kind:'dog',localId:'dog',payload:{name:'Lobo'}});
@@ -27,8 +28,9 @@ try{
   const inventory=await inventoryAccountTestData(options),backup=JSON.parse(inventory.backupJson),result=await resetAccountTestData({...options,inventory,discardConfirmed:true});
   let after,otherAfter;await adapter.update(key,s=>{after=structuredClone(s);return s});await adapter.update(otherKey,s=>{otherAfter=structuredClone(s);return s});adapter.close();journal.dispose();other.dispose();
   const targetQueue=await createCoachingRemoteQueue({userId:ownerId,sessionId:'session'}).listPending(),otherQueue=await createCoachingRemoteQueue({userId:'other',sessionId:'session'}).listPending();
-  return {targetQueue,otherQueue,inventory:{ok:inventory.ok,journal:inventory.journal},result,before,after,otherBefore,otherAfter,backup,auth:localStorage.getItem('sb-project-auth-token'),consent:localStorage.getItem('piste-v2-jumolf-preferences:'+ownerId)};
+  return {targetThumbnail:!!await thumbnailCache.get(ownerId,'test-route'),otherThumbnail:!!await thumbnailCache.get('other','test-route'),targetQueue,otherQueue,inventory:{ok:inventory.ok,journal:inventory.journal},result,before,after,otherBefore,otherAfter,backup,auth:localStorage.getItem('sb-project-auth-token'),consent:localStorage.getItem('piste-v2-jumolf-preferences:'+ownerId)};
  });
+ assert.equal(result.targetThumbnail,false,'device reset erases its derived thumbnail cache');assert.equal(result.otherThumbnail,true,'reset preserves other account thumbnails');
  assert.deepEqual(result.targetQueue,[]);assert.equal(result.otherQueue[0].batchId,'other');assert.equal(result.result.removedQueueEntries,1);assert.equal(result.inventory.ok,true);assert.equal(result.result.ok,true);assert.equal(result.result.removedJournalRecords,2);assert.equal(result.result.removedJournalCommands,2);
  assert.deepEqual(result.after.identities,result.before.identities);assert.deepEqual(result.after.records.unknown,result.before.records.unknown);assert.deepEqual(result.after.commands,result.before.commands.filter(c=>c.kind==='profile'));assert.deepEqual(result.after.records['["profile","profile"]'],result.before.records['["profile","profile"]']);assert.deepEqual(result.otherAfter,result.otherBefore);assert.deepEqual(result.backup.journal,result.before);assert.equal(result.auth,'KEEP TOKEN');assert.equal(result.consent,'KEEP CONSENT');
  console.log('PASS account local reset: real IndexedDB filters target dogs/tracks; preserves profile, identities, unknown records, other account, auth and consents; backup contains original journal.');

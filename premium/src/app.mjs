@@ -1039,7 +1039,7 @@ function render(focus=false) {
  }
  document.querySelector('#app').innerHTML=shellMarkup;
  retainArchiveRender({...archiveIdentity,root:document.querySelector('.tracks-page')});
- mountArchiveMaps({document});
+ mountArchiveMaps({document,getOwnerId:()=>auth.getSession().user?.user_id});
  void startPlaces.mount(document);
  const reportArticle=document.querySelector('.dossier-report');if(reportArticle){const dossier=reportArticle.closest('[data-session-dossier]');restoreReportDraft({article:reportArticle,ownerId:currentUser?.user_id,sessionId:dossier?.dataset.sessionDossier,storage});}
  const restoredExport=document.querySelector('[data-data-exports]');if(restoredExport&&exportUi){restoredExport.open=exportUi.open;for(const name of ['domain','format']){const field=restoredExport.querySelector(`[name=${name}]`);if([...field.options].some(o=>o.value===exportUi[name]))field.value=exportUi[name];}}
