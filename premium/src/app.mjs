@@ -6,7 +6,7 @@ import {compactOperationalGpx,normalizeRetrospective} from './operational-retros
 import {normalizeSearchOutcome,OutcomeBadge,OutcomeEditor,OutcomeStatistics,placeOutcomePanel} from './search-outcome.mjs';
 import {BetaGuide,createBetaWelcome} from './beta-welcome.mjs';
 import {createAccountAutoSync} from './account-auto-sync.mjs';
-import {AccountSyncStatus,AccountSyncPanel} from './account-sync-screen.mjs';
+import {paintAccountSyncUi,AccountSyncPanel} from './account-sync-screen.mjs';
 import {createNotificationReadSync} from './notification-read-sync.mjs';
 import {createNotificationReceipts} from './notification-receipts.mjs';
 import {flushCoachingLiveEnds} from './coaching-live-exit.mjs';
@@ -382,11 +382,8 @@ async function removePersonalCopy(record,localId,ownerId){
  else if(record.kind==='track'){if(personalHasLocal('track',localId))trackLibrary.remove(localId);}
  else if(record.kind==='ops'){if(personalHasLocal('ops',localId)){const result=operationalStore.remove(localId,{ownerId});if(!result.ok)throw Error(removalError(result.reason));}}
 }
-function updateAccountSyncUi(){
- const v=accountAuto?.view(),old=document.querySelector('[data-account-sync-status]'),markup=location.pathname==='/'?'':AccountSyncStatus(v);
- if(old){if(old.outerHTML!==markup)old.outerHTML=markup;}else if(markup)document.querySelector('.app-shell>.screen-header')?.insertAdjacentHTML('afterend',markup);
- const panel=document.querySelector('[data-account-sync-panel]');if(panel){const markup=AccountSyncPanel(v);if(panel.outerHTML!==markup)panel.outerHTML=markup;}
-}
+function updateAccountSyncUi(){paintAccountSyncUi(document,accountAuto?.view());}
+
 function reconcileAccountAutoSync(){
  const owner=location.pathname!=='/jumolf/device-reset'&&auth.assurance==='supabase-auth'&&auth.getSession().access==='enabled'?currentUser?.user_id:null;if(owner===accountAutoOwner)return;
  accountAuto?.dispose();accountAuto=null;accountAutoOwner=owner;if(!owner)return;

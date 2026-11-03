@@ -173,7 +173,7 @@
 .account-sync-status{display:block;margin:0 14px 10px;padding:7px 10px;border:1px solid #416877;border-radius:10px;background:#0d2431;color:#a9e5d7;font-size:12px;line-height:1.35;text-align:center;text-decoration:none;overflow-wrap:anywhere}
 .account-sync-status[data-sync-state=offline],.account-sync-status[data-sync-state=pending],.account-sync-status[data-sync-state=deferred]{color:#f3d599}
 .account-sync-status[data-sync-state=error],.account-sync-status[data-sync-state=conflict]{color:#ffc3b9;border-color:#b56e68}
-.app-shell:has([data-track-cockpit])>.account-sync-status,.app-shell:has([data-gps-live])>.account-sync-status{display:none}
+
 .account-sync-panel{margin:16px 0;overflow-wrap:anywhere}.account-sync-panel p{line-height:1.5}.account-sync-conflict{padding:12px;margin:12px 0;border:1px solid #946c56;border-radius:12px}.account-sync-conflict button{display:block;width:100%;min-height:44px;margin:8px 0;padding:10px;border:1px solid #547a87;border-radius:10px;background:#153748;color:#f0f5f7;font:inherit}.account-sync-conflict button:disabled{opacity:.5}
 
 /* Beta information and a non-blocking, account-scoped first-home guide. */
@@ -183,7 +183,7 @@
 
 /* Canine workspace: full page, dark surfaces and safe mobile forms. */
 .app-shell:has(.dogs-premium-page){--theme-text:#eaf2f6;--theme-text-muted:#a9bfcc;--theme-accent:#88dce4;--theme-accent-secondary:#d5b574;--theme-border:#385466;--theme-surface:#102735;--theme-surface-raised:#163342;--dogs-khaki-surface:#163342;--dogs-slate-surface:#163342;--dogs-khaki-ink:#8bdde4;background:radial-gradient(ellipse at top right,#23455555,transparent 55%),#0c1d2a;color:#eaf2f6}
-.app-shell:has(.dogs-premium-page)>.screen-header,.app-shell:has(.dogs-premium-page)>.account-sync-status{display:none}
+.app-shell:has(.dogs-premium-page)>.screen-header{display:none}
 .app-shell:has(.dogs-premium-page)>main{padding-top:calc(env(safe-area-inset-top,0px) + 24px)}
 .app-shell[data-module-theme="dogs"] .dogs-premium-page :is(.dog-form,.dogs-empty-list){background:transparent;border:0;border-radius:0;box-shadow:none;padding:12px 0}
 .dogs-premium-page .dogs-empty-list .empty-state{background:transparent;color:#eaf2f6;box-shadow:none;border:0}.dogs-premium-page .empty-state p{color:#a9bfcc}
@@ -213,3 +213,13 @@
 
 .operational-after-form{display:grid;gap:18px;min-width:0}.operational-after-form label{display:grid;gap:8px;min-width:0}.operational-after-form fieldset{display:grid;gap:15px;min-width:0;border:1px solid #78939e55;border-radius:16px;padding:16px}.operational-after-form :is(input,select,textarea){box-sizing:border-box;width:100%;min-width:0;max-width:100%;font-size:16px;background:#112937;color:#ebf3f6;border:1px solid #61808e;border-radius:10px;padding:12px;color-scheme:dark}.operational-after-form :is(p,legend){font-size:13px;line-height:1.6}.operational-after-form textarea{resize:vertical}.operational-after-form [data-after-status]{color:#f3cb8f}.operational-after-form .button{width:100%;white-space:normal}.operational-entry-choice[data-operational-entry-choice=after]{border-color:#c8b17b88;background:linear-gradient(135deg,#1c3543,#10222e)}
 .report-edit-dialog [data-report-photo-list] figure{padding:12px;margin:14px 0;border:1px solid #63808f55;border-radius:12px}.report-edit-dialog [data-report-caption]{box-sizing:border-box;width:100%;padding:10px;font:inherit;font-size:16px;color:#e4eff5;background:#142e40;border:1px solid #708a9b;border-radius:8px}.dossier-report figure{margin:20px 0;break-inside:avoid}.dossier-report figure img{display:block;max-width:100%;max-height:650px;object-fit:contain}.dossier-report figcaption{font-size:13px;line-height:1.6;margin-top:8px;white-space:pre-wrap;overflow-wrap:anywhere}
+
+/* The profile dot has no effect on header or page dimensions. */
+.screen-header .avatar[data-account-sync-indicator]{position:relative}
+.screen-header .avatar[data-account-sync-indicator]::after{content:"";position:absolute;right:0;bottom:0;width:8px;height:8px;box-sizing:content-box;border:2px solid #10212d;border-radius:50%;background:#e8c98d;pointer-events:none}
+.screen-header .avatar[data-account-sync-indicator="online"]::after{background:#96e3bd}
+.screen-header .avatar[data-account-sync-indicator="syncing"]::after{background:#85d5e5}
+.screen-header .avatar:is([data-account-sync-indicator="error"],[data-account-sync-indicator="conflict"])::after{background:#ff9f94}
+
+/* Immersive screens cover normal page flow: keep actionable warnings above them. */
+.app-shell:has(:is([data-track-cockpit],[data-gps-live],[data-shared-review]))>.account-sync-status{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:110;margin:0;box-shadow:0 4px 18px #0006}

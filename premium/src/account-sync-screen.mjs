@@ -1,5 +1,19 @@
 import {escapeHTML as e} from './components.mjs';
 const names={profile:'Préférences',dog:'Chien',track:'Tracé',ops:'Dossier OPS','session-dog-link':'Préparation Coaching'};
 export function accountSyncLabel(v){return ({online:'Compte à jour',syncing:'Enregistrement sur votre compte…',pending:'Copie locale · envoi en attente',offline:'Sur ce téléphone · envoi au retour du réseau',conflict:'Deux versions à vérifier · copies conservées',error:'Copie locale conservée · synchronisation à vérifier',deferred:'Données en ligne à récupérer après votre saisie ou séance'})[v?.state]||'Chargement de votre compte…';}
-export function AccountSyncStatus(v){return v?`<a class="account-sync-status" data-account-sync-status data-sync-state="${e(v.state)}" href="/profile/sync"><span role="status">${e(accountSyncLabel(v))}</span></a>`:'';}
+export function AccountSyncStatus(v){return v&&!['online','syncing'].includes(v.state)?`<a class="account-sync-status" data-account-sync-status data-sync-state="${e(v.state)}" href="/profile/sync"><span role="status">${e(accountSyncLabel(v))}</span></a>`:'';}
 export function AccountSyncPanel(v){if(!v)return '';return `<section class="card account-sync-panel" data-account-sync-panel><h2>Synchronisation automatique</h2><p role="status">${e(accountSyncLabel(v))}</p><p>Vos enregistrements sont conservés sur ce téléphone puis envoyés sur votre compte. Vos données en ligne sont récupérées à la connexion. Les sessions Coaching partagées utilisent leur synchronisation dédiée.</p>${v.pending?`<p>${e(v.pending)} envoi(s) ou modification(s) en attente.</p>`:''}${v.errors?.length?`<ul>${v.errors.slice(0,5).map(error=>`<li>${e(error)}</li>`).join('')}</ul>`:''}${(v.conflicts||[]).map(c=>`<article class="account-sync-conflict"><h3>${e(names[c.kind]||'Élément')} · ${e(c.id.slice(-8))}</h3><p>Une autre version existe sur le compte. Choisissez celle à utiliser ; les commandes locales sont conservées dans une copie de récupération.</p><button type="button" data-account-sync="local" data-kind="${e(c.kind)}" data-id="${e(c.id)}" ${v.busy?'disabled':''}>Conserver ma version</button><button type="button" data-account-sync="remote" data-kind="${e(c.kind)}" data-id="${e(c.id)}" ${v.busy?'disabled':''}>Utiliser la version en ligne</button></article>`).join('')}<button type="button" class="button button-dark" data-account-sync="retry" ${v.busy?'disabled':''}>Actualiser la synchronisation</button><p>Les copies OPS récupérées sur un autre appareil restent consultables : aucun capteur GPS ne démarre automatiquement. Les outils de sauvegarde manuelle ci-dessous restent disponibles.</p></section>`;}
+
+// Status updates never replace the header or move content during a normal sync cycle.
+export function paintAccountSyncUi(document,v){
+ const old=document.querySelector('[data-account-sync-status]'),markup=AccountSyncStatus(v);
+ if(old){if(old.outerHTML!==markup)old.outerHTML=markup;}
+ else if(markup)document.querySelector('.app-shell>.screen-header')?.insertAdjacentHTML('afterend',markup);
+ const avatar=document.querySelector('.screen-header .avatar');
+ if(avatar){
+  const label=avatar.dataset.syncProfileLabel||avatar.getAttribute('aria-label')||'Profil';avatar.dataset.syncProfileLabel=label;
+  if(v){avatar.dataset.accountSyncIndicator=v.state;avatar.setAttribute('aria-label',label+' · '+accountSyncLabel(v));avatar.setAttribute('title',accountSyncLabel(v));}
+  else{delete avatar.dataset.accountSyncIndicator;avatar.setAttribute('aria-label',label);avatar.removeAttribute('title');}
+ }
+ const panel=document.querySelector('[data-account-sync-panel]');if(panel){const markup=AccountSyncPanel(v);if(panel.outerHTML!==markup)panel.outerHTML=markup;}
+}

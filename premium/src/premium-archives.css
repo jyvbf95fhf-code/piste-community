@@ -72,5 +72,4 @@
 .tracks-page .tracks-history>.archive-row{margin-bottom:0}
 .app-shell:has(.tracks-page)>.screen-header{padding-bottom:2px}
 .app-shell:has(.tracks-page)>main{padding-top:2px}
-.app-shell:has(.tracks-page)>.account-sync-status:is([data-sync-state="online"],[data-sync-state="syncing"]){margin:0 16px;padding:0;border:0;border-radius:0;background:none;text-align:right;font-size:10px;line-height:1.25}
 .archive-load{margin:0 0 4px;font-size:11px;color:#9dc4ce}

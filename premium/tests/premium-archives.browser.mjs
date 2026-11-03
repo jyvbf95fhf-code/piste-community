@@ -11,9 +11,20 @@ try{const context=await browser.newContext({viewport:{width:390,height:844}}),pa
  });
  await page.goto(origin);await page.waitForFunction(()=>window.ready);await page.screenshot({path:'/tmp/archives-before.png',fullPage:true});await page.getByText('Lieu détecté au départ · Châtenois',{exact:true}).first().waitFor().catch(async e=>{console.log(JSON.stringify({errors,reverse,text:await page.locator('body').innerText()}));throw e;});
  await page.waitForFunction(()=>document.querySelectorAll('[data-archive-map] .leaflet-overlay-pane path').length>0);assert.ok(reverse>0);
- // Healthy sync transitions must not move the list; warnings remain readable.
- const positions=await page.evaluate(()=>{const shell=document.querySelector('.app-shell'),main=document.querySelector('#sample'),status=document.createElement('a');status.className='account-sync-status';shell.insertBefore(status,main);const positions={};for(const state of ['online','syncing']){status.dataset.syncState=state;status.textContent=state==='online'?'Compte à jour':'Enregistrement sur votre compte…';positions[state]=main.getBoundingClientRect().top;}status.remove();return positions;});
- assert.equal(positions.online,positions.syncing,'sync heartbeat must not shift the archive list');
+ // Use the same status painter and header as the application.
+ const statusChecks=await page.evaluate(async()=>{
+  const {ScreenHeader}=await import('/src/components.mjs'),{paintAccountSyncUi}=await import('/src/account-sync-screen.mjs');
+  const shell=document.querySelector('.app-shell'),main=document.querySelector('#sample');shell.insertAdjacentHTML('afterbegin',ScreenHeader('Compte test','C'));
+  const positions={},healthy={};for(const state of ['online','syncing','online']){paintAccountSyncUi(document,{state});positions[state]=main.getBoundingClientRect().top;healthy[state]=!document.querySelector('[data-account-sync-status]');}
+  const avatar=document.querySelector('.screen-header .avatar'),label=avatar.getAttribute('aria-label'),indicator=avatar.dataset.accountSyncIndicator;
+  const warnings=[];for(const mode of ['normal','dogs','gps','cockpit','review']){
+   main.classList.toggle('dogs-premium-page',mode==='dogs');main.classList.toggle('tracer-gps',mode==='gps');main.classList.toggle('shared-review',mode==='review');main.toggleAttribute('data-gps-live',mode==='gps');main.toggleAttribute('data-track-cockpit',mode==='cockpit');main.toggleAttribute('data-shared-review',mode==='review');
+   for(const state of ['offline','pending','error','conflict','deferred']){paintAccountSyncUi(document,{state});const banner=document.querySelector('[data-account-sync-status]');const rect=banner?.getBoundingClientRect();warnings.push(!!rect&&rect.height>0&&banner.getAttribute('href')==='/profile/sync'&&banner.contains(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)));}
+  }
+  main.classList.remove('dogs-premium-page','tracer-gps','shared-review');main.removeAttribute('data-track-cockpit');main.removeAttribute('data-shared-review');paintAccountSyncUi(document,null);
+  return {positions,healthy,warnings,label,indicator,cleared:!avatar.hasAttribute('data-account-sync-indicator')};
+ });
+ assert.equal(statusChecks.positions.online,statusChecks.positions.syncing,'sync heartbeat must not shift the archive list');assert.deepEqual(statusChecks.healthy,{online:true,syncing:true});assert.ok(statusChecks.warnings.every(Boolean),'warnings remain visible in every screen mode');assert.equal(statusChecks.indicator,'online');assert.match(statusChecks.label,/Compte à jour/);assert.equal(statusChecks.cleared,true);
  const search=page.locator('.archive-search'),panel=page.locator('.archive-filter-panel');assert.equal(await panel.getAttribute('open'),null);assert.ok((await page.locator('.archive-search-line').boundingBox()).height<55);
  assert.equal(await page.locator('[data-piste-select="s0"]').isChecked(),true);
  await panel.locator('summary').click();await page.getByLabel('Chien',{exact:true}).selectOption('b');await page.getByRole('button',{name:'Appliquer les filtres',exact:true}).click();assert.equal(await page.evaluate(()=>submitted.status),'Archivées');assert.equal(await page.evaluate(()=>submitted.dogId),'b');await panel.locator('summary').click();
