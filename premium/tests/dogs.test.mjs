@@ -105,3 +105,5 @@ test('dog routes keep using the existing mock-auth route gate', () => {
   assert.equal(resolveMockRoute('/dogs/nox', { authenticated: false }), '/auth');
   assert.equal(resolveMockRoute('/dogs/nox', { authenticated: true }), '/dogs/nox');
 });
+
+test('new dogs default to tracking and are eligible for OPS and Coaching selection',async()=>{const {activeTrackingDogs}=await import('../src/dog-selection.mjs');const store=createDogsStore({dogs:[]});const dog=store.create({name:'Bobby',breed:'Malinois'});assert.deepEqual(dog.disciplines,['tracking']);assert.equal(activeTrackingDogs(store.list())[0].id,dog.id);const defense=store.create({name:'Defense',disciplines:['defense']});assert.deepEqual(defense.disciplines,['defense']);const none=store.create({name:'Choix explicite',disciplines:[]});assert.deepEqual(none.disciplines,[]);});

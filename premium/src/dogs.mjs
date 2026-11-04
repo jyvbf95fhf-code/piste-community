@@ -158,7 +158,7 @@ export function createDogsStore({ dogs = demoDogs, ownerId = null, storage = nul
         portrait: values.portrait || 'silhouette',
         personalPhotoDataUrl: normalizePhotoDataUrl(values.personalPhotoDataUrl),
         notes: String(values.notes || '').trim() || null,
-        disciplines: Array.isArray(values.disciplines) ? [...values.disciplines] : [],
+        disciplines: Array.isArray(values.disciplines) ? [...values.disciplines] : ['tracking'],
         sessions: [],
         isDemonstration: !ownerId
       };

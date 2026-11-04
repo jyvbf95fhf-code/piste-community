@@ -142,7 +142,7 @@ export function DogFormScreen(dog = null,{realMode=false}={}) {
   const editing = !!dog;
   const title = editing ? 'Modifier le profil' : 'Ajouter un chien';
   const heading = pageHeading(realMode?'PROFIL CANIN · COMPTE PERSONNEL':'PROFIL MOCK · MODIFICATIONS TEMPORAIRES', title, realMode?'Créez son profil et préparez vos prochaines pistes. Retrouvez la synchronisation dans Profil → Mon compte en ligne.':'Les photos et modifications restent dans cette visite et disparaissent au rechargement.');
-  const disciplines = new Set(dogDisciplines(dog || {}));
+  const disciplines = new Set(editing ? dogDisciplines(dog) : ['tracking']);
   const isRetired = ['retired','archived'].includes(dog?.status || 'active');
   const disciplineFields = DOG_DISCIPLINES.filter(item=>!realMode||['tracking','defense'].includes(item.id)).map(item => `<label class="dog-discipline-choice"><input type="checkbox" name="disciplines" value="${e(item.id)}" ${disciplines.has(item.id) ? 'checked' : ''}><span>${e(item.label)}</span></label>`).join('');
   const personalPhoto = !!dog?.personalPhotoDataUrl;

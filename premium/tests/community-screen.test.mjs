@@ -117,3 +117,5 @@ test('Prototype describes demo content only, never the real account Contacts vie
  assert.doesNotMatch(page({type:'contacts'},{store:real}),/Prototype/);
  assert.doesNotMatch(page({type:'feed'},{store:real}),/Prototype/);
 });
+
+test('add friend search precedes requests and contacts for real accounts',()=>{const base=createCommunityStore();const store=new Proxy(base,{get(t,k){return k==='getFriendshipStatus'?()=>({message:'Synchronisé'}):t[k];}});const html=page({type:'contacts'},{store});const search=html.indexOf('community-contact-search');assert.ok(search>=0);for(const heading of ['Demandes reçues','Demandes envoyées','Mes contacts'])assert.ok(search<html.indexOf(heading),heading);assert.equal((html.match(/data-community-form="contact-search"/g)||[]).length,1);});

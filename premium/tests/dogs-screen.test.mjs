@@ -138,3 +138,5 @@ test('dog removal discloses associations without offering historical cascade and
   assert.doesNotMatch(protectedHtml,/data-dog-remove/);
   assert.match(protectedHtml,/protégé/);
 });
+
+test('new dog preselects tracking while edits preserve deliberate disciplines',()=>{assert.match(DogFormScreen(null,{realMode:true}),/name="disciplines" value="tracking" checked/);assert.doesNotMatch(DogFormScreen({id:'existing',name:'Defense',disciplines:['defense']},{realMode:true}),/name="disciplines" value="tracking" checked/);});
