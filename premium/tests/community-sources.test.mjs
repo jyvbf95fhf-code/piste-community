@@ -26,3 +26,5 @@ test('active and unavailable source records are omitted rather than filled with 
  const options=communitySourceOptions({sessionRecords:[record('active','SEARCH_RUNNING')],tracks:[],dogs:[]});
  assert.deepEqual(options,[]);
 });
+
+test('manual OPS source uses original identity shared by automatic publication',async()=>{const {accountCommunitySourceOptions}=await import('../src/community-sources.mjs');const sources=accountCommunitySourceOptions({operational:[{id:'ops:cloud-uuid',communityId:'ops:local-original',kind:'operational',status:'Terminée'}]});assert.equal(sources[0].id,'ops:local-original');});

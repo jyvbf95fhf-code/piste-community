@@ -49,6 +49,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(action==='delete-comment')return finish(store.deleteOwnComment(postId,commentId));
   if(action==='report-post')return finish(store.reportPost(postId,'Contenu signalé'));
   if(action==='hide-post')return finish(store.hidePost(postId));
+  if(action==='make-private')return finish(store.makeOwnPostPrivate(postId));
   if(action==='delete-post')return finish(store.deleteOwnPost(postId));
   if(action==='share-post'||action==='share-track'){
    const post=store.getVisiblePost(postId);if(!post)throw new Error('Cette publication n’est pas visible ou disponible.');

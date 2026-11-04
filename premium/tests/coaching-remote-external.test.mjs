@@ -45,3 +45,5 @@ test('reject unknown scenarios, external Traceur app roles, and driver-recorded 
  assert.throws(()=>create('invented'));assert.throws(()=>create('external_traceur','normal','traceur'));
  for(const mode of ['simple_blind','full_blind'])assert.throws(()=>create('external_driver_recorded',mode));
 });
+
+test('authoritative completion timestamp survives later projection without backfilling legacy state',()=>{let s=create('external_traceur');s=command(s,'driver','external-ready');s=command(s,'driver','start-search',{fix:fix(now+1000),segmentId:'search'},now+1000);s=command(s,'driver','finish-search',{},now+9000);assert.equal(projectRemoteSession(s,'driver').searchCompletedAt,now+9000);assert.equal(projectRemoteSession(s,'driver',now+999999).searchCompletedAt,now+9000);delete s.searchCompletedAt;assert.equal(projectRemoteSession(s,'driver').searchCompletedAt,null);});

@@ -56,3 +56,5 @@ test('contact search and Live authorization dispatch use the existing Contact st
  assert.equal(controller.dispatch('set-contact-permission',{userId:'alex',permission:'live_access_authorized',enabled:true}),true);
  assert.equal(store.getContactPermissions('alex').live_access_authorized,true);
 });
+
+test('private menu click dispatches the selected post ID',async()=>{let received;const errors=[];const controller=createCommunityController({store:{makeOwnPostPrivate:async id=>{received=id;}},render:()=>{},toast:e=>errors.push(e)});controller.handleClick({preventDefault(){},target:{closest:()=>({dataset:{communityAction:'make-private',postId:'own-post'}})}});await Promise.resolve();assert.equal(received,'own-post');assert.deepEqual(errors,[]);});

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "b77c0ea8a76809d4",
+  "revision": "8f613bfdb3de05c2",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -104,6 +104,7 @@
     "/src/coaching-tracer-screen.mjs",
     "/src/coaching-tracer.mjs",
     "/src/coaching.mjs",
+    "/src/community-auto-publication.mjs",
     "/src/community-coaching-contacts.mjs",
     "/src/community-controller.mjs",
     "/src/community-feed.mjs",
@@ -115,6 +116,7 @@
     "/src/community-map.mjs",
     "/src/community-model.mjs",
     "/src/community-notifications.mjs",
+    "/src/community-publication.mjs",
     "/src/community-routes.mjs",
     "/src/community-screen.mjs",
     "/src/community-sources.mjs",
@@ -338,5 +340,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4263800
+  "bytes": 4271198
 }
