@@ -1,3 +1,6 @@
+import {createCoachingHandler} from '../src/server/coaching-http.mjs';
+import {createCommunityFeed} from '../src/community-feed.mjs';
+import {createCommunityStore} from '../src/community-store.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {PGlite} from '@electric-sql/pglite';
 const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
 test('actual SQL: email, reciprocal acceptance, feed privacy, replay, role grants and account deletion',async()=>{const db=new PGlite();try{
@@ -16,4 +19,11 @@ test('actual SQL: email, reciprocal acceptance, feed privacy, replay, role grant
  await command(C,{action:'create-post',post:{...pub,text:'Autre auteur',visibility:'community'}});await db.exec('reset role');await db.query('delete from community_feed_likes where actor_id=$1',[B]);await db.query('delete from community_feed_comments where author_id=$1',[B]);await db.query('delete from community_social_commands where actor_id=$1',[A]);await db.query('delete from community_social_edges where owner_id=$1 or peer_id=$1',[A]);await db.query('delete from community_friendships where user_low=$1 or user_high=$1',[A]);
  await db.query('delete from community_friendship_events where actor_id=$1 or peer_id=$1',[A]);await db.query('delete from coaching_remote_users where id=$1',[A]);assert.equal((await snap(C)).posts.length,1);
  for(const role of ['anon','authenticated']){await db.exec('set role '+role);await assert.rejects(db.query('select * from community_feed_posts'));await assert.rejects(db.query('select community_feed_snapshot($1)',[B]));await db.exec('reset role');}
+
+ const admin={rpc:async(name,args)=>{try{return {data:await rpc(name,args)};}catch(e){return {error:{code:e.code}};}},from(table){assert.equal(table,'coaching_remote_users');let id;const q={select(){return q;},eq(k,v){if(k==='id')id=v;return q;},async maybeSingle(){return {data:(await db.query('select * from coaching_remote_users where id=$1 and enabled',[id])).rows[0]};}};return q;}};
+ const handler=createCoachingHandler({admin,authClient:{auth:{getUser:async token=>({data:{user:token===C?{id:C}:null}})}},friendshipsEnabled:true,socialLiveEnabled:true});
+ const call=async body=>{const response=await handler(new Request('https://shnwqdkiapgcftbnhilh.supabase.co/functions/v1/coaching',{method:'POST',headers:{authorization:'Bearer '+C,'content-type':'application/json'},body:JSON.stringify(body)}));const data=await response.json();if(!response.ok)throw Error(data.error);return data;};
+ const base=createCommunityStore({viewerId:C,profiles:[{id:C,displayName:'Charlie'}],posts:[],contacts:[],contactRequests:[],follows:[],notifications:[]});const client=createCommunityFeed({baseStore:base,ownerId:C,call});
+ const actual=await client.store.createPost({text:'Chaîne client, HTTP et SQL',visibility:'private'});assert.equal(actual.authorId,C);assert.equal(actual.text,'Chaîne client, HTTP et SQL');assert.ok(actual.id);
+ await client.store.deleteOwnPost(actual.id);assert.equal(client.store.getVisiblePost(actual.id),null);
  }finally{await db.close();}});

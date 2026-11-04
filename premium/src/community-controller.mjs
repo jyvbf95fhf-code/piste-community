@@ -76,12 +76,13 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(kind==='post-create'){
    let source=null;
    if(payload.sourceType||payload.sourceId){const selected=getSource(payload.sourceType,payload.sourceId);source={type:selected.type,id:selected.id,data:selected.data,fields:[...(payload.fields||[])]};}
-   pendingPost={text:payload.text||'',visibility:payload.visibility||'contacts',dogId:payload.dogId||null,photo:payload.photo||null,source};
+   pendingPost={text:payload.text||'',visibility:payload.visibility||(store.getFeedStatus?'contacts':'private'),dogId:payload.dogId||null,photo:payload.photo||null,source};
    presentConfirmation();return {pending:true,visibility:pendingPost.visibility,sourceType:source?.type||null};
   }
   throw new Error('Formulaire Communauté indisponible.');
  }
  function changeSource(type,id){
+  pendingPost=null;closeConfirmation();
   if(!type&&!id){const path='/community/new';navigate(path);return path;}
   const source=getSource(type,id),params=new URLSearchParams({sourceType:source.type,sourceId:source.id});
   const path=`/community/new?${params}`;navigate(path);return path;
@@ -131,7 +132,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   event.preventDefault();const data=new FormData(form),kind=form.dataset.communityForm;
   try{
    if(kind==='profile'){const task=submit('profile',{displayName:data.get('displayName')});if(task?.then)void task.catch(error=>toast(error.message));}
-   else if(kind==='comment'){const task=submit('comment',{postId:form.dataset.postId,text:data.get('text')});if(task?.then)void task.then(()=>{form.reset();}).catch(error=>toast(error.message));}
+   else if(kind==='comment'){const task=submit('comment',{postId:form.dataset.postId,text:data.get('text')});if(task?.then)void task.then(()=>{form.reset();for(const current of document.querySelectorAll('[data-community-form="comment"]'))if(current.dataset.postId===form.dataset.postId)current.reset();}).catch(error=>toast(error.message));}
    else if(kind==='search')submit('search',{query:data.get('q')});
    else if(kind==='contact-search'){const result=submit('contact-search',{query:data.get('q')});if(result?.then)void result.catch(error=>toast(error.message));}
    else if(kind==='post-create')submit('post-create',{
@@ -164,7 +165,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
  const target=document.querySelector('[data-community-preview-text]');if(target)target.textContent=text;
   const output=document.querySelector('[data-community-preview-fields]');if(!output)return;
   const selected=[...document.querySelectorAll('[name="shareFields"]:checked')].map(field=>field.value);
-  output.textContent=selected.length?selected.map(value=>({dog:'Chien',distance:'Distance',trackAge:'Âge de piste',environment:'Environnement',difficulty:'Difficulté',result:'Résultat',map:'Carte / tracé',points:'Points du tracé',provenance:'Provenance'}[value]||value)).join(' · '):'Aucune donnée de session ou de piste sélectionnée.';
+  output.textContent=selected.length?selected.map(value=>({title:'Titre',dog:'Chien',distance:'Distance',trackAge:'Âge de piste',environment:'Environnement',difficulty:'Difficulté',result:'Résultat',map:'Carte / tracé',points:'Points du tracé',provenance:'Provenance'}[value]||value)).join(' · '):'Aucune donnée de session ou de piste sélectionnée.';
  }
  return Object.freeze({dispatch,submit,changeSource,handleClick,handleSubmit,handleChange,updatePreview,deliverShare,getSource,pendingPost:()=>pendingPost});
 }

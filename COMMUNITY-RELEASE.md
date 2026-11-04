@@ -1,0 +1,9 @@
+# Community release — 4 November 2026
+
+Base production a7326d12c5dcba179e765619c17a279e796cf817. User explicitly authorized correction and production deployment. V2 only; no V1 or main changes.
+
+Real account feed now persists publications, likes, comments and visibility on the server. Name/exact-confirmed-email member search, reciprocal acceptance/following, pending request bell notifications, authorized completed Coaching/owned saved-track sources and real geographic Leaflet maps are connected. Default audience is accepted friends; OPS is excluded from Community sharing. Legacy browser-only posts are not automatically republished. Actual geographic gaps remain separate; missing/unresolved geometry is never invented.
+
+Validation: 2,656 unit/SQL tests passed with zero failures. Local actual-SQL role tests cover privacy, exact-email lookup under service_role, command replay, deletion cascades and denied anon/authenticated access; the real client→HTTP handler→SQL chain is exercised. Actual app browser campaign with two isolated authenticated simulated accounts passed requests/bell/acceptance/publication/maps/like/comment, retained drafts/maps, source selection resets, account isolation and widths320/390/430/1100. External requests were intercepted; physical Safari/Android and live user notifications were not exercised. Independent review has no remaining Critical/Important findings after focused regression fixes. Offline asset manifest verified.
+
+Edge package derives from live Coaching v30, with every unchanged file and the index/auth/deletion/webpush/social settings preserved. Only coaching-http.mjs plus two Community modules are replaced/added; package checks exact baseline hashes. Production SQL is additive and uses invoker RPCs restricted to service_role; new tables have RLS with no direct anonymous/authenticated grants. Account and post foreign keys cascade so existing admin deletion remains supported.
