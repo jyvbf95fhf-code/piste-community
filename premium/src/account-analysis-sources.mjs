@@ -1,3 +1,4 @@
+import {resolveDogId} from './dog-selection.mjs';
 import {retrospectiveMetrics,retrospectivePoints} from './operational-retrospective.mjs';
 import {selectHistoricalWeather} from './session-weather-history.mjs';
 import {LOBO_DEMO_MANIFEST,LOBO_DEMO_OWNER_ID} from './lobo-demo-data.mjs';
@@ -22,7 +23,7 @@ export function buildAccountAnalysisSources({ownerId,localOwnerId,sharedOwnerId,
  if(!ownerId)return empty();
  const fictionalIds=new Set([...LOBO_DEMO_MANIFEST.opsIds,...LOBO_DEMO_MANIFEST.coachingIds]);const loboDemo=id=>ownerId===LOBO_DEMO_OWNER_ID&&fictionalIds.has(String(id||'').replace(/^cloud-/,''));
  const safeDogs=dogs.filter(d=>(ownerId!==LOBO_DEMO_OWNER_ID||d.id!==LOBO_DEMO_MANIFEST.dogId)&&!d.isDemonstration&&!d.demo&&!d.synthetic&&(!d.ownerId||d.ownerId===ownerId)),dogById=new Map(safeDogs.map(d=>[d.id,d]));
- const linked=(id,name)=>dogById.has(id)?{id,name:dogById.get(id).name,breed:dogById.get(id).breed}:name?{name}:null;
+ const linked=(id,name)=>{const canonical=resolveDogId(safeDogs,id),dog=canonical?dogById.get(canonical):null;return dog?{id:dog.id,name:dog.name,breed:dog.breed}:name?{name}:null;};
  const sessions=new Map();
  if(localOwnerId===ownerId)for(const record of coachingRecords){
   if(record.session?.synthetic||record.session?.demo||!['DEBRIEF','ARCHIVED'].includes(record.searchState?.phase)||(!record.searchState.gpsSearch&&!record.tracerState?.gpsPose))continue;

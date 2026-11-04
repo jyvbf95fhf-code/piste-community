@@ -55,7 +55,7 @@ function pageHeading(kicker, title, subtitle, action = '') {
   return `<section class="page-heading dogs-heading"><span class="eyebrow">${e(kicker)}</span><div class="dogs-heading-row"><h1>${e(title)}</h1>${action}</div><p>${e(subtitle)}</p></section>`;
 }
 
-export function DogsListScreen(dogs = [], { primaryDogId = null, realMode = false } = {}) {
+export function DogsListScreen(dogs = [], { primaryDogId = null, realMode = false, mileageTotals = null } = {}) {
   const action = `<a class="button button-gold dogs-add-button" href="/dogs/new">${Icon('plus')}Ajouter un chien</a>`;
   const heading = pageHeading('VOS COMPAGNONS', 'Mes chiens', realMode?'Votre équipe, vos chiens, votre progression.':'Profils de démonstration · données conservées dans cette visite', action);
   if (!dogs.length) {
@@ -64,16 +64,20 @@ export function DogsListScreen(dogs = [], { primaryDogId = null, realMode = fals
   const cards = dogs.map(dog => {
     const summary = summarizeDogActivity(dog);
     const activity = summary.lastActivity ? `Dernière activité · ${e(summary.lastActivity)}` : 'Aucune activité disponible';
+    const mileage=mileageTotals?.[dog.id]||{meters:0,sessions:0};
+    const kilometers=new Intl.NumberFormat('fr-FR',{minimumFractionDigits:1,maximumFractionDigits:2}).format(mileage.meters/1000);
+    const counter=realMode?`<span class="dog-mileage" data-dog-mileage="${e(dog.id)}" data-distance-meters="${mileage.meters}" aria-label="${e(kilometers)} kilomètres enregistrés en OPS et Coaching"><b>${e(kilometers)} <small>km</small></b><span>parcourus · OPS + Coaching</span></span>`:'';
+    const activityLine=realMode?`${mileage.sessions} ${mileage.sessions===1?'piste comptabilisée':'pistes comptabilisées'}${summary.lastActivity?' · '+activity:''}`:`${summary.sessionCount ? `${summary.sessionCount} ${summary.sessionCount === 1 ? 'session' : 'sessions'}` : 'Aucune session associée'} · ${activity}`;
     const age = dog.age || ageLabel(dog);
     return `<a class="dog-list-card card" href="/dogs/${encodeURIComponent(dog.id)}" aria-label="Ouvrir le profil de ${e(dog.name)}">
       ${portraitMarkup(dog, 'dog-list-portrait')}
-      <span class="dog-list-copy"><span class="dog-specialty">${e(dog.specialty || 'Spécialité indisponible')}</span><strong>${e(dog.name)}</strong><span class="dog-list-breed">${e(dog.breed || 'Race indisponible')} · ${e(age)}</span><span class="dog-list-meta">${summary.sessionCount ? `${summary.sessionCount} ${summary.sessionCount === 1 ? 'session' : 'sessions'}` : 'Aucune session associée'} · ${activity}</span></span>
+      <span class="dog-list-copy"><span class="dog-specialty">${e(dog.specialty || 'Spécialité indisponible')}</span><strong>${e(dog.name)}</strong>${counter}<span class="dog-list-breed">${e(dog.breed || 'Race indisponible')} · ${e(age)}</span><span class="dog-list-meta">${activityLine}</span></span>
       <span class="dog-list-trailing">${dogStatus(dog)}${Icon('arrow')}</span>
     </a>`;
   }).join('');
   const eligible = activeTrackingDogs(dogs), selected = resolveDefaultTrackingDog(dogs, primaryDogId);
   const preference = `<section class="card dog-default-selection" aria-label="Chien de piste par défaut"><h2>Chien de piste par défaut</h2><p>${selected ? e(selected.name) : 'Aucun chien actif en discipline Piste.'}</p><p>Utilisé à l’ouverture des outils de piste. Votre choix reste modifiable pour chaque activité.</p>${eligible.length > 1 ? eligible.filter(dog => dog.id !== selected?.id).map(dog => `<button class="button button-dark" type="button" data-dog-set-default="${e(dog.id)}">Définir ${e(dog.name)} par défaut</button>`).join('') : ''}</section>`;
-  return `${heading}${preference}<section class="dog-list" aria-label="Liste de vos chiens">${cards}</section>${!realMode&&dogs.every(d=>d.isDemonstration!==false)?'<p class="dogs-demo-note">Tous les profils présentés sont fictifs. Les modifications sont temporaires.</p>':'<p class="dogs-demo-note">Profils personnels du compte. Les démonstrations sont identifiées dans leur fiche ; les préférences restent modifiables.</p>'}`;
+  return `${heading}${preference}${realMode?'<p class="dog-mileage-note">Kilomètres enregistrés pendant les recherches terminées. Les séances sans distance disponible ne sont pas comptées.</p>':''}<section class="dog-list" aria-label="Liste de vos chiens">${cards}</section>${!realMode&&dogs.every(d=>d.isDemonstration!==false)?'<p class="dogs-demo-note">Tous les profils présentés sont fictifs. Les modifications sont temporaires.</p>':'<p class="dogs-demo-note">Profils personnels du compte. Les démonstrations sont identifiées dans leur fiche ; les préférences restent modifiables.</p>'}`;
 }
 
 function metric(label, value, tone = '') {

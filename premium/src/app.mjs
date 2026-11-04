@@ -1,3 +1,4 @@
+import {dogMileageTotals} from './dog-mileage.mjs';
 import {createCommunityAutoPublication} from './community-auto-publication.mjs';
 import {createArchiveRenderGuard} from './archive-render-guard.mjs';
 import {mountArchiveMaps} from './archive-thumbnails.mjs';
@@ -195,7 +196,7 @@ function updateNotificationBadge(){
 function renderCoachingUpdates(){
  updateNotificationBadge();
  if(document.querySelector('dialog[open][data-piste-owner],[data-search-outcome-form][data-sync-dirty="true"]'))return;
- if(location.pathname!=='/jumolf/rex'&&(['/','/sessions','/tracks','/notifications','/statistics'].includes(location.pathname)||location.pathname.startsWith('/sessions/')||location.pathname.startsWith('/jumolf')||location.pathname.startsWith('/scientific'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
+ if(location.pathname!=='/jumolf/rex'&&(['/','/sessions','/tracks','/notifications','/statistics','/dogs'].includes(location.pathname)||location.pathname.startsWith('/sessions/')||location.pathname.startsWith('/jumolf')||location.pathname.startsWith('/scientific'))&&!document.activeElement?.matches('input,textarea,select,[contenteditable="true"]'))render();
 }
 function coachingInvitationCards(){return coachingInvitations?CoachingInvitations(coachingInvitations.view()):'';}
 let sharedIndex=dogsOwnerId?createSharedSessionIndex({ownerId:dogsOwnerId,storage}):null,sharedAttempt=0;
@@ -1101,7 +1102,7 @@ function render(focus=false) {
  if(focus) { window.scrollTo(0,0); document.querySelector('main').focus({preventScroll:true}); }
 }
 function renderDogs(route) {
- if(route.type==='list')return DogsListScreen(accountDogs(),{realMode:auth.assurance==='supabase-auth',primaryDogId:defaultTrackingDog()?.id});
+ if(route.type==='list')return DogsListScreen(accountDogs(),{realMode:auth.assurance==='supabase-auth',primaryDogId:defaultTrackingDog()?.id,mileageTotals:auth.assurance==='supabase-auth'?dogMileageTotals(accountDogs(),jumolfRawSources()):null});
  if(route.type==='create')return DogFormScreen(null,{realMode:auth.assurance==='supabase-auth'});
  const dog=localDog(route.dogId);
  if(!dog)return DogNotFoundScreen();

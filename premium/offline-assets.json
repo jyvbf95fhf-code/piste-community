@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "c0d76817474b6508",
+  "revision": "89af30cec0948bbd",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -126,6 +126,7 @@
     "/src/consolidated-session-index.mjs",
     "/src/data-exports-client.mjs",
     "/src/data.mjs",
+    "/src/dog-mileage.mjs",
     "/src/dog-selection.mjs",
     "/src/dogs-screen.mjs",
     "/src/dogs.mjs",
@@ -340,5 +341,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4270903
+  "bytes": 4273963
 }

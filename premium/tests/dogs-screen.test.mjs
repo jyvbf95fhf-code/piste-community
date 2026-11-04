@@ -140,3 +140,5 @@ test('dog removal discloses associations without offering historical cascade and
 });
 
 test('new dog preselects tracking while edits preserve deliberate disciplines',()=>{assert.match(DogFormScreen(null,{realMode:true}),/name="disciplines" value="tracking" checked/);assert.doesNotMatch(DogFormScreen({id:'existing',name:'Defense',disciplines:['defense']},{realMode:true}),/name="disciplines" value="tracking" checked/);});
+
+test('personal dog cards prominently show recorded lifetime kilometers and zero for new dogs',()=>{const dogs=[{id:'bobby',name:'Bobby',status:'active',disciplines:['tracking']},{id:'ninja',name:'Ninja',status:'active',disciplines:['tracking']}];const html=DogsListScreen(dogs,{realMode:true,mileageTotals:{bobby:{meters:42600,sessions:10}}});assert.match(html,/data-dog-mileage="bobby" data-distance-meters="42600"/);assert.match(html,/42,6 <small>km/);assert.match(html,/data-dog-mileage="ninja" data-distance-meters="0"/);assert.match(html,/0,0 <small>km/);assert.match(html,/séances sans distance disponible/);});
