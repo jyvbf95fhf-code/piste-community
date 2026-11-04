@@ -1,3 +1,4 @@
+import {createCommunityFeedService} from './community-feed-service.mjs';
 import {cleanAccountStorage} from './admin-account-storage.mjs';
 import {createCommunityLiveService} from './community-live-service.mjs';
 import {canJoinCoaching,targetedCoachingExpiresAt} from '../coaching-invitation-policy.mjs';
@@ -84,6 +85,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
   if(body.catalogueId!==undefined&&body.catalogueId!==catalogueId)error('Vos amis ont changé : actualisez le catalogue.',409);
   const offset=body.page*200;return respond({version:1,ownerId:uid,contacts:contacts.slice(offset,offset+200),page:body.page,total:contacts.length,catalogueId,hasMore:offset+200<contacts.length});
  }
+ if(['community-feed-snapshot','community-feed-command'].includes(body.operation)){const feed=createCommunityFeedService(admin);return respond(await (body.operation==='community-feed-snapshot'?feed.snapshot(uid,{postId:body.postId}):feed.command(uid,body)));}
  if(['community-friendship-snapshot','community-friendship-command','community-friendship-profile'].includes(body.operation)){
   if(!friendshipsEnabled)error('Amitiés en attente d’activation serveur.',503);
   if(body.operation==='community-friendship-profile'){
