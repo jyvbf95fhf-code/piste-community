@@ -221,7 +221,6 @@
 .screen-header .avatar[data-account-sync-indicator="syncing"]::after{background:#85d5e5}
 .screen-header .avatar:is([data-account-sync-indicator="error"],[data-account-sync-indicator="conflict"])::after{background:#ff9f94}
 
-/* Immersive screens cover normal page flow: keep actionable warnings above them. */
-.app-shell:has(:is([data-track-cockpit],[data-gps-live],[data-shared-review]))>.account-sync-status{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 12px);z-index:110;margin:0;box-shadow:0 4px 18px #0006}
-/* Keep the lower terrain controls reachable when a sync warning is visible. */
-.app-shell:has(>.account-sync-status) :is([data-gps-live],[data-track-cockpit],.shared-review){padding-bottom:calc(env(safe-area-inset-bottom,0px) + 84px)}
+/* Terrain controls keep their geometry while background sync changes state.
+   Full sync status remains available on normal pages and in Profile. */
+.app-shell:has(:is([data-track-cockpit],[data-gps-live],[data-shared-review]))>.account-sync-status{display:none}
