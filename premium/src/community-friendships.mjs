@@ -5,6 +5,7 @@ const uuid=v=>typeof v==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[8
 export function createCommunityFriendships({baseStore,ownerId,ownerName='Moi',getOwnerId=()=>ownerId,call,onChange=()=>{},afterRemove=()=>{},getLivePermission=id=>baseStore.getContactPermissions(id)?.live_access_authorized===true,setLivePermission=(id,value)=>baseStore.setContactPermission(id,'live_access_authorized',value)}={}){
  if(!uuid(ownerId))throw Error('Compte réel requis.');
  const recoveryPlan=planLocalFriendshipRecovery(baseStore.getState(),ownerId);
+ let searchEpoch=0,searchResults=[],searchQuery='',readIds=new Set();
  let disposed=false,epoch=0,projection=null,pending=false,loading=false,ready=false,message='',inFlight=null;
  const profiles=new Map([[ownerId,{id:ownerId,displayName:ownerName,dogIds:[]}]]),active=()=>!disposed&&getOwnerId()===ownerId;
  const empty=()=>createCommunityStore({viewerId:ownerId,profiles:[...profiles.values()],posts:[],contacts:[],contactRequests:[],follows:[],notifications:[]});
@@ -24,10 +25,10 @@ export function createCommunityFriendships({baseStore,ownerId,ownerName='Moi',ge
  }
  async function refresh(){
   if(!active()){dropAccount();return;}if(inFlight)return inFlight;
-  const ticket=++epoch;loading=true;message='Chargement des amitiés…';onChange();
+  const ticket=++epoch;loading=true;const previous=JSON.stringify(projection);message='Chargement des amitiés…';
   inFlight=(async()=>{try{const value=await call({operation:'community-friendship-snapshot'});if(active()&&ticket===epoch){accept(value);message='';}else dropAccount();}
    catch(error){if(active()&&ticket===epoch){clear();message=error.message||'Amis indisponibles.';}throw error;}
-   finally{if(ticket===epoch){loading=false;inFlight=null;if(active())onChange();}}
+   finally{if(ticket===epoch){loading=false;inFlight=null;if(active()&&previous!==JSON.stringify(projection))onChange();}}
   })();return inFlight;
  }
  async function command(action,peerId,extra={}){
@@ -38,11 +39,12 @@ export function createCommunityFriendships({baseStore,ownerId,ownerName='Moi',ge
   finally{pending=false;if(active())onChange();}
  }
  const requestAction=(action,id,extra={})=>{const r=[...(projection?.received||[]),...(projection?.sent||[])].find(r=>r.id===id);if(!r)throw Error('Demande indisponible : actualisez les contacts.');return command(action,r.fromUserId===ownerId?r.toUserId:r.fromUserId,extra);};
- const overrides={refreshFriendships:refresh,getSocialVersion:()=>projection?.socialVersion||0,
-  getRelation:id=>({...view.getRelation(id),...(projection?.socialVersion===1?{following:projection.following.includes(id)}:{})}),
+ const notifications=()=>active()?(projection?.received||[]).map(r=>({id:`friend-request:${r.id}:${r.version??r.createdAt}`,requestId:r.id,type:'contact_request',recipientId:ownerId,actorId:r.fromUserId,actorDisplayName:r.name,createdAt:r.createdAt,read:readIds.has(`friend-request:${r.id}:${r.version??r.createdAt}`),route:'/community/contacts',channels:{inApp:true,email:false,push:false}})):[];
+ const overrides={getNotifications:notifications,getNotificationStore:()=>({...view.getNotificationStore(),listAll:notifications,list:notifications}),markNotificationRead:id=>readIds.add(id),refreshFriendships:refresh,getSocialVersion:()=>projection?.socialVersion||0,
+  getRelation:id=>({...((()=>{try{return view.getRelation(id);}catch{return {isSelf:id===ownerId,contactStatus:'none',following:false,followedBy:false};}})()),...(projection?.socialVersion===1?{following:projection.following.includes(id)}:{})}),
   getState:()=>({...view.getState(),...(projection?.socialVersion===1?{follows:projection.following.map(id=>({fromUserId:ownerId,toUserId:id}))}:{})}),
   follow:id=>projection?.socialVersion===1?command('follow',id):view.follow(id),unfollow:id=>projection?.socialVersion===1?command('unfollow',id):view.unfollow(id),
-  async findMembers(query){if(!active())throw Error('Le compte a changé.');const text=String(query||'').trim();if(text.length<2)return [];const value=await call({operation:'community-member-search',query:text});if(!active())throw Error('Le compte a changé.');if(!Array.isArray(value.members))throw Error('Recherche de membres indisponible.');for(const p of value.members){if(!uuid(p.id)||p.id===ownerId||typeof p.displayName!=='string'||!p.displayName.trim())throw Error('Profil distant invalide.');profiles.set(p.id,{id:p.id,displayName:p.displayName,dogIds:[]});}if(projection)accept(projection);onChange();return value.members;},searchContacts:query=>uuid(query)?[view.getProfile(query)].filter(Boolean):view.searchContacts(query),getFriendshipStatus:()=>({ready:active()&&ready,loading,pending,message}),getRecoveryPlan:()=>active()?structuredClone(recoveryPlan):{candidates:[],unverifiable:[],autoConfirmed:0},
+  async findMembers(query){const ticket=++searchEpoch;searchQuery=String(query||'').trim();if(!active())throw Error('Le compte a changé.');const text=String(query||'').trim();if(text.length<2)return [];const value=await call({operation:'community-member-search',query:text});if(!active())throw Error('Le compte a changé.');if(ticket!==searchEpoch)return [];if(!Array.isArray(value.members))throw Error('Recherche de membres indisponible.');for(const p of value.members){if(!uuid(p.id)||p.id===ownerId||typeof p.displayName!=='string'||!p.displayName.trim())throw Error('Profil distant invalide.');profiles.set(p.id,{id:p.id,displayName:p.displayName,dogIds:[]});}searchResults=value.members.map(p=>p.id);view.replaceContactProjection({viewerId:ownerId,profiles:[...profiles.values()],contacts:view.getState().contacts,contactRequests:view.getState().contactRequests});onChange();return value.members;},searchContacts:query=>String(query).trim()===searchQuery?searchResults.map(id=>view.getProfile(id)).filter(Boolean):uuid(query)?[view.getProfile(query)].filter(Boolean):view.searchContacts(query),getFriendshipStatus:()=>({ready:active()&&ready,loading,pending,message}),getRecoveryPlan:()=>active()?structuredClone(recoveryPlan):{candidates:[],unverifiable:[],autoConfirmed:0},
   sendContactRequest:(id,contactPreferences)=>command('contact-request',id,{contactPreferences}),acceptContactRequest:(id,contactPreferences)=>requestAction('accept-contact',id,{contactPreferences}),refuseContactRequest:id=>requestAction('refuse-contact',id),cancelContactRequest:id=>requestAction('cancel-contact',id),removeContact:id=>command('remove-contact',id),
   setContactPermission:(id,permission,enabled)=>permission==='live_access_authorized'&&projection?.socialVersion!==1?setLivePermission(id,enabled):command('set-contact-permission',id,{permission,enabled}),
   getContactPermissions:id=>{const p=view.getContactPermissions(id);return p?{...p,live_access_authorized:projection?.socialVersion===1?projection.livePermissions.some(r=>r.peerId===id&&r.enabled===true):getLivePermission(id)===true}:null;},

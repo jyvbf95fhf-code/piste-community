@@ -53,3 +53,4 @@
  .notification-card .button { width:auto; min-height:44px; }
  .notification-card p { font-size:.9rem; line-height:1.45; }
 }
+.community-real-map{height:260px;min-height:220px;width:100%;border-radius:14px;background:#16283a;isolation:isolate}.community-real-map .leaflet-control-attribution{font-size:9px!important}.community-page{min-width:0}.community-person-row,.community-header-actions{flex-wrap:wrap}.community-contact-search input{min-width:0;width:100%}.community-attachment-copy{overflow-wrap:anywhere}

@@ -1,7 +1,7 @@
 import {buildCommunitySharePayload} from './community-model.mjs';
 
 export function createCommunityController({store,sourceOptions=[],origin='',navigate=()=>{},render=()=>{},toast=()=>{},nativeShare=null,copyLink=null,confirmAction=null}={}){
- let pendingPost=null;
+ let pendingPost=null,publishing=false;
  const options=()=>typeof sourceOptions==='function'?sourceOptions():sourceOptions;
  const getSource=(type,id)=>{
   if(!['session','track'].includes(type))throw new Error('Les missions OPS sont exclues des partages Communauté.');
@@ -14,7 +14,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(typeof document==='undefined')return;
   const dialog=document.querySelector('[data-community-confirm-dialog]');if(!dialog)return;
   const text=String(pendingPost?.text||'').trim();
-  const visibility=pendingPost?.visibility||'private';
+  const visibility=pendingPost?.visibility||'contacts';
   const fields=Object.keys(pendingPost?.source?.data||{});
   const labels={private:'Privé',contacts:'Contacts acceptés',community:'Communauté'};
   const description=dialog.querySelector('[data-community-confirm-description]');
@@ -24,6 +24,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
  const finish=(result,{refresh=true}={})=>{if(result?.then)return result.then(value=>{if(refresh)render();return value;});if(refresh)render();return result;};
  function dispatch(action,payload={}){
   const {userId,postId,commentId}=payload;
+  if(action==='refresh-feed')return finish(store.refreshFeed());
   if(action==='refresh-contacts')return finish(store.refreshFriendships());
   if(action==='recover-contact'){if(!confirmAction&&!globalThis.confirm||!(confirmAction||globalThis.confirm)('Vérifier ce profil et préparer une nouvelle demande ? Le destinataire devra l’accepter.'))return false;return finish(store.resolveProfile(userId));}
   if(action==='follow')return finish(store.follow(userId));
@@ -46,7 +47,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(action==='search-contacts')return store.searchContacts(payload.query||'');
   if(action==='like')return finish(store.toggleLike(postId));
   if(action==='delete-comment')return finish(store.deleteOwnComment(postId,commentId));
-  if(action==='report-post')return finish(store.reportPost(postId,'Signalement mock'));
+  if(action==='report-post')return finish(store.reportPost(postId,'Contenu signalé'));
   if(action==='hide-post')return finish(store.hidePost(postId));
   if(action==='delete-post')return finish(store.deleteOwnPost(postId));
   if(action==='share-post'||action==='share-track'){
@@ -56,7 +57,9 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(action==='cancel-post'){pendingPost=null;closeConfirmation();return true;}
   if(action==='confirm-post'){
    if(!pendingPost)throw new Error('Aucun brouillon à publier.');
-   const created=store.createPost(pendingPost);pendingPost=null;closeConfirmation();navigate(`/community/post/${encodeURIComponent(created.id)}`);return finish(created,{refresh:false});
+   if(publishing)return false;
+   const done=created=>{if(!created?.id)throw Error('Confirmation de publication indisponible.');pendingPost=null;closeConfirmation();navigate(`/community/post/${encodeURIComponent(created.id)}`);return created;};
+   const created=store.createPost(pendingPost);if(!created?.then)return done(created);publishing=true;return created.then(done).finally(()=>{publishing=false;});
   }
   if(action==='mark-notification-read')return finish(store.markNotificationRead(payload.notificationId));
   throw new Error('Action Communauté indisponible.');
@@ -73,7 +76,7 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   if(kind==='post-create'){
    let source=null;
    if(payload.sourceType||payload.sourceId){const selected=getSource(payload.sourceType,payload.sourceId);source={type:selected.type,id:selected.id,data:selected.data,fields:[...(payload.fields||[])]};}
-   pendingPost={text:payload.text||'',visibility:payload.visibility||'private',dogId:payload.dogId||null,photo:payload.photo||null,source};
+   pendingPost={text:payload.text||'',visibility:payload.visibility||'contacts',dogId:payload.dogId||null,photo:payload.photo||null,source};
    presentConfirmation();return {pending:true,visibility:pendingPost.visibility,sourceType:source?.type||null};
   }
   throw new Error('Formulaire Communauté indisponible.');
@@ -87,11 +90,11 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   const share=nativeShare||globalThis.navigator?.share?.bind(globalThis.navigator);
   if(share){try{await share(payload);return true;}catch(error){if(error?.name==='AbortError')return false;}}
   const copy=copyLink||globalThis.navigator?.clipboard?.writeText?.bind(globalThis.navigator.clipboard);
-  if(copy){try{await copy(payload.url);toast('Lien copié · partage mock, sans envoi externe.');return true;}catch{}}
+  if(copy){try{await copy(payload.url);toast('Lien copié.');return true;}catch{}}
   if(typeof document!=='undefined'){
    const dialog=document.createElement('dialog');dialog.className='community-share-fallback';
    const title=document.createElement('h2');title.textContent=payload.kind==='track'?'Partager la piste':'Partager la publication';
-   const input=document.createElement('input');input.readOnly=true;input.value=payload.url;input.setAttribute('aria-label','Lien de partage mock');
+   const input=document.createElement('input');input.readOnly=true;input.value=payload.url;input.setAttribute('aria-label','Lien de partage');
    const close=document.createElement('button');close.type='button';close.className='button button-gold';close.textContent='Fermer';close.addEventListener('click',()=>dialog.close());
    const note=document.createElement('p');note.textContent='Aucun service externe n’a été appelé. Copiez ce lien pour le partager.';
    dialog.append(title,note,input,close);document.body.append(dialog);dialog.addEventListener('close',()=>dialog.remove(),{once:true});dialog.showModal();input.focus();input.select();
@@ -115,10 +118,10 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
    if(['contact-request','accept-contact'].includes(action)){confirmContact(action,button.dataset.userId);return true;}
    if(action==='delete-post'){
     const confirm=confirmAction||globalThis.confirm;
-    if(confirm&&!confirm('Supprimer votre publication mock ?'))return true;
+    if(confirm&&!confirm('Supprimer votre publication ?'))return true;
    }
    const payload={userId:button.dataset.userId,postId:button.dataset.postId,commentId:button.dataset.commentId,notificationId:button.dataset.notificationId};
-   const result=dispatch(action,payload);if(result?.then)void result.catch(error=>{toast(error.message);render();});
+   const result=dispatch(action,payload);if(result?.then)void result.catch(error=>{toast(error.message);});
    if(action==='share-post'||action==='share-track')void deliverShare(result);
    return true;
   }catch(error){toast(error.message);return true;}
@@ -127,8 +130,8 @@ export function createCommunityController({store,sourceOptions=[],origin='',navi
   const form=event.target.closest?.('[data-community-form]');if(!form)return false;
   event.preventDefault();const data=new FormData(form),kind=form.dataset.communityForm;
   try{
-   if(kind==='profile')submit('profile',{displayName:data.get('displayName')});
-   else if(kind==='comment')submit('comment',{postId:form.dataset.postId,text:data.get('text')});
+   if(kind==='profile'){const task=submit('profile',{displayName:data.get('displayName')});if(task?.then)void task.catch(error=>toast(error.message));}
+   else if(kind==='comment'){const task=submit('comment',{postId:form.dataset.postId,text:data.get('text')});if(task?.then)void task.then(()=>{form.reset();}).catch(error=>toast(error.message));}
    else if(kind==='search')submit('search',{query:data.get('q')});
    else if(kind==='contact-search'){const result=submit('contact-search',{query:data.get('q')});if(result?.then)void result.catch(error=>toast(error.message));}
    else if(kind==='post-create')submit('post-create',{
