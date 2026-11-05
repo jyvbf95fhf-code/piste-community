@@ -1,0 +1,60 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {PGlite} from '@electric-sql/pglite';
+import {createOpsLiveRemote} from '../src/ops-live-remote.mjs';
+const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222',c='33333333-3333-4333-8333-333333333333',sid='44444444-4444-4444-8444-444444444444',pid='55555555-5555-4555-8555-555555555555';
+test('SQL Live rejects free accounts, validates both ends on each read, and allows stopping after expiry',async()=>{
+ const db=new PGlite();try{
+ await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;create table auth.users(id uuid primary key,raw_app_meta_data jsonb default '{}');create table auth.sessions(id uuid primary key,user_id uuid,not_after timestamptz);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;create schema realtime;create table realtime.messages(extension text);create function realtime.topic() returns text language sql as $$select ''::text$$;create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$select$$;grant usage on schema realtime to service_role;`);
+ for(const path of ['supabase/migrations/20261015054625_coaching_remote_core.sql','docs/community-friendships/01-friendships-final.proposed.sql','supabase/migrations/20261016081506_ops_live_v2.sql','docs/social-live/2026-10-28-social-live.sql'])await db.exec(await readFile(new URL('../'+path,import.meta.url),'utf8'));
+ await db.exec(`create table public.test_code_grants(actor uuid primary key,record jsonb);create function public.v2_premium_code_entitlement(p_actor uuid) returns jsonb language sql as $$select record from public.test_code_grants where actor=p_actor$$;`);
+ for(const id of [a,b,c]){await db.query('insert into auth.users(id) values($1)',[id]);await db.query('insert into coaching_remote_users values($1,$2,true,true)',[id,'QA']);}
+ await db.exec('update private.community_friendship_control set enabled=true');
+ const rpc=async(name,args)=>{const keys=Object.keys(args);return (await db.query(`select public.${name}(${keys.map((k,i)=>k+'=>$'+(i+1)).join(',')}) result`,Object.values(args))).rows[0].result;};
+ await rpc('community_friendship_command',{p_actor:a,p_peer:b,p_action:'contact-request',p_command_id:crypto.randomUUID(),p_expected:-1,p_enabled:null});
+ await rpc('community_friendship_command',{p_actor:b,p_peer:a,p_action:'accept-contact',p_command_id:crypto.randomUUID(),p_expected:0,p_enabled:null});
+ await db.query('insert into community_social_edges(owner_id,peer_id,live_enabled) values($1,$2,true) on conflict(owner_id,peer_id) do update set live_enabled=true',[a,b]);
+ await db.query('insert into coaching_remote_sessions(id,owner_id,state) values($1,$2,$3)',[sid,a,{session:{mode:'normal'},search:{phase:'SEARCH_RUNNING'}}]);
+ await db.exec(await readFile(new URL('./helpers/live-premium-baseline.sql',import.meta.url),'utf8'));
+ if(!process.env.PISTE_TEST_WITHOUT_PREMIUM_GATE)await db.exec(await readFile(new URL('../docs/live-premium/enforce-premium.proposed.sql',import.meta.url),'utf8'));
+ const grant=(source='premium',extra={})=>({entitlement:'premium',source,granted_at:new Date(Date.now()-60000).toISOString(),expires_at:new Date(Date.now()+3600000).toISOString(),...extra});
+ const metadata=(id,m)=>db.query('update auth.users set raw_app_meta_data=$2 where id=$1',[id,m]);
+ const live=()=>rpc('community_live_sessions',{p_actor:b,p_session_id:sid});
+ assert.equal((await live()).length,0,'free owner and observer cannot read Coaching Live');
+ const publish=()=>rpc('ops_live_commit',{p_id:pid,p_actor:a,p_command:crypto.randomUUID(),p_expected:-1,p_type:'publish',p_payload:{localMissionId:'qa',creationPurpose:'create',creationExpectedVersion:-1,creationExpiresAt:new Date(Date.now()+120000).toISOString(),metadata:{state:'En cours'}}});
+ await assert.rejects(publish(),e=>e.code==='42501');
+ await metadata(a,{permissions:{premium:true},jumolf_entitlement:grant('access_code')});
+ await assert.rejects(publish(),e=>e.code==='42501');
+ await metadata(a,{premium_entitlement:grant()});await metadata(b,{premium_gift:grant('gift')});
+ assert.equal((await live()).length,1);
+ await rpc('ops_live_habitual',{p_actor:a,p_owner:a,p_user:b,p_enabled:true});await publish();
+ const allowed=()=>rpc('ops_live_authorized',{p_id:pid,p_actor:b});assert.equal(await allowed(),true);
+ await metadata(c,{premium_entitlement:grant()});
+ assert.equal(await rpc('ops_live_authorized',{p_id:pid,p_actor:c}),false,'Premium does not substitute friendship/permission');
+ await db.query("select set_config('request.jwt.claim.sub',$1,false)",[b]);
+ const pub=(await db.query('select generation,channel_epoch from ops_live_publications where id=$1',[pid])).rows[0];
+ const topic=`ops-live:${pid}:${pub.generation}:${pub.channel_epoch}:${b}`;
+ const listens=async()=> (await db.query('select private.ops_live_can_listen($1) v',[topic])).rows[0].v;
+ assert.equal(await listens(),true);
+ await metadata(a,{premium_entitlement:grant('premium',{expires_at:new Date(Date.now()-1000).toISOString()})});
+ assert.equal(await allowed(),false);assert.equal((await live()).length,0);assert.equal(await listens(),false);
+ await metadata(a,{premium_entitlement:grant()});await metadata(b,{});
+ assert.equal(await allowed(),false);assert.equal((await live()).length,0);assert.deepEqual(await rpc('ops_live_notifications',{p_actor:b}),[]);assert.equal(await listens(),false);
+ await db.query('insert into test_code_grants values($1,$2)',[b,grant('access_code')]);
+ assert.equal(await allowed(),true);assert.equal((await live()).length,1);
+ await metadata(a,{premium_entitlement:grant('premium',{revoked_at:new Date().toISOString()})});
+ const header=await rpc('ops_live_head',{p_id:pid,p_actor:a});
+ assert.equal(header.version,0);assert.equal('points' in header,false);assert.equal('metadata' in header,false);
+ const key='piste-v2-ops-live-remote:'+a,data=new Map(),calls=[];
+ data.set(key,JSON.stringify({ownerId:a,missions:{local:{id:pid,version:0,generation:1,pending:{operation:'command',id:pid,commandId:crypto.randomUUID(),expectedVersion:0,type:'gps-batch',payload:{generation:1,points:[]}}}}}));
+ const remote=createOpsLiveRemote({ownerId:a,locks:null,storage:{getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)},call:async body=>{
+  calls.push(body.type||body.operation);
+  if(body.operation==='head')return rpc('ops_live_head',{p_id:body.id,p_actor:a});
+  return rpc('ops_live_commit',{p_id:body.id,p_actor:a,p_command:body.commandId,p_expected:body.expectedVersion,p_type:body.type,p_payload:body.payload});
+ }});
+ await remote.cleanupAfterAccessLoss();
+ assert.equal(calls.includes('gps-batch'),false);assert.ok(calls.includes('close'));
+ assert.equal(JSON.parse(data.get(key)).missions.local.closed,true);
+ assert.equal((await db.query('select closed_at is not null v from ops_live_publications where id=$1',[pid])).rows[0].v,true);
+ assert.equal(remote.view().sessions.length,0);
+ assert.equal((await db.query("select has_function_privilege('authenticated','private.live_has_premium(uuid)','EXECUTE') v")).rows[0].v,false);
+ }finally{await db.close();}
+});

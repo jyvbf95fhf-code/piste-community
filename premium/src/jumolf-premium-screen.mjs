@@ -1,3 +1,4 @@
+import {PremiumRecap} from './premium-recap.mjs';
 import {escapeHTML} from './components.mjs';
 import {JUMOLF_ACCESS_PROFILES} from './jumolf-fixtures.mjs';
 const e=escapeHTML;
@@ -12,7 +13,7 @@ export function JumolfPremiumScreen(){
  const benefits=[
   {number:'01',tag:'PRÉPARER',title:'Des pistes pensées pour votre binôme',text:'Imaginez votre prochain entraînement : commune, distance, terrain, transitions de surface et propositions de tracés intelligents.',icon:'◎'},
   {number:'02',tag:'COMPRENDRE',title:'JUMOLF, l’intelligence de votre progression',text:'Retrouvez les tendances de vos séances, vos comparaisons et des recommandations pour préparer les prochaines étapes.',icon:'✧'},
-  {number:'03',tag:'COLLABORER',title:'Une expérience de terrain plus riche',text:'Découvrez les perspectives avancées du Coaching et du Live OPS, à mesure que ces fonctionnalités sont activées.',icon:'⌁'}
+  {number:'03',tag:'COLLABORER',title:'Le Live OPS et Coaching, en Premium',text:'Partagez votre piste sur la carte avec vos amis autorisés et suivez leur progression en lecture seule. Un accès Premium actif est nécessaire pour diffuser et regarder.',icon:'⌁'}
  ];
  return `<main class="pc-premium-landing" id="premium-offer">
  <header class="pc-premium-top"><a href="/jumolf" aria-label="Retour à JUMOLF">← Retour</a><span>PISTE COMMUNITY <b>✦ PREMIUM</b></span></header>
@@ -21,7 +22,8 @@ export function JumolfPremiumScreen(){
  <p class="pc-premium-lead">Préparez avec précision. Vivez vos séances pleinement. Comprenez la progression de votre binôme.</p>
  <a class="pc-premium-primary" href="#pc-premium-benefits">Explorer les avantages <span aria-hidden="true">↓</span></a><p class="pc-premium-micro">Une expérience conçue pour les passionnés et professionnels du pistage canin.</p></section>
  <section class="pc-premium-benefits" id="pc-premium-benefits"><p class="pc-premium-kicker">L’EXPÉRIENCE PREMIUM</p><h2>Plus qu’un outil.<br><em>Un partenaire d’entraînement.</em></h2><div class="pc-premium-benefit-grid">${benefits.map(x=>`<article class="pc-premium-benefit"><div class="pc-premium-benefit-top"><span>${x.number} / ${x.tag}</span><i aria-hidden="true">${x.icon}</i></div><h3>${e(x.title)}</h3><p>${e(x.text)}</p></article>`).join('')}</div></section>
- <section class="pc-premium-compare"><p class="pc-premium-kicker">CHOISISSEZ VOTRE EXPÉRIENCE</p><h2>Le pistage pour tous.<br><em>La profondeur en plus.</em></h2><div class="pc-premium-plans"><article><span>ESSENTIEL</span><h3>Gratuit</h3><p>Le cœur du pistage, toujours accessible.</p><ul><li>Création manuelle de tracés</li><li>Import GPX</li><li>Fonctions de base des séances et du suivi</li></ul></article><article class="pc-premium-plan-featured"><span>✦ L’EXPÉRIENCE COMPLÈTE</span><h3>Premium</h3><p>Pour préparer et analyser avec davantage de profondeur.</p><ul><li>Tout l’accès gratuit</li><li>Créateur de tracés intelligent</li><li>JUMOLF et analyses de progression</li><li>Fonctions avancées au fil de leur activation</li></ul></article></div></section>
+ ${PremiumRecap()}
+ <section class="pc-premium-compare"><p class="pc-premium-kicker">CHOISISSEZ VOTRE EXPÉRIENCE</p><h2>Le pistage pour tous.<br><em>La profondeur en plus.</em></h2><div class="pc-premium-plans"><article><span>ESSENTIEL</span><h3>Gratuit</h3><p>Le cœur du pistage, toujours accessible.</p><ul><li>Création manuelle de tracés</li><li>Import GPX</li><li>Fonctions de base des séances et du suivi</li></ul></article><article class="pc-premium-plan-featured"><span>✦ L’EXPÉRIENCE COMPLÈTE</span><h3>Premium</h3><p>Pour préparer et analyser avec davantage de profondeur.</p><ul><li>Tout l’accès gratuit</li><li>Créateur de tracés intelligent</li><li>JUMOLF et analyses de progression</li><li>Live OPS et Coaching avec vos amis autorisés</li></ul></article></div></section>
  <section class="pc-premium-final"><span class="pc-premium-final-symbol" aria-hidden="true">✦</span><h2>Votre binôme mérite<br><em>le meilleur de vos données.</em></h2><p>Le paiement n’est pas encore ouvert. Vous pouvez découvrir l’expérience ou utiliser un code d’accès déjà attribué.</p><div class="pc-premium-actions"><a class="pc-premium-primary" href="/jumolf/access-code">J’ai un code d’accès ↗</a><a class="pc-premium-secondary" href="/track-builder?tool=smart">Découvrir le créateur de tracés</a></div><small>Présentation de l’offre en développement · Aucun paiement réel · Les fonctionnalités annoncées comme futures ne sont pas encore actives.</small></section>
  </main>`;
 }

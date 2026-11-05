@@ -25,6 +25,7 @@ export function operationalJournalMarkup(journal = [], events = [], trace = [], 
 }
 
 function livePolicyControls(view,policy={}){
+  if(policy.premiumRequired)return `<section class="card" data-live-premium-gate><span class="eyebrow">LIVE OPS · PREMIUM</span><p>Activez Premium pour partager votre suivi Live avec vos amis autorisés.</p><a class="button button-gold" href="/jumolf/premium">Découvrir Premium</a></section>`;
   const options=policy.projectionOptions||{};
   const checkbox=(field,label,checked)=>`<label><input type="checkbox" data-live-policy="${field}" data-session-id="${e(view.id)}" data-session-type="ops" ${checked?'checked':''}>${label}</label>`;
   const option=(field,label)=>`<label><input type="checkbox" data-live-option="${field}" data-session-id="${e(view.id)}" ${options[field]!==false?'checked':''}>${label}</label>`;
