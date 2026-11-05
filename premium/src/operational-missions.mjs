@@ -321,7 +321,7 @@ export function createOperationalMissionStore({
     createRetrospective({dog,handler,retrospective,address=''}={}){
       const report=normalizeRetrospective(retrospective);if(!report)throw Error('Bilan après intervention requis.');
       const draft=this.createDraft({dog,handler,details:{observations:report.observations},places:{interventionAddress:String(address||'').slice(0,240)}});
-      const mission=records.get(draft.id);mission.entryMode='retrospective';mission.retrospective=report;mission.gpsTrack=null;mission.status='Archivée';mission.trackingState='stopped';mission.fieldClosedAt=report.finishedAt;mission.completedAt=isoNow();mission.archivedAt=isoNow();mission.provenance.retrospective='user_declared';mission.traceMetadata={sourceType:report.gpx?'gpx_import':null,sourceDevice:null,importType:'after_intervention'};
+      const mission=records.get(draft.id);mission.entryMode='retrospective';mission.liveSharing=false;mission.retrospective=report;mission.gpsTrack=null;mission.status='Archivée';mission.trackingState='stopped';mission.fieldClosedAt=report.finishedAt;mission.completedAt=isoNow();mission.archivedAt=isoNow();mission.provenance.retrospective='user_declared';mission.traceMetadata={sourceType:report.gpx?'gpx_import':null,sourceDevice:null,importType:'after_intervention'};
       mission.journal=[{id:mission.id+'-after',sequence:1,kind:'recorded_after_intervention',elapsedMs:0,timeLabel:report.recordedAt}];
       mission.time.trackingActiveDurationMs=null;mission.time.totalMissionDurationMs=retrospectiveMetrics(report).elapsedMs;
       return snapshot(mission);
@@ -338,6 +338,7 @@ export function createOperationalMissionStore({
         kind: 'operational',
         ownerUserId: ownerId,
         retrospective:null,
+        liveSharing:true,
         status: 'Brouillon',
         trackingState: 'ready',
         dogId: String(dog.id),
@@ -434,6 +435,14 @@ export function createOperationalMissionStore({
 
     trackingElapsedMs(id, at = clock()) {
       return trackingElapsedMs(getMutable(id), at);
+    },
+
+    setLiveSharing(id, enabled) {
+      const mission=getMutable(id);
+      requireEditable(mission);
+      if(typeof enabled!=='boolean')throw Error('Choix de partage Live invalide.');
+      mission.liveSharing=enabled;
+      return snapshot(mission);
     },
 
     updateDetails(id, patch = {}) {
