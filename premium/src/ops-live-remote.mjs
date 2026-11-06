@@ -19,9 +19,24 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
  async function read(id){const result=await send({operation:'head',id});if(!result)throw Object.assign(Error('Accès refusé.'),{status:403});return result;}
  async function readTrack(item,previous=null){
   let result;const retained=previous&&previous.generation===item.generation?previous:null;
-  try{result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:item.version});}catch(error){if(error.status!==409)throw error;return readTrack({id:item.id},null);}
-  const points=[...(retained?.points||[]),...result.points];let after=points.at(-1)?.sequence||0;
-  while(after<result.lastSequence){const page=await send({operation:'read',id:item.id,after,version:result.version});if(!page.points?.length)throw Error('Page GPS incomplète.');points.push(...page.points);after=points.at(-1).sequence;}return {...result,points};
+  try{result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:item.version});}
+  catch(error){
+   if(error.status!==409)throw error;
+   // One fresh read only: a stale version must never trigger recursive retries.
+   console.warn('[OPS Live] Conflit de version en lecture ; une seule resynchronisation complète.');
+   result=await send({operation:'read',id:item.id,after:0,version:null});
+   return readTrackPages(result,[]);
+  }
+  return readTrackPages(result,retained?.points||[]);
+ }
+ async function readTrackPages(result,retainedPoints){
+  const points=[...retainedPoints,...(result.points||[])];let after=points.at(-1)?.sequence||0;
+  while(after<result.lastSequence){
+   const page=await send({operation:'read',id:result.id,after,version:result.version});
+   if(!page.points?.length)throw Error('Page GPS incomplète.');
+   points.push(...page.points);after=points.at(-1).sequence;
+  }
+  return {...result,points};
  }
  async function refresh(){if(refreshing)return refreshing;const ticket=++epoch;
   refreshing=(async()=>{try{const list=await send({operation:'list'}),next=new Map(),nextRaw=new Map();for(const item of list){try{const previous=rawRows.get(item.id),row=previous&&previous.generation===item.generation&&previous.version===item.version?previous:await readTrack(item,previous);nextRaw.set(item.id,row);const p=opsLiveProjection(row);p.activity=liveActivity({ended:p.ended,lastPositionAt:p.lastPositionAt,updatedAt:item.updatedAt||row.updatedAt});p.isOwner=item.isOwner===true||item.ownerId===ownerId||Object.values(saved.missions).some(m=>m.id===item.id);p.ownerId=p.isOwner?ownerId:item.ownerId||null;next.set(item.id,p);}catch(e){if(![401,403].includes(e.status))throw e;}}
