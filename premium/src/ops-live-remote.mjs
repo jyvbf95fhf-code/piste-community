@@ -11,20 +11,31 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
  if(!uuid(ownerId)||!storage||typeof call!=='function')throw Error('Identité et stockage OPS requis.');
  const key='piste-v2-ops-live-remote:'+ownerId;let saved={ownerId,missions:{}};
  const raw=storage.getItem(key);if(raw!==null){saved=JSON.parse(raw);if(saved.ownerId!==ownerId||!saved.missions||typeof saved.missions!=='object')throw Error('Stockage OPS illisible : original conservé.');}
- let disposed=false,epoch=0,connection='idle',sessions=[],notices=[],invitations=[],directory=[],directoryLoading=null,projections=new Map(),rawRows=new Map(),refreshing=null;const busy=new Map();
+ let disposed=false,epoch=0,connection='idle',sessions=[],notices=[],invitations=[],directory=[],directoryLoading=null,projections=new Map(),rawRows=new Map(),refreshing=null;const busy=new Map(),staleReads=new Map();
  const save=()=>storage.setItem(key,JSON.stringify(saved));
  const active=()=>{if(disposed)throw Error('Suivi OPS fermé.');};
  const send=async body=>{active();const result=await call(body);active();return result;};
  const view=()=>({connection,sessions:structuredClone(sessions),notifications:structuredClone(notices),invitations:structuredClone(invitations),directory:structuredClone(directory)});
  async function read(id){const result=await send({operation:'head',id});if(!result)throw Object.assign(Error('Accès refusé.'),{status:403});return result;}
  async function readTrack(item,previous=null){
-  let result;const retained=previous&&previous.generation===item.generation?previous:null;
-  try{result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:item.version});}catch(error){if(error.status!==409)throw error;return readTrack({id:item.id},null);}
+  let result;let retained=previous&&previous.generation===item.generation?previous:null;
+  const versionKey=String(item.generation)+':'+String(item.version);
+  if(staleReads.get(item.id)===versionKey)throw Object.assign(Error('Version OPS en attente de mise à jour.'),{status:409});
+  if(staleReads.has(item.id))staleReads.delete(item.id);
+  try{result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:item.version});}
+  catch(error){
+   if(error.status!==409)throw error;
+   // The list may lag the authoritative head. Retry once, never recursively.
+   const latest=await read(item.id);
+   retained=null;
+   try{result=await send({operation:'read',id:item.id,after:0,version:latest.version});}
+   catch(retryError){if(retryError.status===409)staleReads.set(item.id,versionKey);throw retryError;}
+  }
   const points=[...(retained?.points||[]),...result.points];let after=points.at(-1)?.sequence||0;
   while(after<result.lastSequence){const page=await send({operation:'read',id:item.id,after,version:result.version});if(!page.points?.length)throw Error('Page GPS incomplète.');points.push(...page.points);after=points.at(-1).sequence;}return {...result,points};
  }
  async function refresh(){if(refreshing)return refreshing;const ticket=++epoch;
-  refreshing=(async()=>{try{const list=await send({operation:'list'}),next=new Map(),nextRaw=new Map();for(const item of list){try{const previous=rawRows.get(item.id),row=previous&&previous.generation===item.generation&&previous.version===item.version?previous:await readTrack(item,previous);nextRaw.set(item.id,row);const p=opsLiveProjection(row);p.activity=liveActivity({ended:p.ended,lastPositionAt:p.lastPositionAt,updatedAt:item.updatedAt||row.updatedAt});p.isOwner=item.isOwner===true||item.ownerId===ownerId||Object.values(saved.missions).some(m=>m.id===item.id);p.ownerId=p.isOwner?ownerId:item.ownerId||null;next.set(item.id,p);}catch(e){if(![401,403].includes(e.status))throw e;}}
+  refreshing=(async()=>{try{const list=await send({operation:'list'}),next=new Map(),nextRaw=new Map();for(const item of list){try{const previous=rawRows.get(item.id),row=previous&&previous.generation===item.generation&&previous.version===item.version?previous:await readTrack(item,previous);nextRaw.set(item.id,row);const p=opsLiveProjection(row);p.activity=liveActivity({ended:p.ended,lastPositionAt:p.lastPositionAt,updatedAt:item.updatedAt||row.updatedAt});p.isOwner=item.isOwner===true||item.ownerId===ownerId||Object.values(saved.missions).some(m=>m.id===item.id);p.ownerId=p.isOwner?ownerId:item.ownerId||null;next.set(item.id,p);}catch(e){if(![401,403,409].includes(e.status))throw e;}}
    const notifications=await send({operation:'notifications'}),pending=await send({operation:'invitations'});if(!disposed&&ticket===epoch){sessions=list.filter(x=>next.has(x.id));projections=next;rawRows=nextRaw;notices=notifications;invitations=pending;connection='connected';onChange();}
   }catch(e){if(!disposed&&ticket===epoch){connection=[401,403].includes(e.status)?'forbidden':'offline';if(connection==='forbidden'){projections.clear();rawRows.clear();sessions=[];notices=[];invitations=[];}else for(const [id,p] of projections)if(!p.ended)projections.set(id,{...p,activity:{state:'disconnected',label:'Déconnecté · dernière réception conservée'}});onChange();}}finally{refreshing=null;}})();return refreshing;
  }
