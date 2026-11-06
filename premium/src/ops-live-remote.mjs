@@ -18,7 +18,7 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
  const view=()=>({connection,sessions:structuredClone(sessions),notifications:structuredClone(notices),invitations:structuredClone(invitations),directory:structuredClone(directory)});
  async function read(id){const result=await send({operation:'head',id});if(!result)throw Object.assign(Error('Accès refusé.'),{status:403});return result;}
  async function readTrack(item,previous=null){
-  let result;const retained=previous&&previous.generation===item.generation?previous:null;
+  let result;const retained=previous&&previous.generation===item.generation&&previous.version===item.version?previous:null;
   try{result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:item.version});}catch(error){if(error.status!==409)throw error;return readTrack({id:item.id},null);}
   const points=[...(retained?.points||[]),...result.points];let after=points.at(-1)?.sequence||0;
   while(after<result.lastSequence){const page=await send({operation:'read',id:item.id,after,version:result.version});if(!page.points?.length)throw Error('Page GPS incomplète.');points.push(...page.points);after=points.at(-1).sequence;}return {...result,points};
