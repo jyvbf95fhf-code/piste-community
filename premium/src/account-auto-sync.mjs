@@ -76,7 +76,14 @@ export function createAccountAutoSync({ownerId,getOwnerId,journal,repository,get
      const observed=local?fingerprint(prepared(local).payload):null;
      const guard=()=>{if(!active())throw Error('Compte changé.');if(entry&&hasLocal&&!hasLocal(kind,localId))throw Error('Copie locale retirée pendant la récupération.');if(observed!==null){const current=candidates().find(c=>c.kind===kind&&c.localId===local.localId);if(!current||fingerprint(prepared(current).payload)!==observed)throw Error('Modification locale conservée pendant la récupération.');}};
      await restore(r,guard);pullErrors.delete(identity(r));deferredRecords.delete(identity(r));restored++;
-    }catch(e){pullErrors.set(identity(r),kind+' : '+e.message);}
+    }catch(e){
+     // A removed Coaching session or dog can leave a cloud association that
+     // cannot be restored locally. Keep it for a future retry, without
+     // treating unrelated account records as failed or deleting the link.
+     if(kind==='session-dog-link'&&e.message==='Session ou chien indisponible.'){
+      pullErrors.delete(identity(r));deferredRecords.add(identity(r));
+     }else pullErrors.set(identity(r),kind+' : '+e.message);
+    }
    }
   }
   lastPull=clock();hydrated=true;if(restored&&active())onHydrated(restored);
