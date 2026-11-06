@@ -30,6 +30,7 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
    retained=null;
    try{result=await send({operation:'read',id:item.id,after:0,version:latest.version});}
    catch(retryError){if(retryError.status===409)staleReads.set(item.id,versionKey);throw retryError;}
+   if(latest.version!==item.version)staleReads.set(item.id,versionKey);
   }
   const points=[...(retained?.points||[]),...result.points];let after=points.at(-1)?.sequence||0;
   while(after<result.lastSequence){const page=await send({operation:'read',id:item.id,after,version:result.version});if(!page.points?.length)throw Error('Page GPS incomplète.');points.push(...page.points);after=points.at(-1).sequence;}return {...result,points};
