@@ -2067,9 +2067,17 @@ setInterval(()=>{if(document.visibilityState!=='hidden')refreshSharedCatalog();}
 
 // Save events queue work immediately; visible ticks also catch shared session links.
 window.addEventListener('piste:personal-change',()=>accountAuto?.schedule({changed:true}));
-const accountSyncOnReturn=()=>{if(document.visibilityState!=='hidden'){reconcileAccountAutoSync();void accountAuto?.cycle({forcePull:true});}};
+// Focus, pageshow and visibilitychange commonly fire together on iOS. One
+// foreground return must produce at most one forced cloud reconciliation.
+let accountForegroundPullAt=0;
+const accountSyncOnReturn=()=>{
+ if(document.visibilityState==='hidden'||navigator.onLine===false)return;
+ const now=Date.now();if(now-accountForegroundPullAt<15000)return;
+ accountForegroundPullAt=now;reconcileAccountAutoSync();void accountAuto?.cycle({forcePull:true});
+};
 window.addEventListener('offline',()=>void accountAuto?.cycle());window.addEventListener('online',accountSyncOnReturn);window.addEventListener('focus',accountSyncOnReturn);window.addEventListener('pageshow',accountSyncOnReturn);document.addEventListener('visibilitychange',accountSyncOnReturn);
-setInterval(()=>{if(document.visibilityState!=='hidden')void accountAuto?.cycle();},5000);
+// Local changes still schedule an immediate sync; routine idle checks need not run every 5s.
+setInterval(()=>{if(document.visibilityState==='visible')void accountAuto?.cycle();},15000);
 const markPersonalFormDirty=event=>{const form=event.target.closest?.('form[data-dog-form],form[data-profile-form],form[data-track-editor-form]');if(form)form.dataset.syncDirty='true';};
 document.addEventListener('input',markPersonalFormDirty);document.addEventListener('change',markPersonalFormDirty);
 
