@@ -2061,7 +2061,14 @@ document.addEventListener('keydown',event=>{if(event.key!=='Escape')return;const
 document.addEventListener('cancel',event=>{if(event.target.matches?.('[data-smart-panel]')){event.preventDefault();event.target.close();trackSmart.cancel();document.querySelector('[data-editor-action="open-smart"]')?.focus();}},true);
 
 // Refresh invitations on opening/returning to the app. Poll only while visible.
-function refreshCoachingOnReturn(){if(document.visibilityState!=='hidden')refreshSharedCatalog(true);}
+// iOS can emit focus, pageshow and visibilitychange in a single return.
+// Coalesce only automatic foreground refreshes; explicit user actions remain immediate.
+let coachingForegroundRefreshAt=0;
+function refreshCoachingOnReturn(){
+ if(document.visibilityState==='hidden'||navigator.onLine===false)return;
+ const now=Date.now();if(now-coachingForegroundRefreshAt<15000)return;
+ coachingForegroundRefreshAt=now;refreshSharedCatalog(true);
+}
 window.addEventListener('focus',refreshCoachingOnReturn);window.addEventListener('pageshow',refreshCoachingOnReturn);window.addEventListener('online',refreshCoachingOnReturn);document.addEventListener('visibilitychange',refreshCoachingOnReturn);
 setInterval(()=>{if(document.visibilityState!=='hidden')refreshSharedCatalog();},30000);
 
