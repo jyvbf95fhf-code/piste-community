@@ -321,7 +321,8 @@ function reconcileOpsLive(){
  if(owner&&storage)try{opsLiveBindings=createOpsLiveBindings({ownerId:owner,storage});for(const binding of opsLiveBindings.list())communityStore.setContactPermission(binding.alias,'live_access_authorized',binding.enabled);opsLiveRemote=createOpsLiveRemote({ownerId:owner,storage,call:createOpsLiveTransport({client:accountClient,ownerId:owner}),onChange:()=>{updateLiveBadge();if(location.pathname==='/')renderCoachingUpdates();if(location.pathname.startsWith('/live')||location.pathname.startsWith('/community/profile/')||location.pathname==='/notifications')render();}});notificationReadSync=createNotificationReadSync({ownerId:owner,getOwnerId:()=>auth.getSession().user?.user_id,receipts:notificationReceipts,remote:opsLiveRemote});for(const m of operationalStore.list())if(m.ownerUserId===owner){const patch=opsLiveRemote.storedPolicy(m.id);if(patch)communityLiveStore.setSessionPolicy({sessionType:'ops',sessionId:m.id,patch});}}catch(error){Toast(error.message);}
 }
 async function tickOpsLive(force=false){
- if(document.visibilityState==='hidden'||opsLiveTickPending||!force&&Date.now()-opsLiveAttempt<5000)return;
+ const liveActive=operationalStore.list().some(m=>m.ownerUserId===opsLiveRemoteOwner&&m.status==='En cours'&&opsLivePolicy(m.id).share_live)||opsLiveRemote?.view().sessions.some(s=>!s.closed&&!s.ended); const interval=liveActive?5000:30000;
+ if(document.visibilityState==='hidden'||opsLiveTickPending||!force&&Date.now()-opsLiveAttempt<interval)return;
  void flushCoachingLiveEnds({client:accountClient,ownerId:auth.getSession().user?.user_id,storage,force}).catch(()=>{});void tickFriendLive(force);reconcileOpsLive();if(!opsLiveRemote)return;opsLiveAttempt=Date.now();opsLiveTickPending=true;const remote=opsLiveRemote,premium=hasLivePremium(jumolfAccess());
  try{
   if(!premium){await remote.cleanupAfterAccessLoss();return;}
