@@ -1,10 +1,24 @@
-/* A native transparent wordmark: no photographic rectangle, blend mode or SVG filter. */
-.home-shell .home-welcome-logo {
- background-image:url('/src/assets/brand/piste-community-horizontal.svg');
- background-size:contain;
- background-position:center;
- mix-blend-mode:normal;
- mask-image:none;
- -webkit-mask-image:none;
- filter:none;
+/* Home welcome only: show the approved horizontal dog-and-mountains brand,
+   rather than the legacy paw wordmark. Do not alter login or app icons. */
+.home-shell .screen-header .brand {
+ position:relative;
+ width:156px;
+ height:76px;
+ flex-shrink:0;
+}
+.home-shell .screen-header .brand .home-welcome-logo {
+ display:block;
+ width:100%;
+ height:100%;
+ background-image:url('/src/assets/brand/piste-community-horizontal.svg') !important;
+ background-repeat:no-repeat !important;
+ background-size:contain !important;
+ background-position:center !important;
+ mix-blend-mode:normal !important;
+ mask-image:none !important;
+ -webkit-mask-image:none !important;
+ filter:none !important;
+}
+@media(max-width:360px) {
+ .home-shell .screen-header .brand { width:140px; }
 }
