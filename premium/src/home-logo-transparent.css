@@ -31,13 +31,14 @@
  z-index:1;
  top:0;
  right:0;
- width:52%;
- height:26%;
+ width:57%;
+ height:27%;
  pointer-events:none;
- background: url('/src/assets/piste-community-accueil-original.jpg') right top / 192.3% auto no-repeat;
- filter:blur(24px) brightness(.64);
- -webkit-mask-image:radial-gradient(ellipse 90% 77% at 68% 45%,#000 52%,transparent 100%);
- mask-image:radial-gradient(ellipse 90% 77% at 68% 45%,#000 52%,transparent 100%);
+ /* Fully occlude the old baked-in lettering, feather the perimeter into the night sky. */
+ background:#061321;
+ filter:none;
+ -webkit-mask-image:radial-gradient(ellipse 100% 90% at 80% 36%,#000 0%,#000 69%,transparent 100%);
+ mask-image:radial-gradient(ellipse 100% 90% at 80% 36%,#000 0%,#000 69%,transparent 100%);
 }
 .auth-welcome .auth-welcome-art::after {
  content:"";
