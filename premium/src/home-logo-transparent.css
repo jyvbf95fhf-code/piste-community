@@ -23,21 +23,50 @@
  .home-shell .screen-header .brand { width:140px; }
 }
 
-/* Public welcome (/auth): the old logo is baked into the photograph.
-   Cover only its top-right region with the already-approved transparent SVG.
-   Native login/signup links remain functional and unchanged. */
+/* Public welcome image: soften the old baked-in mark without a visible box. */
+.auth-welcome .auth-welcome-art { isolation:isolate; }
+.auth-welcome .auth-welcome-art::before {
+ content:"";
+ position:absolute;
+ z-index:1;
+ top:0;
+ right:0;
+ width:52%;
+ height:26%;
+ pointer-events:none;
+ background: url('/src/assets/piste-community-accueil-original.jpg') right top / 192.3% auto no-repeat;
+ filter:blur(24px) brightness(.64);
+ -webkit-mask-image:radial-gradient(ellipse 90% 77% at 68% 45%,#000 52%,transparent 100%);
+ mask-image:radial-gradient(ellipse 90% 77% at 68% 45%,#000 52%,transparent 100%);
+}
 .auth-welcome .auth-welcome-art::after {
  content:"";
  position:absolute;
- top:3.8%;
- right:1.5%;
- width:48%;
+ z-index:2;
+ top:3%;
+ right:3%;
+ width:45%;
  height:19%;
  pointer-events:none;
- background:
-   url('/src/assets/brand/piste-community-complet.svg') center / contain no-repeat,
-   linear-gradient(100deg,#061322 0%,#061322 100%);
+ background:url('/src/assets/brand/piste-community-complet.svg') center / contain no-repeat;
 }
-@media (orientation:landscape) {
+.auth-welcome .auth-welcome-art img {
+ -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 84%,transparent 100%);
+ mask-image:linear-gradient(to bottom,#000 0%,#000 84%,transparent 100%);
+}
+.auth-welcome main::before { filter:blur(18px) brightness(.72); }
+.auth-welcome .auth-welcome-actions { background:linear-gradient(180deg,transparent,#020e1855 25%,#020e18e8 80%); }
+@media(orientation:landscape) {
+ .auth-welcome .auth-welcome-art::before { width:36%;height:42%; }
  .auth-welcome .auth-welcome-art::after { top:2%;right:2%;width:27%;height:26%; }
+}
+/* Carry the same terrain photograph into login, signup and password recovery,
+   but veil it so forms stay legible. No changes to authentication logic. */
+.auth-shell.auth-login-premium,
+.auth-shell.auth-signup-premium,
+.auth-shell.auth-forgot-premium {
+ background:
+  linear-gradient(180deg,#061320d9 0%,#071827c9 43%,#020a12f5 100%),
+  url('/src/assets/piste-community-accueil-original.jpg') center top / cover no-repeat,
+  #061320;
 }
