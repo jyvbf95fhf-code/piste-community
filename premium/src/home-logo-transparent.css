@@ -22,3 +22,22 @@
 @media(max-width:360px) {
  .home-shell .screen-header .brand { width:140px; }
 }
+
+/* Public welcome (/auth): the old logo is baked into the photograph.
+   Cover only its top-right region with the already-approved transparent SVG.
+   Native login/signup links remain functional and unchanged. */
+.auth-welcome .auth-welcome-art::after {
+ content:"";
+ position:absolute;
+ top:3.8%;
+ right:1.5%;
+ width:48%;
+ height:19%;
+ pointer-events:none;
+ background:
+   url('/src/assets/brand/piste-community-complet.svg') center / contain no-repeat,
+   linear-gradient(100deg,#061322 0%,#061322 100%);
+}
+@media (orientation:landscape) {
+ .auth-welcome .auth-welcome-art::after { top:2%;right:2%;width:27%;height:26%; }
+}
