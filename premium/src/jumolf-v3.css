@@ -6,7 +6,8 @@
 .jumolf-v3-shell .jumolf-brand strong { letter-spacing:.12em; font-size:25px; }
 .jumolf-v3-shell .jumolf-brand small { letter-spacing:.13em; color:var(--v3-muted); font-size:9px; }
 .jumolf-v3-shell .jumolf-header-state { color:var(--v3-gold); font-size:10px; max-width:170px; white-space:normal; text-align:right; line-height:1.6; }
-.jumolf-v3-shell .v3-return { display:inline-flex; align-items:center; min-height:44px; color:var(--v3-muted); font-size:12px; margin-bottom:6px; }
+.jumolf-v3-shell .v3-return { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:8px 14px; border:1px solid #bca46a; border-radius:12px; background:#0d2031; color:#ead39a; font-size:12px; font-weight:650; margin-bottom:6px; }
+.jumolf-v3-shell .v3-return svg { display:block; width:18px; height:18px; }
 .jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); padding:6px; gap:4px; background:#102335; border:1px solid #294253; border-radius:18px; margin-bottom:28px; overflow:visible; }
 .jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a { min-height:58px; display:flex; align-items:center; justify-content:center; gap:9px; padding:10px 6px; border-radius:12px; color:var(--v3-muted); font-size:13px; white-space:normal; text-align:center; border:0; }
 .jumolf-shell.jumolf-v3-shell .jumolf-subnav.v3-nav a svg { width:20px; height:20px; }
@@ -62,8 +63,9 @@
 .jumolf-v3-shell .jumolf-simple-advanced { display:none; } /* Same complete tools are kept once in the shared shell. */
 @media(max-width:760px) {
  .app-shell[data-jumolf=true] > .bottom-nav { display:none; }
- .app-shell[data-jumolf=true] main { padding-bottom:calc(90px + env(safe-area-inset-bottom)); }
+ .app-shell[data-jumolf=true] main { padding-bottom:calc(146px + env(safe-area-inset-bottom)); }
  .jumolf-v3-shell { width:100%; padding:0 0 20px; }
+ .jumolf-v3-shell .v3-return { position:fixed; z-index:91; left:12px; right:12px; bottom:calc(78px + env(safe-area-inset-bottom)); margin:0; }
  .jumolf-v3-shell .jumolf-header { padding:0; margin-bottom:18px; flex-wrap:wrap; }
  .jumolf-v3-shell .jumolf-header-state { max-width:108px; font-size:9px; }
  .jumolf-v3-shell .jumolf-brand strong { font-size:22px; }
