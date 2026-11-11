@@ -23,8 +23,21 @@
  .home-shell .screen-header .brand { width:140px; }
 }
 
-/* Shared approved terrain behind the existing authentication forms. */
+/* Forms show only the dog's region of the approved artwork.
+   The fixed crop excludes the captured status bar, logo, slogans and buttons.
+   Keep the public welcome artwork and all authentication behavior unchanged. */
 .auth-shell.auth-form-shell {
- background:linear-gradient(180deg,#061320ed,#071827e6 43%,#020a12fa),
- url('/src/assets/piste-community-accueil-definitif.jpg') center / cover no-repeat,#061320;
+ isolation:isolate;
+ background:#061320;
+}
+.auth-shell.auth-form-shell::before {
+ content:"";
+ position:fixed;
+ inset:0;
+ z-index:-1;
+ pointer-events:none;
+ background:
+  linear-gradient(180deg,#061320bf,#071827c9 43%,#020a12ed),
+  url('/src/assets/piste-community-accueil-definitif.jpg') 82% 47% / max(200vw,162vh) auto no-repeat,
+  #061320;
 }
