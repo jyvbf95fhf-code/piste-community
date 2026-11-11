@@ -1,0 +1,33 @@
+/* Fixed scenic backgrounds, scoped to this visual trial. No scroll listeners.
+   Maps, fields, modals and sensor controls retain their own surfaces. */
+body:has(.app-shell[data-forest-scene]) { background:#07151c; }
+.app-shell[data-forest-scene] {
+ position:relative; isolation:isolate; background:transparent;
+ --theme-bg:#07151c; --theme-surface:#102637e6;
+ --theme-surface-raised:#142e40ed; --theme-text:#eef5f8;
+ --theme-text-muted:#c0d0dc; --theme-border:#8da4b255;
+ --theme-accent:#d7be84; --theme-accent-secondary:#94cbd8;
+}
+.app-shell[data-forest-scene]::before {
+ content:''; position:fixed; inset:0;
+ width:min(100%,var(--shell-width)); margin-inline:auto;
+ z-index:-1; pointer-events:none;
+ background:linear-gradient(180deg,#06121ccc,#071a2673 40%,#06172280 75%,#040e17bf),
+ var(--forest-scene-image) center bottom / cover no-repeat,#07151c;
+}
+.app-shell[data-forest-scene='dogs'] { --forest-scene-image:url('/src/assets/forest-dogs-trial.webp'); }
+.app-shell[data-forest-scene='live'] { --forest-scene-image:url('/src/assets/forest-live-trial.webp'); }
+.app-shell[data-forest-scene='coaching'] { --forest-scene-image:url('/src/assets/forest-coaching-trial.webp'); }
+.app-shell[data-forest-scene='tracks'],
+.app-shell[data-forest-scene='statistics'] { --forest-scene-image:url('/src/assets/forest-tracks-trial.webp'); }
+.app-shell[data-forest-scene='community'] { --forest-scene-image:url('/src/assets/forest-community-trial.webp'); }
+.app-shell[data-forest-scene='jumolf'] { --forest-scene-image:url('/src/assets/forest-jumolf-trial.webp'); }
+.app-shell[data-forest-scene='ops'] { --forest-scene-image:url('/src/assets/home-forest-immersive-trial.webp'); }
+.app-shell[data-forest-scene]>main,
+.app-shell[data-forest-scene]>.screen-header { background:transparent; }
+.app-shell[data-forest-scene] :is(.page-heading,.page-title,.sessions-heading,.dogs-heading,.community-heading,.auth-heading) { text-shadow:0 2px 10px #020a12; }
+.app-shell[data-forest-scene] :is(.card,.dog-card,.list-item,.empty-state) {
+ background:linear-gradient(145deg,#102b3be0,#081a28eb);
+ border-color:#c5b58066;
+}
+.app-shell[data-forest-scene] .bottom-nav { background:#091c2bf5; border-color:#8099a866; }

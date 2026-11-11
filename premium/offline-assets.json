@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "d24fc60ff51108c2",
+  "revision": "67b9be62f13a3673",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -38,7 +38,14 @@
     "/src/assets/coaching-mode-double-blind.jpg",
     "/src/assets/coaching-mode-normal.jpg",
     "/src/assets/coaching-mode-simple-blind.jpg",
+    "/src/assets/forest-coaching-trial.webp",
+    "/src/assets/forest-community-trial.webp",
+    "/src/assets/forest-dogs-trial.webp",
+    "/src/assets/forest-jumolf-trial.webp",
+    "/src/assets/forest-live-trial.webp",
+    "/src/assets/forest-tracks-trial.webp",
     "/src/assets/home-forest-day-trial.webp",
+    "/src/assets/home-forest-immersive-trial.webp",
     "/src/assets/home-trail.svg",
     "/src/assets/piste-community-accueil-definitif.jpg",
     "/src/assets/piste-community-accueil-original.jpg",
@@ -133,6 +140,8 @@
     "/src/dogs-screen.mjs",
     "/src/dogs.mjs",
     "/src/foreground-refresh.mjs",
+    "/src/forest-scenes-trial.css",
+    "/src/forest-scenes-trial.mjs",
     "/src/friend-live-client.mjs",
     "/src/home-forest-trial.css",
     "/src/home-harmony.css",
@@ -346,5 +355,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 5177165
+  "bytes": 6843923
 }
