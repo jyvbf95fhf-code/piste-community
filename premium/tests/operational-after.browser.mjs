@@ -7,7 +7,8 @@ const projection={id:'33333333-3333-4333-8333-333333333333',version:4,phase:'ARC
 const pages=[],debug=[];
 const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH,args:['--no-sandbox','--disable-dev-shm-usage']});
 async function device(ownerId,initialOnline=true){
- const context=await browser.newContext({viewport:{width:390,height:844}}),page=await context.newPage(),control={online:initialOnline};pages.push(page);page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
+ // Synthetic HTTP routing must remain in control on every navigation.
+ const context=await browser.newContext({serviceWorkers:'block',viewport:{width:390,height:844}}),page=await context.newPage(),control={online:initialOnline};pages.push(page);page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
  await context.addInitScript(value=>{window.gpsStarts=0;Object.defineProperty(navigator,'geolocation',{value:{watchPosition(){window.gpsStarts++;throw Error('Unexpected sensor start')},getCurrentPosition(){window.gpsStarts++;throw Error('Unexpected sensor start')},clearWatch(){}}});window.__pisteOnline=localStorage.getItem('qa-online')===null?value:localStorage.getItem('qa-online')==='true';Object.defineProperty(navigator,'onLine',{get:()=>window.__pisteOnline});},initialOnline);
  await page.route('**/*',async route=>{const req=route.request(),u=new URL(req.url());
   if(u.hostname==='shnwqdkiapgcftbnhilh.supabase.co'){
