@@ -25,50 +25,45 @@ body:has(.app-shell) { background:#14222f; }
 .app-shell[data-jumolf="true"]>.screen-header .shared-official-logo {
  filter:hue-rotate(135deg) saturate(.8) brightness(1.1) drop-shadow(0 1px .5px #07111f66);
 }
-/* A single uncropped, edge-to-edge artwork; short screens scroll rather than crop. */
+/* Approved screenshot, unchanged. Clip only its captured iPhone status bar.
+   Real accessible links align with the artwork's button faces; no duplicate text.
+   Short viewports scroll so the dog, logo and DIMENSION remain uncropped. */
 .auth-shell.auth-welcome {
- --welcome-safe-top:env(safe-area-inset-top,0px);
- --welcome-safe-bottom:env(safe-area-inset-bottom,0px);
- --welcome-safe-left:env(safe-area-inset-left,0px);
- --welcome-safe-right:env(safe-area-inset-right,0px);
- height:auto;
- min-height:100svh;
- min-height:100dvh;
- overflow:visible;
- background:#020e18;
+ height:auto; min-height:100svh; min-height:100dvh;
+ overflow:visible; background:#020e18;
+ padding-top:env(safe-area-inset-top,0px);
+ padding-bottom:env(safe-area-inset-bottom,0px);
 }
 .auth-shell.auth-welcome main {
- display:flex;
- flex-direction:column;
- width:100%;
- height:auto;
- min-height:100svh;
- min-height:100dvh;
- overflow:visible;
+ display:block; width:100%; height:auto; min-height:0; padding:0; overflow:visible;
 }
-.auth-welcome main::before { content:none; background:none; }
+.auth-welcome main::before { content:none; }
 .auth-welcome .auth-welcome-art {
- position:relative;
- inset:auto;
- flex:0 0 auto;
- width:100%;
- padding-top:var(--welcome-safe-top);
+ position:relative; inset:auto; width:100%; padding:0;
+ aspect-ratio:709 / 1466; overflow:hidden;
 }
+.auth-welcome .auth-welcome-art::before,
+.auth-welcome .auth-welcome-art::after { content:none; }
 .auth-welcome .auth-welcome-art img {
- display:block;
- width:100%;
- height:auto;
- object-fit:contain;
- object-position:center;
- /* Fade only empty edge pixels into the page, never the text or dog. */
- -webkit-mask-image:linear-gradient(transparent 0%,#000 2%,#000 96%,transparent 100%);
- mask-image:linear-gradient(transparent 0%,#000 2%,#000 96%,transparent 100%);
+ display:block; position:absolute; width:100%; height:auto;
+ top:-4.7749%; left:0; object-fit:contain;
+ mask-image:none; -webkit-mask-image:none;
 }
 .auth-welcome .auth-welcome-actions {
- position:relative;
- inset:auto;
- width:100%;
- margin-top:auto;
- padding:12px max(20px,var(--welcome-safe-right)) calc(8px + var(--welcome-safe-bottom)) max(20px,var(--welcome-safe-left));
- background:none;
+ position:absolute; inset:0; margin:0; padding:0;
+ width:100%; background:none; pointer-events:none; display:block;
+}
+.auth-welcome .auth-welcome-actions a {
+ position:absolute; display:block; pointer-events:auto;
+ margin:0; padding:0; min-height:44px; background:transparent;
+ border:0; box-shadow:none; transform:none;
+}
+.auth-welcome .auth-welcome-login {
+ left:16.8%; top:86.7%; width:66.6%; height:4.9%; border-radius:16px;
+}
+.auth-welcome .auth-welcome-signup {
+ left:27%; top:92.2%; width:46%; height:4%; border-radius:8px;
+}
+.auth-welcome .auth-welcome-actions a:focus-visible {
+ outline:3px solid #fff; outline-offset:2px; background:#fff2;
 }
