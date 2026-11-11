@@ -28,6 +28,7 @@ try{
   await route.fulfill({status,headers,json});
  });
 
+ await page.clock.install();
  await page.goto('https://piste.test/auth/login');
  await page.getByLabel('Email',{exact:true}).fill('qa@example.invalid');await page.getByLabel('Mot de passe',{exact:true}).fill('synthetic-existing');
  await page.getByRole('button',{name:'Se connecter',exact:true}).click();
@@ -38,6 +39,8 @@ try{
  await page.waitForFunction(()=>!document.querySelector('[data-piste-bulk="mode"]')?.disabled);
  await page.locator('.archive-filter-panel>summary').click();
  const refreshComplete=page.waitForResponse(r=>r.url().endsWith('/functions/v1/piste-history')&&r.request().postDataJSON()?.domain==='track');
+ // Automatic foreground refreshes deliberately coalesce for 15 seconds.
+ await page.clock.fastForward(15001);
  await page.evaluate(()=>{window.archiveNode=document.querySelector('.tracks-page');window.archiveSnapshot=window.__PISTE_PROTOTYPE__;window.dispatchEvent(new Event('focus'));});
  await page.waitForFunction(()=>window.__PISTE_PROTOTYPE__!==window.archiveSnapshot);
  await refreshComplete;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
@@ -45,6 +48,7 @@ try{
  assert.equal(await page.locator('.archive-filter-panel').getAttribute('open'),'');
  await page.locator('.archive-filter-panel>summary').click();
  projection={...projection,version:projection.version+1,dog:'Nox actualisé'};
+ await page.clock.fastForward(15001);
  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await page.locator('[data-history-session="'+sessionId+'"] .archive-copy').filter({hasText:'Nox actualisé'}).waitFor();
  assert.equal(await page.evaluate(()=>window.archiveNode===document.querySelector('.tracks-page')),false,'changed server data updates archives');

@@ -8,7 +8,7 @@ import {createOperationalMissionStore} from '../src/operational-missions.mjs';
 import {readFile} from 'node:fs/promises';import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.PISTE_CHROMIUM_PATH||await chromiumBundle.executablePath(),args:chromiumBundle.args,headless:true});
 try{
- const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],calls=[];
+ const page=await browser.newPage({serviceWorkers:'block',viewport:{width:390,height:844}}),errors=[],calls=[];
  let cloudRecord=null,omitReceipt=false,hidden=[],deleted=false,enabled=true; const sessionId='33333333-3333-4333-8333-333333333333'; let projection;
  const user={id:'11111111-1111-4111-8111-111111111111',email:'qa@example.invalid',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{role:'admin'}};
  const encode=x=>Buffer.from(JSON.stringify(x)).toString('base64url');const token=encode({alg:'HS256',typ:'JWT'})+'.'+encode({sub:user.id,exp:Math.floor(Date.now()/1000)+3600})+'.'+encode('synthetic');
