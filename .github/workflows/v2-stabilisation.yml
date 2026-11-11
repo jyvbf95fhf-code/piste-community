@@ -1,11 +1,11 @@
 name: V2 consolidated non-regression gate
 on:
   push:
-    branches: ['feature/v2-premium-stabilisation-*']
-    paths: ['premium/src/**', 'premium/tests/**', 'premium/scripts/**', 'premium/package*.json', '.github/workflows/v2-stabilisation.yml']
+    branches: ['develop/v2-premium', 'release/v2-production', 'fix/v2-*', 'feature/v2-premium-stabilisation-*']
+    paths: ['premium/**', '.github/workflows/v2-stabilisation.yml']
   pull_request:
-    branches: ['feature/v2-premium-stabilisation-*']
-    paths: ['premium/src/**', 'premium/tests/**', 'premium/scripts/**', 'premium/package*.json', '.github/workflows/v2-stabilisation.yml']
+    branches: ['develop/v2-premium', 'release/v2-production', 'fix/v2-*', 'feature/v2-premium-stabilisation-*']
+    paths: ['premium/**', '.github/workflows/v2-stabilisation.yml']
   workflow_dispatch:
 permissions:
   contents: read

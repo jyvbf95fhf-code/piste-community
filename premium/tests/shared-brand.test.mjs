@@ -9,8 +9,8 @@ const routes=['/jumolf','/jumolf/dashboard','/jumolf/session/id','/jumolf/settin
 test('one visible official wordmark is centralized across signed-in sections and their subroutes',()=>{
  for(const route of routes){const html=AppShell('<section><h1>Rubrique conservée</h1><button data-action="unchanged">Action</button></section>',route,'Sébastien','SL','base',3);assert.equal((html.match(/class="shared-official-logo"/g)||[]).length,1,route);assert.match(html,/class="brand-official-sizing" aria-hidden="true"/);assert.match(html,/Notifications, 3 non lues/);}
 });
-test('outside the shared header all markup, actions, links and navigation stay identical',()=>{
- const strip=html=>html.replace(/<header class="screen-header">[\s\S]*?<\/header>/,'');
+test('outside the shared header only the approved forest attribute differs; actions and navigation stay identical',()=>{
+ const strip=html=>html.replace(/<header class="screen-header">[\s\S]*?<\/header>/,'').replace(/ data-forest-scene="[^"]*"/g,'');
  for(const route of routes){const args=['<section><h1>Titre</h1><button data-action="unchanged">Action</button></section>',route,'Sébastien','SL','base',3];assert.equal(strip(AppShell(...args)),strip(old.AppShell(...args)),route);assert.equal(BottomNavigation(route),old.BottomNavigation(route));}
 });
 test('Home keeps its exact previously approved shell',()=>{

@@ -1,5 +1,5 @@
 /* Static shell only. Never cache account API responses, GPS, reports or tokens. */
-const CACHE='piste-v2-static-67b9be62f13a3673';
+const CACHE='piste-v2-static-5259e72e3acad790';
 self.addEventListener('install',event=>event.waitUntil((async()=>{const response=await fetch('/offline-assets.json',{cache:'no-store'});if(!response.ok)throw Error('Offline asset list unavailable.');const manifest=await response.json();if(manifest.version!==1||!Array.isArray(manifest.files)||manifest.files.some(url=>typeof url!=='string'||!url.startsWith('/')||url.startsWith('//')||url.includes('?')||url.includes('/api/')))throw Error('Invalid static asset list.');const cache=await caches.open(CACHE);await cache.addAll(manifest.files);})()));
 // No skipWaiting/clients.claim: an open terrain session keeps its current worker.
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('piste-v2-static-')&&k!==CACHE).map(k=>caches.delete(k))))));
@@ -10,7 +10,7 @@ self.addEventListener('fetch',event=>{
  if(request.mode==='navigate'){
   event.respondWith(caches.open(CACHE).then(cache=>cache.match('/index.html')).then(value=>value||fetch(request)));return;
  }
- if(!url.pathname.startsWith('/src/')||!(/\.(mjs|js|css|svg|png|webmanifest)$/.test(url.pathname)))return;
+ if(!url.pathname.startsWith('/src/')||!(/\.(mjs|js|css|svg|png|webp|jpg|jpeg|webmanifest)$/.test(url.pathname)))return;
  event.respondWith(caches.open(CACHE).then(cache=>cache.match(request)).then(cached=>cached||fetch(request).then(response=>{if(response.ok&&response.type==='basic'){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)));}return response;}).catch(()=>caches.match(request).then(value=>value||Response.error()))));
 });
 
