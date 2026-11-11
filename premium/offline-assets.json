@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "168a64b344883756",
+  "revision": "be304f24da88fee7",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -39,6 +39,7 @@
     "/src/assets/coaching-mode-normal.jpg",
     "/src/assets/coaching-mode-simple-blind.jpg",
     "/src/assets/home-trail.svg",
+    "/src/assets/piste-community-accueil-definitif.jpg",
     "/src/assets/piste-community-accueil-original.jpg",
     "/src/beta-welcome.mjs",
     "/src/coaching-briefing.mjs",
@@ -343,5 +344,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4281552
+  "bytes": 4707631
 }

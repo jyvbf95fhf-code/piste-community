@@ -323,7 +323,7 @@ function reconcileOpsLive(){
 async function tickOpsLive(force=false){
  if(document.visibilityState==='hidden'||opsLiveTickPending)return;
  const liveOwner=auth.assurance==='supabase-auth'?currentUser?.user_id:null;
- const liveActive=operationalStore.list().some(m=>m.ownerUserId===liveOwner&&m.status==='En cours'&&opsLivePolicy(m.id).share_live===true)||opsLiveRemoteOwner===liveOwner&&opsLiveRemote?.view().sessions.some(s=>!s.closed&&!s.ended);
+ const liveActive=opsLiveRemoteOwner===liveOwner&&opsLiveRemote?.hasActiveBroadcast(operationalStore.list(),opsLivePolicy);
  const interval=liveActive?5000:30000;
  if(!force&&Date.now()-opsLiveAttempt<interval)return;
  void flushCoachingLiveEnds({client:accountClient,ownerId:auth.getSession().user?.user_id,storage,force}).catch(()=>{});void tickFriendLive(force);reconcileOpsLive();if(!opsLiveRemote)return;opsLiveAttempt=Date.now();opsLiveTickPending=true;const remote=opsLiveRemote,premium=hasLivePremium(jumolfAccess());
@@ -338,7 +338,7 @@ async function tickOpsLive(force=false){
   }
   for(const mission of operationalStore.list())if(mission.ownerUserId===opsLiveRemoteOwner)await remote.syncMission(mission,opsLivePolicy(mission.id));
  }catch{/* Durable GPS and commands stay local; observers see the next verified refresh only. */}
- finally{try{if(premium){await remote.refresh();await notificationReadSync?.flush();}}finally{opsLiveTickPending=false;}}
+ finally{try{if(premium){await remote.refresh({auxiliaryInterval:force?0:30000});await notificationReadSync?.flush();}}finally{opsLiveTickPending=false;}}
 }
 setInterval(()=>{void tickOpsLive();},5000);
 window.addEventListener('online',()=>{void tickOpsLive(true);});
