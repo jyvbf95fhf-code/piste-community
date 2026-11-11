@@ -11,8 +11,8 @@ body:has(.app-shell.home-shell) { background:#07151c; }
  z-index:-1;
  pointer-events:none;
  background:
-  linear-gradient(180deg,#06121cd9 0%,#071a2673 32%,#06172240 65%,#040e17a6 100%),
-  url('/src/assets/home-forest-immersive-trial.webp') center bottom / cover no-repeat,
+  linear-gradient(180deg,#06121c99 0%,#071a2633 32%,#0617221a 65%,#040e1759 100%),
+  url('/src/assets/home-forest-day-trial.webp') center bottom / cover no-repeat,
   #07151c;
  opacity:1;
  mask-image:none;
