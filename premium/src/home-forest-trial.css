@@ -1,0 +1,45 @@
+/* Isolated visual experiment. Remove this stylesheet link to restore the home.
+   One fixed, inert layer; no scroll handler, animation or network service. */
+body:has(.app-shell.home-shell) { background:#07151c; }
+.app-shell.home-shell[data-module-theme] { background:transparent; }
+.app-shell.home-shell::before {
+ content:'';
+ position:fixed;
+ inset:0;
+ width:min(100%,var(--shell-width));
+ margin-inline:auto;
+ z-index:-1;
+ pointer-events:none;
+ background:
+  linear-gradient(180deg,#06121cd9 0%,#071a2673 32%,#06172240 65%,#040e17a6 100%),
+  url('/src/assets/home-forest-immersive-trial.webp') center bottom / cover no-repeat,
+  #07151c;
+ opacity:1;
+ mask-image:none;
+ -webkit-mask-image:none;
+}
+.app-shell.home-shell .header-terrain { display:none; }
+.app-shell.home-shell :is(.feature-tile[href],.track-builder-entry,.coaching-invitations,.active-sessions,.explore-section) {
+ background:linear-gradient(145deg,#102b3bc9,#081a28e0);
+ border-color:#c5b58066;
+ box-shadow:0 8px 22px #0003,inset 0 1px 0 #eef8ff0a;
+}
+.app-shell.home-shell .feature-tile::after {
+ background:linear-gradient(180deg,transparent 0%,#06152222 35%,#061522a6 100%);
+}
+.app-shell.home-shell .discovery-hero {
+ background:linear-gradient(110deg,#081a29e6,#0c263699 65%,#0a1d2c66);
+ border-color:#c5b58080;
+}
+/* Avoid a second competing dog photograph over the continuous forest. */
+.app-shell.home-shell .discovery-hero .hero-terrain { display:none; }
+.app-shell.home-shell .home-intro :is(h1,.home-tagline,.greeting,.eyebrow) {
+ text-shadow:0 2px 10px #020a12;
+}
+.app-shell.home-shell .bottom-nav {
+ background:#091c2bf5;
+ border-color:#8099a866;
+}
+@media(min-width:700px) {
+ .app-shell.home-shell::before { background-position:center 70%; }
+}

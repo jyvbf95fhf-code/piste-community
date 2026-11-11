@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "be304f24da88fee7",
+  "revision": "6bb55b84ddf21a68",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -38,6 +38,7 @@
     "/src/assets/coaching-mode-double-blind.jpg",
     "/src/assets/coaching-mode-normal.jpg",
     "/src/assets/coaching-mode-simple-blind.jpg",
+    "/src/assets/home-forest-immersive-trial.webp",
     "/src/assets/home-trail.svg",
     "/src/assets/piste-community-accueil-definitif.jpg",
     "/src/assets/piste-community-accueil-original.jpg",
@@ -133,6 +134,7 @@
     "/src/dogs.mjs",
     "/src/foreground-refresh.mjs",
     "/src/friend-live-client.mjs",
+    "/src/home-forest-trial.css",
     "/src/home-harmony.css",
     "/src/home-logo-transparent.css",
     "/src/home-photo-swap.css",
@@ -344,5 +346,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 4707631
+  "bytes": 4994179
 }
