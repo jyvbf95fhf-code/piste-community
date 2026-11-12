@@ -53,7 +53,7 @@ export function nextQaAction(search,preparation,ui={}){
   if(preparation.phase==='ready')return action('start-laying','Tracer la piste','[data-tracer="start"]','LAYING_STARTED');
  }
  if(search.phase==='LAYING'&&role==='traceur'&&preparation.productScenario==='self_trace'&&tracerProgress(search,ui)<2)return action('progress-laying','Avancer la pose mock','[data-tracer="progress"]','Progression de pose mock');
- if(search.phase==='LAYING'&&role==='traceur')return action('finish-laying','Terminer la piste','[data-tracer="finish"]','LAYING_FINISHED');
+ if(search.phase==='LAYING'&&role==='traceur')return action('finish-laying','Terminer la pose de la piste','[data-tracer="finish"]','LAYING_FINISHED');
  if(search.phase==='TRACK_FINISHED'&&role==='traceur')return action('in-place','Je suis en place','[data-tracer="in-place"]','TRACEUR_IN_POSITION · SEARCH_READY');
  if(search.phase==='LAYING_WAIT'&&role==='traceur'&&preparation.productScenario==='self_trace')return action('return-start','Revenir au départ · démarrer la relève','[data-tracer="return-start"]','Retour au départ · SEARCH_READY');
  if(search.phase==='SEARCH_READY'&&role==='driver')return action('start-search','Démarrer la recherche','[data-search="start"]','SEARCH_STARTED');

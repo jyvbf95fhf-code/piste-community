@@ -42,7 +42,7 @@ async function createActiveSession(traceType='direct'){
 async function finishSession(){
  await tap('Simulateur Conducteur');await tap('Préparation (DEV)');await page.locator('[data-prep-simulator] summary').tap();await page.locator('[data-prep-sim="viewerRole"]').selectOption('traceur');await page.locator('[data-prep-sim="gps"]').selectOption('fresh');await page.locator('[data-prep-simulator] summary').tap();
  if(await page.locator('[data-prep-action="approach"]').count()){await page.locator('[data-prep-action="approach"]').tap();await page.locator('[data-tracer="arrive"]').tap();}
- await tap('Me déclarer prêt à tracer');await tap('Tracer la piste');await tap('Simulateur terrain');await tap('Avancer le scénario (+30 s mock)');await tap('Fermer le simulateur');await tap('Terminer la piste');await tap('Je suis en place');
+ await tap('Me déclarer prêt à tracer');await tap('Tracer la piste');await tap('Simulateur terrain');await tap('Avancer le scénario (+30 s mock)');await tap('Fermer le simulateur');await tap('Terminer la pose de la piste');await tap('Je suis en place');
  await tap('Simulateur terrain');await tap('Préparation (DEV)');if(!await page.locator('[data-prep-simulator]').evaluate(node=>node.open))await page.locator('[data-prep-simulator] summary').tap();await page.locator('[data-prep-sim="viewerRole"]').selectOption('driver');await tap('Ouvrir le cockpit Conducteur (DEV)');
  await tap('Démarrer la recherche');await tap('Simulateur Conducteur');await tap('Avancer la recherche (+30 s mock)');await tap('Fermer le simulateur Conducteur');await tap('Terminer la recherche');await tap('Confirmer la fin');
  assert.equal(await page.locator('[data-debrief-phase]').getAttribute('data-debrief-phase'),'DEBRIEF');

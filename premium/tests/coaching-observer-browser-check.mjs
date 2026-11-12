@@ -19,7 +19,7 @@ for(const [mode,target,name] of views){
  await dev();await page.locator('[data-prep-sim="mode"]').selectOption(mode);await page.locator('[data-prep-sim="viewerRole"]').selectOption('traceur');await page.locator('[data-prep-sim="gps"]').selectOption('fresh');await page.locator('[data-prep-simulator] summary').tap();await click('Me déclarer prêt à tracer');await click('Tracer la piste');
  if(target==='laying') {await click('Simulateur terrain');await click('Avancer le scénario (+30 s mock)');await click('Fermer le simulateur');}
  else {
-   await click('Terminer la piste');await click('Je suis en place');
+   await click('Terminer la pose de la piste');await click('Je suis en place');
    if(target==='search'||target==='debrief'){
      await dev();await page.locator('[data-prep-sim="viewerRole"]').selectOption('driver');await click('Ouvrir le cockpit Conducteur (DEV)');await click('Démarrer la recherche');await click('Simulateur Conducteur');await click('Avancer la recherche (+30 s mock)');await click('Fermer le simulateur Conducteur');
      if(target==='debrief'){await click('Terminer la recherche');await click('Confirmer la fin');await click('Ouvrir le débrief');}

@@ -34,7 +34,7 @@ for(const type of ['prepared','gpx','direct','none'])for(const creator of ['coac
   await shot('05-pose-active');await click('Simulateur terrain');await page.locator('[data-tracer-sim="messages"]').selectOption('2');await click('Fermer le simulateur');
   assert.equal(await page.locator('[data-tracer-unread]').innerText(),'2');await page.locator('[data-tracer="messages"]').click();await page.locator('[data-tracer="reply"][data-text="J’arrive"]').click();await shot('06-messages');await click('Fermer les messages');
   await click('Simulateur terrain');await page.locator('[data-tracer-sim="gps"]').selectOption('unavailable');const old=await page.locator('[data-map-path="pose"]').evaluateAll(ns=>ns.map(n=>n.getAttribute('d')));await click('Avancer le scénario (+30 s mock)');assert.deepEqual(await page.locator('[data-map-path="pose"]').evaluateAll(ns=>ns.map(n=>n.getAttribute('d'))),old);await click('Fermer le simulateur');await shot('07-interruption');
-  await click('Simulateur terrain');await page.locator('[data-tracer-sim="gps"]').selectOption('fresh');await click('Avancer le scénario (+30 s mock)');await click('Fermer le simulateur');assert.equal(await page.locator('[data-map-path="pose"]').count(),2);await shot('08-reprise');await click('Terminer la piste');await shot('09-pose-terminee');await click('Je suis en place');await shot('10-en-place');
+  await click('Simulateur terrain');await page.locator('[data-tracer-sim="gps"]').selectOption('fresh');await click('Avancer le scénario (+30 s mock)');await click('Fermer le simulateur');assert.equal(await page.locator('[data-map-path="pose"]').count(),2);await shot('08-reprise');await click('Terminer la pose de la piste');await shot('09-pose-terminee');await click('Je suis en place');await shot('10-en-place');
  }
 }
 await create('prepared','driver',true);await click('Rejoindre le départ');await page.locator('[data-tracer="arrive"]').tap();await click('Me déclarer prêt à tracer');assert.equal(await page.locator('[data-tracer-phase]').getAttribute('data-tracer-phase'),'before');checks.push({soloSelfTrace:true,approachRequired:true});
@@ -49,7 +49,7 @@ for(const interaction of ['click','tap'])for(const type of ['prepared','gpx']){
  assert.match(await page.locator('.tracer-hud').innerText(),/0,00 km/);assert.match(await page.locator('.tracer-hud').innerText(),/00:00/);
  assert.equal(await page.getByRole('button',{name:'Démarrer la piste',exact:true}).count(),0);
  await act('Tracer la piste');assert.equal(await page.locator('[data-tracer-phase]').getAttribute('data-tracer-phase'),'active');
- await act('Terminer la piste');await act('Je suis en place');assert.match(await page.locator('.tracer-in-place').innerText(),/Vous êtes en place/);
+ await act('Terminer la pose de la piste');await act('Je suis en place');assert.match(await page.locator('.tracer-in-place').innerText(),/Vous êtes en place/);
  checks.push({type,interaction,arrivalWithoutDev:true,gps:'acquiring',fullUserFlow:true});
 }
 for(const phase of ['approaching','arrived','before']){

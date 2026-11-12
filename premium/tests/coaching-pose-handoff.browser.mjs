@@ -17,7 +17,7 @@ try{
   const at=Date.now();await cmd(icloud,id,'start-pose',{fix:{timestamp:at,coords:{latitude:48,longitude:7,accuracy:5}}});
   await cmd(icloud,id,'gps-batch',{kind:'pose',points:[{timestamp:at+1000,coords:{latitude:48.001,longitude:7.001,accuracy:5},segmentId:'s',sequence:1}]});
   const tracer=await account(icloud),driver=await account(gmail);await tracer.page.setViewportSize({width:[320,390,430][i],height:844});
-  await tracer.page.goto(origin+'/coaching/session?session='+id);await tracer.page.locator('[data-remote="finish-pose"]').waitFor();
+  await tracer.page.goto(origin+'/coaching/session?session='+id);await tracer.page.getByRole('button',{name:'Terminer la pose de la piste',exact:true}).waitFor();
   await decision(tracer.page,'finish-pose',true,/Terminer cet enregistrement/);await tracer.page.locator('[data-remote="return-later"]').waitFor();await tracer.page.screenshot({path:'/tmp/handoff-'+mode+'.png',fullPage:true});
   await decision(tracer.page,'return-later',false,/retour.*Je suis en place/i);assert.equal((await f.call(icloud,{operation:'read',sessionId:id})).projection.messages.length,0);
   await decision(tracer.page,'in-place',false,/conducteur.*démarrer/i);assert.equal((await f.call(icloud,{operation:'read',sessionId:id})).projection.phase,'TRACK_FINISHED');
