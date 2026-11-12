@@ -82,7 +82,7 @@ export function createOpsLiveProposedHandler({authClient,admin,isAccountEnabled,
     }else return reply({error:'Opération invalide.'},400);
    }
    return reply({result});
-  }catch(error){const status=error.code==='42501'?403:error.code==='40001'||error.code==='23505'?409:error.code==='22023'||error.code==='23514'||error.code==='23503'?400:503;
+  }catch(error){const status=error.code==='42501'?403:error.code==='PT409'||error.code==='40001'||error.code==='23505'?409:error.code==='22023'||error.code==='23514'||error.code==='23503'?400:503;
    return reply({error:status===403?'Accès refusé.':status===409?'Conflit de synchronisation.':status===400?'Commande refusée.':'Service temporairement indisponible.'},status);
   }
  };

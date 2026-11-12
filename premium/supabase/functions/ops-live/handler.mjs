@@ -117,7 +117,7 @@ function createOpsLiveProposedHandler({ authClient, admin, isAccountEnabled, isS
       }
       return reply({ result });
     } catch (error) {
-      const status = error.code === "42501" ? 403 : error.code === "40001" || error.code === "23505" ? 409 : error.code === "22023" || error.code === "23514" || error.code === "23503" ? 400 : 503;
+      const status = error.code === "42501" ? 403 : error.code === "PT409" || error.code === "40001" || error.code === "23505" ? 409 : error.code === "22023" || error.code === "23514" || error.code === "23503" ? 400 : 503;
       return reply({ error: status === 403 ? "Acc\xE8s refus\xE9." : status === 409 ? "Conflit de synchronisation." : status === 400 ? "Commande refus\xE9e." : "Service temporairement indisponible." }, status);
     }
   };
