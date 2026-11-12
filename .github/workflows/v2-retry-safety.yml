@@ -1,0 +1,29 @@
+name: V2 retry safety
+on:
+  push:
+    paths: ['premium/**', '.github/workflows/v2-retry-safety.yml']
+  pull_request:
+    paths: ['premium/**', '.github/workflows/v2-retry-safety.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v2-retry-safety-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  retry-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: premium
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - run: node scripts/check-retry-safety.mjs
+      - run: node --test tests/retry-safety-gate.test.mjs tests/ops-live-retry-protection.test.mjs tests/ops-live-remote.test.mjs tests/live-request-budget.test.mjs tests/live-end-client.test.mjs tests/live-resume.test.mjs tests/business-conflicts.test.mjs tests/ops-live-conflict-status.test.mjs
+

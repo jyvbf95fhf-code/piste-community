@@ -1,0 +1,53 @@
+{
+  "historicalSql": {
+    "docs/OPS-LIVE-ROLLBACK.sql": "b6138efe8134ae634d03ac2efb2f02a5829d915a",
+    "docs/coaching-creation/01-targeted-invites.proposed.sql": "357a4b2930332639e70d55e99a14d7cb71312816",
+    "docs/coaching-creation/02-disable-targeted-invites.proposed.sql": "339564c33cdf12880ee1f9b9604b0d6bba687ea2",
+    "docs/coaching-version-conflict/01-conflict-sqlstate.proposed.sql": "9bcdd0a2712a22b9584a996ceb5be5068b590728",
+    "docs/coaching/2026-10-28-late-invitations.sql": "77631301eafa7c30d95267028de15d7b2a4cf6c1",
+    "docs/community-feed/automatic-publication.sql": "339bd9e493cb77b7015f51752d13207d098813e6",
+    "docs/community-feed/community-feed.sql": "98da8f41de6e6aff555a226a9d638ec35110d70b",
+    "docs/community-friendships/01-friendships-final.proposed.sql": "4a2893918af188b74fc4ae07c0b062f0c039518f",
+    "docs/community-friendships/02-enable.proposed.sql": "e3102236fdfbaad91ca4580e02c446f516db37cc",
+    "docs/community-friendships/03-disable.proposed.sql": "9c31c5e5d0c4ffc8c1937f3d38901dc461026487",
+    "docs/community-friendships/04-service-role-privileges.sql": "4075ccb6bdeedbb6b118acbf652393fccb0b86e3",
+    "docs/contacts/2026-10-28-contact-options.sql": "7d57ad149de5e6033db9254503538bd03a80f202",
+    "docs/incidents/2026-11-12-business-conflicts.sql": "46b6c0b05b615fefa24c7cc844567fe82eb41a64",
+    "docs/live-end/2026-10-28-live-activity.sql": "481e405f705c0576675060274d6951894cb94aaf",
+    "docs/live-end/2026-10-28-live-end.sql": "a41a33a43f3bc8e539b4590460b631aef601af50",
+    "docs/live-premium/enforce-premium.proposed.sql": "97793b5381e2f2e77cb936731f8ff45a7bdf57fa",
+    "docs/member-gifts-proposal/01-owner-gifts.proposed.sql": "8592c01e845b981306f8ff6241045ef5c7581694",
+    "docs/ops-live-3b-proposal/01-schema-rls.proposed.sql": "9778527be4cd275fcb5674e0d7c9b27f73b2414a",
+    "docs/ops-live-3b-proposal/02-realtime-retention.proposed.sql": "d2bce2adea4f76abccf32e0327c63a205954210b",
+    "docs/ops-live-3b-proposal/03-emergency-disable.proposed.sql": "0bae982bb49982ceedbf494b1dc0be9b6ad78264",
+    "docs/ops-live-3b-proposal/04-api-transactions.proposed.sql": "578ae8dd3eeb922af7941aeade907fcb14ca9b77",
+    "docs/pilot/prepared-track-shares.sql": "c81110d39c3bc07980c92fad80a94a934c939839",
+    "docs/pilot/web-push.sql": "bfea7ae6eeee4bee17a29d681e72a1448ac743c5",
+    "docs/real-gift-codes/01-premium-codes.proposed.sql": "0f1ddbe35219fee44b352b85aff731b6ed994374",
+    "docs/social-live/2026-10-28-social-live.sql": "826727b82560a2b25ce7ec8fe1a643898ec8cfc8",
+    "supabase/migrations/20261015054625_coaching_remote_core.sql": "9c28bdfd4a5fb12c015f3e70b915feadb79cd0f5",
+    "supabase/migrations/20261015061217_restrict_platform_rls_helper.sql": "5e7fb52285e982df23b951253d12668e1f985bcc",
+    "supabase/migrations/20261016060313_v2_personal_data.sql": "1907a85d1ac79e96ef19d3cefcbe414c96c4803a",
+    "supabase/migrations/20261016061237_v2_personal_business_conflicts.sql": "8406efca1bec260070f47eab02f544c09910aa0a",
+    "supabase/migrations/20261016081506_ops_live_v2.sql": "338725713fbd5b7e1f0012c88782b15993afc762",
+    "supabase/migrations/20261016082038_ops_live_retention_worker.sql": "6734da99d9e6fc6d9d640942c6c8e31694b262dd",
+    "supabase/migrations/20261016120231_ops_live_invitations_index.sql": "55168d1b3138ec6289793cd8fcbc9875f16a28f1",
+    "supabase/migrations/20261016191733_v2_admin_rights_block5.sql": "c37c21896216774289e5b702850ed1fbfd507be7",
+    "supabase/migrations/20261016195512_v2_owner_member_premium_gifts.sql": "8592c01e845b981306f8ff6241045ef5c7581694",
+    "supabase/migrations/20261025115900_v2_piste_history_preflight_backup.sql": "55a627c67d8bceeccdf8c723e33d5489057e668a",
+    "supabase/migrations/20261025120000_v2_piste_history.sql": "25d06a460e374a163099ee03adaf3d8ccea41e16",
+    "supabase/migrations/20261112081600_ops_live_conflicts_use_pt409.sql": "39115042f00206cf45e732b1fbfdadbbdd7000ee"
+  },
+  "requiredCorrections": {
+    "supabase/migrations/20261112092918_v2_business_conflicts_no_automatic_retry.sql": [
+      "public.community_friendship_command",
+      "public.community_social_command",
+      "public.v2_history_action",
+      "private.v2_history_prevent_resurrection"
+    ],
+    "supabase/migrations/20261112081600_ops_live_conflicts_use_pt409.sql": [
+      "public.ops_live_read",
+      "public.ops_live_commit"
+    ]
+  }
+}

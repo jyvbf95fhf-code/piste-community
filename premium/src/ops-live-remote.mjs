@@ -11,22 +11,34 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
  if(!uuid(ownerId)||!storage||typeof call!=='function')throw Error('Identité et stockage OPS requis.');
  const key='piste-v2-ops-live-remote:'+ownerId;let saved={ownerId,missions:{}};
  const raw=storage.getItem(key);if(raw!==null){saved=JSON.parse(raw);if(saved.ownerId!==ownerId||!saved.missions||typeof saved.missions!=='object')throw Error('Stockage OPS illisible : original conservé.');}
- let disposed=false,epoch=0,connection='idle',sessions=[],notices=[],invitations=[],directory=[],directoryLoading=null,projections=new Map(),rawRows=new Map(),refreshing=null,lastAuxiliary=-Infinity,auxiliaryRequested=false;const busy=new Map();
+ let disposed=false,epoch=0,connection='idle',sessions=[],notices=[],invitations=[],directory=[],directoryLoading=null,projections=new Map(),rawRows=new Map(),refreshing=null,lastAuxiliary=-Infinity,auxiliaryRequested=false,retryPaused=false;const busy=new Map(),failures=new Map();
  const save=()=>storage.setItem(key,JSON.stringify(saved));
  const active=()=>{if(disposed)throw Error('Suivi OPS fermé.');};
- const send=async body=>{active();const result=await call(body);active();return result;};
- const view=()=>({connection,sessions:structuredClone(sessions.map(s=>({...s,ended:projections.get(s.id)?.ended===true}))),notifications:structuredClone(notices),invitations:structuredClone(invitations),directory:structuredClone(directory)});
+ const pausedError=()=>Object.assign(Error('Synchronisation Live en pause après plusieurs échecs. Réessayez manuellement.'),{retryPaused:true});
+ const send=async body=>{active();if(retryPaused)throw pausedError();const requestKey=JSON.stringify([body.operation,body.id||'',body.type||'']);try{const result=await call(body);active();failures.delete(requestKey);return result;}catch(error){if(disposed)throw error;if(![400,401,403,404].includes(error.status)){const count=(failures.get(requestKey)||0)+1;failures.set(requestKey,count);if(count>=3){retryPaused=true;connection='paused';for(const [id,p] of projections)if(!p.ended)projections.set(id,{...p,activity:{state:'disconnected',label:'Synchronisation en pause · dernière réception conservée'}});onChange();}}throw error;}};
+ const view=()=>({connection,retryPaused,sessions:structuredClone(sessions.map(s=>({...s,ended:projections.get(s.id)?.ended===true}))),notifications:structuredClone(notices),invitations:structuredClone(invitations),directory:structuredClone(directory)});
  async function read(id){const result=await send({operation:'head',id});if(!result)throw Object.assign(Error('Accès refusé.'),{status:403});return result;}
  async function readTrack(item,previous=null){
-  let result;const retained=previous&&previous.generation===item.generation?previous:null;
-  try{result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:item.version});}catch(error){if(error.status!==409)throw error;return readTrack({id:item.id},null);}
-  const points=[...(retained?.points||[]),...result.points];let after=points.at(-1)?.sequence||0;
-  while(after<result.lastSequence){const page=await send({operation:'read',id:item.id,after,version:result.version});if(!page.points?.length)throw Error('Page GPS incomplète.');points.push(...page.points);after=points.at(-1).sequence;}return {...result,points};
+  let retained=previous&&previous.generation===item.generation?previous:null;
+  for(let attempt=0;attempt<3;attempt++){
+   try{
+    const result=await send({operation:'read',id:item.id,after:retained?.lastSequence||0,version:attempt===0?item.version:undefined});
+    const points=[...(retained?.points||[]),...result.points];let after=points.at(-1)?.sequence||0;
+    const target=result.lastSequence;
+    while(after<target){
+     const page=await send({operation:'read',id:item.id,after,version:result.version});
+     if(page.version!==result.version||page.generation!==result.generation)throw Object.assign(Error('Version GPS modifiée.'),{status:409});
+     if(!page.points?.length||page.points[0].sequence<=after||page.points.at(-1).sequence<=after)throw Error('Page GPS incomplète.');
+     points.push(...page.points);after=points.at(-1).sequence;
+    }
+    return {...result,points};
+   }catch(error){if(error.status!==409||attempt>=2||retryPaused)throw error;retained=null;}
+  }
  }
- async function refresh({auxiliaryInterval=0}={}){if(refreshing){if(auxiliaryInterval===0)auxiliaryRequested=true;return refreshing;}auxiliaryRequested=auxiliaryInterval===0;const ticket=++epoch;
+ async function refresh({auxiliaryInterval=0}={}){if(retryPaused)return;if(refreshing){if(auxiliaryInterval===0)auxiliaryRequested=true;return refreshing;}auxiliaryRequested=auxiliaryInterval===0;const ticket=++epoch;
   refreshing=(async()=>{try{const list=await send({operation:'list'}),next=new Map(),nextRaw=new Map();for(const item of list){try{const previous=rawRows.get(item.id),row=previous&&previous.generation===item.generation&&previous.version===item.version?previous:await readTrack(item,previous);nextRaw.set(item.id,row);const p=opsLiveProjection(row);p.activity=liveActivity({ended:p.ended,lastPositionAt:p.lastPositionAt,updatedAt:item.updatedAt||row.updatedAt});p.isOwner=item.isOwner===true||item.ownerId===ownerId||Object.values(saved.missions).some(m=>m.id===item.id);p.ownerId=p.isOwner?ownerId:item.ownerId||null;next.set(item.id,p);}catch(e){if(![401,403].includes(e.status))throw e;}}
    let notifications=notices,pending=invitations;const auxiliaryDue=auxiliaryRequested||clock()-lastAuxiliary>=auxiliaryInterval;if(auxiliaryDue){notifications=await send({operation:'notifications'});pending=await send({operation:'invitations'});}if(!disposed&&ticket===epoch){sessions=list.filter(x=>next.has(x.id));projections=next;rawRows=nextRaw;notices=notifications;invitations=pending;if(auxiliaryDue)lastAuxiliary=clock();connection='connected';onChange();}
-  }catch(e){if(!disposed&&ticket===epoch){connection=[401,403].includes(e.status)?'forbidden':'offline';if(connection==='forbidden'){projections.clear();rawRows.clear();sessions=[];notices=[];invitations=[];}else for(const [id,p] of projections)if(!p.ended)projections.set(id,{...p,activity:{state:'disconnected',label:'Déconnecté · dernière réception conservée'}});onChange();}}finally{refreshing=null;}})();return refreshing;
+  }catch(e){if(!disposed&&ticket===epoch){connection=retryPaused?'paused':[401,403].includes(e.status)?'forbidden':'offline';if(connection==='forbidden'){projections.clear();rawRows.clear();sessions=[];notices=[];invitations=[];}else for(const [id,p] of projections)if(!p.ended)projections.set(id,{...p,activity:{state:'disconnected',label:'Déconnecté · dernière réception conservée'}});onChange();}}finally{refreshing=null;}})();return refreshing;
  }
  async function command(state,type,payload,expected=state.version){
   if(!state.pending){state.pending={operation:'command',id:state.id,commandId:crypto.randomUUID(),expectedVersion:expected,type,payload};save();}
@@ -61,7 +73,7 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
    if(f.state==='Fin de piste'){state.closed=true;save();break;}
   }
  }
- return {async cleanupAfterAccessLoss(){active();sessions=[];projections.clear();rawRows.clear();notices=[];invitations=[];connection='forbidden';onChange();for(const [id,state] of Object.entries(saved.missions))if(state.id&&!state.closed){try{await this.endBroadcast(id,{cleanupOnly:true});}catch(e){if(e.status!==403)throw e;const current=saved.missions[id];if(current){current.closed=true;current.ending=false;save();}}}},view,refresh,
+ return {async retry(){active();if(refreshing)await refreshing;failures.clear();retryPaused=false;return refresh();},async cleanupAfterAccessLoss(){active();sessions=[];projections.clear();rawRows.clear();notices=[];invitations=[];connection='forbidden';onChange();for(const [id,state] of Object.entries(saved.missions))if(state.id&&!state.closed){try{await this.endBroadcast(id,{cleanupOnly:true});}catch(e){if(e.status!==403)throw e;const current=saved.missions[id];if(current){current.closed=true;current.ending=false;save();}}}},view,refresh,
   hasActiveBroadcast(missions,policyFor){return missions.some(m=>m.ownerUserId===ownerId&&m.status==='En cours'&&policyFor(m.id).share_live===true&&!saved.missions[m.id]?.closed&&!saved.missions[m.id]?.ending)||sessions.some(s=>!s.closed&&!projections.get(s.id)?.ended);},
   broadcastEnded:id=>saved.missions[id]?.closed===true||saved.missions[id]?.ending===true,
   async resumeBroadcast(mission,policy){active();if(mission.ownerUserId!==ownerId||mission.status!=='En cours'||!policy.share_live)throw Error('Reprise Live non autorisée.');const prior=busy.get(mission.id);const resume=async()=>{const raw=storage.getItem(key);if(raw){const latest=JSON.parse(raw);if(latest.ownerId!==ownerId)throw Error('Compte différent.');saved=latest;}const old=saved.missions[mission.id];if(!old?.closed)throw Error('Clôturez la diffusion avant de la reprendre.');saved.missions[mission.id]={id:null,version:-1,generation:1,stopped:true,wireMissionId:mission.id+':live:'+crypto.randomUUID(),policy:structuredClone(policy)};save();return sync(mission,policy);};const task=(async()=>{if(prior)await prior;if(locks)return locks.request('piste-ops-live:'+ownerId,resume);return resume();})();busy.set(mission.id,task);try{return await task;}finally{if(busy.get(mission.id)===task)busy.delete(mission.id);}},isOwn:id=>sessions.some(s=>s.id===id&&s.isOwner===true)||Object.values(saved.missions).some(m=>m.id===id)||projections.get(id)?.isOwner===true,
@@ -69,7 +81,7 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   async loadDirectory(){if(directoryLoading)return directoryLoading;directoryLoading=send({operation:'directory'}).then(rows=>{directory=rows;onChange();return rows;}).catch(e=>{directoryLoading=null;throw e;});return directoryLoading;},
   async acceptInvite(id){return send({operation:'accept-invite',id,commandId:crypto.randomUUID()});},
   async revoke(id,userId){const r=await read(id);return send({operation:'command',id,commandId:crypto.randomUUID(),expectedVersion:r.version,type:'revoke',payload:{userId}});},
-  async syncMission(mission,policy){if(busy.has(mission.id))return busy.get(mission.id);const task=(async()=>{try{if(locks)return await locks.request('piste-ops-live:'+ownerId,()=>{const latest=storage.getItem(key);if(latest!==null){const parsed=JSON.parse(latest);if(parsed.ownerId!==ownerId||!parsed.missions)throw Error('Stockage OPS invalide.');saved=parsed;}return sync(mission,policy);});if(typeof window!=='undefined')throw Error('Verrouillage multi-onglets OPS indisponible.');return await sync(mission,policy);}catch(e){connection=[401,403].includes(e.status)?'forbidden':'offline';throw e;}})().finally(()=>busy.delete(mission.id));busy.set(mission.id,task);return task;},
+  async syncMission(mission,policy){if(busy.has(mission.id))return busy.get(mission.id);const task=(async()=>{try{if(locks)return await locks.request('piste-ops-live:'+ownerId,()=>{const latest=storage.getItem(key);if(latest!==null){const parsed=JSON.parse(latest);if(parsed.ownerId!==ownerId||!parsed.missions)throw Error('Stockage OPS invalide.');saved=parsed;}return sync(mission,policy);});if(typeof window!=='undefined')throw Error('Verrouillage multi-onglets OPS indisponible.');return await sync(mission,policy);}catch(e){connection=retryPaused?'paused':[401,403].includes(e.status)?'forbidden':'offline';throw e;}})().finally(()=>busy.delete(mission.id));busy.set(mission.id,task);return task;},
   async setHabitual(userId,enabled){if(!uuid(userId))throw Error('Compte réel requis : aucun alias de démonstration accepté.');return send({operation:'habitual',userId,enabled:enabled===true});},
   async invite(id,userId){if(!uuid(userId))throw Error('Compte réel requis.');const r=await read(id);return send({operation:'command',id,commandId:crypto.randomUUID(),expectedVersion:r.version,type:'invite',payload:{recipientId:userId,expiresAt:new Date(Date.now()+3600000).toISOString()}});},
   async join(id,token,expectedVersion){return send({operation:'command',id,commandId:crypto.randomUUID(),expectedVersion,type:'join',payload:{token}});},
@@ -77,3 +89,4 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   dispose(){disposed=true;epoch++;connection='disconnected';projections.clear();rawRows.clear();sessions=[];notices=[];invitations=[];directory=[];}
  };
 }
+

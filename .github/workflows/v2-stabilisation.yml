@@ -30,4 +30,7 @@ jobs:
           cache: npm
           cache-dependency-path: premium/package-lock.json
       - run: npm ci --ignore-scripts
+      - run: node scripts/check-retry-safety.mjs
+      - run: node scripts/build-offline-assets.mjs
       - run: npm run test:stabilisation
+
