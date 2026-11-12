@@ -126,17 +126,17 @@
  background:#0b1b2fed;border:1px solid #9dbad63d;border-radius:14px;
  padding:6px 10px;text-shadow:none;
 }
-[data-gps-live] .gps-corridor-picker{position:relative}
-[data-gps-live] .gps-corridor-picker>.gps-map-control{color:#9fc1d2}
-[data-gps-live] .gps-corridor-info{
+:is([data-gps-live],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-picker{position:relative}
+:is([data-gps-live],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-picker>.gps-map-control{color:#9fc1d2}
+:is([data-gps-live],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info{
  position:absolute;right:60px;top:0;width:min(210px,calc(100vw - 105px));
  box-sizing:border-box;padding:12px;border:1px solid #9dbad642;border-radius:14px;
  background:#0c2030f5;box-shadow:0 6px 24px #0006;color:#eaf3f5;
  font-size:12px;line-height:1.45;
 }
-[data-gps-live] .gps-corridor-info strong{font-size:12px;color:#eaf3f5}
-[data-gps-live] .gps-corridor-info p{margin:6px 0 0}
-[data-gps-live] .gps-corridor-info small{display:block;color:#acd0df;margin-top:4px}
+:is([data-gps-live],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info strong{font-size:12px;color:#eaf3f5}
+:is([data-gps-live],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info p{margin:6px 0 0}
+:is([data-gps-live],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info small{display:block;color:#acd0df;margin-top:4px}
 
 /* Keep cockpit labels readable over the lighter aerial map. */
 [data-gps-live]>.coaching-heading,[data-gps-live]>.gps-tools>summary{text-shadow:0 2px 5px #000,0 0 10px #0009}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "431433f10378b774",
+  "revision": "b18b4c6c4e675484",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -55,6 +55,7 @@
     "/src/coaching-closure-view.mjs",
     "/src/coaching-corridor-controller.mjs",
     "/src/coaching-corridor-model.mjs",
+    "/src/coaching-corridor-review.mjs",
     "/src/coaching-corridor-weather.mjs",
     "/src/coaching-corridor.css",
     "/src/coaching-debrief-screen.mjs",
@@ -355,5 +356,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6847438
+  "bytes": 6850432
 }

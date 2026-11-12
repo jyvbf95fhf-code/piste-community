@@ -1,14 +1,17 @@
 /* Scoped to the existing olfactory popover; validated cockpit stays unchanged. */
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info{width:min(290px,calc(100vw - 105px));max-height:45dvh;overflow:auto;overscroll-behavior:contain}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) [data-corridor-summary][data-active="true"]{color:#c5b6ff;border-color:#bba6ef99}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info button{width:100%;min-height:40px;padding:8px;margin-top:8px;border:1px solid #9dbad652;border-radius:10px;background:#18334b;color:#f0f5fa;font:inherit;cursor:pointer}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info button:disabled{opacity:.5;cursor:default}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info form{margin:10px 0 0}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info form[hidden]{display:none}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info summary{font-size:11px;color:#dbe7f0}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-fields label{display:block;min-width:0;font-size:10px;color:#c8d7e4}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-fields input{box-sizing:border-box;width:100%;min-width:0;min-height:38px;padding:6px;border:1px solid #9dbad642;border-radius:8px;background:#071726;color:#fff;font:inherit;font-size:16px}
-:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"]) .gps-corridor-info a{color:#b5d6eb}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info{width:min(290px,calc(100vw - 105px));max-height:45dvh;overflow:auto;overscroll-behavior:contain}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) [data-corridor-summary][data-active="true"]{color:#c5b6ff;border-color:#bba6ef99}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info button{width:100%;min-height:40px;padding:8px;margin-top:8px;border:1px solid #9dbad652;border-radius:10px;background:#18334b;color:#f0f5fa;font:inherit;cursor:pointer}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info button:disabled{opacity:.5;cursor:default}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info form{margin:10px 0 0}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info form[hidden]{display:none}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info summary{font-size:11px;color:#dbe7f0}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-fields label{display:block;min-width:0;font-size:10px;color:#c8d7e4}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-fields input{box-sizing:border-box;width:100%;min-width:0;min-height:38px;padding:6px;border:1px solid #9dbad642;border-radius:8px;background:#071726;color:#fff;font:inherit;font-size:16px}
+:is([data-gps-live],[data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-corridor-info a{color:#b5d6eb}
 
-[data-real-map-reader][data-gps-kind="ops"] .gps-map-controls{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+:is([data-real-map-reader][data-gps-kind="ops"],[data-real-map-reader][data-gps-corridor-review]) .gps-map-controls{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+
+/* Archive cards have narrower maps than the live cockpit: keep the wind panel inside. */
+[data-real-map-reader][data-gps-corridor-review] .gps-corridor-info{right:0;top:calc(100% + 8px);max-height:min(240px,calc(48dvh - 145px))}
