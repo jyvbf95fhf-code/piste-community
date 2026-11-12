@@ -967,7 +967,7 @@ function createPersonalDataHandler({ authenticate, enabled, repositoryFor } = {}
 var columns = "id,kind,schema_version,revision,payload,updated_at,deleted_at";
 var record = (r) => ({ schemaVersion: r.schema_version, kind: r.kind, id: r.id, revision: r.revision, payload: r.payload, updatedAt: r.updated_at, deletedAt: r.deleted_at });
 var unwrap = (result) => {
-  if (result.error) throw Object.assign(Error("Sauvegarde refus\xE9e."), { status: ["40001", "P0001"].includes(result.error.code) ? 409 : result.error.code === "42501" ? 403 : 503 });
+  if (result.error) throw Object.assign(Error("Sauvegarde refus\xE9e."), { status: ["40001", "PT409", "P0001"].includes(result.error.code) ? 409 : result.error.code === "42501" ? 403 : 503 });
   return result.data;
 };
 function createPersonalDataRepository(admin, ownerId) {

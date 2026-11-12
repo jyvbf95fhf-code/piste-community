@@ -1,6 +1,6 @@
 const columns='id,kind,schema_version,revision,payload,updated_at,deleted_at';
 const record=r=>({schemaVersion:r.schema_version,kind:r.kind,id:r.id,revision:r.revision,payload:r.payload,updatedAt:r.updated_at,deletedAt:r.deleted_at});
-const unwrap=result=>{if(result.error)throw Object.assign(Error('Sauvegarde refusée.'),{status:['40001','P0001'].includes(result.error.code)?409:result.error.code==='42501'?403:503});return result.data;};
+const unwrap=result=>{if(result.error)throw Object.assign(Error('Sauvegarde refusée.'),{status:['40001','PT409','P0001'].includes(result.error.code)?409:result.error.code==='42501'?403:503});return result.data;};
 export function createPersonalDataRepository(admin,ownerId){
  const write=async(operation,c)=>{
   // Older open clients must not silently strip a newer personal result.

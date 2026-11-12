@@ -317,7 +317,7 @@ function createHistoryHandler({ admin, authenticate, clock = Date.now }) {
         const r = await admin.rpc("v2_history_action", { p_actor: uid, p_key: item.key, p_action: item.action, p_expected: item.expectedVersion ?? null, p_force: item.force === true });
         if (r.error) {
           const code = r.error.code;
-          results.push({ key: item.key, status: ["42501", "22023", "55000", "40001"].includes(code) ? "refused" : "failed", reason: code === "55001" ? "Dossier ancien incoh\xE9rent : r\xE9essayez en suppression forc\xE9e." : code === "42501" ? "Droits insuffisants ou d\xE9monstration prot\xE9g\xE9e." : code === "55000" ? "Session active : arr\xEAt requis." : code === "40001" ? "Dossier modifi\xE9 : actualisez puis r\xE9essayez." : "\xC9chec de la transaction : aucune suppression partielle." });
+          results.push({ key: item.key, status: ["42501", "22023", "55000", "40001", "PT409"].includes(code) ? "refused" : "failed", reason: code === "55001" ? "Dossier ancien incoh\xE9rent : r\xE9essayez en suppression forc\xE9e." : code === "42501" ? "Droits insuffisants ou d\xE9monstration prot\xE9g\xE9e." : code === "55000" ? "Session active : arr\xEAt requis." : ["40001", "PT409"].includes(code) ? "Dossier modifi\xE9 : actualisez puis r\xE9essayez." : "\xC9chec de la transaction : aucune suppression partielle." });
         } else results.push(r.data);
       }
       return respond({ results });

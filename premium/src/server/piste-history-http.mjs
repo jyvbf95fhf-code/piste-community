@@ -25,7 +25,7 @@ export function createHistoryHandler({admin,authenticate,clock=Date.now}){
    for(const item of body.items){
     if(!item||typeof item.key!=='string'||item.key.length>240||!['hide','delete'].includes(item.action)||item.force!==undefined&&typeof item.force!=='boolean'||item.expectedVersion!==undefined&&(!Number.isSafeInteger(item.expectedVersion)||item.expectedVersion<0)){results.push({key:item?.key||'',status:'refused',reason:'Commande invalide.'});continue;}
     const r=await admin.rpc('v2_history_action',{p_actor:uid,p_key:item.key,p_action:item.action,p_expected:item.expectedVersion??null,p_force:item.force===true});
-    if(r.error){const code=r.error.code;results.push({key:item.key,status:['42501','22023','55000','40001'].includes(code)?'refused':'failed',reason:code==='55001'?'Dossier ancien incohérent : réessayez en suppression forcée.':code==='42501'?'Droits insuffisants ou démonstration protégée.':code==='55000'?'Session active : arrêt requis.':code==='40001'?'Dossier modifié : actualisez puis réessayez.':'Échec de la transaction : aucune suppression partielle.'});}
+    if(r.error){const code=r.error.code;results.push({key:item.key,status:['42501','22023','55000','40001','PT409'].includes(code)?'refused':'failed',reason:code==='55001'?'Dossier ancien incohérent : réessayez en suppression forcée.':code==='42501'?'Droits insuffisants ou démonstration protégée.':code==='55000'?'Session active : arrêt requis.':['40001','PT409'].includes(code)?'Dossier modifié : actualisez puis réessayez.':'Échec de la transaction : aucune suppression partielle.'});}
     else results.push(r.data);
    }
    return respond({results});
