@@ -812,8 +812,8 @@ function previewSmartProposal(id){try{const preview=trackSmart.proposal(id);trac
 function submitCurrentTrack(prepare=false){const panel=document.querySelector('[data-creator-panel]');if(panel)panel.open=true;const form=document.querySelector('[data-track-editor-form]'),button=prepare?form?.querySelector('[name="prepareCanine"]'):form?.querySelector('button[type="submit"]:not([name])');if(!button||button.disabled)throw Error('Vérifiez le nom, le chien et la géométrie dans Menu.');form.requestSubmit(button);}
 function prepareSavedTrack(saved){
  const access=jumolfAccess();if(auth.assurance!=='supabase-auth'||!access.entitlement_valid||access.entitlement!=='premium')throw Error('Préparation Premium indisponible pour ce compte.');
- const next=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,dogId:saved.dogId||'',track:saved,currentState:coachingWizardState});
- const ownerId=currentUser.user_id,proceed=()=>{const a=jumolfAccess();if(currentUser?.user_id!==ownerId||!a.entitlement_valid||a.entitlement!=='premium')return;try{if(coachingWizardState?.draft)throw Error('Un brouillon Coaching est déjà en cours.');sharedIndex?.saveTrainingDraft(next);coachingWizardState=next;trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:'',preview:null};history.pushState({},'','/new-session');render(true);}catch(error){Toast(error.message);}};
+ const next=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,dogId:saved.dogId||'',track:saved,currentState:coachingWizardState,replaceDraft:true});
+ const ownerId=currentUser.user_id,proceed=()=>{const a=jumolfAccess();if(currentUser?.user_id!==ownerId||!a.entitlement_valid||a.entitlement!=='premium')return;try{sharedIndex?.saveTrainingDraft(next);coachingWizardState=next;trackEditorActive=false;trackEditor={...trackEditor,draft:null,routeKey:'',preview:null};history.pushState({},'','/new-session');render(true);}catch(error){Toast(error.message);}};
  if(trackEditorActive&&trackEditor.draft?.dirty)ConfirmationDialog({title:'Continuer vers Coaching ?',description:'La piste choisie est enregistrée et restera réutilisable. Le brouillon précédent comporte des modifications non enregistrées ; quitter maintenant les abandonnera.',onConfirm:proceed});else proceed();
 }
 function openProposalSave(prepare=false){
@@ -823,7 +823,6 @@ function openProposalSave(prepare=false){
  dialog.querySelector('[data-save-cancel]').onclick=()=>dialog.close();dialog.addEventListener('close',()=>dialog.remove());
  dialog.querySelector('form').onsubmit=event=>{event.preventDefault();const feedback=dialog.querySelector('[data-save-error]');try{
   const current=jumolfAccess();if(currentUser?.user_id!==ownerId||trackEditor.preview!==preview||!current.entitlement_valid||current.entitlement!=='premium')throw Error('Le compte, les droits ou la proposition ont changé.');
-  if(prepare&&coachingWizardState?.draft)throw Error('Un brouillon Coaching existe déjà. Reprenez-le ; il reste conservé.');
   const context=canineTrackContext(preview.draft.dogId);let memory=null;
   if(preview.options&&preview.draft.dogId&&context.dog)memory=createTrainingMemory({ownerId,dogId:preview.draft.dogId,options:preview.options,proposal:preview.proposal,draft:preview.draft,mission:missionController.snapshot(),context});
   const saved=saveDisplayedProposal({library:trackLibrary,preview,ownerId,name:dialog.querySelector('[name="name"]').value,trainingMemory:memory});
@@ -927,7 +926,7 @@ function accountScientificDataset(){return buildAccountScientificDataset(buildJu
 function scienceDataset(){return auth.assurance==='supabase-auth'?accountScientificDataset():scientificDataset;}
 function prepareJumolfTraining(preparation){
  if(auth.assurance!=='supabase-auth'||!currentUser?.user_id)throw Error('Un compte connecté est nécessaire.');
- coachingWizardState=coachingJumolfPreparationState({ownerId:currentUser.user_id,dogs:trackingDogs(),preparation,currentState:coachingWizardState});
+ coachingWizardState=coachingJumolfPreparationState({ownerId:currentUser.user_id,dogs:trackingDogs(),preparation,currentState:coachingWizardState,replaceDraft:true});
  try{sharedIndex?.saveTrainingDraft(coachingWizardState);}catch(error){Toast(error.message);}
  history.pushState({},'','/new-session');render(true);
 }
@@ -1950,7 +1949,7 @@ document.addEventListener('submit',async event=>{
    let generatedState=null;
    if(prepareCanine){
     const a=jumolfAccess();if(auth.assurance!=='supabase-auth'||!a.entitlement_valid||a.entitlement!=='premium'||trackEditor.canine?.ownerId!==currentUser?.user_id)throw Error('Préparation pédagogique indisponible ou non autorisée.');
-    generatedState=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,dogId:values.dogId||'',track:{id:'pending',name:values.name,geometry:{points:trackEditor.draft.points}},currentState:coachingWizardState});
+    generatedState=coachingGeneratedTrackState({ownerId:currentUser.user_id,dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,dogId:values.dogId||'',track:{id:'pending',name:values.name,geometry:{points:trackEditor.draft.points}},currentState:coachingWizardState,replaceDraft:true});
    }
    let saved;
    const trainingContext=missionContext(),dogId=values.dogId||'';
