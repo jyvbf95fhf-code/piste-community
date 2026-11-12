@@ -7,10 +7,21 @@ import {PremiumPictogram as P} from './coaching-pictograms.mjs';
 import {escapeHTML as e} from './components.mjs';
 import {resolveDogId,resolveDefaultTrackingDog} from './dog-selection.mjs';
 import {remotePreparedInput,remoteGpxInput} from './coaching-remote-reference.mjs';
+// Shared creation never inherits the local demonstration's named participants.
+function sharedCoachingDraft(profile,dogs){
+ const d=createDraft({user_id:profile.id,name:profile.name},dogs);
+ return {...d,step:'mode',participants:[{id:'self',name:profile.name||'Vous'}],roles:{coach:null,traceur:'pending-traceur',driver:'self',observers:[]},...(profile.coaching_team_version===1?{teamSetupVersion:1}:{})};
+}
+function checkDraftReplacement(currentState,ownerId,replaceDraft){
+ if(currentState?.draft&&(!replaceDraft||currentState.ownerId!==ownerId||currentState.draft.identityContext?.userId!==ownerId||currentState.draft.session))throw Error('Un brouillon Coaching est déjà en cours. Reprenez-le avant de préparer une autre séance.');
+}
 export function createSharedCoachingWizard({profile,dogs=[],primaryDogId=null,getTracks=()=>[],initialState=null,onChange=()=>{},resolveJumolfPreparation=p=>p}={}){
- let d={...createDraft({user_id:profile.id,name:profile.name},dogs),step:'mode',...(profile.coaching_team_version===1?{teamSetupVersion:1}:{})},reference=null;
+ let d=sharedCoachingDraft(profile,dogs),reference=null;
  if(initialState?.ownerId===profile.id&&initialState.draft?.identityContext?.userId===profile.id){d={...structuredClone(initialState.draft),dogs:dogs.map(dog=>({...dog})),session:null};d.dogId=resolveDogId(dogs,d.dogId);}
  d.dogId=resolveDogId(dogs,d.dogId)||resolveDefaultTrackingDog(dogs,primaryDogId)?.id||(dogs.length===1?dogs[0].id:null);
+ // Old JUMOLF handoffs stored demo aliases; discard only those draft assignments.
+ const demoIds=new Set(['camille','alex','lea','hugo','ines']);
+ if([...Object.values(d.roles).filter(x=>!Array.isArray(x)),...d.roles.observers].some(id=>demoIds.has(id)))d.roles=sharedCoachingDraft(profile,dogs).roles;
  let teamContacts=null,restoredRoles=initialState?.ownerId===profile.id?structuredClone(d.roles):null;
  const sequence=()=>['mode',...(['prepared','gpx'].includes(d.traceType)?['prepare']:[]),...(d.creatorRole!=='traceur'&&(!d.dogId||d.step==='dog')?['dog']:[]),'roles','review'];
  const snapshot=()=>({ownerId:profile.id,draft:structuredClone(d)});
@@ -38,8 +49,9 @@ export function createSharedCoachingWizard({profile,dogs=[],primaryDogId=null,ge
   if(restoredRoles){d={...d,roles:restoredRoles};restoredRoles=null;}
   notify();
  },
- render(notice='',busy=false){refreshJumolfPreparation();const preparation=resolveDogId(dogs,d.jumolfPreparation?.dogId)===d.dogId?d.jumolfPreparation:null;const memory=d.preparationTrack?.trainingMemory?.dogId===d.dogId?d.preparationTrack.trainingMemory:null;const memoryBrief=memory?`<aside class="card jumolf-training-brief" data-prepared-training><h2>Préparation JUMOLF retrouvée</h2><p>${e(memory.objective)}</p><p>Niveau déclaré : ${e(memory.level||'non renseigné')} · distance préparée calculée : ${e(memory.parameters.distanceM)} m.</p><p>Conservée sur cet appareil. La séance reste à créer explicitement ; conducteur et binôme seront ceux de l’équipe Coaching autorisée.</p></aside>`:'';const brief=preparation?`<aside class="card jumolf-training-brief"><h2>Objectif JUMOLF</h2><strong>${e(preparation.title)}</strong><p>${e(preparation.objective)}</p><details><summary>Protocole à observer</summary><ul>${preparation.protocol.preparation.map(x=>`<li>${e(x)}</li>`).join('')}</ul><ol>${preparation.protocol.steps.map(x=>`<li>${e(x)}</li>`).join('')}</ol><p>${e(preparation.protocol.difficulty)}</p><ul>${preparation.protocol.criteria.map(x=>`<li>${e(x)}</li>`).join('')}</ul></details><p>Préparation locale à cette visite, sans réalisation déclarée. Les rôles et modes de visibilité restent à choisir. Le lien n’est pas enregistré durablement.</p><a href="/jumolf/exercises?dog=${encodeURIComponent(d.dogId||'')}">Retour à JUMOLF</a></aside>`:'';const html=memoryBrief+brief+CoachingScreen(d,notice,available(),[],{},null,null,{shared:true,groupConfiguration:true,traceChoiceMarkup:delegatedSource()?'<aside class="coaching-local-note"><p>Le traceur invité choisira de tracer directement ou d’utiliser un tracé préparé, avec import GPX possible.</p><p>Invitez votre traceur dans l’étape Équipe. Vous ne choisissez et ne consultez pas sa référence.</p></aside>':undefined,dogOptional:d.creatorRole==='traceur',roleChoiceMarkup:d.trackingScenario==='connected_traceur'?`<div class="coaching-principal"><p class="eyebrow">VOTRE FONCTION PRINCIPALE</p><div role="group" aria-label="Votre fonction principale">${roleTypes.filter(r=>r.id!=='observer').map(r=>`<button data-coaching="creator" data-role="${r.id}" aria-pressed="${d.creatorRole===r.id}">${r.title}</button>`).join('')}</div></div>`:'',dogChangeMarkup:dogChangeMarkup(),compactReview:true,stepSequence:sequence(),headings:{mode:'Configurer la session',prepare:'Choisir le tracé',dog:'Choisir le chien',roles:'Votre équipe',review:'Récapitulatif'},descriptions:{mode:'',review:''},rolesMarkup:roleMarkup(),prepareMarkup:prepareMarkup(),errors:errors(),canContinue:d.step==='mode'?!!d.mode&&!!d.traceType:d.step==='prepare'?(!canPrepare()||!!d.preparationTrack):undefined,allowedTraceTypes:d.trackingScenario.startsWith('external_')?['direct']:['direct','prepared','gpx']});return busy?`<div aria-busy="true"><fieldset class="coaching-wizard-busy" disabled>${html}</fieldset></div>`:html;},
+ render(notice='',busy=false){refreshJumolfPreparation();const preparation=resolveDogId(dogs,d.jumolfPreparation?.dogId)===d.dogId?d.jumolfPreparation:null;const memory=d.preparationTrack?.trainingMemory?.dogId===d.dogId?d.preparationTrack.trainingMemory:null;const memoryBrief=memory?`<aside class="card jumolf-training-brief" data-prepared-training><h2>Préparation JUMOLF retrouvée</h2><p>${e(memory.objective)}</p><p>Niveau déclaré : ${e(memory.level||'non renseigné')} · distance préparée calculée : ${e(memory.parameters.distanceM)} m.</p><p>Conservée sur cet appareil. La séance reste à créer explicitement ; conducteur et binôme seront ceux de l’équipe Coaching autorisée.</p></aside>`:'';const brief=preparation?`<aside class="card jumolf-training-brief"><h2>Objectif JUMOLF</h2><strong>${e(preparation.title)}</strong><p>${e(preparation.objective)}</p><details><summary>Protocole à observer</summary><ul>${preparation.protocol.preparation.map(x=>`<li>${e(x)}</li>`).join('')}</ul><ol>${preparation.protocol.steps.map(x=>`<li>${e(x)}</li>`).join('')}</ol><p>${e(preparation.protocol.difficulty)}</p><ul>${preparation.protocol.criteria.map(x=>`<li>${e(x)}</li>`).join('')}</ul></details><p>Préparation locale à cette visite, sans réalisation déclarée. Les rôles et modes de visibilité restent à choisir. Le lien n’est pas enregistré durablement.</p><a href="/jumolf/exercises?dog=${encodeURIComponent(d.dogId||'')}">Retour à JUMOLF</a></aside>`:'';const restart='<aside class="coaching-local-note"><p>JUMOLF est facultatif pour chaque séance.</p><button type="button" class="button button-dark" data-coaching="without-jumolf">Recommencer sans JUMOLF</button></aside>';const html=restart+memoryBrief+brief+CoachingScreen(d,notice,available(),[],{},null,null,{shared:true,groupConfiguration:true,traceChoiceMarkup:delegatedSource()?'<aside class="coaching-local-note"><p>Le traceur invité choisira de tracer directement ou d’utiliser un tracé préparé, avec import GPX possible.</p><p>Invitez votre traceur dans l’étape Équipe. Vous ne choisissez et ne consultez pas sa référence.</p></aside>':undefined,dogOptional:d.creatorRole==='traceur',roleChoiceMarkup:d.trackingScenario==='connected_traceur'?`<div class="coaching-principal"><p class="eyebrow">VOTRE FONCTION PRINCIPALE</p><div role="group" aria-label="Votre fonction principale">${roleTypes.filter(r=>r.id!=='observer').map(r=>`<button data-coaching="creator" data-role="${r.id}" aria-pressed="${d.creatorRole===r.id}">${r.title}</button>`).join('')}</div></div>`:'',dogChangeMarkup:dogChangeMarkup(),compactReview:true,stepSequence:sequence(),headings:{mode:'Configurer la session',prepare:'Choisir le tracé',dog:'Choisir le chien',roles:'Votre équipe',review:'Récapitulatif'},descriptions:{mode:'',review:''},rolesMarkup:roleMarkup(),prepareMarkup:prepareMarkup(),errors:errors(),canContinue:d.step==='mode'?!!d.mode&&!!d.traceType:d.step==='prepare'?(!canPrepare()||!!d.preparationTrack):undefined,allowedTraceTypes:d.trackingScenario.startsWith('external_')?['direct']:['direct','prepared','gpx']});return busy?`<div aria-busy="true"><fieldset class="coaching-wizard-busy" disabled>${html}</fieldset></div>`:html;},
  dispatch({action,field,value,step}={}){
+  if(action==='without-jumolf'){const {dogId,teamSetupVersion}=d;d={...sharedCoachingDraft(profile,dogs),...(teamSetupVersion===1?{teamSetupVersion:1}:{}),dogId:resolveDogId(dogs,dogId)||resolveDefaultTrackingDog(dogs,primaryDogId)?.id||null};reference=null;restoredRoles=null;roles();notify();return {type:'render'};}
   refreshJumolfPreparation();
   if(field==='teamRole'||field==='teamObservers'){
    if(!teamContacts)throw Error('Catalogue de contacts indisponible.');
@@ -73,19 +85,19 @@ export function coachingTrackReturnState(state,ownerId,search,track){
 }
 
 // Local presentation handoff only. No server payload or membership is changed.
-export function coachingJumolfPreparationState({ownerId,dogs=[],preparation:input,currentState=null}={}){
- if(currentState?.draft)throw Error('Un brouillon Coaching est déjà en cours. Reprenez-le avant de préparer une autre séance.');
+export function coachingJumolfPreparationState({ownerId,dogs=[],preparation:input,currentState=null,replaceDraft=false}={}){
+ checkDraftReplacement(currentState,ownerId,replaceDraft);
  const resolvedDogId=resolveDogId(dogs,input?.dogId);if(!ownerId||!resolvedDogId)throw Error('Compte ou chien indisponible.');
- const draft=createDraft({user_id:ownerId},dogs);
+ const draft=sharedCoachingDraft({id:ownerId},dogs);
  return {ownerId,draft:{...draft,step:'mode',dogId:resolvedDogId,jumolfPreparation:structuredClone(input)}};
 }
 
 // Existing library reference, explicit visit-only handoff. No session is created.
-export function coachingGeneratedTrackState({ownerId,dogs=[],dogId='',primaryDogId=null,track,currentState=null}={}){
- if(currentState?.draft)throw Error('Un brouillon Coaching est déjà en cours. Reprenez-le avant de préparer une autre séance.');
+export function coachingGeneratedTrackState({ownerId,dogs=[],dogId='',primaryDogId=null,track,currentState=null,replaceDraft=false}={}){
+ checkDraftReplacement(currentState,ownerId,replaceDraft);
  if(!ownerId||!track?.id||!track.geometry?.points?.length||!track.geometry.points.every(p=>p.space==='wgs84'))throw Error('Compte ou référence géographique indisponible.');
  const resolvedDogId=resolveDogId(dogs,dogId);
  if(dogId&&!resolvedDogId)throw Error('Chien indisponible.');
- const draft=createDraft({user_id:ownerId},dogs);
+ const draft=sharedCoachingDraft({id:ownerId},dogs);
  return {ownerId,draft:{...draft,step:'mode',traceType:'prepared',dogId:resolvedDogId||resolveDefaultTrackingDog(dogs,primaryDogId)?.id||draft.dogId,preparationTrack:structuredClone(track)}};
 }
