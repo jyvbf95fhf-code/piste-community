@@ -366,7 +366,8 @@ function renderPisteNotifications(){
 }
 let profileOwnerId=currentUser?.user_id||null;
 let profileStore=createProfileStore({}, {ownerId:profileOwnerId,storage});
-const makeProfileController=()=>createProfileController({store:profileStore,communityStore,getDogs:()=>accountDogs(),notificationStore:communityStore.getNotificationStore(),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
+const profileCommunityStore=()=>auth.assurance==='supabase-auth'?persistentCommunity?.store:communityStore;
+const makeProfileController=()=>createProfileController({store:profileStore,communityStore:{viewerId:communityStore.viewerId,updateOwnProfile:patch=>(profileCommunityStore()||communityStore).updateOwnProfile(patch)},getDogs:()=>accountDogs(),notificationStore:communityStore.getNotificationStore(),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
 let profileController=makeProfileController();
 let personalCloud=null;
 let accountAuto=null,accountAutoOwner=null;
@@ -890,8 +891,10 @@ function profileConsentSummary(){
 function renderProfile(route){
  if(route.type==='discover')return BetaGuide({page:true});
  if(route.type==='sync')return auth.assurance==='supabase-auth'?personalCloudForUser().screen().replace('<h1>Sauvegardes cloud</h1>','<h1>Mon compte en ligne</h1>'+AccountSyncPanel(accountAuto?.view())):'<p>Connectez-vous à votre compte PISTE pour accéder aux sauvegardes privées.</p>';
+ const profileCommunity=profileCommunityStore();
+ const viewerId=profileCommunity?.viewerId;
  const notifications=communityStore.getNotificationStore();
- return (profileStore.persistenceWarning()?`<p role="status">${escapeHTML(profileStore.persistenceWarning())}</p>`:'')+ProfileScreen({route,user:currentUser,profileStore,realMode:auth.assurance==='supabase-auth',dogs:accountDogs(),communityProfile:communityStore.getProfile(communityStore.viewerId),jumolfAccess:jumolfAccess(),jumolfState:jumolfStore.snapshot(),consent:profileConsentSummary(),scientificAccess:scientificCorpusAccessFor(currentUser),adminAccess:adminStore.accessFor(currentUser),notificationPreferences:notifications.getPreferences(communityStore.viewerId),appVersion:adminCurrentVersion()});
+ return (profileStore.persistenceWarning()?`<p role="status">${escapeHTML(profileStore.persistenceWarning())}</p>`:'')+ProfileScreen({route,user:currentUser,profileStore,realMode:auth.assurance==='supabase-auth',dogs:accountDogs(),communityProfile:viewerId?profileCommunity.getProfile(viewerId):null,jumolfAccess:jumolfAccess(),jumolfState:jumolfStore.snapshot(),consent:profileConsentSummary(),scientificAccess:scientificCorpusAccessFor(currentUser),adminAccess:adminStore.accessFor(currentUser),notificationPreferences:notifications.getPreferences(communityStore.viewerId),appVersion:adminCurrentVersion()});
 }
 function makeCommunityController(){return createCommunityController({store:communityViewStore(),sourceOptions:communitySourceOptions,origin:location.origin,navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render(),toast:Toast});}
 let communityController=makeCommunityController();
