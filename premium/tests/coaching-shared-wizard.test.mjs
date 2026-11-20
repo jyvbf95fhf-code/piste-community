@@ -13,3 +13,46 @@ test('valid default skips mandatory dog step but mode offers a session-only chan
 test('missing default retains the explicit dog selection step',()=>{const w=createSharedCoachingWizard({profile:{id:'u',name:'U'},dogs:[{id:'a',name:'A'},{id:'b',name:'B'}]});w.dispatch({field:'mode',value:'normal'});w.dispatch({field:'traceType',value:'direct'});w.dispatch({action:'next'});assert.equal(w.snapshot().draft.step,'dog');});
 test('scientific preparation accepts explicit cloud alias without changing source identity',async()=>{const {coachingJumolfPreparationState}=await import('../src/coaching-shared-wizard.mjs');const input={dogId:'cloud-id',title:'Objective',protocol:{preparation:[],steps:[],criteria:[]}};const state=coachingJumolfPreparationState({ownerId:'u',dogs:[{id:'local-id',cloudId:'cloud-id',name:'QA'}],preparation:input});assert.equal(state.draft.dogId,'local-id');assert.equal(state.draft.jumolfPreparation.dogId,'cloud-id');assert.deepEqual(input.dogId,'cloud-id');});
 test('alias-based scientific preparation creates local training memory without changing source request',async()=>{const {coachingJumolfPreparationState}=await import('../src/coaching-shared-wizard.mjs');const dogs=[{id:'local-dog',cloudId:'cloud-dog',name:'QA',status:'active',disciplines:['tracking']}],preparation={dogId:'cloud-dog',recommendationId:'r',objective:'Observer',title:'Observer',protocol:{preparation:['Préparer'],steps:['Observer'],criteria:['Noter']}};const initialState=coachingJumolfPreparationState({ownerId:'u',dogs,preparation});const wizard=createSharedCoachingWizard({profile:{id:'u',name:'U'},dogs,initialState});wizard.dispatch({field:'mode',value:'normal'});wizard.dispatch({field:'traceType',value:'direct'});const result=wizard.dispatch({action:'create'});assert.equal(result.dogId,'local-dog');assert.equal(result.trainingMemory.dogId,'local-dog');assert.equal(preparation.dogId,'cloud-dog');});
+
+for (const [mode, traceType] of [['normal', 'direct'], ['simple_blind', 'prepared']]) {
+ test(`Coach with an external Traceur can invite the driver and create a ${traceType} session`, async () => {
+  const {createRemoteSession, joinRemoteSession, reduceRemoteSession, projectRemoteSession} = await import('../src/server/coaching-service.mjs');
+  const coach = {id:'10000000-0000-4000-8000-000000000001', name:'Coach'};
+  const driver = {id:'20000000-0000-4000-8000-000000000002', name:'Conducteur'};
+  const contacts = [{...driver, quick_coaching_invite_authorized:true}];
+  const track = {id:'t', name:'Piste préparée', geometry:{points:[{x:7,y:48,space:'wgs84'},{x:7.01,y:48.01,space:'wgs84'}]}};
+  const w = createSharedCoachingWizard({profile:{...coach, coaching_team_version:1}, getTracks:()=>[track]});
+  w.setTeamCatalogue({version:1, ownerId:coach.id, contacts});
+  w.dispatch({field:'mode', value:mode});
+  w.dispatch({field:'trackingScenario', value:'external_traceur'});
+  w.dispatch({action:'creator', value:'coach'});
+  assert.match(w.render(), /data-value="prepared"/);
+  w.dispatch({field:'traceType', value:traceType});
+  if (traceType==='prepared') w.dispatch({field:'preparation', value:'t'});
+  w.dispatch({action:'next'});
+  if (traceType==='prepared') w.dispatch({action:'next'});
+  assert.match(w.render(), /data-coaching-role="driver"/);
+  w.dispatch({field:'teamRole', value:{role:'driver', person:driver.id}});
+  const {payload, reference} = w.dispatch({action:'create'});
+  assert.equal(payload.role, 'coach');
+  assert.equal(reference, null);
+  const now = Date.now();
+  let state = createRemoteSession({id:'external-coach-session', owner:coach, ...payload, now, teamContacts:contacts});
+  assert.equal(state.session.roles.traceur, null);
+  assert.equal(state.pendingTeam[0].recipientId, driver.id);
+  joinRemoteSession(state, driver, 'driver');
+  joinRemoteSession(state, {id:'observer',name:'Observateur'}, 'observer');
+  const command = (userId,type,payload={}) => reduceRemoteSession(state,{userId,type,payload,now});
+  assert.throws(()=>command('observer','external-ready'));
+  state = command(coach.id,'external-ready');
+  const driverView = projectRemoteSession(state,driver.id);
+  assert.equal(driverView.phase,'SEARCH_READY');
+  assert.equal(driverView.poseRecorder,null);
+  assert.equal(driverView.reference,null);
+  assert.equal(projectRemoteSession(state,coach.id).reference?.name, traceType==='prepared'?'Piste préparée':undefined);
+  const fix = {timestamp:now,coords:{latitude:48,longitude:7,accuracy:5}};
+  assert.throws(()=>command(coach.id,'start-search',{fix,segmentId:'search'}));
+  state = command(driver.id,'start-search',{fix,segmentId:'search'});
+  assert.equal(projectRemoteSession(state,driver.id).phase,'SEARCH_RUNNING');
+ });
+}

@@ -10,7 +10,7 @@ export function normalizeCoachingTeam({assignments,contacts,ownerId,creatorRole,
  const allowed=coachingTeamContacts(contacts,ownerId),ids=new Set(),assigned=new Set();
  if(!Array.isArray(assignments)||assignments.length>32)fail('Affectations invalides.');
  return assignments.map(a=>{
-  if(!a||!roleTypes.some(r=>r.id===a.role)||!allowed.some(c=>c.id===a.recipientId)||ids.has(a.recipientId)||a.role===creatorRole||a.role==='traceur'&&scenario!=='connected_traceur'||a.role==='driver'&&scenario!=='connected_traceur'||a.role!=='observer'&&assigned.has(a.role))fail('Contact, fonction ou cumul non autorisé.');
+  if(!a||!roleTypes.some(r=>r.id===a.role)||!allowed.some(c=>c.id===a.recipientId)||ids.has(a.recipientId)||a.role===creatorRole||a.role==='traceur'&&scenario!=='connected_traceur'||a.role==='driver'&&!['connected_traceur','external_traceur'].includes(scenario)||a.role!=='observer'&&assigned.has(a.role))fail('Contact, fonction ou cumul non autorisé.');
   ids.add(a.recipientId);assigned.add(a.role);return {recipientId:a.recipientId,role:a.role};
  });
 }

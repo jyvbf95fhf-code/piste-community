@@ -19,7 +19,7 @@ export const roleTypes=[
 export const trackingScenarios=Object.freeze([
  {id:'connected_traceur',title:'Traceur avec application',description:'Le Traceur dispose de l’application et réalise la pose.',normalOnly:false},
  {id:'self_trace',title:'Je trace pour moi-même',description:'La même personne réalisera la pose puis la relève.',normalOnly:true},
- {id:'external_traceur',title:'Traceur externe sans application',description:'Le Conducteur déclare sa mise en place. Aucune position du Traceur n’existe dans l’application.',normalOnly:false},
+ {id:'external_traceur',title:'Traceur externe sans application',description:'Le Coach ou le Conducteur confirme sa mise en place. Aucune position du Traceur n’est enregistrée.',normalOnly:false},
  {id:'external_driver_recorded',title:'Traceur externe · j’enregistre sa pose',description:'Le téléphone Conducteur enregistre la pose du Traceur externe, puis sa propre relève.',normalOnly:true}
 ]);
 export function createDraft(user,dogs) {
@@ -33,6 +33,7 @@ export function setTrackingScenario(draft,scenario){
  if(definition.normalOnly&&draft.mode!=='normal')throw Error('Ce parcours est disponible uniquement en mode Normal.');
  const roles={...draft.roles};let creatorRole=draft.creatorRole;
  if(scenario==='self_trace'){creatorRole='driver';roles.driver='self';roles.traceur='self';roles.observers=roles.observers.filter(id=>id!=='self');}
+ else if(scenario==='external_traceur'&&draft.creatorRole==='coach'){roles.traceur=null;}
  else if(scenario==='external_traceur'||scenario==='external_driver_recorded'){creatorRole='driver';roles.driver='self';roles.traceur=null;roles.observers=roles.observers.filter(id=>id!=='self');}
  else if(draft.trackingScenario!=='connected_traceur'&&!roles.traceur)roles.traceur='alex';
  return {...draft,trackingScenario:scenario,creatorRole,roles,session:null};
@@ -50,14 +51,14 @@ export function updateDraft(draft,patch) {
 export function assignRole(draft,role,person,action=null) {
  if(!['coach','traceur','driver'].includes(role))throw Error('Choisissez une fonction principale ; utilisez la sélection multiple pour les Observateurs.');
  if(draft.trackingScenario!=='connected_traceur'&&role==='traceur')throw Error('Le rôle olfactif est externe ou déjà assuré par vous-même dans ce parcours.');
- if(['self_trace','external_traceur','external_driver_recorded'].includes(draft.trackingScenario)&&role==='driver'&&person!=='self')throw Error('Le Conducteur connecté réalise ce parcours.');
+ if(['self_trace','external_driver_recorded'].includes(draft.trackingScenario)&&role==='driver'&&person!=='self')throw Error('Le Conducteur connecté réalise ce parcours.');
  if(person!==null&&!draft.participants.some(p=>p.id===person))throw Error('Participant inconnu');
  const next=retainPreparationAction(draft,action,'function-assignment',{referenceId:null,beneficiaryParticipantId:person,assignedFunction:role});
  return {...next,roles:{...draft.roles,[role]:person},session:null};
 }
 export function selectCreatorRole(draft,role) {
  if(!['coach','traceur','driver'].includes(role))throw Error('Choisissez un rôle principal Coach, Traceur ou Conducteur.');
- if(draft.trackingScenario!=='connected_traceur'&&role!=='driver')throw Error('Le Conducteur connecté reste l’utilisateur principal dans ce parcours.');
+ if(draft.trackingScenario!=='connected_traceur'&&role!=='driver'&&!(draft.trackingScenario==='external_traceur'&&role==='coach'))throw Error('Le Conducteur connecté reste l’utilisateur principal dans ce parcours.');
  const roles={...draft.roles};
  // Exchange the defaults when switching main function; later assignments remain editable.
  if(role!==draft.creatorRole&&roles[role]!=='self'&&roles[draft.creatorRole]==='self')roles[draft.creatorRole]=roles[role];
@@ -139,7 +140,7 @@ export function validateDraft(draft) {
  if(!traceTypes.some(t=>t.id===draft.traceType))add('trace_required','Choisissez le type de tracé.');
  if(!draft.dogs.some(d=>d.id===draft.dogId))add('dog_required','Choisissez votre chien.');
  if(!['coach','traceur','driver'].includes(draft.creatorRole)||draft.roles[draft.creatorRole]!=='self')add('creator_required','Votre rôle principal doit vous être attribué.');
- if(scenario?.id!=='connected_traceur'&&(draft.creatorRole!=='driver'||draft.roles.driver!=='self'))add('driver_scenario_required','Le Conducteur connecté doit être l’utilisateur principal de ce parcours.');
+ if(scenario?.id!=='connected_traceur'&&!(scenario?.id==='external_traceur'&&draft.creatorRole==='coach')&&(draft.creatorRole!=='driver'||draft.roles.driver!=='self'))add('driver_scenario_required','Le Conducteur connecté doit être l’utilisateur principal de ce parcours.');
  if(scenario?.id==='self_trace'&&draft.roles.traceur!=='self')add('self_trace_actor','Vous réalisez vous-même la pose et la relève.');
  if(['external_traceur','external_driver_recorded'].includes(scenario?.id)&&draft.roles.traceur)add('external_traceur_member','Un Traceur externe sans application ne peut pas être ajouté comme participant connecté.');
  for(const role of ['driver',...(scenario?.id==='connected_traceur'?['traceur']:[])])if(!draft.roles[role])add(`${role}_required`,role==='driver'?'Un Conducteur est nécessaire pour le binôme.':'Choisissez un Traceur pour préparer la piste.');
