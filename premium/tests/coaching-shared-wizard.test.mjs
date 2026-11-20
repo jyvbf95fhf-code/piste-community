@@ -56,3 +56,26 @@ for (const [mode, traceType] of [['normal', 'direct'], ['simple_blind', 'prepare
   assert.equal(projectRemoteSession(state,driver.id).phase,'SEARCH_RUNNING');
  });
 }
+
+test('external traceur role can be corrected from the Team step of an existing draft', () => {
+ const coach = {id:'10000000-0000-4000-8000-000000000001',name:'Sébastien',coaching_team_version:1};
+ const driver = {id:'20000000-0000-4000-8000-000000000002',name:'Conducteur',quick_coaching_invite_authorized:true};
+ const catalogue = {version:1,ownerId:coach.id,contacts:[driver]};
+ const options = {profile:coach,dogs:[{id:'dog',name:'Chien'}]};
+ const original = createSharedCoachingWizard(options);
+ original.setTeamCatalogue(catalogue);
+ original.dispatch({field:'mode',value:'normal'});
+ original.dispatch({field:'trackingScenario',value:'external_traceur'});
+ original.dispatch({action:'next'});
+ const w = createSharedCoachingWizard({...options,initialState:original.snapshot()});
+ w.setTeamCatalogue(catalogue);
+ assert.match(w.render(), /aria-pressed="true">Je suis Conducteur/);
+ w.dispatch({action:'creator',value:'coach'});
+ const html = w.render();
+ assert.match(html, /aria-pressed="true">Je suis Coach/);
+ assert.match(html, /data-coaching-creator-assignment="coach"/);
+ assert.match(html, /data-coaching-role="driver"/);
+ w.dispatch({field:'teamRole',value:{role:'driver',person:driver.id}});
+ w.dispatch({action:'creator',value:'coach'});
+ assert.equal(w.dispatch({action:'create'}).payload.teamAssignments[0].recipientId,driver.id);
+});
