@@ -19,22 +19,3 @@ test('Coaching and OPS detail render read-only projections without mutation cont
 test('denied or revoked Live route displays an unavailable state',()=>{
  const html=LiveDetailScreen(null);assert.match(html,/Live indisponible/);assert.match(html,/accès a été révoqué/);assert.doesNotMatch(html,/Voir le Live/);
 });
-
-test('position age uses the last GPS capture and becomes stale without a new frame', async ()=>{
- const {livePositionFreshness}=await import('../src/live-activity.mjs');
- const now=100000;
- assert.equal(livePositionFreshness(null,now).state,'waiting');
- assert.equal(livePositionFreshness(now+6000,now).state,'waiting');
- assert.deepEqual(livePositionFreshness(now-8000,now),{state:'fresh',label:'Position reçue il y a 8 s'});
- assert.equal(livePositionFreshness(now-59999,now).state,'fresh');
- assert.equal(livePositionFreshness(now-60000,now).state,'stale');
-});
-
-test('fullscreen and GPS freshness appear only for readable active Live maps',()=>{
- const active=LiveDetailScreen({sessionType:'ops',sessionId:'ops-session',distance:125,trackingSeconds:63});
- assert.match(active,/data-live-map-expand/);
- assert.match(active,/data-gps-center/);
- assert.match(active,/En attente d’une position GPS/);
- assert.match(active,/125 m · 1 min 3 s/);
- for(const projection of [null,{ended:true}])assert.doesNotMatch(LiveDetailScreen(projection),/data-live-map-expand/);
-});

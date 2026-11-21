@@ -276,26 +276,3 @@
 .profile-avatar:has(.profile-avatar-photo) { overflow: hidden; }
 .profile-avatar-photo { width: 100%; height: 100%; object-fit: cover; }
 .community-avatar:has(.profile-avatar-photo) { overflow: hidden; }
-
-.live-map-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 8px 0;
-}
-.live-map-toolbar p { margin: 0; }
-.live-detail [data-live-map] [data-gps-map] { min-height: min(58dvh, 480px); }
-.live-detail [data-live-map-expanded] {
-  position: fixed;
-  inset: 0;
-  z-index: 3000;
-  display: flex;
-  flex-direction: column;
-  background: #101714;
-  padding: max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom));
-}
-.live-detail [data-live-map-expanded] .gps-map-stage { flex: 1; min-height: 0; }
-.live-detail [data-live-map-expanded] [data-gps-map] { height: 100%; }
-.live-detail [data-live-map-expanded] .real-map-availability { display: none; }
