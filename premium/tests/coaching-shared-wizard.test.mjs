@@ -79,3 +79,25 @@ test('external traceur role can be corrected from the Team step of an existing d
  w.dispatch({action:'creator',value:'coach'});
  assert.equal(w.dispatch({action:'create'}).payload.teamAssignments[0].recipientId,driver.id);
 });
+
+test('reselecting the external scenario preserves the prepared track',()=>{
+ const track={id:'t',name:'Piste',geometry:{points:[{x:7,y:48,space:'wgs84'},{x:7.01,y:48.01,space:'wgs84'}]}};
+ const w=createSharedCoachingWizard({profile:{id:'u',name:'Coach'},getTracks:()=>[track]});
+ w.dispatch({field:'mode',value:'normal'});
+ w.dispatch({field:'trackingScenario',value:'external_traceur'});
+ w.dispatch({action:'creator',value:'coach'});
+ w.dispatch({field:'traceType',value:'prepared'});
+ w.dispatch({field:'preparation',value:'t'});
+ w.dispatch({field:'trackingScenario',value:'external_traceur'});
+ assert.equal(w.dispatch({action:'create'}).payload.reference.name,'Piste');
+});
+
+test('changing direct to prepared from review opens track selection',()=>{
+ const w=wizard();
+ w.dispatch({field:'mode',value:'normal'});
+ w.dispatch({field:'traceType',value:'direct'});
+ w.dispatch({action:'edit',step:'trace'});
+ w.dispatch({field:'traceType',value:'prepared'});
+ w.dispatch({action:'next'});
+ assert.equal(w.snapshot().draft.step,'prepare');
+});
