@@ -54,3 +54,37 @@
  .notification-card p { font-size:.9rem; line-height:1.45; }
 }
 .community-real-map{height:260px;min-height:220px;width:100%;border-radius:14px;background:#16283a;isolation:isolate}.community-real-map .leaflet-control-attribution{font-size:9px!important}.community-page{min-width:0}.community-person-row,.community-header-actions{flex-wrap:wrap}.community-contact-search input{min-width:0;width:100%}.community-attachment-copy{overflow-wrap:anywhere}
+
+.community-profile-page .community-profile-hero {
+  display: grid;
+  gap: 14px;
+  padding: clamp(16px, 4vw, 26px);
+}
+.community-profile-hero .community-profile-identity {
+  align-items: center;
+  min-width: 0;
+}
+.community-profile-hero h1 {
+  margin: 0;
+  font-size: clamp(1.45rem, 5vw, 2rem);
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+.community-profile-hero .community-profile-bio { margin: 0; }
+.community-profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.community-profile-settings { border-top: 1px solid var(--theme-border); }
+.community-profile-settings > summary {
+  padding: 10px 0 2px;
+  cursor: pointer;
+  color: var(--theme-text-muted);
+}
+.community-profile-settings .community-contact-permissions { margin-top: 12px; }
+.community-profile-dogs .community-profile-empty {
+  margin: 0;
+  color: var(--theme-text-muted);
+}

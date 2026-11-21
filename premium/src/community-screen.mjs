@@ -60,13 +60,29 @@ function pageHeader(kicker,title,description,actions=''){
 }
 function profileScreen(route,store,dogs){
  const person=store.getProfile(route.id);if(!person)return `<section class="community-page community-profile-page">${EmptyState('Profil indisponible','Ce profil n’est pas disponible dans cette visite mock.','users')}<a class="button button-dark" href="/community">Retour au fil</a></section>`;
- const own=person.id===store.viewerId,ownDogs=(person.dogIds||[]).map(id=>selectedDog(dogs,id)).filter(Boolean),posts=store.getFeed().filter(post=>post.authorId===person.id),relation=store.getRelation(person.id);
- const actions=own?`<a class="button button-subtle" href="/community/contacts">Gérer mes contacts</a>`:relationActions(store,person.id)+contactPermissionControls(store,person.id);
+ const own=person.id===store.viewerId,ownDogs=(person.dogIds||[]).map(id=>selectedDog(dogs,id)).filter(Boolean),posts=store.getFeed().filter(post=>post.authorId===person.id);
+ const actions=own?`<a class="button button-subtle" href="/community/contacts">Gérer mes contacts</a>`:relationActions(store,person.id);
+ const permissions=own?'':contactPermissionControls(store,person.id);
  const edit=own?`<form class="community-profile-edit" data-community-form="profile"><label for="community-display-name">Nom visible</label><input id="community-display-name" name="displayName" maxlength="80" required value="${e(person.displayName)}"><button type="submit" class="button button-gold">Enregistrer mon nom visible</button></form>`:'';
- const dogSection=ownDogs.length?`<section class="community-section"><h2>Chiens liés</h2><div class="community-dog-grid">${ownDogs.map(dogCard).join('')}</div></section>`:EmptyState('Aucun chien visible','Aucun chien n’est lié à ce profil Communauté.','dog');
- const state=store.getState(),contactCount=state.contacts.filter(item=>item.userIds?.includes(person.id)).length;
- const stats=(person.publicStats||[]).map(item=>`<div><strong>${e(item.value)}</strong><span>${e(item.label)}</span></div>`).join('');
- return `<section class="community-page community-profile-page" data-community-route="profile" data-profile-id="${e(person.id)}"><a class="back-link" href="/community">← Communauté</a>${pageHeader(own?'MON PROFIL':'PROFIL COMMUNAUTÉ',person.displayName,person.bio||'Aucune biographie disponible.',actions)}<article class="community-profile-card"><div class="community-profile-identity"><span class="community-avatar community-avatar-large" aria-hidden="true">${e(person.displayName.slice(0,1).toLocaleUpperCase('fr'))}</span><div><h2>${e(person.role||'Rôle indisponible')}</h2><p>${e(person.specialty||'Spécialité indisponible')} · ${e(person.location||'Localisation non renseignée')}</p></div></div>${edit}<div class="community-profile-tags">${(person.disciplines||[]).map(label=>`<span>${e(label)}</span>`).join('')}</div><div class="community-profile-stats"><div><strong>${posts.length}</strong><span>Publications visibles</span></div><div><strong>${contactCount}</strong><span>Contacts</span></div><div><strong>${state.follows.filter(item=>item.toUserId===person.id).length}</strong><span>Abonnés</span></div><div><strong>${state.follows.filter(item=>item.fromUserId===person.id).length}</strong><span>Abonnements</span></div>${stats}</div></article>${dogSection}<section class="community-section"><h2>Publications <span>${posts.length}</span></h2>${posts.length?posts.map(post=>postCard(post,store,dogs)).join(''):EmptyState('Aucune publication visible','Les publications partagées par ce profil apparaîtront ici.','users')}</section></section>`;
+ const details=[person.role,person.specialty,person.location].filter(Boolean).map(e).join(' · ');
+ const dogsMarkup=ownDogs.length
+  ? `<div class="community-dog-grid">${ownDogs.map(dogCard).join('')}</div>`
+  : '<p class="community-profile-empty">Aucun chien visible pour le moment.</p>';
+ return `<section class="community-page community-profile-page" data-community-route="profile" data-profile-id="${e(person.id)}">
+  <a class="back-link" href="/community">← Communauté</a>
+  <article class="community-profile-card community-profile-hero">
+   <div class="community-profile-identity">
+    <span class="community-avatar community-avatar-large" aria-hidden="true">${e(person.displayName.slice(0,1).toLocaleUpperCase('fr'))}</span>
+    <div><h1>${e(person.displayName)}</h1>${details?`<p>${details}</p>`:''}</div>
+   </div>
+   ${person.bio?`<p class="community-profile-bio">${e(person.bio)}</p>`:''}
+   <div class="community-profile-actions">${actions}</div>
+   ${permissions?`<details class="community-profile-settings"><summary>Réglages du contact</summary>${permissions}</details>`:''}
+   ${edit}
+  </article>
+  <section class="community-section community-profile-dogs"><h2>Chiens</h2>${dogsMarkup}</section>
+  <section class="community-section"><h2>Publications <span>${posts.length}</span></h2>${posts.length?posts.map(post=>postCard(post,store,dogs)).join(''):EmptyState('Aucune publication visible','Les publications partagées par ce profil apparaîtront ici.','users')}</section>
+ </section>`;
 }
 function contactsScreen(store,query=''){
  const requests=store.getContactRequests(),profiles=store.listProfiles(),person=id=>store.getProfile(id);
