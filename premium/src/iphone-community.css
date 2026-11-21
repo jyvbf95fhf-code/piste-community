@@ -216,16 +216,24 @@
 }
 .app-shell .community-contacts-page .community-person-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  padding: 10px 0;
   margin: 0;
-  background: #1b2420a8;
-  border-color: #e6ca8e26;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
 }
 .community-contacts-page .community-person-row + .community-person-row {
-  margin-top: 8px;
+  border-top: 1px solid #e6ca8e33;
+}
+.community-contacts-page .community-person-actions .community-social-actions {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.community-contacts-page .community-person-actions .button {
+  white-space: normal;
 }
 .app-shell .community-contacts-page .community-access-menu {
   grid-column: 1 / -1;
@@ -245,8 +253,3 @@
 }
 .community-contacts-page .community-empty-compact { margin: 0; }
 
-@media (max-width: 420px) {
-  .app-shell .community-contacts-page .community-person-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
