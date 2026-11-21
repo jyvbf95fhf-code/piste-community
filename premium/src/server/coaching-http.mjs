@@ -1,3 +1,6 @@
+import {dogMileageTotals} from '../dog-mileage.mjs';
+import {buildAccountAnalysisSources} from '../account-analysis-sources.mjs';
+import {createPersonalDataRepository} from './personal-data-repository.mjs';
 import {createCommunityFeedService} from './community-feed-service.mjs';
 import {cleanAccountStorage} from './admin-account-storage.mjs';
 import {createCommunityLiveService} from './community-live-service.mjs';
@@ -16,6 +19,41 @@ const hash=async text=>[...new Uint8Array(await crypto.subtle.digest('SHA-256',n
 const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x);
 function error(message,status=400){throw Object.assign(Error(message),{status});}
 const assertResult=result=>{if(result.error){const code=result.error.code;error(['40001','PT409'].includes(code)?'Session mise à jour ailleurs : actualisez puis réessayez.':code==='42501'?'Accès refusé.':'Commande refusée.',['40001','PT409'].includes(code)?409:code==='42501'?403:400);}return result.data;};
+async function contactDogMileage(admin,ownerId,dogs,now){
+ const repository=createPersonalDataRepository(admin,ownerId);
+ const readRecords=async kind=>{
+  const records=[];
+  let cursor=null;
+  do{
+   const page=await repository.list({kind,cursor});
+   records.push(...page.records.filter(record=>!record.deletedAt));
+   cursor=page.cursor;
+  }while(cursor);
+  return records;
+ };
+ const readShared=async ()=>{
+  const sessions=[];
+  let cursor=null;
+  do{
+   let query=admin.from('coaching_remote_sessions').select('id,state')
+    .contains('state',{members:[{id:ownerId}]}).order('id').limit(50);
+   if(cursor)query=query.gt('id',cursor);
+   const rows=assertResult(await query)||[];
+   sessions.push(...rows.map(row=>projectRemoteSession(row.state,ownerId,now)));
+   cursor=rows.length===50?rows.at(-1).id:null;
+  }while(cursor);
+  return sessions;
+ };
+ const [links,missions,sharedSessions]=await Promise.all([
+  readRecords('session-dog-link'),readRecords('ops'),readShared()
+ ]);
+ const sources=buildAccountAnalysisSources({
+  ownerId,sharedOwnerId:ownerId,dogs,sharedSessions,
+  dogIds:Object.fromEntries(links.map(({payload})=>[payload.sessionId,payload.dogId])),
+  operationalMissions:missions.map(({id,payload})=>({...payload,id,ownerUserId:ownerId}))
+ });
+ return dogMileageTotals(dogs,sources);
+}
 export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodesEnabled=false,accountDeletionEnabled=false,teamContactsProvider=null,friendshipsEnabled=false,socialLiveEnabled=false,coachingInboxEnabled=false,pushDelivery=null,background=work=>{void work.catch(()=>{});}}={}){
  const friendships=createCommunityFriendshipService(admin,{socialLiveEnabled});
  const push=createWebPushService(admin,pushDelivery);
@@ -104,6 +142,10 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
      const personalPhotoDataUrl=typeof photo==='string'&&/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i.test(photo)?photo:null;
      dogs.push({id,name,breed,sex,dateOfBirth,specialty,portrait,disciplines,personalPhotoDataUrl});
     }
+   }
+   if(dogs.length){
+    const mileage=await contactDogMileage(admin,peer.id,dogs,clock());
+    for(const dog of dogs)dog.mileage=mileage[dog.id];
    }
    return respond({id:peer.id,displayName:peer.display_name,dogs});
   }

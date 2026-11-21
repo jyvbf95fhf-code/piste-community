@@ -70,6 +70,7 @@ function profileScreen(route,store,dogs){
   ? `<div class="community-dog-grid">${ownDogs.map(dogCard).join('')}</div>`
   : friendDogs.length?friendDogs.map(dog=>`<details class="community-dog-card">
    <summary>${DogPhotoMarkup(dog,'community-dog-photo')} <strong>${e(dog.name)}</strong></summary>
+   ${Number.isFinite(dog.mileage?.meters)&&Number.isSafeInteger(dog.mileage?.sessions)?`<p><strong>${e(new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}).format(dog.mileage.meters/1000))} km</strong> · ${dog.mileage.sessions} ${dog.mileage.sessions===1?'piste réalisée':'pistes réalisées'}</p>`:''}
    <p>${[dog.breed,dog.specialty,dog.dateOfBirth&&`Né le ${dog.dateOfBirth.split('-').reverse().join('/')}`].filter(Boolean).map(e).join(' · ')}</p>
   </details>`).join('')
   : '<p class="community-profile-empty">Aucun chien visible pour le moment.</p>';
