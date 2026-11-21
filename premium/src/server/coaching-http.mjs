@@ -90,10 +90,22 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
   if(!friendshipsEnabled)error('Amitiés en attente d’activation serveur.',503);
   if(body.operation==='community-friendship-profile'){
    if(!uuid(body.peerId))error('Identifiant de profil invalide.');
-   await friendships.snapshot(uid);
+   const social=await friendships.snapshot(uid);
    const peer=assertResult(await admin.from('coaching_remote_users').select('id,display_name').eq('id',body.peerId).eq('enabled',true).maybeSingle());
    if(!peer)error('Profil indisponible.',404);
-   return respond({id:peer.id,displayName:peer.display_name});
+   const dogs=[];
+   if(social.contacts.some(contact=>contact.id===peer.id)){
+    const records=assertResult(await admin.from('v2_personal_records')
+     .select('id,payload').eq('owner_id',peer.id).eq('kind','dog').is('deleted_at',null).order('id').limit(50))||[];
+    for(const {id,payload} of records){
+     if(typeof payload?.name!=='string')continue;
+     const {name,breed,sex,dateOfBirth,specialty,portrait,disciplines}=payload;
+     const photo=payload.personalPhotoDataUrl;
+     const personalPhotoDataUrl=typeof photo==='string'&&/^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i.test(photo)?photo:null;
+     dogs.push({id,name,breed,sex,dateOfBirth,specialty,portrait,disciplines,personalPhotoDataUrl});
+    }
+   }
+   return respond({id:peer.id,displayName:peer.display_name,dogs});
   }
   const friendshipResult=await (body.operation==='community-friendship-snapshot'?friendships.snapshot(uid):friendships.command(uid,body));if(body.operation==='community-friendship-command'&&body.action==='contact-request'&&body.peerId!==uid)background(push.notify(body.peerId,{body:'Vous avez reçu une demande de contact.',tag:'piste-contact'}));return respond(friendshipResult);
  }

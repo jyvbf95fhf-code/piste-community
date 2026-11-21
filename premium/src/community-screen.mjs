@@ -65,8 +65,13 @@ function profileScreen(route,store,dogs){
  const permissions=own?'':contactPermissionControls(store,person.id);
  const edit=own?`<form class="community-profile-edit" data-community-form="profile"><label for="community-display-name">Nom visible</label><input id="community-display-name" name="displayName" maxlength="80" required value="${e(person.displayName)}"><button type="submit" class="button button-gold">Enregistrer mon nom visible</button></form>`:'';
  const details=[person.role,person.specialty,person.location].filter(Boolean).map(e).join(' · ');
+ const friendDogs=!own&&store.getRelation(person.id).contactStatus==='accepted'?(person.dogs||[]):[];
  const dogsMarkup=ownDogs.length
   ? `<div class="community-dog-grid">${ownDogs.map(dogCard).join('')}</div>`
+  : friendDogs.length?friendDogs.map(dog=>`<details class="community-dog-card">
+   <summary>${DogPhotoMarkup(dog,'community-dog-photo')} <strong>${e(dog.name)}</strong></summary>
+   <p>${[dog.breed,dog.specialty,dog.dateOfBirth&&`Né le ${dog.dateOfBirth.split('-').reverse().join('/')}`].filter(Boolean).map(e).join(' · ')}</p>
+  </details>`).join('')
   : '<p class="community-profile-empty">Aucun chien visible pour le moment.</p>';
  return `<section class="community-page community-profile-page" data-community-route="profile" data-profile-id="${e(person.id)}">
   <a class="back-link" href="/community">← Communauté</a>

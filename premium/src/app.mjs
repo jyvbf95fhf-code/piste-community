@@ -295,7 +295,7 @@ function reconcileCommunityFriendships(route){
  }
  const feedKey=route.startsWith('/community')?route+location.search:'';if(persistentFeed&&feedKey&&feedKey!==communityFeedEntry){const target=resolveCommunityRoute(route);communityFeedEntry=feedKey;void persistentFeed.refresh(target?.type==='post'?{postId:target.id}:{}).catch(()=>{});}else communityFeedEntry=feedKey;
  const key=route+location.search;
- if(persistentCommunity&&key&&key!==communityEntryKey){communityEntryKey=key;const target=resolveCommunityRoute(route),instance=persistentCommunity;void instance.refresh().then(()=>{if(instance===persistentCommunity&&target?.type==='profile'&&target.id!=='self'&&!instance.store.getProfile(target.id))return instance.store.resolveProfile(target.id);}).catch(()=>{});}
+ if(persistentCommunity&&key&&key!==communityEntryKey){communityEntryKey=key;const target=resolveCommunityRoute(route),instance=persistentCommunity;void instance.refresh().then(()=>{if(instance===persistentCommunity&&target?.type==='profile'&&target.id!=='self'&&target.id!==owner)return instance.store.resolveProfile(target.id);}).catch(()=>{});}
  else communityEntryKey=key;
 }
 const friendshipForeground=createForegroundRefresh({interval:15000});
@@ -1649,7 +1649,7 @@ document.addEventListener('click',async event=>{
  const dogDefault=event.target.closest('[data-dog-set-default]');if(dogDefault){try{const dog=sessionDog(dogDefault.dataset.dogSetDefault);if(!dog)throw Error('Chien pisteur indisponible.');profileStore.setPrimaryDog(dog.id);jumolfController=makeJumolfController();render();Toast('Chien pisteur par défaut enregistré sur cet appareil.');}catch(error){Toast(error.message);}return;}
  const dogRemove=event.target.closest('[data-dog-remove]');if(dogRemove){const id=dogRemove.dataset.dogRemove,ownerId=currentUser?.user_id,dog=localDog(id);if(!dog||isProtectedDog(dog)){Toast('LOBO et sa démonstration sont protégés.');return;}ConfirmationDialog({title:'Supprimer ce chien ?',description:'Seule cette fiche sera retirée. Les pistes, séances et historiques, y compris partagés, restent conservés. Le prochain chien pisteur disponible deviendra le choix par défaut. Une sauvegarde cloud associée sera également supprimée si elle est identifiée.',onConfirm:()=>{void removeAccountDog(id,ownerId).catch(error=>Toast(error.message));}});return;}
  const photoReset=event.target.closest('[data-dog-photo-reset]');
- if(photoReset){const form=photoReset.closest('form[data-dog-form]');form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl='';form.querySelector('[data-dog-photo]').value='';photoReset.hidden=true;form.querySelector('.dog-photo-pick span').textContent='Ajouter une photo';form.querySelector('.dog-photo-feedback').textContent='';refreshDogPhotoPreview(form);return;}
+ if(photoReset){const form=photoReset.closest('form[data-dog-form]');delete form.dataset.dogPhotoPending;form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl='';form.querySelector('[data-dog-photo]').value='';photoReset.hidden=true;form.querySelector('.dog-photo-pick span').textContent='Ajouter une photo';form.querySelector('.dog-photo-feedback').textContent='';refreshDogPhotoPreview(form);return;}
  if(action==='notification') Toast(mock.notification);
  if(action==='preview') ConfirmationDialog({title:'Aperçu de la préparation',description:'Ce bouton présente le futur parcours. Aucune session réelle ne sera créée.',onConfirm:()=>Toast('Démonstration uniquement · aucune session créée.')});
  const control=event.target.closest('[data-session-filter]');
@@ -1737,11 +1737,40 @@ document.addEventListener('change',event=>{
  if(field.matches('[data-dog-photo]')){
   const file=field.files?.[0];if(!file)return;
   const form=field.closest('form[data-dog-form]'),feedback=form.querySelector('.dog-photo-feedback');
-  if(!/^image\/(?:png|jpeg|webp|gif)$/i.test(file.type)||file.size>3*1024*1024){feedback.textContent='Choisissez une image PNG, JPEG, WebP ou GIF de 3 Mo maximum.';field.value='';return;}
-  const reader=new FileReader();
-  reader.onload=()=>{if(typeof reader.result!=='string')return;form.dataset.dogPhotoChanged='true';form.dataset.personalPhotoDataUrl=reader.result;form.querySelector('[data-dog-photo-reset]').hidden=false;form.querySelector('.dog-photo-pick span').textContent='Remplacer la photo';feedback.textContent='Aperçu temporaire · cette photo restera sur cet appareil pendant la visite.';refreshDogPhotoPreview(form);};
-  reader.onerror=()=>{feedback.textContent='Cette photo n’a pas pu être lue.';};
-  reader.readAsDataURL(file);return;
+  if(!/^image\/(?:png|jpeg|webp|gif)$/i.test(file.type)||file.size>3*1024*1024){delete form.dataset.dogPhotoPending;feedback.textContent='Choisissez une image PNG, JPEG, WebP ou GIF de 3 Mo maximum.';field.value='';return;}
+  form.dataset.dogPhotoPending='true';
+  feedback.textContent='Préparation de la photo…';
+  const url=URL.createObjectURL(file);
+  const image=new Image();
+  image.onload=()=>{
+   URL.revokeObjectURL(url);
+   if(!form.isConnected||field.files?.[0]!==file)return;
+   delete form.dataset.dogPhotoPending;
+   try{
+    const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
+    for(const size of [960,720,480,320]){
+     const scale=Math.min(1,size/Math.max(image.naturalWidth,image.naturalHeight));
+     canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+     canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+     context.fillStyle='#182322';
+     context.fillRect(0,0,canvas.width,canvas.height);
+     context.drawImage(image,0,0,canvas.width,canvas.height);
+     const photo=canvas.toDataURL('image/jpeg',.78);
+     if(photo.length>120000)continue;
+     form.dataset.dogPhotoChanged='true';
+     form.dataset.personalPhotoDataUrl=photo;
+     form.querySelector('[data-dog-photo-reset]').hidden=false;
+     form.querySelector('.dog-photo-pick span').textContent='Remplacer la photo';
+     feedback.textContent='Photo prête. Enregistrez le profil du chien.';
+     refreshDogPhotoPreview(form);
+     return;
+    }
+    throw Error();
+   }catch{feedback.textContent='Cette photo n’a pas pu être préparée.';}
+  };
+  image.onerror=()=>{URL.revokeObjectURL(url);if(field.files?.[0]===file){delete form.dataset.dogPhotoPending;feedback.textContent='Cette photo n’a pas pu être lue.';}};
+  image.src=url;
+  return;
  }
  if(field.matches('[data-dog-status]')){const retired=['retired','archived'].includes(field.value),container=field.closest('form').querySelector('[data-dog-retirement-field]'),date=container.querySelector('input');container.hidden=!retired;date.disabled=!retired;return;}
  if(field.matches('select[name="portrait"]')){const form=field.closest('form[data-dog-form]');if(!form.dataset.personalPhotoDataUrl)refreshDogPhotoPreview(form);return;}
@@ -1983,6 +2012,7 @@ document.addEventListener('submit',async event=>{
  const dogForm=event.target.closest('form[data-dog-form]');
  if(dogForm){
   event.preventDefault();
+  if(dogForm.dataset.dogPhotoPending)return;
   const data=new FormData(dogForm);
   const values={
    name:data.get('name'),officialName:data.get('officialName'),breed:data.get('breed'),sex:data.get('sex')||null,
