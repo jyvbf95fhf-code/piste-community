@@ -22,6 +22,37 @@ export function createProfileController({store,communityStore,getDogs=()=>[],not
  }
  function handleClick(event){const node=event.target?.closest?.('[data-profile-action]');if(!node)return false;event.preventDefault();try{dispatch(node.dataset.profileAction,{dogId:node.dataset.dogId,key:node.dataset.key,value:node.dataset.value,href:node.dataset.href});}catch(error){node.dataset.error=error.message;render();}return true;}
  function handleChange(event){const field=event.target;if(field?.matches?.('[data-profile-preference]')){try{dispatch('set-preference',{key:field.dataset.profilePreference,value:field.value});}catch(error){field.dataset.error=error.message;render();}return true;}if(field?.matches?.('[data-profile-notification]')){try{dispatch('set-notification',{key:field.dataset.profileNotification,value:field.checked});}catch(error){field.checked=!field.checked;field.dataset.error=error.message;render();}return true;}if(field?.matches?.('[data-profile-primary-dog]')){try{dispatch(field.value?'set-primary-dog':'clear-primary-dog',{dogId:field.value});}catch(error){field.dataset.error=error.message;render();}return true;}return false;}
- function handleSubmit(event){const form=event.target?.closest?.('[data-profile-form]');if(!form)return false;event.preventDefault();if(form.dataset.profileForm==='account'){const data=new FormData(form);try{submit('account',{displayName:data.get('displayName'),avatar:data.get('avatar')});}catch(error){const status=form.querySelector('[role="status"]');if(status)status.textContent=error.message;}}return true;}
+ async function saveAccountForm(form){
+  const data=new FormData(form),photo=data.get('profilePhoto');
+  const button=form.querySelector('button[type="submit"]');
+  if(button?.disabled)return;
+  if(button)button.disabled=true;
+  try{
+   if(photo?.size){
+    if(photo.size>15*1024*1024)throw Error('Choisissez une photo de 15 Mo maximum.');
+    const url=URL.createObjectURL(photo);
+    try{
+     const image=new Image();image.src=url;await image.decode();
+     if(!form.isConnected)return;
+     const canvas=form.ownerDocument.createElement('canvas'),scale=Math.min(1,320/Math.max(image.naturalWidth,image.naturalHeight));
+     canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+     canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+     canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+     store.setPhoto(canvas.toDataURL('image/jpeg',.78));
+    }finally{URL.revokeObjectURL(url);}
+   }else if(data.has('removeProfilePhoto'))store.setPhoto(null);
+   submit('account',{displayName:data.get('displayName'),avatar:data.get('avatar')});
+  }catch(error){
+   const status=form.querySelector('[role="status"]');
+   if(status)status.textContent=error.message||'Cette photo n’a pas pu être lue.';
+  }finally{if(button)button.disabled=false;}
+ }
+ function handleSubmit(event){
+  const form=event.target?.closest?.('[data-profile-form]');
+  if(!form)return false;
+  event.preventDefault();
+  if(form.dataset.profileForm==='account')void saveAccountForm(form);
+  return true;
+ }
  return Object.freeze({dispatch,submit,handleClick,handleChange,handleSubmit});
 }

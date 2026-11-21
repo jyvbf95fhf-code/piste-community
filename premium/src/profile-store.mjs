@@ -8,6 +8,16 @@ export function createProfileStore(initial={}, {ownerId=null,storage=null}={}){
  const commit=next=>{if(key){if(blocked)throw Error(warning);try{if(!storage)throw Error();storage.setItem(key,JSON.stringify({version:1,ownerId,profile:next}));warning='';}catch{warning='Profil non enregistré : stockage local indisponible.';throw Error(warning);}}state=next;personalChanged(ownerId);return clone(state);};
  return Object.freeze({
   persistenceWarning:()=>warning,
+  getPhoto(){try{
+   const value=key&&storage?.getItem(key+':photo');
+   return /^data:image\/jpeg;base64,[a-z0-9+/]+=*$/i.test(value||'')?value:null;
+  }catch{return null;}},
+  setPhoto(value){
+   if(!key||!storage)throw Error('Stockage de la photo indisponible.');
+   if(value===null){storage.removeItem(key+':photo');return;}
+   if(value.length>120000||!/^data:image\/jpeg;base64,[a-z0-9+/]+=*$/i.test(value))throw Error('Photo de profil invalide.');
+   storage.setItem(key+':photo',value);
+  },
   restoreCloud(payload){const validator=createProfileStore();validator.setAvatar(payload.avatar);validator.setPrimaryDog(payload.primary_dog_id);validator.setPreferences(payload.preferences);return commit(validator.snapshot());},
   snapshot:()=>clone(state),
   setPrimaryDog(id){return commit({...state,primary_dog_id:id==null?null:String(id)});},
