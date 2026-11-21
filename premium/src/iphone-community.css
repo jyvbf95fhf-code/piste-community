@@ -156,3 +156,43 @@
 .community-profile-publications .community-real-map {
   height: clamp(240px, 72vw, 360px);
 }
+
+.community-header-actions > .community-friends-entry {
+  border: 1px solid #d5b475;
+  background: #e5cb97;
+  color: #1c211c;
+  font-weight: 750;
+}
+.community-friends-entry > span {
+  padding: .12em .5em;
+  border-radius: 999px;
+  background: #26241f20;
+}
+.app-shell .community-contacts-page > .community-contact-search {
+  padding: 12px;
+  margin-block: 0;
+  background: #11191566;
+  border-color: #e6ca8e50;
+  box-shadow: none;
+}
+.app-shell .community-contacts-page .community-contact-search form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.community-contact-search form > label {
+  grid-column: 1 / -1;
+  font-size: .82rem;
+}
+.community-contact-search .community-contact-search-submit {
+  align-self: stretch;
+  min-height: 44px;
+  padding-inline: 10px;
+  border: 1px solid #d5b475;
+  background: #e5cb97;
+  color: #1c211c;
+  font-size: .8rem;
+}
