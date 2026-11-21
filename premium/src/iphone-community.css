@@ -88,3 +88,71 @@
   margin: 0;
   color: var(--theme-text-muted);
 }
+
+.app-shell .community-profile-page {
+  display: grid;
+  gap: 18px;
+  max-width: 760px;
+  width: 100%;
+  margin-inline: auto;
+}
+.app-shell .community-profile-page .community-profile-hero {
+  background: linear-gradient(135deg, #121816ed, #0d1414e8);
+  border-color: #e6ca8e40;
+  border-radius: 20px;
+  box-shadow: none;
+}
+.community-profile-hero .community-avatar {
+  background: #e6cc99;
+  color: #24231c;
+}
+.app-shell .community-profile-page > .community-section {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+.community-profile-page > .community-section > h2 {
+  margin: 0 0 10px;
+  text-shadow: 0 2px 6px #000;
+}
+.community-profile-page > .community-section > h2 span {
+  color: #ecd39e;
+  margin-left: .3em;
+}
+.community-profile-page .community-profile-empty {
+  padding: 11px 14px;
+  background: #101714dc;
+  border: 1px solid #e6ca8e30;
+  border-radius: 12px;
+}
+.app-shell .community-profile-publications .community-post-card {
+  background: #111918f2;
+  border-color: #e6ca8e33;
+  box-shadow: none;
+  padding: clamp(12px, 3vw, 20px);
+}
+.app-shell .community-profile-publications .community-post-card > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.community-profile-publications .community-author {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.app-shell .community-profile-publications .community-attachment {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.community-profile-publications .community-attachment-copy {
+  gap: 6px 12px;
+  padding-block: 4px;
+}
+.community-profile-publications .community-attachment-copy > span:first-child {
+  flex-basis: 100%;
+}
+.community-profile-publications .community-real-map {
+  height: clamp(240px, 72vw, 360px);
+}

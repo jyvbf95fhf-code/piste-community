@@ -81,7 +81,7 @@ function profileScreen(route,store,dogs){
    ${edit}
   </article>
   <section class="community-section community-profile-dogs"><h2>Chiens</h2>${dogsMarkup}</section>
-  <section class="community-section"><h2>Publications <span>${posts.length}</span></h2>${posts.length?posts.map(post=>postCard(post,store,dogs)).join(''):EmptyState('Aucune publication visible','Les publications partagées par ce profil apparaîtront ici.','users')}</section>
+  <section class="community-section community-profile-publications"><h2>Publications <span>${posts.length}</span></h2>${posts.length?posts.map(post=>postCard(post,store,dogs)).join(''):EmptyState('Aucune publication visible','Les publications partagées par ce profil apparaîtront ici.','users')}</section>
  </section>`;
 }
 function contactsScreen(store,query=''){
