@@ -196,3 +196,57 @@
   color: #1c211c;
   font-size: .8rem;
 }
+
+.app-shell .community-contacts-page {
+  display: grid;
+  gap: 14px;
+}
+.app-shell .community-contacts-page > :is(.community-heading,.community-section,.community-contact-search) {
+  padding: clamp(12px, 3vw, 18px);
+  margin: 0;
+  background: #101714dc;
+  border-color: #e6ca8e33;
+  box-shadow: none;
+}
+.app-shell .community-contacts-page > .community-contact-search {
+  background: #10171466;
+}
+.app-shell .community-contacts-page .community-contact-search form {
+  margin-top: 6px;
+}
+.app-shell .community-contacts-page .community-person-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+  background: #1b2420a8;
+  border-color: #e6ca8e26;
+  box-shadow: none;
+}
+.community-contacts-page .community-person-row + .community-person-row {
+  margin-top: 8px;
+}
+.app-shell .community-contacts-page .community-access-menu {
+  grid-column: 1 / -1;
+  padding: 0;
+  border: 0;
+}
+.community-contacts-page .community-access-menu > summary {
+  display: list-item;
+  padding: 9px 0 2px;
+  border-top: 1px solid #e6ca8e33;
+  color: #e6cc99;
+  font-size: .82rem;
+  cursor: pointer;
+}
+.community-contacts-page .community-access-menu[open] .community-contact-permissions {
+  margin-top: 10px;
+}
+.community-contacts-page .community-empty-compact { margin: 0; }
+
+@media (max-width: 420px) {
+  .app-shell .community-contacts-page .community-person-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

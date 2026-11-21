@@ -104,9 +104,9 @@ test('search shows matching profile and track result types with visible relation
 
 test('accepted contacts expose access controls and keep removal secondary',()=>{
  const html=page({type:'contacts'});
- assert.match(html,/<section class="community-access-menu" aria-label="Accès Live et Coaching">/);
+ assert.match(html,/<details class="community-access-menu"><summary>Accès accordés à ce contact<\/summary>/);
  assert.match(html,/<details class="community-contact-menu"><summary[^>]*>Options<\/summary><div><button[^>]*data-community-action="remove-contact"/);
- assert.doesNotMatch(html,/<details class="community-access-menu"/);
+ assert.doesNotMatch(html,/<details class="community-access-menu" open/);
  assert.match(html,/aucun rôle Coaching/);
 });
 

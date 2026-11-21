@@ -94,7 +94,15 @@ function contactsScreen(store,query=''){
  const requests=store.getContactRequests(),profiles=store.listProfiles(),person=id=>store.getProfile(id);
  const status=store.getFriendshipStatus?.();
  const remoteNotice=status?`<p role="status">${e(status.message||'Amitiés synchronisées avec votre compte.')}</p><button class="button button-subtle" data-community-action="refresh-contacts" ${status.loading||status.pending?'disabled':''}>Actualiser les contacts</button>`:'';
- const card=(profile,kind)=>profile?`<article class="community-person-row" data-community-person="${e(profile.id)}">${profileLink(profile)}<div class="community-person-actions">${relationActions(store,profile.id)}${kind==='contact'?`<section class="community-access-menu" aria-label="Accès Live et Coaching">${contactPermissionControls(store,profile.id)}</section>`:''}</div></article>`:'';
+ const card=(profile,kind)=>{
+  if(!profile)return '';
+  const permissions=kind==='contact'?contactPermissionControls(store,profile.id):'';
+  return `<article class="community-person-row" data-community-person="${e(profile.id)}">
+   ${profileLink(profile)}
+   <div class="community-person-actions">${relationActions(store,profile.id)}</div>
+   ${permissions?`<details class="community-access-menu"><summary>Accès accordés à ce contact</summary>${permissions}</details>`:''}
+  </article>`;
+ };
  const contacts=requests.contacts.map(item=>card(item,'contact')).join('');
  const received=requests.received.map(item=>card(person(item.fromUserId),'received')).join('');
  const sent=requests.sent.map(item=>card(person(item.toUserId),'sent')).join('');
