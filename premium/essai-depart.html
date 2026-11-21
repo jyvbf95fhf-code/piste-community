@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Essai · Rejoindre le départ · PISTE</title>
+  <link rel="stylesheet" href="/src/tokens.css">
+  <link rel="stylesheet" href="/src/styles.css">
+  <style>
+    body { margin: 0; background: #0c202a; color: #f0f7f8; }
+    main { max-width: 46rem; margin: auto; padding: 2rem 1rem; }
+    .trial-panel { padding: 1.15rem; margin-block: 1rem; background: #142a34; border: 1px solid #41616c; border-radius: 1rem; }
+    .trial-panel h2 { margin-top: 0; }
+    .trial-panel input { width: 100%; }
+    .trial-controls { display: flex; flex-wrap: wrap; gap: .6rem; }
+    #feedback { min-height: 1.5em; color: #9cddc7; }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">PISTE Community · Aperçu</p>
+    <h1>Rejoindre le départ</h1>
+    <p>Essaie le parcours avec les vues organisateur et participant sur cette page. Les données de cet essai sont fictives.</p>
+    <div class="trial-controls" aria-label="Type de session">
+      <button class="button button-gold" data-mode="coaching" aria-pressed="true">Coaching · Tracé préparé</button>
+      <button class="button button-dark" data-mode="ops" aria-pressed="false">OPS · Terrain direct</button>
+    </div>
+    <section class="trial-panel">
+      <h2>Organisateur</h2>
+      <div id="owner"></div>
+      <p id="feedback" role="status"></p>
+    </section>
+    <section class="trial-panel">
+      <h2>Participant autorisé</h2>
+      <div id="participant"></div>
+    </section>
+  </main>
+  <script type="module">
+    import { SessionDeparture, copySessionDeparture } from '/src/operational-intake.mjs';
+    import { normalizeSessionDeparture } from '/src/session-departure.mjs';
+
+    let mode = 'coaching';
+    const destinations = { coaching: null, ops: null };
+    const owner = document.querySelector('#owner');
+    const participant = document.querySelector('#participant');
+    const feedback = document.querySelector('#feedback');
+
+    function render() {
+      const destination = destinations[mode];
+      owner.innerHTML = SessionDeparture({ destination, form: mode, missionId: 'exemple', suggestion: mode === 'coaching' ? '48.271, 7.401' : null });
+      participant.innerHTML = SessionDeparture({ destination });
+    }
+
+    document.querySelector('.trial-controls').addEventListener('click', event => {
+      const button = event.target.closest('[data-mode]');
+      if (!button) return;
+      mode = button.dataset.mode;
+      for (const option of document.querySelectorAll('[data-mode]')) {
+        option.className = 'button ' + (option === button ? 'button-gold' : 'button-dark');
+        option.setAttribute('aria-pressed', String(option === button));
+      }
+      feedback.textContent = '';
+      render();
+    });
+
+    owner.addEventListener('submit', event => {
+      event.preventDefault();
+      const remove = event.submitter?.name === 'remove';
+      const destination = remove ? null : normalizeSessionDeparture(event.target.elements.departure.value);
+      if (!remove && !destination) {
+        feedback.textContent = 'Saisis une adresse ou des coordonnées GPS valides.';
+        return;
+      }
+      destinations[mode] = destination;
+      feedback.textContent = remove ? 'Départ retiré.' : 'Départ visible dans la vue du participant.';
+      render();
+    });
+
+    document.addEventListener('click', event => {
+      const button = event.target.closest('[data-copy-departure]');
+      if (button) void copySessionDeparture(button);
+    });
+
+    render();
+  </script>
+</body>
+</html>
