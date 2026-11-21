@@ -27,20 +27,27 @@ export function createProfileController({store,communityStore,savePhoto=photo=>s
   const button=form.querySelector('button[type="submit"]');
   if(button?.disabled)return;
   if(button)button.disabled=true;
+  const persistPhoto=form.dataset.photoSync==='true'?savePhoto:value=>store.setPhoto(value);
   try{
    if(photo?.size){
     if(photo.size>15*1024*1024)throw Error('Choisissez une photo de 15 Mo maximum.');
-    const url=URL.createObjectURL(photo);
-    try{
-     const image=new Image();image.src=url;await image.decode();
-     if(!form.isConnected)return;
-     const canvas=form.ownerDocument.createElement('canvas'),scale=Math.min(1,320/Math.max(image.naturalWidth,image.naturalHeight));
-     canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
-     canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-     canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
-     await savePhoto(canvas.toDataURL('image/jpeg',.78));
-    }finally{URL.revokeObjectURL(url);}
-   }else if(data.has('removeProfilePhoto'))await savePhoto(null);
+    const source=await new Promise((resolve,reject)=>{
+     const reader=new FileReader();
+     reader.onload=()=>resolve(reader.result);
+     reader.onerror=()=>reject(Error('Cette photo n’a pas pu être lue.'));
+     reader.readAsDataURL(photo);
+    });
+    const image=new Image();
+    image.src=source;
+    try{await image.decode();}
+    catch{throw Error('Cette photo n’a pas pu être ouverte. Essayez une image JPEG ou PNG.');}
+    if(!form.isConnected)return;
+    const canvas=form.ownerDocument.createElement('canvas'),scale=Math.min(1,320/Math.max(image.naturalWidth,image.naturalHeight));
+    canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+    canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+    canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+    await persistPhoto(canvas.toDataURL('image/jpeg',.78));
+   }else if(data.has('removeProfilePhoto'))await persistPhoto(null);
    if(!form.isConnected)return;
    submit('account',{displayName:data.get('displayName'),avatar:data.get('avatar')});
   }catch(error){
