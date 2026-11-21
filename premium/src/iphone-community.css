@@ -97,7 +97,7 @@
   margin-inline: auto;
 }
 .app-shell .community-profile-page .community-profile-hero {
-  background: linear-gradient(135deg, #121816ed, #0d1414e8);
+  background: #10171466;
   border-color: #e6ca8e40;
   border-radius: 20px;
   box-shadow: none;
@@ -122,12 +122,12 @@
 }
 .community-profile-page .community-profile-empty {
   padding: 11px 14px;
-  background: #101714dc;
+  background: #10171466;
   border: 1px solid #e6ca8e30;
   border-radius: 12px;
 }
 .app-shell .community-profile-publications .community-post-card {
-  background: #111918f2;
+  background: #10171466;
   border-color: #e6ca8e33;
   box-shadow: none;
   padding: clamp(12px, 3vw, 20px);
