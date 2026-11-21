@@ -14,11 +14,38 @@ export function LiveScreen({ownSessions=[],contactSessions=[],invitations=[],ref
 export function LiveDetailScreen(projection){
  if(projection?.ended||projection?.status==='ended'||projection?.state==='Fin de piste')return `<section class="live-page live-ended" data-live-ended><span class="eyebrow">DIFFUSION CLÔTURÉE</span><h1>Live terminé</h1><p>La diffusion est arrêtée. Aucune nouvelle position n’est transmise aux observateurs.</p><a class="button button-gold" href="/live">Retour au Live</a></section>`;
  if(!projection)return `<section class="live-page">${EmptyState('Live indisponible','Cette session n’est pas partagée avec vous ou votre accès a été révoqué.','shield')}<a class="button button-dark" href="/live">Retour au Live</a></section>`;
- if(projection.sessionType==='ops'){
-  const points=projection.trace||[],path=points.map((point,index)=>`${index?'L':'M'} ${point.x} ${point.y}`).join(' ');
-  return `<section class="live-page live-detail" data-live-role="ops_trace_observer"><a class="back-link" href="/live">← Live</a><header class="live-heading"><span class="eyebrow">OPS LIVE</span><h1>${e(projection.roleLabel)}</h1><p>Lecture seule · projection de trace autorisée</p></header><section class="card live-map-card"><div class="live-map-heading"><h2>Progression de la trace</h2><span>Carte réelle</span></div>${projection.activity?`<p role="status">${e(projection.activity.label)}</p>`:''}${ReadOnlyRealMap({gpsTrack:projection.gpsTrack,trace:projection.trace,events:projection.events||[]})}${projection.corridor?`<p class="live-estimated-corridor">${e(projection.corridor.label)} · couche estimée, distincte de la trace</p>`:''}</section><section class="card live-metrics"><h2>Suivi</h2><dl><div><dt>État</dt><dd>${e(projection.state||'Indisponible')}</dd></div><div><dt>Distance</dt><dd>${projection.distance==null?'Indisponible':`${e(projection.distance)} m`}</dd></div><div><dt>Temps de pistage</dt><dd>${projection.trackingSeconds==null?'Indisponible':`${e(projection.trackingSeconds)} s`}</dd></div><div><dt>Âge / délai de piste</dt><dd>${e(projection.trackAge||'Non renseigné')}</dd></div>${projection.dogName?`<div><dt>Chien</dt><dd>${e(projection.dogName)}</dd></div>`:''}${projection.handlerName?`<div><dt>Conducteur</dt><dd>${e(projection.handlerName)}</dd></div>`:''}</dl></section>${projection.events?.length?`<section class="card live-events"><h2>Événements partageables</h2><ul>${projection.events.map(event=>`<li>${e(event.type)}</li>`).join('')}</ul></section>`:''}<p class="live-readonly-note">Observateur de trace OPS · aucune commande de mission disponible.</p></section>`;
- }
- const map=projection.map||{};
- return `<section class="live-page live-detail" data-live-role="observer"><a class="back-link" href="/live">← Live</a><header class="live-heading"><span class="eyebrow">COACHING LIVE</span><h1>Observateur</h1><p>Lecture seule · visibilité ${e(projection.modeLabel||'')}</p></header>${projection.activity?`<p role="status">${e(projection.activity.label)}</p>`:''}${ReadOnlyRealMap(map)}<section class="card live-coaching-state"><h2>${e(projection.phase||'Session')}</h2><p>${e(projection.dog?.name||projection.dog||'Chien indisponible')}</p><p>${e(projection.readOnly?'Aucune commande disponible.':'')}</p>${map.showStart&&map.start?`<p>Départ · ${e(map.start.label||'visible')}</p>`:''}${map.paths?.length?`<p>Tracé visible · ${map.paths.length} segment(s)</p>`:''}</section><p class="live-readonly-note">Observateur · aucune commande Coaching disponible.</p></section>`;
+ const ops=projection.sessionType==='ops';
+ const map=ops?{gpsTrack:projection.gpsTrack,trace:projection.trace,events:projection.events||[]}:projection.map||{};
+ const track=ops?projection.gpsTrack:map.gpsSearch||map.gpsPose;
+ const distance=ops?projection.distance:track?.distanceM;
+ const seconds=ops?projection.trackingSeconds:Number.isFinite(track?.elapsedMs)?Math.floor(track.elapsedMs/1000):null;
+ const dog=ops?projection.dogName:typeof projection.dog==='string'?projection.dog:projection.dog?.name;
+ const phase=stateLabel(ops?projection.state:projection.phase);
+ const type=ops?'OPS':'Coaching';
+ const activity=projection.activity;
+ const activityState=['live','waiting','disconnected'].includes(activity?.state)?activity.state:'unknown';
+ const metrics=[
+  ['Distance',Number.isFinite(distance)?`${Math.round(distance)} m`:null],
+  ['Durée',Number.isFinite(seconds)?`${Math.floor(seconds/60)} min ${seconds%60} s`:null],
+  ['Âge de piste',ops?projection.trackAge:null]
+ ].filter(([,value])=>value!==null&&value!==undefined&&value!=='Non renseigné');
+ const modes={normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'};
+ const details=ops?projection.handlerName:projection.modeLabel||modes[projection.mode];
+ return `<section class="live-page live-detail live-observer-view" data-live-role="${ops?'ops_trace_observer':'observer'}">
+  <header class="live-observer-header">
+   <div class="live-observer-navigation"><a class="back-link" href="/live">← Live</a><span class="live-observer-chip">Lecture seule</span></div>
+   <div class="live-observer-title"><h1>${e(dog||`Live ${type}`)}</h1>${dog?StatusBadge(type,ops?'terrain':'cyan'):''}</div>
+   ${details?`<p>${e(details)}</p>`:''}
+  </header>
+  <div class="live-observer-map">
+   <div class="live-observer-status" data-observer-activity="${activityState}" ${phase||activity?.label?'':'hidden'}>
+    ${phase?`<strong>${e(phase)}</strong>`:''}
+    ${activity?.label?`<span role="status">${e(activity.label)}</span>`:''}
+   </div>
+   ${ReadOnlyRealMap(map,{label:`Carte Live ${type} · lecture seule`})}
+   ${metrics.length?`<dl class="live-observer-metrics">${metrics.map(([label,value])=>`<div><dt>${label}</dt><dd>${e(value)}</dd></div>`).join('')}</dl>`:''}
+  </div>
+  ${ops&&projection.corridor?`<p class="live-estimated-corridor">${e(projection.corridor.label)} · couche estimée autour de la trace</p>`:''}
+  ${ops&&projection.events?.length?`<details class="live-observer-events"><summary>Événements partagés · ${projection.events.length}</summary><ul>${projection.events.map(event=>`<li>${e(event.type)}</li>`).join('')}</ul></details>`:''}
+ </section>`;
 }
-

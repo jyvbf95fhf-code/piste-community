@@ -276,3 +276,60 @@
 .profile-avatar:has(.profile-avatar-photo) { overflow: hidden; }
 .profile-avatar-photo { width: 100%; height: 100%; object-fit: cover; }
 .community-avatar:has(.profile-avatar-photo) { overflow: hidden; }
+
+.live-observer-view {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.live-observer-header {
+  display: grid;
+  gap: 8px;
+  padding: 2px 0;
+}
+.live-observer-header p { margin: 0; color: #c3d4d7; }
+.live-observer-navigation,
+.live-observer-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.live-observer-title h1 {
+  margin: 0;
+  font-size: clamp(1.5rem, 6vw, 2.15rem);
+  overflow-wrap: anywhere;
+}
+.live-observer-map {
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #e6ca8e40;
+  border-radius: 18px;
+  background: #101914bf;
+}
+.live-observer-status:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 4px 4px 10px;
+}
+.live-observer-status span { color: #dbd3b8; font-size: .85rem; }
+.live-observer-status[data-observer-activity="live"] span { color: #a7e4cc; }
+.live-observer-map [data-gps-map] {
+  height: clamp(260px, 52dvh, 500px);
+}
+.live-observer-map .real-map-availability { margin: 6px 4px 0; font-size: .75rem; }
+.live-observer-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  border-top: 1px solid #e6ca8e33;
+  padding: 10px 4px 2px;
+  margin: 8px 0 0;
+}
+.live-observer-metrics dt { color: #b6c8c8; font-size: .75rem; }
+.live-observer-metrics dd { margin: 2px 0 0; font-weight: 700; }
+.live-observer-events { padding: 8px 4px; }
+.live-observer-events summary { cursor: pointer; color: #e6cc99; }
