@@ -19,13 +19,14 @@ export function sessionRemovalPolicy(record,{ownerId,localOwnerId,currentSession
  const own=validOwner(ownerId)&&knownOwner===ownerId&&explicitOwners.every(v=>v===ownerId);
  const phase=record?.searchState?.phase??record?.phase??record?.preparationState?.phase;
  const terminal=['DEBRIEF','ARCHIVED','CANCELLED','INTERRUPTED'].includes(phase)||['Terminée','Archivée','À compléter'].includes(record?.status);
- const active=kind==='coaching'&&!terminal||id===currentSessionId&&!terminal||['SEARCH_RUNNING','SEARCH_PAUSED','LAYING','PREPARATION','LAYING_WAIT','SEARCH_READY'].includes(phase)||['En cours'].includes(record?.status)||['active','paused'].includes(record?.trackingState);
+ const readOnlyOpsCopy=kind==='operational'&&record?.status==='En cours'&&record?.cloudReadOnly===true&&(record.gpsNeedsResume===true||record.cloudOnly===true)&&id!==currentSessionId&&Array.isArray(record.gpsTrack?.segments)&&record.gpsTrack.segments.every(segment=>Array.isArray(segment)&&segment.length===0);
+ const active=!readOnlyOpsCopy&&(kind==='coaching'&&!terminal||id===currentSessionId&&!terminal||['SEARCH_RUNNING','SEARCH_PAUSED','LAYING','PREPARATION','LAYING_WAIT','SEARCH_READY'].includes(phase)||['En cours'].includes(record?.status)||['active','paused'].includes(record?.trackingState));
  let reason=!id?'Session introuvable.':isProtectedSessionId(id)||isProtectedSessionId(cloudId)||extra.includes(id)?'Les 40 séances de démonstration LOBO sont protégées.':!own?'Suppression réservée au propriétaire identifié de cette session.':active?'Arrêtez et quittez la session active avant de la supprimer.':'';
  const canRemoveLocal=!reason&&!shared;
- const canRemoveCloud=!reason&&kind==='operational'&&cloud&&!!cloudId&&Number.isSafeInteger(cloudRevision)&&cloudRevision>0;
+ const canRemoveCloud=!reason&&!readOnlyOpsCopy&&kind==='operational'&&cloud&&!!cloudId&&Number.isSafeInteger(cloudRevision)&&cloudRevision>0;
  return {id,kind,ownerId:knownOwner??null,canRemoveLocal,canRemoveCloud,cloudId,cloudRevision,
   localReason:reason||(shared?'Cette session Coaching partagée ne possède pas de copie locale supprimable.':''),
-  cloudReason:reason||(kind==='coaching'?'La suppression des sessions Coaching cloud nécessite une prise en charge du serveur.':!cloud?'Aucune sauvegarde cloud identifiée pour cette session.':!canRemoveCloud?'Révision cloud indisponible.':'')};
+  cloudReason:reason||(readOnlyOpsCopy?'Seule la copie locale peut être retirée dans cet état.':kind==='coaching'?'La suppression des sessions Coaching cloud nécessite une prise en charge du serveur.':!cloud?'Aucune sauvegarde cloud identifiée pour cette session.':!canRemoveCloud?'Révision cloud indisponible.':'')};
 }
 
 export function SessionRemovalMenu(policy){
