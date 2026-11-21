@@ -1,4 +1,4 @@
-// premium/src/server/ops-live-http.mjs
+// src/server/ops-live-http.mjs
 var uuid = (value) => typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 var hash = async (value) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))), (x) => x.toString(16).padStart(2, "0")).join("");
 var sign = async (keyText, value) => {
@@ -87,7 +87,11 @@ function createOpsLiveProposedHandler({ authClient, admin, isAccountEnabled, isS
           if (!uuid(body.commandId)) return reply({ error: "Commande invalide." }, 400);
           result = await call("ops_live_accept_invite", { p_id: body.id, p_actor: actor, p_command: body.commandId });
         } else if (body.operation === "read") result = await call("ops_live_read", { p_id: body.id, p_actor: actor, p_after: body.after ?? 0, p_version: body.version ?? null });
-        else if (body.operation === "delete-live") result = await call("ops_live_delete", { p_id: body.id, p_actor: actor });
+        else if (body.operation === "finish-observer") {
+          if (body.seconds != null && (!Number.isSafeInteger(body.seconds) || body.seconds < 0)) return reply({ error: "Dur\xE9e invalide." }, 400);
+          if (body.outcome != null && !["positive", "assisted_positive", "oriented_not_found", "negative", "interrupted", "no_target"].includes(body.outcome)) return reply({ error: "R\xE9sultat invalide." }, 400);
+          result = await call("ops_live_finish_observer", { p_id: body.id, p_actor: actor, p_seconds: body.seconds ?? null, p_outcome: body.outcome ?? null });
+        } else if (body.operation === "delete-live") result = await call("ops_live_delete", { p_id: body.id, p_actor: actor });
         else if (body.operation === "command") {
           if (!uuid(body.commandId) || !Number.isSafeInteger(body.expectedVersion) || body.expectedVersion < -1 || typeof body.type !== "string" || !body.payload || typeof body.payload !== "object" || Array.isArray(body.payload)) return reply({ error: "Commande invalide." }, 400);
           let payload = structuredClone(body.payload), invitationToken = null;

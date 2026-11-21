@@ -9,6 +9,7 @@ test('real controller, HTTP handler and local PostgreSQL: offline replay, GPS, o
  const owner='11111111-1111-4111-8111-111111111111',observer='22222222-2222-4222-8222-222222222222',third='33333333-3333-4333-8333-333333333333';for(const id of [owner,observer,third])await db.query('insert into auth.users values($1)',[id]);
  for(const file of ['01-schema-rls.proposed.sql','02-realtime-retention.proposed.sql','04-api-transactions.proposed.sql'])await db.exec(await readFile(new URL('../docs/ops-live-3b-proposal/'+file,import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20261016120231_ops_live_invitations_index.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/20261121090000_ops_live_final_observer.sql',import.meta.url),'utf8'));
  const admin={rpc:async(name,args)=>{try{const keys=Object.keys(args);const r=await db.query(`select public.${name}(${keys.map((k,i)=>`${k}=>$${i+1}`).join(',')}) as result`,keys.map(k=>typeof args[k]==='object'&&args[k]!==null?JSON.stringify(args[k]):args[k]));return {data:r.rows[0].result};}catch(error){return {error};}}};
  let account=owner;const handler=createOpsLiveProposedHandler({enabled:true,admin,authClient:{auth:{getUser:async()=>({data:{user:{id:account}}})}},isAccountEnabled:async()=>true,invitationKey:'a'.repeat(64)});
  let lose=false,interleave=true;const call=async body=>{if(interleave&&body.type==='gps-batch'){interleave=false;const changed=await admin.rpc('ops_live_commit',{p_id:body.id,p_actor:observer,p_command:crypto.randomUUID(),p_expected:body.expectedVersion,p_type:'mark-notification-read',p_payload:{}});assert.ok(changed.data);}const response=await handler(new Request('http://local',{method:'POST',headers:{authorization:'Bearer simulated-test-identity'},body:JSON.stringify(body)})),value=await response.json();if(!response.ok)throw Object.assign(Error(value.error),{status:response.status});if(lose&&body.type==='gps-batch'){lose=false;throw Error('lost acknowledgement');}return value.result;};
@@ -23,7 +24,21 @@ test('real controller, HTTP handler and local PostgreSQL: offline replay, GPS, o
  account=observer;const notice=await call({operation:'notifications'});assert.equal(notice.length,1);assert.equal(notice[0].route,'/live/ops/'+id);
  account=owner;await remote.invite(id,third);account=third;const invitations=await call({operation:'invitations'});assert.equal(invitations.length,1);assert.equal(invitations[0].tokenHash,undefined);const watcher=createOpsLiveRemote({ownerId:third,storage,call});await watcher.acceptInvite(id);await watcher.refresh();assert.equal(watcher.projection(id).gpsTrack.segments.length,2);
  account=owner;await remote.revoke(id,third);account=third;await watcher.refresh();assert.equal(watcher.projection(id),null);watcher.dispose();
- account=owner;source.trackingState='stopped';source.status='À compléter';await remote.syncMission(source,policy);await remote.refresh();assert.equal(remote.projection(id).state,'Fin de piste');
+ account=owner;source.trackingState='paused';await remote.syncMission(source,policy);
+ account=observer;const viewer=createOpsLiveRemote({ownerId:observer,storage,call});await viewer.refresh();
+ assert.equal(viewer.projection(id).state,'Pause');
+ account=owner;source.trackingState='active';await remote.syncMission(source,policy);
+ account=observer;await viewer.refresh();assert.equal(viewer.projection(id).state,'En cours');
+ await assert.rejects(call({operation:'finish-observer',id,outcome:'positive'}),{status:403});
+ account=owner;source.trackingState='stopped';source.status='À compléter';await remote.syncMission(source,policy);
+ account=observer;await viewer.refresh();assert.equal(viewer.projection(id).state,'Fin de piste');
+ assert.equal(viewer.projection(id).missionFinished,true);
+ assert.equal(viewer.projection(id).outcome,null);
+ account=owner;await assert.rejects(call({operation:'finish-observer',id,outcome:'dossier privé'}),{status:400});
+ await remote.publishOutcome(source.id,'positive');
+ account=observer;await viewer.refresh();assert.equal(viewer.projection(id).outcome,'positive');viewer.dispose();
+ account=third;await assert.rejects(call({operation:'read',id}),{status:403});
+ account=owner;
  assert.equal((await db.query('select count(*)::int as n from public.ops_live_points')).rows[0].n,3);
  await remote.syncMission(source,{...policy,share_live:false});assert.equal((await db.query('select sharing from public.ops_live_publications')).rows[0].sharing,false);
  }finally{await db.close();}

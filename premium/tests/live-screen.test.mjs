@@ -19,3 +19,20 @@ test('Coaching and OPS detail render read-only projections without mutation cont
 test('denied or revoked Live route displays an unavailable state',()=>{
  const html=LiveDetailScreen(null);assert.match(html,/Live indisponible/);assert.match(html,/accès a été révoqué/);assert.doesNotMatch(html,/Voir le Live/);
 });
+
+test('OPS wall display separates a declared pause from stale GPS and shows the shared final result',()=>{
+ const base={sessionType:'ops',sessionId:'ops-1',distance:125,trackingSeconds:63};
+ const pause=LiveDetailScreen({...base,state:'Pause',lastPositionAt:1000},{wide:true,now:17000});
+ assert.match(pause,/live-observer-wide/);
+ assert.match(pause,/En pause/);
+ assert.match(pause,/Position GPS non actualisée/);
+ assert.match(pause,/data-gps-follow-session="ops-1"/);
+ assert.match(pause,/1 min 3 s/);
+ const waiting=LiveDetailScreen({...base,ended:true,missionFinished:true},{wide:true});
+ assert.match(waiting,/Résultat en attente/);
+ const final=LiveDetailScreen({...base,ended:true,missionFinished:true,outcome:'positive'},{wide:true});
+ assert.match(final,/Personne retrouvée par le chien/);
+ assert.match(final,/125 m/);
+ assert.doesNotMatch(LiveDetailScreen({...base,ended:true}),/Résultat en attente/);
+ assert.doesNotMatch(LiveDetailScreen({sessionType:'coaching'},{wide:true}),/live-observer-wide/);
+});

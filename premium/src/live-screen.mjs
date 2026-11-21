@@ -11,8 +11,18 @@ export function LiveScreen({ownSessions=[],contactSessions=[],invitations=[],ref
  return `<section class="live-page live-directory" data-live-screen><header class="live-heading"><div class="live-heading-top"><span class="eyebrow">LE TERRAIN EN DIRECT</span><span class="live-observer-chip">Lecture seule</span></div><div class="live-title-row"><h1>Live</h1><button type="button" class="button button-dark" data-refresh-friend-live ${refreshing?'disabled':''}>${refreshing?'Actualisation…':'Actualiser'}</button></div><p>Suivez les pistes de vos amis, selon les accès qu’ils vous accordent.</p><div class="live-availability"><span class="live-presence-dot" aria-hidden="true"></span><strong>${active.length} ${active.length>1?'pistes disponibles':'piste disponible'}</strong></div>${error?`<p role="status">${e(error)}</p>`:''}</header>${group('À observer',active,'Aucun Live disponible pour le moment')}${offline.length?group('Sans activité récente',offline,''):''}${pending.length?group('Invitations à rejoindre',pending,''):''}</section>`;
 }
 
-export function LiveDetailScreen(projection){
- if(projection?.ended||projection?.status==='ended'||projection?.state==='Fin de piste')return `<section class="live-page live-ended" data-live-ended><span class="eyebrow">DIFFUSION CLÔTURÉE</span><h1>Live terminé</h1><p>La diffusion est arrêtée. Aucune nouvelle position n’est transmise aux observateurs.</p><a class="button button-gold" href="/live">Retour au Live</a></section>`;
+const opsResultLabels={
+ positive:'Personne retrouvée par le chien',
+ assisted_positive:'Personne retrouvée après orientation du chien',
+ oriented_not_found:'Orientation donnée · personne non retrouvée',
+ negative:'Personne non retrouvée',
+ interrupted:'Recherche interrompue',
+ no_target:'Exercice sans personne à découvrir'
+};
+
+export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
+ const resultScreen=projection?.sessionType==='ops'&&projection.missionFinished===true;
+ if(!resultScreen&&(projection?.ended||projection?.status==='ended'||projection?.state==='Fin de piste'))return `<section class="live-page live-ended" data-live-ended><span class="eyebrow">DIFFUSION CLÔTURÉE</span><h1>Live terminé</h1><p>La diffusion est arrêtée. Aucune nouvelle position n’est transmise aux observateurs.</p><a class="button button-gold" href="/live">Retour au Live</a></section>`;
  if(!projection)return `<section class="live-page">${EmptyState('Live indisponible','Cette session n’est pas partagée avec vous ou votre accès a été révoqué.','shield')}<a class="button button-dark" href="/live">Retour au Live</a></section>`;
  const ops=projection.sessionType==='ops';
  const map=ops?{gpsTrack:projection.gpsTrack,trace:projection.trace,events:projection.events||[]}:projection.map||{};
@@ -20,7 +30,13 @@ export function LiveDetailScreen(projection){
  const distance=ops?projection.distance:track?.distanceM;
  const seconds=ops?projection.trackingSeconds:Number.isFinite(track?.elapsedMs)?Math.floor(track.elapsedMs/1000):null;
  const dog=ops?projection.dogName:typeof projection.dog==='string'?projection.dog:projection.dog?.name;
- const phase=stateLabel(ops?projection.state:projection.phase);
+ const phase=resultScreen?'Mission terminée':ops&&projection.state==='Pause'?'En pause':ops&&projection.state==='En cours'?'Pistage en cours':stateLabel(ops?projection.state:projection.phase);
+ const outcome=resultScreen&&Object.hasOwn(opsResultLabels,projection.outcome)?opsResultLabels[projection.outcome]:null;
+ const expanded=ops&&wide;
+ const last=projection.lastPositionAt;
+ const gps=ops&&!resultScreen&&Number.isFinite(last)&&now-last>15000
+  ? `Position GPS non actualisée · dernier point à ${new Date(last).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}`
+  : projection.activity?.label;
  const type=ops?'OPS':'Coaching';
  const activity=projection.activity;
  const activityState=['live','waiting','disconnected'].includes(activity?.state)?activity.state:'unknown';
@@ -31,18 +47,22 @@ export function LiveDetailScreen(projection){
  ].filter(([,value])=>value!==null&&value!==undefined&&value!=='Non renseigné');
  const modes={normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'};
  const details=ops?projection.handlerName:projection.modeLabel||modes[projection.mode];
- return `<section class="live-page live-detail live-observer-view" data-live-role="${ops?'ops_trace_observer':'observer'}">
+ return `<section class="live-page live-detail live-observer-view${expanded?' live-observer-wide':''}" data-live-role="${ops?'ops_trace_observer':'observer'}">
   <header class="live-observer-header">
-   <div class="live-observer-navigation"><a class="back-link" href="/live">← Live</a><span class="live-observer-chip">Lecture seule</span></div>
+   <div class="live-observer-navigation">
+    <a class="back-link" href="/live">← Live</a><span class="live-observer-chip">Lecture seule</span>
+    ${ops?`<a class="button button-dark" href="${expanded?'?ecran=0':'?ecran=1'}">${expanded?'Quitter le grand écran':'Grand écran'}</a><button type="button" class="button button-dark" data-copy-ops-screen>Copier le lien grand écran</button>`:''}
+   </div>
    <div class="live-observer-title"><h1>${e(dog||`Live ${type}`)}</h1>${dog?StatusBadge(type,ops?'terrain':'cyan'):''}</div>
    ${details?`<p>${e(details)}</p>`:''}
   </header>
+  ${resultScreen?`<div class="live-observer-result" role="status"><span>Mission terminée</span><strong>${e(outcome||'Résultat en attente')}</strong></div>`:''}
   <div class="live-observer-map">
-   <div class="live-observer-status" data-observer-activity="${activityState}" ${phase||activity?.label?'':'hidden'}>
+   <div class="live-observer-status" data-observer-activity="${activityState}" ${!resultScreen&&(phase||gps)?'':'hidden'}>
     ${phase?`<strong>${e(phase)}</strong>`:''}
-    ${activity?.label?`<span role="status">${e(activity.label)}</span>`:''}
+    ${gps?`<span role="status">${e(gps)}</span>`:''}
    </div>
-   ${ReadOnlyRealMap(map,{label:`Carte Live ${type} · lecture seule`})}
+   ${ReadOnlyRealMap(map,{label:`Carte Live ${type} · lecture seule`,followSessionId:expanded?projection.sessionId:null})}
    ${metrics.length?`<dl class="live-observer-metrics">${metrics.map(([label,value])=>`<div><dt>${label}</dt><dd>${e(value)}</dd></div>`).join('')}</dl>`:''}
   </div>
   ${ops&&projection.corridor?`<p class="live-estimated-corridor">${e(projection.corridor.label)} · couche estimée autour de la trace</p>`:''}

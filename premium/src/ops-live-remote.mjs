@@ -5,7 +5,7 @@ const uuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[8
 export function opsLiveProjection(r){
  const segments=[];let segment=null;
  for(const p of r.points||[]){if(segment!==p.segmentId){segments.push([]);segment=p.segmentId;}segments.at(-1).push({latitude:p.latitude,longitude:p.longitude,accuracy:p.accuracy,timestamp:Date.parse(p.capturedAt),receivedAt:Date.parse(p.capturedAt)});}
- const m=r.metadata||{};return {sessionId:r.id,sessionType:'ops',role:'ops_trace_observer',roleLabel:'Observateur de trace OPS',readOnly:true,canAct:false,ended:r.closed===true||m.state==='Fin de piste',status:r.closed===true||m.state==='Fin de piste'?'ended':'active',state:m.state,dogName:m.dogName??null,handlerName:m.handlerName??null,events:m.events||[],trackAge:m.trackAge??null,trackingSeconds:m.trackingSeconds??null,distance:r.distanceM,corridor:null,lastPositionAt:Date.parse(r.lastPositionAt),gpsTrack:{provenance:'device-geolocation',phase:r.closed?'finished':'recording',segments,distanceM:r.distanceM},trace:[]};
+ const m=r.metadata||{};return {sessionId:r.id,sessionType:'ops',role:'ops_trace_observer',roleLabel:'Observateur de trace OPS',readOnly:true,canAct:false,ended:r.closed===true||m.state==='Fin de piste',status:r.closed===true||m.state==='Fin de piste'?'ended':'active',state:m.state,missionFinished:r.missionFinished===true,outcome:r.outcome??null,dogName:m.dogName??null,handlerName:m.handlerName??null,events:m.events||[],trackAge:m.trackAge??null,trackingSeconds:m.trackingSeconds??null,distance:r.distanceM,corridor:null,lastPositionAt:Date.parse(r.lastPositionAt),gpsTrack:{provenance:'device-geolocation',phase:r.closed?'finished':'recording',segments,distanceM:r.distanceM},trace:[]};
 }
 export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navigator?.locks,clock=Date.now,onChange=()=>{}}={}){
  if(!uuid(ownerId)||!storage||typeof call!=='function')throw Error('Identité et stockage OPS requis.');
@@ -44,7 +44,33 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   if(!state.pending){state.pending={operation:'command',id:state.id,commandId:crypto.randomUUID(),expectedVersion:expected,type,payload};save();}
   for(let attempt=0;;attempt++)try{const result=await send(state.pending);state.version=result.version;state.generation=result.generation;state.pending=null;save();return result;}catch(error){if(error.status!==409||attempt>=2)throw error;const latest=await read(state.id);state.version=latest.version;state.pending.expectedVersion=latest.version;save();}
  }
- async function finishBroadcast(missionId,{cleanupOnly=false}={}){const state=saved.missions[missionId];if(!state?.id||state.closed)return;if(cleanupOnly&&state.pending&&!['close','stop-sharing','revoke'].includes(state.pending.type)){state.retainedPending=state.pending;state.pending=null;}state.ending=true;save();if(state.pending)await command(state);const latest=await read(state.id);state.version=latest.version;if(!latest.closed)await command(state,'close',{});state.closed=true;state.ending=false;save();}
+ async function flushObserverFinish(state){
+  if(!state.observerFinishPending||!state.closed||state.stopped)return;
+  try{await send({operation:'finish-observer',id:state.id,seconds:state.observerFinishPending.seconds});}
+  catch(error){if(![400,403,404].includes(error.status))throw error;}
+  state.observerFinishPending=null;save();
+ }
+ async function finishBroadcast(missionId,{cleanupOnly=false,completedMission=null}={}){
+  const state=saved.missions[missionId];
+  if(!state?.id)return;
+  if(completedMission&&state.policy?.share_live===true&&!state.stopped){
+   const elapsed=completedMission.trackingElapsedMs;
+   state.observerFinishPending={seconds:Number.isFinite(elapsed)&&elapsed>=0?Math.floor(elapsed/1000):null};
+   save();
+  }
+  if(!state.closed){
+   if(cleanupOnly&&state.pending&&!['close','stop-sharing','revoke'].includes(state.pending.type)){
+    state.retainedPending=state.pending;state.pending=null;
+   }
+   state.ending=true;save();
+   if(state.pending)await command(state);
+   const latest=await read(state.id);state.version=latest.version;
+   if(!latest.closed)await command(state,'close',{});
+   state.closed=true;state.ending=false;save();
+  }
+  if(!cleanupOnly)await flushObserverFinish(state);
+ }
+
  async function sync(mission,policy){
   active();let state=saved.missions[mission.id];if(state?.ending)return finishBroadcast(mission.id);
   if(state){state.policy={share_live:policy.share_live===true,notify_observers:policy.notify_observers!==false,projectionOptions:structuredClone(policy.projectionOptions||{})};save();}
@@ -52,7 +78,7 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   if(mission.status!=='En cours'&&!state)return;
   if(mission.ownerUserId!==ownerId)throw Error('Mission appartenant à un autre compte.');
   const frame=projectOpsGpsLive(mission,policy);if(!frame)return;
-  if(state?.closed)return;
+  if(state?.closed){await flushObserverFinish(state);return;}
   if(!state){state=saved.missions[mission.id]={id:null,version:-1,generation:1,stopped:false,policy:{share_live:true,notify_observers:policy.notify_observers!==false,projectionOptions:structuredClone(policy.projectionOptions||{})}};save();}
   if(state.pending)await command(state);
   if(!state.id||state.stopped){
@@ -70,7 +96,7 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
    for(let i=0;i<points.length;i+=60)await command(state,'gps-batch',{generation:state.generation,points:points.slice(i,i+60)});
    const f=item.frame,metadata={state:f.state,trackingSeconds:f.trackingSeconds,...(f.dogName?{dogName:f.dogName}:{}),...(f.handlerName?{handlerName:f.handlerName}:{}),...(f.trackAge?{trackAge:f.trackAge}:{}),events:f.events};
    await command(state,'update',{metadata,options:policy.projectionOptions,notifyObservers:policy.notify_observers});queue.acknowledge(item.id);
-   if(f.state==='Fin de piste'){state.closed=true;save();break;}
+   if(f.state==='Fin de piste'){state.closed=true;state.observerFinishPending={seconds:f.trackingSeconds};save();await flushObserverFinish(state);break;}
   }
  }
  return {async retry(){active();if(refreshing)await refreshing;failures.clear();retryPaused=false;return refresh();},async cleanupAfterAccessLoss(){active();sessions=[];projections.clear();rawRows.clear();notices=[];invitations=[];connection='forbidden';onChange();for(const [id,state] of Object.entries(saved.missions))if(state.id&&!state.closed){try{await this.endBroadcast(id,{cleanupOnly:true});}catch(e){if(e.status!==403)throw e;const current=saved.missions[id];if(current){current.closed=true;current.ending=false;save();}}}},view,refresh,
@@ -82,6 +108,13 @@ export function createOpsLiveRemote({ownerId,storage,call,locks=globalThis.navig
   async acceptInvite(id){return send({operation:'accept-invite',id,commandId:crypto.randomUUID()});},
   async revoke(id,userId){const r=await read(id);return send({operation:'command',id,commandId:crypto.randomUUID(),expectedVersion:r.version,type:'revoke',payload:{userId}});},
   async syncMission(mission,policy){if(busy.has(mission.id))return busy.get(mission.id);const task=(async()=>{try{if(locks)return await locks.request('piste-ops-live:'+ownerId,()=>{const latest=storage.getItem(key);if(latest!==null){const parsed=JSON.parse(latest);if(parsed.ownerId!==ownerId||!parsed.missions)throw Error('Stockage OPS invalide.');saved=parsed;}return sync(mission,policy);});if(typeof window!=='undefined')throw Error('Verrouillage multi-onglets OPS indisponible.');return await sync(mission,policy);}catch(e){connection=retryPaused?'paused':[401,403].includes(e.status)?'forbidden':'offline';throw e;}})().finally(()=>busy.delete(mission.id));busy.set(mission.id,task);return task;},
+  canPublishOutcome(missionId){const state=saved.missions[missionId];return !!state?.id&&!state.stopped&&state.policy?.share_live===true;},
+  async publishOutcome(missionId,outcome){
+   const state=saved.missions[missionId];
+   if(!this.canPublishOutcome(missionId))throw Error('Diffusion OPS indisponible.');
+   if(!state.closed)await this.endBroadcast(missionId);
+   return send({operation:'finish-observer',id:state.id,outcome});
+  },
   async setHabitual(userId,enabled){if(!uuid(userId))throw Error('Compte réel requis : aucun alias de démonstration accepté.');return send({operation:'habitual',userId,enabled:enabled===true});},
   async invite(id,userId){if(!uuid(userId))throw Error('Compte réel requis.');const r=await read(id);return send({operation:'command',id,commandId:crypto.randomUUID(),expectedVersion:r.version,type:'invite',payload:{recipientId:userId,expiresAt:new Date(Date.now()+3600000).toISOString()}});},
   async join(id,token,expectedVersion){return send({operation:'command',id,commandId:crypto.randomUUID(),expectedVersion,type:'join',payload:{token}});},

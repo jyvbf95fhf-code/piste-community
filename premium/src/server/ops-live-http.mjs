@@ -52,6 +52,11 @@ export function createOpsLiveProposedHandler({authClient,admin,isAccountEnabled,
     if(body.operation==='head')result=await call('ops_live_head',{p_id:body.id,p_actor:actor});
     else if(body.operation==='accept-invite'){if(!uuid(body.commandId))return reply({error:'Commande invalide.'},400);result=await call('ops_live_accept_invite',{p_id:body.id,p_actor:actor,p_command:body.commandId});}
     else if(body.operation==='read')result=await call('ops_live_read',{p_id:body.id,p_actor:actor,p_after:body.after??0,p_version:body.version??null});
+    else if(body.operation==='finish-observer'){
+     if(body.seconds!=null&&(!Number.isSafeInteger(body.seconds)||body.seconds<0))return reply({error:'Durée invalide.'},400);
+     if(body.outcome!=null&&!['positive','assisted_positive','oriented_not_found','negative','interrupted','no_target'].includes(body.outcome))return reply({error:'Résultat invalide.'},400);
+     result=await call('ops_live_finish_observer',{p_id:body.id,p_actor:actor,p_seconds:body.seconds??null,p_outcome:body.outcome??null});
+    }
     else if(body.operation==='delete-live')result=await call('ops_live_delete',{p_id:body.id,p_actor:actor});
     else if(body.operation==='command'){
      if(!uuid(body.commandId)||!Number.isSafeInteger(body.expectedVersion)||body.expectedVersion< -1||typeof body.type!=='string'||!body.payload||typeof body.payload!=='object'||Array.isArray(body.payload))return reply({error:'Commande invalide.'},400);
