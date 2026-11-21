@@ -1,3 +1,4 @@
+import {SessionDeparture} from './operational-intake.mjs';
 import {ReadOnlyRealMap} from './read-only-real-map.mjs';
 import {escapeHTML as e,EmptyState,StatusBadge} from './components.mjs';
 
@@ -47,7 +48,7 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
  ].filter(([,value])=>value!==null&&value!==undefined&&value!=='Non renseigné');
  const modes={normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'};
  const details=ops?projection.handlerName:projection.modeLabel||modes[projection.mode];
- return `<section class="live-page live-detail live-observer-view${expanded?' live-observer-wide':''}" data-live-role="${ops?'ops_trace_observer':'observer'}">
+ return `<section class="live-page live-detail live-observer-view${expanded?' live-observer-wide':''}" data-live-departure-id="${e(projection.sessionId||projection.id||'')}" data-live-role="${ops?'ops_trace_observer':'observer'}">
   <header class="live-observer-header">
    <div class="live-observer-navigation">
     <a class="back-link" href="/live">← Live</a><span class="live-observer-chip">Lecture seule</span>
@@ -56,6 +57,7 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
    <div class="live-observer-title"><h1>${e(dog||`Live ${type}`)}</h1>${dog?StatusBadge(type,ops?'terrain':'cyan'):''}</div>
    ${details?`<p>${e(details)}</p>`:''}
   </header>
+  ${!expanded&&!resultScreen?SessionDeparture({destination:projection.meetingPoint}):''}
   ${resultScreen?`<div class="live-observer-result" role="status"><span>Mission terminée</span><strong>${e(outcome||'Résultat en attente')}</strong></div>`:''}
   <div class="live-observer-map">
    <div class="live-observer-status" data-observer-activity="${activityState}" ${!resultScreen&&(phase||gps)?'':'hidden'}>

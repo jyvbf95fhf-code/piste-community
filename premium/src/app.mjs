@@ -116,7 +116,7 @@ import {pisteSessionRows,pistePreparedRows,pisteVisibleRows,normalizePisteOption
 import { createOperationalMissionStore } from './operational-missions.mjs';
 import { operationalMissionView, operationalReplayView, resolveOperationalRoute } from './operational-views.mjs';
 import { OperationalScreen, OperationalSessionDetailScreen, OperationalTerrainScreen } from './operational-screen.mjs';
-import { OperationalNavigation } from './operational-intake.mjs';
+import { OperationalNavigation, copySessionDeparture } from './operational-intake.mjs';
 import { OperationalReplayScreen } from './operational-replay-screen.mjs';
 import { createHoldToUnlockController } from './operational-lock.mjs';
 import {createTrackDraft,setTrackMode,updateTrackMetadata,addTrackPoint,moveTrackPoint,removeTrackPoint,undoTrackEdit,clearTrackDraft,trackDraftMetrics} from './track-editor.mjs';
@@ -997,6 +997,8 @@ function exportPanelForRoute(route){
 }
 const retainArchiveRender=createArchiveRenderGuard();
 function render(focus=false) {
+ const oldLiveDeparture=document.querySelector('[data-live-departure-id]');
+ const oldLiveDepartureOpen=oldLiveDeparture?.querySelector('[data-departure-links]')?.open;
  const missionPanelWasOpen=document.querySelector('[data-mission-panel]')?.open===true,missionSections=[...document.querySelectorAll('[data-mission-section]')].map(el=>[el.dataset.missionSection,el.open]),missionScroll=document.querySelector('.mission-panel-content')?.scrollTop||0;
  missionMount?.dispose();missionMount=null;missionController.reconcile();
  const exportPanel=document.querySelector('[data-data-exports]'),exportUi=exportPanel?{open:exportPanel.open,domain:exportPanel.querySelector('[name=domain]')?.value,format:exportPanel.querySelector('[name=format]')?.value}:null;
@@ -1074,6 +1076,7 @@ function render(focus=false) {
  const oldMaps=sameCommunity?[...oldCommunity.querySelectorAll('[data-community-map]')]:[];
  const oldForms=sameCommunity?[...oldCommunity.querySelectorAll('[data-community-form]')].map(form=>({sourceType:form.dataset.sourceType,sourceId:form.dataset.sourceId,kind:form.dataset.communityForm,postId:form.dataset.postId,form,values:[...form.elements].filter(f=>f.name).map(f=>({name:f.name,value:f.value,checked:f.checked}))})):[];
  document.querySelector('#app').innerHTML=shellMarkup;
+ if(oldLiveDepartureOpen){const next=document.querySelector('[data-live-departure-id]');const links=next?.querySelector('[data-departure-links]');if(links&&next.dataset.liveDepartureId===oldLiveDeparture.dataset.liveDepartureId)links.open=true;}
  const newCommunity=document.querySelector('[data-community-route]');if(newCommunity){newCommunity.dataset.communityPath=location.pathname;newCommunity.dataset.communityOwner=communityOwnerId||'demo';for(const old of oldMaps){const next=[...newCommunity.querySelectorAll('[data-community-map]')].find(el=>el.dataset.communityMap===old.dataset.communityMap);if(next)next.replaceWith(old);}for(const row of oldForms){const next=[...newCommunity.querySelectorAll('[data-community-form]')].find(f=>f.dataset.communityForm===row.kind&&f.dataset.postId===row.postId);if(!next)continue;if(row.kind==='post-create'&&(row.sourceType!==next.dataset.sourceType||row.sourceId!==next.dataset.sourceId))communityController.dispatch('cancel-post');for(const field of next.elements){if(field.name==='shareFields'&&(row.sourceType!==next.dataset.sourceType||row.sourceId!==next.dataset.sourceId))continue;const value=row.values.find(v=>v.name===field.name&&(!['checkbox','radio'].includes(field.type)||v.value===field.value));if(value){field.value=value.value;if(['checkbox','radio'].includes(field.type))field.checked=value.checked;}}const oldDialog=row.form.querySelector('dialog[open]');if(oldDialog&&row.sourceType===next.dataset.sourceType&&row.sourceId===next.dataset.sourceId){const nextDialog=next.querySelector('dialog');oldDialog.close();nextDialog?.replaceWith(oldDialog);oldDialog.showModal();}}}mountCommunityMaps();
  retainArchiveRender({...archiveIdentity,root:document.querySelector('.tracks-page')});
  mountArchiveMaps({document,getOwnerId:()=>auth.getSession().user?.user_id});
@@ -1366,6 +1369,8 @@ function endLiveOnNavigation(destination){
  if(current?.type==='mission'&&!(target?.type==='mission'&&target.missionId===current.missionId)){const mission=operationalStore.get(current.missionId);if(mission?.ownerUserId===currentUser?.user_id)void opsLiveRemote?.endBroadcast(mission.id).then(()=>opsLiveRemote?.refresh()).catch(()=>Toast('Arrêt du Live en attente de reconnexion.'));}
 }
 document.addEventListener('click',async event=>{
+ const departureCopy=event.target.closest('[data-copy-departure]');
+ if(departureCopy){await copySessionDeparture(departureCopy);return;}
  if(event.target.closest('[data-web-push]')){const button=event.target.closest('[data-web-push]'),target=document.querySelector('[data-web-push-status]');button.disabled=true;void configureWebPush({call:body=>accountApi.call(body),enable:button.dataset.webPush==='enable',ownerId:currentUser?.user_id,getOwnerId:()=>auth.getSession().user?.user_id}).then(message=>{if(target)target.textContent=message;}).catch(error=>{if(target)target.textContent=error.message;}).finally(()=>{button.disabled=false;});return;}
  if(event.target.closest('[data-dossier-edit]')){const dossier=event.target.closest('[data-session-dossier]');openReportEditor({article:dossier?.querySelector('.dossier-report'),ownerId:currentUser?.user_id,sessionId:dossier?.dataset.sessionDossier,getOwnerId:()=>auth.getSession().user?.user_id,storage});return;}
  if(event.target.closest('[data-dossier-print]')){const button=event.target.closest('[data-dossier-print]'),ownerId=currentUser?.user_id;button.disabled=true;try{await printPersonalReport({article:button.closest('[data-session-dossier]')?.querySelector('.dossier-report'),ownerId,getOwnerId:()=>auth.getSession().user?.user_id});}catch(error){Toast(error.message);}finally{button.disabled=false;}return;}
@@ -1880,6 +1885,22 @@ window.addEventListener('resize',syncNavigationHeight);
 render();
 
 document.addEventListener('submit',async event=>{
+ const departureForm=event.target.closest('[data-ops-departure-form]');
+ if(departureForm){
+  event.preventDefault();
+  const id=departureForm.dataset.opsDepartureForm;
+  const status=departureForm.querySelector('[data-departure-save-status]');
+  try{
+   const mission=operationalStore.get(id);
+   if(mission?.cloudReadOnly||!['Brouillon','En cours'].includes(mission?.status))throw Error('Modification du départ indisponible.');
+   const remove=event.submitter?.name==='remove';
+   operationalStore.updateDetails(id,{meetingPoint:remove?null:departureForm.elements.departure.value});
+   render();
+   void tickOpsLive(true);
+   Toast(remove?'Point de départ retiré.':'Point de départ enregistré.');
+  }catch(error){status.textContent=error.message;}
+  return;
+ }
  if(event.target.matches('[data-piste-filter]')){event.preventDefault();if(pisteBusy)return;const params=new URLSearchParams(new FormData(event.target));history.pushState({},'','/tracks?'+params);render(true);return;}
  if(event.target.matches('[data-ops-account-link]')){event.preventDefault();const alias=event.target.dataset.opsAccountLink,userId=event.target.elements.userId.value,enabled=communityStore.getContactPermissions(alias)?.live_access_authorized===true;try{if(!opsLiveRemote.view().directory.some(p=>p.id===userId))throw Error('Compte réel indisponible.');opsLiveBindings.set(alias,userId,enabled);await opsLiveRemote.setHabitual(userId,enabled);opsHabitualState.set(userId,enabled);Toast('Compte Live OPS associé.');render();}catch(error){Toast(error.message);}return;}
  if(event.target.matches('[data-ops-invite]')){event.preventDefault();try{await opsLiveRemote.invite(event.target.dataset.opsInvite,event.target.elements.userId.value);Toast('Invitation Live envoyée au compte choisi.');await opsLiveRemote.refresh();}catch(error){Toast(error.message);}return;}

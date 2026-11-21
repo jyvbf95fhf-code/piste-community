@@ -1,3 +1,4 @@
+import {normalizeSessionDeparture} from './session-departure.mjs';
 import {validGpsPose} from './coaching-gps-model.mjs';
 const eventTypes=new Set(['Départ','Rupture','Reprise','Indice','Objet trouvé','Zone particulière','Changement notable','Fin de piste']);
 const text=value=>typeof value==='string'?value.slice(0,160):null;
@@ -11,7 +12,8 @@ export function projectOpsGpsLive(mission,policy={}, {now=Date.now()}={}){
  if(t&&!validGpsPose(t,'ops:'+mission.id,mission.gpsOwnerId))throw Error('GPS OPS invalide.');
  const options=policy.projectionOptions||{},gpsTrack=safeTrack(t),elapsed=nonnegative(mission.trackingElapsedMs);
  const state=['À compléter','Terminée','Archivée'].includes(mission.status)||mission.trackingState==='stopped'?'Fin de piste':mission.status==='En cours'?(mission.trackingState==='paused'?'Pause':'En cours'):'Prêt';
- return {sessionId:String(mission.id),sessionType:'ops',role:'ops_trace_observer',readOnly:true,canAct:false,state,gpsTrack,distance:gpsTrack?.distanceM??null,trackingSeconds:elapsed===null?null:Math.floor(elapsed/1000),interruptions:Math.max(0,(gpsTrack?.segments.length||0)-1),lastPositionAt:gpsTrack?.segments.at(-1)?.at(-1)?.timestamp??null,dogName:options.showDog===true?text(mission.dog?.name):null,handlerName:options.showHandler===true?text(mission.handler?.name):null,events:options.showEvents===true?safeEvents(mission.events):[],trackAge:options.showTrackAge===true?text(mission.time?.trackAgeAtStart?.label):null,corridor:null};
+ const meetingPoint=state==='Fin de piste'?null:normalizeSessionDeparture(mission.places?.meetingPoint);
+ return {sessionId:String(mission.id),sessionType:'ops',role:'ops_trace_observer',readOnly:true,canAct:false,state,...(meetingPoint?{meetingPoint}:{}),gpsTrack,distance:gpsTrack?.distanceM??null,trackingSeconds:elapsed===null?null:Math.floor(elapsed/1000),interruptions:Math.max(0,(gpsTrack?.segments.length||0)-1),lastPositionAt:gpsTrack?.segments.at(-1)?.at(-1)?.timestamp??null,dogName:options.showDog===true?text(mission.dog?.name):null,handlerName:options.showHandler===true?text(mission.handler?.name):null,events:options.showEvents===true?safeEvents(mission.events):[],trackAge:options.showTrackAge===true?text(mission.time?.trackAgeAtStart?.label):null,corridor:null};
 }
 // Validate and re-project a wire frame: never trust extra fields or client flags.
 export function sanitizeOpsLiveFrame(frame){
@@ -19,7 +21,8 @@ export function sanitizeOpsLiveFrame(frame){
  const t=frame.gpsTrack;
  if(t&&!validGpsPose({...t,sessionId:'wire',actorId:'wire'},'wire','wire'))throw Error('GPS OPS invalide.');
  if(frame.trackingSeconds!==null&&(!Number.isSafeInteger(frame.trackingSeconds)||frame.trackingSeconds<0))throw Error('Durée OPS invalide.');
- return {sessionId:String(frame.sessionId),sessionType:'ops',role:'ops_trace_observer',readOnly:true,canAct:false,state:frame.state,gpsTrack:safeTrack(t),distance:t?.distanceM??null,trackingSeconds:frame.trackingSeconds,interruptions:Math.max(0,(t?.segments.length||0)-1),lastPositionAt:t?.segments.at(-1)?.at(-1)?.timestamp??null,dogName:text(frame.dogName),handlerName:text(frame.handlerName),events:safeEvents(frame.events),trackAge:text(frame.trackAge),corridor:null};
+ const meetingPoint=frame.state==='Fin de piste'?null:normalizeSessionDeparture(frame.meetingPoint);
+ return {sessionId:String(frame.sessionId),sessionType:'ops',role:'ops_trace_observer',readOnly:true,canAct:false,state:frame.state,...(meetingPoint?{meetingPoint}:{}),gpsTrack:safeTrack(t),distance:t?.distanceM??null,trackingSeconds:frame.trackingSeconds,interruptions:Math.max(0,(t?.segments.length||0)-1),lastPositionAt:t?.segments.at(-1)?.at(-1)?.timestamp??null,dogName:text(frame.dogName),handlerName:text(frame.handlerName),events:safeEvents(frame.events),trackAge:text(frame.trackAge),corridor:null};
 }
 export function opsLiveFreshness(projection,now=Date.now(),staleAfterMs=15000){
  const last=projection?.lastPositionAt;

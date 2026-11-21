@@ -1,3 +1,4 @@
+import {normalizeSessionDeparture} from './session-departure.mjs';
 import {normalizeRetrospective,retrospectiveMetrics} from './operational-retrospective.mjs';
 import {personalChanged} from './personal-change.mjs';
 import {sessionRemovalPolicy} from './session-removal.mjs';
@@ -40,7 +41,7 @@ const DETAIL_FIELDS = new Set([
 ]);
 const PERSON_FIELDS = new Set(['identity', 'age', 'ageRange', 'sex', 'description', 'clothing', 'footwear', 'mobility', 'vulnerability', 'expectedBehavior', 'movementMethod']);
 const TIME_FIELDS = new Set(['disappearanceAt', 'lastContactAt', 'timePrecision']);
-const PLACE_FIELDS = new Set(['interventionAddress', 'interventionCommune', 'interventionSector', 'lastKnownDescription', 'probableTrackStart', 'confirmedTrackStart']);
+const PLACE_FIELDS = new Set(['interventionAddress', 'interventionCommune', 'interventionSector', 'lastKnownDescription', 'probableTrackStart', 'confirmedTrackStart', 'meetingPoint']);
 const CONTEXT_FIELDS = new Set(['circumstances', 'environmentType', 'risks', 'observations', 'additionalInfo','callAt','callerName','callerPhone','callerRelation','callInstructions']);
 
 const clone = value => structuredClone(value);
@@ -449,7 +450,8 @@ export function createOperationalMissionStore({
       const mission = getMutable(id);
       requireEditable(mission);
       for (const [key, value] of Object.entries(patch)) {
-        const text = optionalText(value);
+        const text = key === 'meetingPoint' ? normalizeSessionDeparture(value) : optionalText(value);
+        if (key === 'meetingPoint' && value !== null && !text) throw new Error('Adresse ou coordonnées de départ invalides.');
         if (DETAIL_FIELDS.has(key)) {
           mission.details[key] = text;
           if (key === 'searchedPerson') mission.person.identity = text;

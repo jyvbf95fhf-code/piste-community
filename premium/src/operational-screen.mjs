@@ -1,3 +1,4 @@
+import {departureFromPoint} from './session-departure.mjs';
 import {OperationalAfterScreen} from './operational-after-screen.mjs';
 import {formatOperationalGpsClock} from './operational-gps-screen.mjs';
 import {OperationalWeatherMarkup} from './operational-weather.mjs';
@@ -8,7 +9,7 @@ import { OperationalMap } from './operational-map.mjs';
 import { OPERATIONAL_EVENT_TYPES } from './operational-missions.mjs';
 import { gpxFixtures } from './track-library.mjs';
 import { operationalMissionView } from './operational-views.mjs';
-import { OperationalEntryChoices, QuickStartForm, PreparedMissionForm, OperationalNavigation } from './operational-intake.mjs';
+import { OperationalEntryChoices, QuickStartForm, PreparedMissionForm, OperationalNavigation, SessionDeparture } from './operational-intake.mjs';
 
 const entryMission = mission => `<a class="card operational-resume-card" href="/operational/missions/${encodeURIComponent(mission.id)}"><span class="operational-resume-mark">${Icon('navLive')}</span><span><small>${StatusBadge(mission.status, mission.status === 'En cours' ? 'cyan' : 'gold')}</small><strong>Mission · ${e(mission.dog?.name || 'Chien indisponible')}</strong><em>Reprendre la mission</em></span>${Icon('arrow')}</a>`;
 const JOURNAL_LABELS = { recorded_after_intervention:'Mission ajoutée après intervention', tracking_started:'Début du pistage', tracking_paused:'Pause du suivi', tracking_resumed:'Reprise du suivi', progress:'Progression mock', terrain_event:'Événement terrain', tracking_stopped:'Arrêt du suivi', ready_to_complete:'Mission à compléter', mission_completed:'Mission terminée', mission_archived:'Mission archivée' };
@@ -71,7 +72,13 @@ function OperationalMission({ view, ui = {}, livePolicy = {} } = {}) {
   const cockpitStage=`<div class="operational-cockpit-stage" data-operational-cockpit-stage><div class="operational-map-layer">${OperationalMap(view,{interactive:view.canAddEvent})}</div><div class="operational-map-overlay" data-operational-overlay-controls><div class="operational-cockpit-map-status"><strong>${e(view.trackingLabel)}</strong><span>SIMULATION · AUCUN GPS</span></div>${corridorAction}<div class="operational-cockpit-tools">${mapModeButtons}</div>${eventComposer}<div class="operational-cockpit-hud">${trackingHud}<div class="operational-cockpit-action-dock">${actions}</div><small>Verrouillage simulé · l’écran de l’appareil reste actif.</small></div></div></div>`;
   const mapPanel=isCockpit?`<section class="operational-map-panel operational-cockpit-panel" data-operational-can-progress="${view.canAddProgress}">${cockpitStage}</section>`:`<section class="operational-map-panel" data-operational-can-progress="${view.canAddProgress}"><div class="operational-map-heading"><div><span class="eyebrow">CARTE MISSION</span><h2>Progression terrain</h2></div><span class="operational-mock-label">${view.gpsTrack?'GPS RÉEL · LECTURE SEULE':'SIMULATION · AUCUN GPS'}</span></div>${corridorAction}${OperationalMap(view,{interactive:view.canAddEvent})}${mapActions}</section>`;
   const remainingActions=isCockpit?'':`${actions}${view.canPause||view.canResume?'<p class="operational-lock-note">Verrouillage simulé · l’écran de l’appareil reste actif.</p>':''}<p>Arrêter le pistage ouvre la fiche À compléter. Terminer la mission et Fin de piste sont des actions distinctes.</p>`;
-  return `<section class="operational-page operational-mission${isCockpit?' operational-cockpit-page':''}" data-operational-view="mission" data-operational-status="${e(view.status)}" data-operational-tracking-state="${e(view.trackingState)}" data-operational-mission-id="${e(view.id)}">${cockpitHeader}${isCockpit?`<p class="operational-track-age operational-cockpit-age" data-operational-track-age>Âge de la piste : ${e(ageOfTrack)}</p>`:''}${mapPanel}${view.canStart?`<section class="operational-field-actions">${remainingActions}</section>`:''}<p class="operational-memory-note operational-cockpit-memory">${view.gpsTrack?e(ui.gps?.warning||'Mission GPS sauvegardée sur cet appareil.'):'Données de démonstration en mémoire — un rechargement peut réinitialiser la mission.'}</p>${livePolicyControls(view,livePolicy)}${eventsPanel}${detailsSection}${evaluationForm}${gpxSection}${weatherSection}${view.canStart?'':`<section class="operational-field-actions">${remainingActions}</section>`}</section>`;
+  return `<section class="operational-page operational-mission${isCockpit?' operational-cockpit-page':''}" data-operational-view="mission" data-operational-status="${e(view.status)}" data-operational-tracking-state="${e(view.trackingState)}" data-operational-mission-id="${e(view.id)}">${cockpitHeader}${['Brouillon','En cours'].includes(view.status)?missionDeparture(view):''}${isCockpit?`<p class="operational-track-age operational-cockpit-age" data-operational-track-age>Âge de la piste : ${e(ageOfTrack)}</p>`:''}${mapPanel}${view.canStart?`<section class="operational-field-actions">${remainingActions}</section>`:''}<p class="operational-memory-note operational-cockpit-memory">${view.gpsTrack?e(ui.gps?.warning||'Mission GPS sauvegardée sur cet appareil.'):'Données de démonstration en mémoire — un rechargement peut réinitialiser la mission.'}</p>${livePolicyControls(view,livePolicy)}${eventsPanel}${detailsSection}${evaluationForm}${gpxSection}${weatherSection}${view.canStart?'':`<section class="operational-field-actions">${remainingActions}</section>`}</section>`;
+}
+
+function missionDeparture(view){
+  const confirmed = view.places?.confirmedTrackStart?.point;
+  const suggestion = departureFromPoint(confirmed) || view.places?.confirmedTrackStart?.description;
+  return SessionDeparture({destination:view.places?.meetingPoint,suggestion,form:'ops',missionId:view.id});
 }
 
 export function OperationalScreen({ route = { type: 'entry' }, missions = [], dogs = [], view = null, ui = {}, livePolicy = {} } = {}) {
@@ -79,7 +86,7 @@ export function OperationalScreen({ route = { type: 'entry' }, missions = [], do
   if (route.type === 'new' || route.type === 'quick') return QuickStartForm({ dogs, handler: ui.handler,realMode:ui.realMode });
   if (route.type === 'prepared') return PreparedMissionForm({ dogs, handler: ui.handler,realMode:ui.realMode });
   if (route.type === 'mission') {
-    if(view?.gpsTrack&&['ready','active','paused'].includes(view.trackingState)&&!ui.showDetails)return OperationalGpsScreen(view,ui.gps,ui);
+    if(view?.gpsTrack&&['ready','active','paused'].includes(view.trackingState)&&!ui.showDetails)return OperationalGpsScreen(view,ui.gps,{...ui,departure:missionDeparture(view)});
     const content=OperationalMission({ view, ui, livePolicy });
     return view?.gpsTrack&&ui.showDetails?'<p><button type="button" class="button button-dark" data-ops="cockpit">Retour à la carte GPS</button></p>'+content:content;
   }

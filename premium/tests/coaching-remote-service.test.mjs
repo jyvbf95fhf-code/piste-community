@@ -20,3 +20,22 @@ for(const mode of ['normal','simple_blind','full_blind'])test(`${mode}: owner en
  const repeated=command(ended,'tracer','end-live',{},now+1000);assert.deepEqual(repeated,{...ended,version:ended.version+1});assert.throws(()=>command(ended,'driver','end-live'),{status:403});
  const continued=command(ended,'tracer','gps-batch',{kind:'pose',points:[{...fix(now+1000),sequence:1,segmentId:'start'}]},now+1000);assert.equal(continued.search.phase,'LAYING');assert.equal(continued.liveEndedAt,now);assert.equal(continued.tracer.gpsPose.segments.flat().length,2);
 });
+
+test('the organizer shares a single confirmed departure with every member of a blind session',()=>{
+ const initial=setup('full_blind');
+ assert.equal(api.projectRemoteSession(initial,'driver',now).meetingPoint,null);
+ assert.throws(()=>command(initial,'observer','set-departure',{destination:'Parking'}),{status:403});
+ assert.throws(()=>command(initial,'tracer','set-departure',{destination:'91, 7'}),{status:400});
+ const shared=command(initial,'tracer','set-departure',{destination:'48.271000, 7.401'});
+ for(const actor of actors){
+  const view=api.projectRemoteSession(shared,actor.id,now);
+  assert.equal(view.meetingPoint,'48.271, 7.401');
+  assert.equal(view.canSetDeparture,actor.id==='tracer');
+  assert.equal(view.reference,null);
+ }
+ assert.throws(()=>api.projectRemoteSession(shared,'outsider',now),{status:403});
+ const updated=command(shared,'tracer','set-departure',{destination:'Parking de la forêt'});
+ assert.equal(api.projectRemoteSession(updated,'coach',now).meetingPoint,'Parking de la forêt');
+ const removed=command(updated,'tracer','set-departure',{destination:null});
+ assert.equal(api.projectRemoteSession(removed,'observer',now).meetingPoint,null);
+});

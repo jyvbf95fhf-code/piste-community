@@ -1,3 +1,5 @@
+import {departureFromPoint} from './session-departure.mjs';
+import {SessionDeparture} from './operational-intake.mjs';
 import {poseHandoffStatus} from './coaching-pose-handoff.mjs';
 import {sharedCoachingEntry} from './coaching-shared-entry.mjs';
 import {DriverGpsScreen} from './coaching-driver-gps-screen.mjs';
@@ -17,6 +19,10 @@ export function sharedCockpitClock(p,state={},now=Date.now()){
 }
 // This adapter consumes the authorized server projection only. It never loads
 // the local simulated session or restores geometry filtered out by the server.
+export function CoachingDeparture(p,draft){
+ const point=p.reference?.geometry?.segments?.[0]?.[0]||p.referenceStart;
+ return SessionDeparture({destination:p.meetingPoint,suggestion:departureFromPoint(point),form:p.canSetDeparture?'coaching':null,draft});
+}
 export function SharedCoachingCockpit(p,state={},ui={}){
  const poseView=p.role===p.poseRecorder&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT'].includes(p.phase);
  const primary=(poseView?p.pose:p.search)||empty(p.id);
@@ -25,7 +31,7 @@ export function SharedCoachingCockpit(p,state={},ui={}){
  let html=poseView?TracerGpsScreen({phase:p.phase==='LAYING'?'active':p.phase==='TRACK_FINISHED'?'finished':p.phase==='LAYING_WAIT'?'in_place':'before',gpsPose:primary},status,{plannedReference:planned}):DriverGpsScreen({phase:p.phase,gpsSearch:primary,searchTrackingState:p.trackingState,search_started_at:new Date(0).toISOString(),searchPausedAt:new Date(p.searchActiveMs||0).toISOString(),searchTotalPausedMs:0},status,{now:p.searchActiveMs||0,pose:p.pose,corridorAllowed:!!p.pose,plannedReference:planned});
  html=html.replace(/data-gps-clock>[^<]*/,`data-gps-clock>${sharedCockpitClock(p,state,ui.now)}`);
  const heading=`<header class="coaching-heading"><span class="eyebrow">COACHING · ${role[p.role]||''}</span><h1>${poseView?'Pose GPS':p.role==='driver'?'Recherche GPS':'Suivi de la session'} · ${e(p.dog)}</h1><p class="remote-phase">${e(poseHandoffStatus(p)||labels[p.phase]||p.phase)}${p.trackingState==='paused'?' · En pause':''}</p><button type="button" class="button button-dark shared-session-menu" data-remote="open-session">Session ▾</button></header>`;
- html=html.replace(/<header class="coaching-heading">[\s\S]*?<\/header>/,heading+(entry.reference?`<p class="shared-reference-status" data-shared-reference="${entry.status}">${entry.status==='proposed'?`Tracé proposé · ${e(entry.reference.name)} · à valider`:`Tracé intégré · ${e(entry.reference.name)}`}</p>`:''));
+ html=html.replace(/<header class="coaching-heading">[\s\S]*?<\/header>/,heading+CoachingDeparture(p,ui.departureDraft)+(entry.reference?`<p class="shared-reference-status" data-shared-reference="${entry.status}">${entry.status==='proposed'?`Tracé proposé · ${e(entry.reference.name)} · à valider`:`Tracé intégré · ${e(entry.reference.name)}`}</p>`:''));
  html=html.replace(/<details class="gps-details">[\s\S]*?<\/details>/,`<details class="gps-details"><summary>Informations GPS</summary><p>${e(state.status||'Données GPS synchronisées avec la session.')}</p></details>`);
  let actions=ui.actions;
  if(actions===undefined){const button=(id,label)=>GpsButton('remote',id,label);actions=p.phase==='SEARCH_RUNNING'&&['driver','coach'].includes(p.role)?button(p.trackingState==='paused'?'resume-search':'pause-search',p.trackingState==='paused'?'Reprendre':'Pause')+(p.role==='driver'?button('finish-search','Terminer la recherche'):''):'';}

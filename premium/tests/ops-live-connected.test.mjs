@@ -10,6 +10,7 @@ test('real controller, HTTP handler and local PostgreSQL: offline replay, GPS, o
  for(const file of ['01-schema-rls.proposed.sql','02-realtime-retention.proposed.sql','04-api-transactions.proposed.sql'])await db.exec(await readFile(new URL('../docs/ops-live-3b-proposal/'+file,import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20261016120231_ops_live_invitations_index.sql',import.meta.url),'utf8'));
  await db.exec(await readFile(new URL('../supabase/migrations/20261121090000_ops_live_final_observer.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/20261121100000_ops_live_meeting_point.sql',import.meta.url),'utf8'));
  const admin={rpc:async(name,args)=>{try{const keys=Object.keys(args);const r=await db.query(`select public.${name}(${keys.map((k,i)=>`${k}=>$${i+1}`).join(',')}) as result`,keys.map(k=>typeof args[k]==='object'&&args[k]!==null?JSON.stringify(args[k]):args[k]));return {data:r.rows[0].result};}catch(error){return {error};}}};
  let account=owner;const handler=createOpsLiveProposedHandler({enabled:true,admin,authClient:{auth:{getUser:async()=>({data:{user:{id:account}}})}},isAccountEnabled:async()=>true,invitationKey:'a'.repeat(64)});
  let lose=false,interleave=true;const call=async body=>{if(interleave&&body.type==='gps-batch'){interleave=false;const changed=await admin.rpc('ops_live_commit',{p_id:body.id,p_actor:observer,p_command:crypto.randomUUID(),p_expected:body.expectedVersion,p_type:'mark-notification-read',p_payload:{}});assert.ok(changed.data);}const response=await handler(new Request('http://local',{method:'POST',headers:{authorization:'Bearer simulated-test-identity'},body:JSON.stringify(body)})),value=await response.json();if(!response.ok)throw Object.assign(Error(value.error),{status:response.status});if(lose&&body.type==='gps-batch'){lose=false;throw Error('lost acknowledgement');}return value.result;};
@@ -41,5 +42,27 @@ test('real controller, HTTP handler and local PostgreSQL: offline replay, GPS, o
  account=owner;
  assert.equal((await db.query('select count(*)::int as n from public.ops_live_points')).rows[0].n,3);
  await remote.syncMission(source,{...policy,share_live:false});assert.equal((await db.query('select sharing from public.ops_live_publications')).rows[0].sharing,false);
+ const draft={...source,id:'draft-with-meeting-point',status:'Brouillon',trackingState:'ready',gpsTrack:null,trackingElapsedMs:0,places:{interventionAddress:'Adresse privée',meetingPoint:'48.271, 7.401'}};
+ await remote.syncMission(draft,policy);
+ await remote.refresh();
+ const draftId=remote.view().sessions.find(row=>row.id!==id).id;
+ account=observer;
+ const observerDraft=await call({operation:'read',id:draftId});
+ assert.equal(observerDraft.metadata.state,'Prêt');
+ assert.equal(observerDraft.metadata.meetingPoint,'48.271, 7.401');
+ assert.ok(!JSON.stringify(observerDraft).includes('Adresse privée'));
+ account=third;
+ await assert.rejects(call({operation:'read',id:draftId}),{status:403});
+ account=owner;
+ draft.places.meetingPoint='Parking de la forêt';
+ await remote.syncMission(draft,policy);
+ account=observer;
+ assert.equal((await call({operation:'read',id:draftId})).metadata.meetingPoint,'Parking de la forêt');
+ account=owner;
+ draft.places.meetingPoint=null;
+ await remote.syncMission(draft,policy);
+ account=observer;
+ assert.equal((await call({operation:'read',id:draftId})).metadata.meetingPoint,undefined);
+ account=owner;
  }finally{await db.close();}
 });

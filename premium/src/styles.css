@@ -4719,3 +4719,10 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 .dog-mileage>span{color:#bfd1d9;font-size:9px;line-height:1.35}
 .dog-mileage-note{color:#aabec9;font-size:12px;line-height:1.5;margin:12px 0}
 @media(max-width:360px){.dog-mileage{padding:7px}.dog-mileage>b{font-size:23px}}
+
+.session-departure { display: grid; gap: .35rem; margin-block: .5rem; }
+.session-departure-empty { margin: .25rem 0; color: var(--theme-muted, #b8c6ce); }
+.session-departure-editor summary { cursor: pointer; color: var(--theme-accent, #eddbad); padding-block: .4rem; }
+.session-departure-editor form { display: grid; gap: .6rem; max-width: 32rem; margin: .45rem 0; }
+.session-departure-editor label { display: grid; gap: .3rem; }
+.session-departure-editor p { margin: 0; }
