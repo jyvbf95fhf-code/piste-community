@@ -66,7 +66,13 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
  const sharing=createPreparedTrackShareService(admin,{clock});
  if(body.operation==='prepared-share-read')return respond(await sharing.read(body.token));
  const token=request.headers.get('authorization')?.match(/^Bearer (.+)$/i)?.[1];if(!token)error('Connexion requise.',401);const result=await authClient.auth.getUser(token);if(result.error||!result.data?.user)error('Connexion expirée.',401);const uid=result.data.user.id;
- const profile=assertResult(await admin.from('coaching_remote_users').select('id,display_name,qa,enabled').eq('id',uid).eq('enabled',true).maybeSingle());if(!profile)error('Compte non autorisé pour ce pilote.',403);
+ const profile=assertResult(await admin.from('coaching_remote_users').select(body.operation==='profile'?'id,display_name,qa,enabled,profile_photo':'id,display_name,qa,enabled').eq('id',uid).eq('enabled',true).maybeSingle());if(!profile)error('Compte non autorisé pour ce pilote.',403);
+ if(body.operation==='profile-photo-save'){
+  const photo=body.photo;
+  if(photo!==null&&(typeof photo!=='string'||photo.length>120000||!/^data:image\/jpeg;base64,\/9j\/[a-z0-9+/]+=*$/i.test(photo)))error('Photo de profil invalide.');
+  assertResult(await admin.from('coaching_remote_users').update({profile_photo:photo}).eq('id',uid).eq('enabled',true));
+  return respond({profilePhoto:photo});
+ }
  if(body.operation==='push-public-key')return respond(await push.publicKey());
  if(body.operation==='push-subscribe')return respond(await push.subscribe(uid,body.subscription));
  if(body.operation==='push-unsubscribe')return respond(await push.unsubscribe(uid,body.endpoint));
@@ -129,7 +135,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
   if(body.operation==='community-friendship-profile'){
    if(!uuid(body.peerId))error('Identifiant de profil invalide.');
    const social=await friendships.snapshot(uid);
-   const peer=assertResult(await admin.from('coaching_remote_users').select('id,display_name').eq('id',body.peerId).eq('enabled',true).maybeSingle());
+   const peer=assertResult(await admin.from('coaching_remote_users').select('id,display_name,profile_photo').eq('id',body.peerId).eq('enabled',true).maybeSingle());
    if(!peer)error('Profil indisponible.',404);
    const dogs=[];
    if(social.contacts.some(contact=>contact.id===peer.id)){
@@ -147,7 +153,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
     const mileage=await contactDogMileage(admin,peer.id,dogs,clock());
     for(const dog of dogs)dog.mileage=mileage[dog.id];
    }
-   return respond({id:peer.id,displayName:peer.display_name,dogs});
+   return respond({id:peer.id,displayName:peer.display_name,profilePhoto:peer.profile_photo??null,dogs});
   }
   const friendshipResult=await (body.operation==='community-friendship-snapshot'?friendships.snapshot(uid):friendships.command(uid,body));if(body.operation==='community-friendship-command'&&body.action==='contact-request'&&body.peerId!==uid)background(push.notify(body.peerId,{body:'Vous avez reçu une demande de contact.',tag:'piste-contact'}));return respond(friendshipResult);
  }
@@ -159,7 +165,7 @@ export function createCoachingHandler({admin,authClient,clock=Date.now,giftCodes
   if(!uuid(body.sessionId))error('Identifiant de session invalide.');
   return respond(await live.read(uid,body.sessionId));
  }
- if(body.operation==='profile')return respond({id:uid,name:profile.display_name,qa:profile.qa,...capabilities,coaching_invitations_version:coachingInboxEnabled?1:0,coaching_team_version:typeof teamContactsProvider==='function'?1:0});
+ if(body.operation==='profile')return respond({id:uid,name:profile.display_name,profilePhoto:profile.profile_photo??null,qa:profile.qa,...capabilities,coaching_invitations_version:coachingInboxEnabled?1:0,coaching_team_version:typeof teamContactsProvider==='function'?1:0});
  if(body.operation==='list'){const rows=assertResult(await admin.from('coaching_remote_sessions').select('id,state').contains('state',{members:[{id:uid}]}).order('updated_at',{ascending:false}).limit(30));return respond({sessions:rows.map(r=>projectRemoteSession(r.state,uid,clock()))});}
  const id=body.sessionId;if(!uuid(id))error('Identifiant de session invalide.');
  const load=async()=>assertResult(await admin.from('coaching_remote_sessions').select('state,version,owner_id').eq('id',id).maybeSingle());

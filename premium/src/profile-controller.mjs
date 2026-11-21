@@ -1,4 +1,4 @@
-export function createProfileController({store,communityStore,getDogs=()=>[],notificationStore=null,render=()=>{},navigate=()=>{}}={}){
+export function createProfileController({store,communityStore,savePhoto=photo=>store.setPhoto(photo),getDogs=()=>[],notificationStore=null,render=()=>{},navigate=()=>{}}={}){
  if(!store||!communityStore)throw new TypeError('Stores Profil et Communauté requis.');
  function dispatch(action,payload={}){
   if(action==='set-primary-dog'){
@@ -38,9 +38,10 @@ export function createProfileController({store,communityStore,getDogs=()=>[],not
      canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
      canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
      canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
-     store.setPhoto(canvas.toDataURL('image/jpeg',.78));
+     await savePhoto(canvas.toDataURL('image/jpeg',.78));
     }finally{URL.revokeObjectURL(url);}
-   }else if(data.has('removeProfilePhoto'))store.setPhoto(null);
+   }else if(data.has('removeProfilePhoto'))await savePhoto(null);
+   if(!form.isConnected)return;
    submit('account',{displayName:data.get('displayName'),avatar:data.get('avatar')});
   }catch(error){
    const status=form.querySelector('[role="status"]');

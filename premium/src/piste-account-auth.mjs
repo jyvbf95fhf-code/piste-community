@@ -29,7 +29,7 @@ export function createPisteAccount({client,loadProfile,storage,clock=Date.now,on
    if(version!==generation)return session;
    if(p.id!==id)throw Error('Identité incohérente.');
    const name=typeof p.name==='string'&&p.name.trim()?p.name.trim():'Membre';
-   session={authenticated:true,access:'enabled',user:{user_id:id,name,email:verified.data.user.email||null,createdAt:verified.data.user.created_at||null,initials:name.slice(0,1),role:'Conducteur',permissions:{research:p.permissions?.research===true,admin:p.permissions?.admin===true&&['owner_admin','admin','support_admin','readonly_admin'].includes(p.admin_role),...(typeof p.permissions?.premium==='boolean'?{premium:p.permissions.premium}:{})},admin_role:p.admin_role||null,premium_entitlement:p.premium_entitlement||null,subscription:p.subscription||null,jumolf_entitlement:p.jumolf_entitlement&&['premium','admin_grant','access_code'].includes(p.jumolf_entitlement.entitlement)?structuredClone(p.jumolf_entitlement):{entitlement:'none'},assurance:'supabase-auth',qa:p.qa===true}};
+   session={authenticated:true,access:'enabled',user:{user_id:id,name,profilePhoto:p.profilePhoto??null,email:verified.data.user.email||null,createdAt:verified.data.user.created_at||null,initials:name.slice(0,1),role:'Conducteur',permissions:{research:p.permissions?.research===true,admin:p.permissions?.admin===true&&['owner_admin','admin','support_admin','readonly_admin'].includes(p.admin_role),...(typeof p.permissions?.premium==='boolean'?{premium:p.permissions.premium}:{})},admin_role:p.admin_role||null,premium_entitlement:p.premium_entitlement||null,subscription:p.subscription||null,jumolf_entitlement:p.jumolf_entitlement&&['premium','admin_grant','access_code'].includes(p.jumolf_entitlement.entitlement)?structuredClone(p.jumolf_entitlement):{entitlement:'none'},assurance:'supabase-auth',qa:p.qa===true}};
   }catch(error){if(version!==generation)return session;if(error.status===403){clear('pending');return session;}throw Error('Vérification de votre accès impossible. Réessayez.');}
   return structuredClone(session);
  }
@@ -40,6 +40,9 @@ export function createPisteAccount({client,loadProfile,storage,clock=Date.now,on
   finally{mailPending=false;}
  }
  return {
+  setVerifiedProfilePhoto(ownerId,photo){
+   if(session.user?.user_id===ownerId)session.user.profilePhoto=photo;
+  },
   assurance:'supabase-auth',getSession:()=>structuredClone(session),initialize:verify,
   async signIn({email,password}){
    if(loginPending)throw Error('Connexion en cours. Patientez.');

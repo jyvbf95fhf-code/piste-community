@@ -9,7 +9,12 @@ const typeLabels=Object.freeze({training:'Entraînement',session:'Session termin
 const visibilityLabels=Object.freeze({private:'Privé',contacts:'Contacts',community:'Communauté'});
 const dogUrl=id=>`/dogs/${encodeURIComponent(id)}`;
 const htmlButton=(action,label,attrs='')=>`<button type="button" class="button button-subtle" data-community-action="${e(action)}" ${attrs}>${e(label)}</button>`;
-function profileLink(person){return `<a class="community-author" href="/community/profile/${encodeURIComponent(person.id)}"><span class="community-avatar" aria-hidden="true">${e((person.displayName||'?').trim().slice(0,1).toLocaleUpperCase('fr'))}</span><span><strong>${e(person.displayName||'Membre')}</strong><small>${e(person.role||person.specialty||'Membre Communauté')}</small></span></a>`;}
+function communityAvatar(person){
+ const photo=person.profilePhoto;
+ if(typeof photo==='string'&&photo.length<=120000&&/^data:image\/jpeg;base64,\/9j\/[a-z0-9+/]+=*$/i.test(photo))return `<img class="profile-avatar-photo" src="${e(photo)}" alt="" loading="lazy">`;
+ return e((person.displayName||'?').trim().slice(0,1).toLocaleUpperCase('fr'));
+}
+function profileLink(person){return `<a class="community-author" href="/community/profile/${encodeURIComponent(person.id)}"><span class="community-avatar" aria-hidden="true">${communityAvatar(person)}</span><span><strong>${e(person.displayName||'Membre')}</strong><small>${e(person.role||person.specialty||'Membre Communauté')}</small></span></a>`;}
 function formatDate(value){const date=new Date(value);return Number.isFinite(date.getTime())?new Intl.DateTimeFormat('fr-FR',{day:'numeric',month:'short',year:'numeric'}).format(date):'Date indisponible';}
 function selectedDog(dogs,id){return dogs.find(item=>item.id===id)||null;}
 function dogCard(dog){
@@ -78,7 +83,7 @@ function profileScreen(route,store,dogs){
   <a class="back-link" href="/community">← Communauté</a>
   <article class="community-profile-card community-profile-hero">
    <div class="community-profile-identity">
-    <span class="community-avatar community-avatar-large" aria-hidden="true">${e(person.displayName.slice(0,1).toLocaleUpperCase('fr'))}</span>
+    <span class="community-avatar community-avatar-large" aria-hidden="true">${communityAvatar(person)}</span>
     <div><h1>${e(person.displayName)}</h1>${details?`<p>${details}</p>`:''}</div>
    </div>
    ${person.bio?`<p class="community-profile-bio">${e(person.bio)}</p>`:''}

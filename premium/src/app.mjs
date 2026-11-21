@@ -367,7 +367,12 @@ function renderPisteNotifications(){
 let profileOwnerId=currentUser?.user_id||null;
 let profileStore=createProfileStore({}, {ownerId:profileOwnerId,storage});
 const profileCommunityStore=()=>auth.assurance==='supabase-auth'?persistentCommunity?.store:communityStore;
-const makeProfileController=()=>createProfileController({store:profileStore,communityStore:{viewerId:communityStore.viewerId,updateOwnProfile:patch=>(profileCommunityStore()||communityStore).updateOwnProfile(patch)},getDogs:()=>accountDogs(),notificationStore:communityStore.getNotificationStore(),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
+const makeProfileController=()=>createProfileController({store:profileStore,savePhoto:async photo=>{
+ const ownerId=auth.getSession().user?.user_id;
+ if(!ownerId)throw Error('Connexion requise.');
+ const saved=await accountApi.call({operation:'profile-photo-save',photo});
+ auth.setVerifiedProfilePhoto(ownerId,saved.profilePhoto);
+},communityStore:{viewerId:communityStore.viewerId,updateOwnProfile:patch=>(profileCommunityStore()||communityStore).updateOwnProfile(patch)},getDogs:()=>accountDogs(),notificationStore:communityStore.getNotificationStore(),navigate:path=>{history.pushState({},'',path);render(true);},render:()=>render()});
 let profileController=makeProfileController();
 let personalCloud=null;
 let accountAuto=null,accountAutoOwner=null;
