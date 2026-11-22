@@ -61,7 +61,11 @@ export function recordedCommunityCorridor(source){
 }
 export function accountCommunitySourceOptions(raw={}){
  const map=points=>{const segments=expandSegmentCoordinates(points);return segments.length?{coordinateSpace:'wgs84',segments}:null;};
- const sessions=[...(raw.sessions||[]),...(raw.operational||[])].filter(s=>(s.kind==='coaching'&&['DEBRIEF','ARCHIVED'].includes(s.status)||s.kind==='operational'&&['Terminée','Archivée'].includes(s.status))&&!s.synthetic&&!s.demo).map(s=>{const data={title:s.title||(s.kind==='operational'?'Piste opérationnelle':'Session Coaching terminée')},geometry=map(s.trace?.length?s.trace:s.referenceTrace?.length?s.referenceTrace:s.plannedReferenceTrace||[]);if(s.dog?.name)data.dog={name:s.dog.name};if(Number.isFinite(s.metrics?.distanceM??s.distanceM))data.distance=`${Math.round(s.metrics?.distanceM??s.distanceM)} m`;if(Number.isFinite(s.trackAge?.seconds))data.trackAge=`${Math.round(s.trackAge.seconds/60)} min`;if(geometry){
+ const gpsMap=source=>{
+ const segments=(Array.isArray(source?.gpsTrack?.segments)?source.gpsTrack.segments:[]).map(segment=>(Array.isArray(segment)?segment:[]).filter(p=>Number.isFinite(p?.longitude)&&Math.abs(p.longitude)<=180&&Number.isFinite(p?.latitude)&&Math.abs(p.latitude)<=90).map(p=>({x:p.longitude,y:p.latitude}))).filter(segment=>segment.length>=2);
+ return segments.length?{coordinateSpace:'wgs84',segments}:null;
+ };
+ const sessions=[...(raw.sessions||[]),...(raw.operational||[])].filter(s=>(s.kind==='coaching'&&['DEBRIEF','ARCHIVED'].includes(s.status)||s.kind==='operational'&&['Terminée','Archivée'].includes(s.status))&&!s.synthetic&&!s.demo).map(s=>{const data={title:s.title||(s.kind==='operational'?'Piste opérationnelle':'Session Coaching terminée')},geometry=(s.kind==='operational'?gpsMap(s):null)||map(s.trace?.length?s.trace:s.referenceTrace?.length?s.referenceTrace:s.plannedReferenceTrace||[]);if(s.dog?.name)data.dog={name:s.dog.name};if(Number.isFinite(s.metrics?.distanceM??s.distanceM))data.distance=`${Math.round(s.metrics?.distanceM??s.distanceM)} m`;if(Number.isFinite(s.trackAge?.seconds))data.trackAge=`${Math.round(s.trackAge.seconds/60)} min`;if(geometry){
    // Only reuse geometry explicitly stored in the completed source.
    // Never expose unpublished mission metadata or calculate a new corridor.
    const stored=s.olfactoryCorridor;
