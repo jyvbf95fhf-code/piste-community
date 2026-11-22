@@ -1,4 +1,5 @@
 import {segmentCoordinates} from './track-route-segments.mjs';
+import {buildGpsCorridor} from './coaching-corridor-model.mjs';
 import {sessionDetailView,sessionReplayView,trackListView} from './session-views.mjs';
 
 // A read-only projection of existing Community-shareable sources. OPS missions
@@ -34,8 +35,47 @@ export function expandSegmentCoordinates(points=[]){
   for(const [x,y] of coords)if(Number.isFinite(x)&&Math.abs(x)<=180&&Number.isFinite(y)&&Math.abs(y)<=90&&(!line.length||line.at(-1).x!==x||line.at(-1).y!==y))line.push({x,y});
  }flush();return groups;
 }
+
+// Build the same estimated boundaries as the archive only when the completed
+// source contains a real GPS pose and recorded wind data. No weather lookup.
+export function recordedCommunityCorridor(source){
+ if(source?.olfactoryCorridor?.enabled!==true||!source?.gpsTrack?.segments?.length)return null;
+ const pose=source.gpsTrack;
+ const end=pose.segments.flat().at(-1)?.timestamp;
+ if(!Number.isFinite(end))return null;
+ const weather=source.weatherSnapshot?.weather??source.weatherSnapshot;
+ const result=buildGpsCorridor({pose,weather,allowed:true,enabled:true,now:end+1000});
+ if(result.state!=='available')return null;
+ const polygons=[];
+ for(const feature of result.features){
+  for(const boundary of ['outerBoundary','innerBoundary']){
+   const poly=feature?.[boundary];
+   if(!Array.isArray(poly)||poly.length<3||poly.length>1000)return null;
+   const converted=poly.map(p=>({x:p.lon,y:p.lat}));
+   if(!converted.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&Math.abs(p.x)<=180&&Math.abs(p.y)<=90))return null;
+   polygons.push(converted);
+  }
+ }
+ if(!polygons.length||polygons.length>120||polygons.reduce((n,p)=>n+p.length,0)>6000)return null;
+ return {provenance:'estimated',polygons};
+}
 export function accountCommunitySourceOptions(raw={}){
  const map=points=>{const segments=expandSegmentCoordinates(points);return segments.length?{coordinateSpace:'wgs84',segments}:null;};
- const sessions=[...(raw.sessions||[]),...(raw.operational||[])].filter(s=>(s.kind==='coaching'&&['DEBRIEF','ARCHIVED'].includes(s.status)||s.kind==='operational'&&['Terminée','Archivée'].includes(s.status))&&!s.synthetic&&!s.demo).map(s=>{const data={title:s.title||(s.kind==='operational'?'Piste opérationnelle':'Session Coaching terminée')},geometry=map(s.trace?.length?s.trace:s.referenceTrace?.length?s.referenceTrace:s.plannedReferenceTrace||[]);if(s.dog?.name)data.dog={name:s.dog.name};if(Number.isFinite(s.metrics?.distanceM??s.distanceM))data.distance=`${Math.round(s.metrics?.distanceM??s.distanceM)} m`;if(Number.isFinite(s.trackAge?.seconds))data.trackAge=`${Math.round(s.trackAge.seconds/60)} min`;if(geometry)data.map=geometry;return {type:'session',id:s.communityId||s.id,label:data.title,data,availableFields:Object.keys(data)};});
+ const gpsMap=source=>{
+ const segments=(Array.isArray(source?.gpsTrack?.segments)?source.gpsTrack.segments:[]).map(segment=>(Array.isArray(segment)?segment:[]).filter(p=>Number.isFinite(p?.longitude)&&Math.abs(p.longitude)<=180&&Number.isFinite(p?.latitude)&&Math.abs(p.latitude)<=90).map(p=>({x:p.longitude,y:p.latitude}))).filter(segment=>segment.length>=2);
+ return segments.length?{coordinateSpace:'wgs84',segments}:null;
+ };
+ const sessions=[...(raw.sessions||[]),...(raw.operational||[])].filter(s=>(s.kind==='coaching'&&['DEBRIEF','ARCHIVED'].includes(s.status)||s.kind==='operational'&&['Terminée','Archivée'].includes(s.status))&&!s.synthetic&&!s.demo).map(s=>{const data={title:s.title||(s.kind==='operational'?'Piste opérationnelle':'Session Coaching terminée')},geometry=(s.kind==='operational'?gpsMap(s):null)||map(s.trace?.length?s.trace:s.referenceTrace?.length?s.referenceTrace:s.plannedReferenceTrace||[]);if(s.dog?.name)data.dog={name:s.dog.name};if(Number.isFinite(s.metrics?.distanceM??s.distanceM))data.distance=`${Math.round(s.metrics?.distanceM??s.distanceM)} m`;if(Number.isFinite(s.trackAge?.seconds))data.trackAge=`${Math.round(s.trackAge.seconds/60)} min`;if(geometry){
+   // Only reuse geometry explicitly stored in the completed source.
+   // Never expose unpublished mission metadata or calculate a new corridor.
+   const stored=s.olfactoryCorridor;
+   if(stored?.enabled===true&&stored.provenance==='estimated'&&Array.isArray(stored.polygons)){
+    const valid=stored.polygons.length<=120&&stored.polygons.every(poly=>Array.isArray(poly)&&poly.length>=3&&poly.length<=1000&&poly.every(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)&&Math.abs(p.x)<=180&&Math.abs(p.y)<=90));
+    const count=valid?stored.polygons.reduce((n,poly)=>n+poly.length,0):Infinity;
+    if(valid&&count<=6000)geometry.corridor={provenance:'estimated',polygons:stored.polygons.map(poly=>poly.map(p=>({x:p.x,y:p.y})))};
+   }
+   if(!geometry.corridor&&s.kind==='operational'){const derived=recordedCommunityCorridor(s);if(derived)geometry.corridor=derived;}
+   data.map=geometry;
+  }return {type:'session',id:s.communityId||s.id,label:data.title,data,availableFields:Object.keys(data)};});
  const tracks=(raw.tracks||[]).filter(t=>!t.demo&&!t.synthetic).map(t=>{const data={title:t.name||t.title||'Piste enregistrée',provenance:t.provenance==='gpx_import'?'Import GPX':'Piste préparée'},geometry=map(Array.isArray(t.geometry)?t.geometry:t.geometry?.points||t.points||[]);if(geometry)data.map=geometry;return {type:'track',id:t.id,label:data.title,data,availableFields:Object.keys(data)};});return [...sessions,...tracks];
 }
