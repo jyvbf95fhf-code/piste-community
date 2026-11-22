@@ -47,22 +47,22 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
  ].filter(([,value])=>value!==null&&value!==undefined&&value!=='Non renseigné');
  const modes={normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'};
  const details=ops?projection.handlerName:projection.modeLabel||modes[projection.mode];
- return `<section class="live-page live-detail live-observer-view${expanded?' live-observer-wide':''}" data-live-role="${ops?'ops_trace_observer':'observer'}">
+ return `<section class="live-page live-detail live-observer-view${expanded?' live-observer-wide live-observer-map-fullscreen':''}" data-live-role="${ops?'ops_trace_observer':'observer'}">
   <header class="live-observer-header">
    <div class="live-observer-navigation">
     <a class="back-link" href="/live">← Live</a><span class="live-observer-chip">Lecture seule</span>
-    ${ops?`<a class="button button-dark" href="${expanded?'?ecran=0':'?ecran=1'}">${expanded?'Quitter le grand écran':'Grand écran'}</a><button type="button" class="button button-dark" data-copy-ops-screen>Copier le lien grand écran</button>`:''}
+    ${ops?`<a class="button button-dark" href="${expanded?'?ecran=0':'?ecran=1'}">${expanded?'Fermer la carte':'Grand écran'}</a><button type="button" class="button button-dark" data-copy-ops-screen>Copier le lien grand écran</button>`:''}
    </div>
    <div class="live-observer-title"><h1>${e(dog||`Live ${type}`)}</h1>${dog?StatusBadge(type,ops?'terrain':'cyan'):''}</div>
    ${details?`<p>${e(details)}</p>`:''}
   </header>
   ${resultScreen?`<div class="live-observer-result" role="status"><span>Mission terminée</span><strong>${e(outcome||'Résultat en attente')}</strong></div>`:''}
-  <div class="live-observer-map">
+  <div class="live-observer-map">\n   ${expanded?`<div class="live-map-overlay-top"><strong>${e(dog||'Live OPS')}</strong><span>Lecture seule</span><a href="?ecran=0" class="live-map-close" aria-label="Fermer la carte">✕ Fermer la carte</a></div>`:''}
    <div class="live-observer-status" data-observer-activity="${activityState}" ${!resultScreen&&(phase||gps)?'':'hidden'}>
     ${phase?`<strong>${e(phase)}</strong>`:''}
     ${gps?`<span role="status">${e(gps)}</span>`:''}
    </div>
-   ${ReadOnlyRealMap(map,{label:`Carte Live ${type} · lecture seule`,followSessionId:expanded?projection.sessionId:null})}
+   ${ReadOnlyRealMap(map,{label:`Carte Live ${type} · lecture seule`,followSessionId:expanded?projection.sessionId:null,conductorMarker:ops})}
    ${metrics.length?`<dl class="live-observer-metrics">${metrics.map(([label,value])=>`<div><dt>${label}</dt><dd>${e(value)}</dd></div>`).join('')}</dl>`:''}
   </div>
   ${ops&&projection.corridor?`<p class="live-estimated-corridor">${e(projection.corridor.label)} · couche estimée autour de la trace</p>`:''}
