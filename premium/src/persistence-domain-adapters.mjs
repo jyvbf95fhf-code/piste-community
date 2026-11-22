@@ -31,5 +31,5 @@ export function preparePersistenceCandidate({kind,localId,value},{ownerId=null}=
  else if(kind==='session-dog-link'){if(typeof value.sessionId!=='string'||!value.sessionId||value.sessionId.length>180||(!value.searchOutcome&&(typeof value.dogId!=='string'||!value.dogId))||(value.dogId!==undefined&&(typeof value.dogId!=='string'||!value.dogId)))throw Error('Association invalide.');payload=pick(value,['sessionId','dogId']);if(value.searchOutcome)payload.searchOutcome=normalizeSearchOutcome(value.searchOutcome);}
  else throw Error('Domaine de sauvegarde inconnu.');
  if(value.trainingMemory&&['track','session-dog-link'].includes(kind))payload.trainingMemory=normalizeTrainingMemory(value.trainingMemory,{ownerId:ownerId||value.trainingMemory.ownerId,dogId:value.dogId});
- const result={kind,localId,payload};if(new TextEncoder().encode(JSON.stringify(result)).byteLength+512>200000)throw Error('Dossier trop volumineux : original local conservé.');return result;
+ const result={kind,localId,payload};if(new TextEncoder().encode(JSON.stringify(result)).byteLength+512>5000000)throw Error('Dossier trop volumineux : original local conservé.');return result;
 }
