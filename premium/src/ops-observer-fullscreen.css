@@ -1,0 +1,17 @@
+/* OPS observer immersive map — isolated to wide view. */
+.gps-conductor-badge{display:flex;align-items:center;justify-content:center;width:36px;height:36px;border:3px solid #38bdf8;border-radius:50%;background:#07141d;color:white;font:800 20px system-ui,sans-serif;box-shadow:0 2px 10px #000a}
+.live-observer-map-fullscreen{position:fixed!important;inset:0!important;z-index:9990!important;width:100vw!important;height:100dvh!important;max-width:none!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#08130f}
+.live-observer-map-fullscreen>.live-observer-header,.live-observer-map-fullscreen>.live-estimated-corridor,.live-observer-map-fullscreen>.live-observer-events{display:none!important}
+.live-observer-map-fullscreen>.live-observer-map{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;overflow:hidden!important}
+.live-observer-map-fullscreen .real-map-reader,.live-observer-map-fullscreen .gps-map-stage,.live-observer-map-fullscreen .gps-map{height:100%!important;min-height:100%!important;width:100%!important;max-height:none!important;border-radius:0!important}
+.live-observer-map-fullscreen .real-map-reader{position:absolute!important;inset:0!important}
+.live-observer-map-fullscreen .real-map-availability{display:none!important}
+.live-observer-map-fullscreen .live-observer-status{position:absolute!important;top:calc(env(safe-area-inset-top) + 75px)!important;left:12px!important;right:12px!important;z-index:1001!important;max-width:calc(100% - 24px)!important;padding:8px 12px!important;border-radius:12px!important;background:#081b18e8!important;pointer-events:none}
+.live-observer-map-fullscreen .live-observer-metrics{position:absolute!important;bottom:calc(env(safe-area-inset-bottom) + 12px)!important;left:12px!important;right:12px!important;z-index:1001!important;display:flex!important;gap:8px!important;justify-content:space-around!important;padding:12px!important;background:#081b18eb!important;border:1px solid #ffffff30!important;border-radius:14px!important}
+.live-observer-map-fullscreen .live-observer-metrics>div{min-width:0!important;flex:1!important}
+.live-map-overlay-top{display:none}
+.live-observer-map-fullscreen .live-map-overlay-top{position:absolute;top:0;left:0;right:0;z-index:1100;display:flex;align-items:center;gap:8px;min-height:calc(env(safe-area-inset-top) + 64px);padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:linear-gradient(#081b18f5,#081b18aa);color:#fff}
+.live-map-overlay-top strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live-map-overlay-top span{font-size:11px;opacity:.8}
+.live-map-close{margin-left:auto;padding:11px 12px;background:#13273c;color:white;border:1px solid #ffffff40;border-radius:12px;white-space:nowrap;font-size:13px;font-weight:700}
+.live-observer-map-fullscreen .gps-map-controls{top:calc(env(safe-area-inset-top) + 140px)!important}
