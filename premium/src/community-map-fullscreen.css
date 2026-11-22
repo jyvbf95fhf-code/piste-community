@@ -5,3 +5,11 @@
 .community-map-fullscreen-toolbar button{pointer-events:auto;border:1px solid #ffffff55;border-radius:12px;background:#12273de8;color:white;padding:12px;font-weight:700}
 .community-map-fullscreen-stats{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;z-index:1000;display:flex;flex-wrap:wrap;gap:8px;background:#0a201cde;color:#fff;padding:12px;border-radius:14px;pointer-events:none}
 .community-map-fullscreen-stats span{font-size:12px;line-height:1.5}
+
+/* Keep Leaflet zoom away from the close button on small iPhone screens. */
+.community-map-fullscreen .leaflet-top.leaflet-left{left:auto!important;right:12px!important;top:calc(env(safe-area-inset-top) + 76px)!important}
+.community-map-fullscreen .leaflet-control-zoom{margin:0!important}
+.community-route-marker{background:transparent;border:0}
+.community-route-marker-badge{display:flex;align-items:center;justify-content:center;width:36px;height:36px;box-sizing:border-box;border:4px solid var(--marker-color);border-radius:50%;background:#081b16;color:#fff;font:800 20px system-ui,sans-serif;box-shadow:0 2px 9px #0009}
+.community-map-fullscreen-stats{padding:9px 12px;gap:5px 14px}
+.community-map-fullscreen-stats span{font-size:12px}
