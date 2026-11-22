@@ -12,10 +12,14 @@ function paint(element,L,geometry,{fullscreen=false}={}){
   if(coords.length<2)continue;
   L.polyline(coords,{color:'#e7ba62',weight:4}).addTo(map);
   bounds.push(...coords);
-  L.circleMarker(coords[0],{radius:7,color:'#fff',fillColor:'#328b58',fillOpacity:1}).addTo(map).bindTooltip('Départ');
-  L.circleMarker(coords.at(-1),{radius:7,color:'#fff',fillColor:'#bf5555',fillOpacity:1}).addTo(map).bindTooltip('Arrivée');
  }
- if(bounds.length)map.fitBounds(bounds,{padding:[24,24],maxZoom:17});
+ // A single start/end marker for the entire shared trace, not one per segment.
+ if(bounds.length){
+  const endpoint=(point,label,color,title)=>L.marker(point,{icon:L.divIcon({className:'community-route-marker',html:`<span class="community-route-marker-badge" style="--marker-color:${color}">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]}),title,keyboard:true,zIndexOffset:1000}).addTo(map).bindTooltip(title);
+  endpoint(bounds[0],'D','#38e76a','Départ');
+  endpoint(bounds.at(-1),'A','#e76b71','Arrivée');
+  map.fitBounds(bounds,{padding:[24,24],maxZoom:17});
+ }
  const switchLayer=id=>{const next=GPS_BASE_LAYERS[id];if(!next)return;const newTiles=L.tileLayer(next.url,{maxZoom:next.maxZoom,attribution:next.attribution});newTiles.addTo(map);map.removeLayer(tiles);tiles=newTiles;};
  return {map,switchLayer};
 }
@@ -33,6 +37,10 @@ function openOverlay(element,L){
  const attachment=element.closest('.community-attachment');
  const fields=[...attachment?.querySelectorAll('.community-attachment-copy span')||[]].filter(el=>/Distance|Âge de piste|Durée|Temps|Délai/i.test(el.textContent||''));
  for(const field of fields){const item=document.createElement('span');item.textContent=field.textContent;stats.append(item);}
+ const present=fields.map(el=>el.textContent||'').join(' ').toLowerCase();
+ for(const [label,pattern] of [['Durée',/durée|temps/],['Délai',/délai|âge de piste/]]){
+  if(!pattern.test(present)){const item=document.createElement('span');item.textContent=label+' : non renseigné';stats.append(item);}
+ }
  const corridor=document.createElement('span');corridor.textContent='Couloir olfactif : indisponible dans les données partagées';stats.append(corridor);
  panel.append(mapElement,toolbar,stats);document.body.append(panel);
  overlay={element:panel,row:paint(mapElement,L,geometry,{fullscreen:true})};
