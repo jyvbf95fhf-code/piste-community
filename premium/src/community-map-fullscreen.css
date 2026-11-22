@@ -16,3 +16,7 @@
 
 /* Match OPS / Coaching endpoint markers: green start, red arrival. */
 .community-route-marker-badge{background:#071912!important;border:4px solid var(--marker-color)!important;color:#fff!important;box-shadow:0 0 0 2px #091d16,0 2px 9px #0009!important}
+
+/* Inline style attributes are forbidden by the app CSP: explicit classes are required. */
+.community-route-marker-badge.community-route-start{border-color:#38e76a!important}
+.community-route-marker-badge.community-route-end{border-color:#e76b71!important}
