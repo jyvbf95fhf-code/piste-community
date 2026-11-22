@@ -36,6 +36,16 @@ export function expandSegmentCoordinates(points=[]){
 }
 export function accountCommunitySourceOptions(raw={}){
  const map=points=>{const segments=expandSegmentCoordinates(points);return segments.length?{coordinateSpace:'wgs84',segments}:null;};
- const sessions=[...(raw.sessions||[]),...(raw.operational||[])].filter(s=>(s.kind==='coaching'&&['DEBRIEF','ARCHIVED'].includes(s.status)||s.kind==='operational'&&['Terminée','Archivée'].includes(s.status))&&!s.synthetic&&!s.demo).map(s=>{const data={title:s.title||(s.kind==='operational'?'Piste opérationnelle':'Session Coaching terminée')},geometry=map(s.trace?.length?s.trace:s.referenceTrace?.length?s.referenceTrace:s.plannedReferenceTrace||[]);if(s.dog?.name)data.dog={name:s.dog.name};if(Number.isFinite(s.metrics?.distanceM??s.distanceM))data.distance=`${Math.round(s.metrics?.distanceM??s.distanceM)} m`;if(Number.isFinite(s.trackAge?.seconds))data.trackAge=`${Math.round(s.trackAge.seconds/60)} min`;if(geometry)data.map=geometry;return {type:'session',id:s.communityId||s.id,label:data.title,data,availableFields:Object.keys(data)};});
+ const sessions=[...(raw.sessions||[]),...(raw.operational||[])].filter(s=>(s.kind==='coaching'&&['DEBRIEF','ARCHIVED'].includes(s.status)||s.kind==='operational'&&['Terminée','Archivée'].includes(s.status))&&!s.synthetic&&!s.demo).map(s=>{const data={title:s.title||(s.kind==='operational'?'Piste opérationnelle':'Session Coaching terminée')},geometry=map(s.trace?.length?s.trace:s.referenceTrace?.length?s.referenceTrace:s.plannedReferenceTrace||[]);if(s.dog?.name)data.dog={name:s.dog.name};if(Number.isFinite(s.metrics?.distanceM??s.distanceM))data.distance=`${Math.round(s.metrics?.distanceM??s.distanceM)} m`;if(Number.isFinite(s.trackAge?.seconds))data.trackAge=`${Math.round(s.trackAge.seconds/60)} min`;if(geometry){
+   // Only reuse geometry explicitly stored in the completed source.
+   // Never expose unpublished mission metadata or calculate a new corridor.
+   const stored=s.olfactoryCorridor;
+   if(stored?.enabled===true&&stored.provenance==='estimated'&&Array.isArray(stored.polygons)){
+    const valid=stored.polygons.length<=120&&stored.polygons.every(poly=>Array.isArray(poly)&&poly.length>=3&&poly.length<=1000&&poly.every(p=>Number.isFinite(p?.x)&&Number.isFinite(p?.y)&&Math.abs(p.x)<=180&&Math.abs(p.y)<=90));
+    const count=valid?stored.polygons.reduce((n,poly)=>n+poly.length,0):Infinity;
+    if(valid&&count<=6000)geometry.corridor={provenance:'estimated',polygons:stored.polygons.map(poly=>poly.map(p=>({x:p.x,y:p.y})))};
+   }
+   data.map=geometry;
+  }return {type:'session',id:s.communityId||s.id,label:data.title,data,availableFields:Object.keys(data)};});
  const tracks=(raw.tracks||[]).filter(t=>!t.demo&&!t.synthetic).map(t=>{const data={title:t.name||t.title||'Piste enregistrée',provenance:t.provenance==='gpx_import'?'Import GPX':'Piste préparée'},geometry=map(Array.isArray(t.geometry)?t.geometry:t.geometry?.points||t.points||[]);if(geometry)data.map=geometry;return {type:'track',id:t.id,label:data.title,data,availableFields:Object.keys(data)};});return [...sessions,...tracks];
 }
