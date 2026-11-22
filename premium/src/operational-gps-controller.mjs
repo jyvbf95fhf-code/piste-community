@@ -14,6 +14,17 @@ export function createOperationalGpsController({getContext,getStore,render=()=>{
   if(fix){lastPosition=position;lastReceived=now;status='fresh';if(c.mission.gpsNeedsResume)getStore().resumeGps(c.mission.id,c.user.user_id);if(c.mission.status==='En cours')getStore().appendGpsPoint(c.mission.id,position);}else{status='poor';gap();}
   changed();
  },onStatus(value){if(value.startsWith('wake-'))wake=value==='wake-active'?'active':'unavailable';else status=value;changed();},onGap(){lastPosition=null;gap();}});
+ function autoResume(){
+  const c=getContext();
+  if(document?.visibilityState==='hidden'||!c||!ownsOperationalGps(c)||c.mission.status!=='En cours'||c.mission.trackingState!=='active')return;
+  if(sensor.running()||status!=='hidden')return;
+  // Restore the watch only; the persisted GPS gap is closed on the first valid fix.
+  connect();
+ }
+ const onForeground=()=>autoResume();
+ document?.addEventListener('visibilitychange',onForeground);
+ globalThis.addEventListener?.('pageshow',onForeground);
+ globalThis.addEventListener?.('focus',onForeground);
  function connect(){stop();const c=getContext();bound={missionId:c.mission.id,ownerId:c.user.user_id};status='acquiring';sensor.start();timer=schedule(()=>{const context=getContext();if(!same(context)){gap();stop();return;}if(lastReceived!==null&&clock()-lastReceived>15000&&status==='fresh'){status='stale';lastPosition=null;gap();changed();}},5000);}
  return {
   view(){return {running:sensor.running(),status,wake,lastFix:normalizeGpsFix(lastPosition,clock()),warning:getStore().persistenceWarning?.()||''};},
@@ -22,6 +33,6 @@ export function createOperationalGpsController({getContext,getStore,render=()=>{
   seed(){const c=getContext();if(same(c)&&lastPosition&&c.mission.status==='En cours')getStore().appendGpsPoint(c.mission.id,lastPosition);},
   reconcile(){if(bound&&!same(getContext())){gap();stop();}},
   pause(){gap();stop();status='hidden';},
-  dispose(){gap();stop();sensor.destroy();}
+  dispose(){document?.removeEventListener('visibilitychange',onForeground);globalThis.removeEventListener?.('pageshow',onForeground);globalThis.removeEventListener?.('focus',onForeground);gap();stop();sensor.destroy();}
  };
 }
