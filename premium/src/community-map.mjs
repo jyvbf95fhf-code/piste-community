@@ -1,6 +1,7 @@
 import {GPS_BASE_LAYERS} from './coaching-gps-screen.mjs';
 const mounted=new Map();
 let overlay=null;
+let escapeHandler=null;
 function paint(element,L,geometry,{fullscreen=false}={}){
  const map=L.map(element,{scrollWheelZoom:fullscreen,zoomControl:true});
  const layer=GPS_BASE_LAYERS.aerial;
@@ -18,7 +19,7 @@ function paint(element,L,geometry,{fullscreen=false}={}){
  const switchLayer=id=>{const next=GPS_BASE_LAYERS[id];if(!next)return;const newTiles=L.tileLayer(next.url,{maxZoom:next.maxZoom,attribution:next.attribution});newTiles.addTo(map);map.removeLayer(tiles);tiles=newTiles;};
  return {map,switchLayer};
 }
-function closeOverlay(){if(!overlay)return;overlay.row.map.remove();overlay.element.remove();overlay=null;}
+function closeOverlay(){if(escapeHandler){document.removeEventListener('keydown',escapeHandler);escapeHandler=null;}if(!overlay)return;overlay.row.map.remove();overlay.element.remove();overlay=null;}
 function openOverlay(element,L){
  closeOverlay();let geometry;try{geometry=JSON.parse(element.dataset.communityMap);}catch{return;}
  const panel=document.createElement('section');panel.className='community-map-fullscreen';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Carte de la publication en grand écran');
@@ -36,7 +37,7 @@ function openOverlay(element,L){
  panel.append(mapElement,toolbar,stats);document.body.append(panel);
  overlay={element:panel,row:paint(mapElement,L,geometry,{fullscreen:true})};
  requestAnimationFrame(()=>overlay?.row.map.invalidateSize());
- const key=e=>{if(e.key==='Escape'){closeOverlay();document.removeEventListener('keydown',key);}};document.addEventListener('keydown',key,{once:false});
+ escapeHandler=e=>{if(e.key==='Escape')closeOverlay();};document.addEventListener('keydown',escapeHandler);
 }
 export function mountCommunityMaps(root=globalThis.document,{L=globalThis.L,IntersectionObserver=globalThis.IntersectionObserver}={}){
  for(const [element,row] of mounted)if(!element.isConnected){row.observer?.disconnect();row.map?.remove();mounted.delete(element);}
