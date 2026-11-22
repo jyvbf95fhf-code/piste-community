@@ -1,0 +1,7 @@
+.community-map-expand{display:block;margin:8px 0 12px auto;padding:9px 13px;background:#183146;color:#fff;border:1px solid #547082;border-radius:10px;font-weight:650}
+.community-map-fullscreen{position:fixed;inset:0;z-index:99999;background:#06140e}
+.community-map-fullscreen-canvas{position:absolute;inset:0;width:100%;height:100%}
+.community-map-fullscreen-toolbar{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:12px;right:12px;display:flex;justify-content:space-between;gap:10px;z-index:1000;pointer-events:none}
+.community-map-fullscreen-toolbar button{pointer-events:auto;border:1px solid #ffffff55;border-radius:12px;background:#12273de8;color:white;padding:12px;font-weight:700}
+.community-map-fullscreen-stats{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 12px);left:12px;right:12px;z-index:1000;display:flex;flex-wrap:wrap;gap:8px;background:#0a201cde;color:#fff;padding:12px;border-radius:14px;pointer-events:none}
+.community-map-fullscreen-stats span{font-size:12px;line-height:1.5}
