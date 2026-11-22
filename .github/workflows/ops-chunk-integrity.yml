@@ -1,0 +1,26 @@
+name: OPS chunk integrity (isolated)
+on:
+  pull_request:
+    paths:
+      - 'premium/src/ops-sync-chunks.mjs'
+      - 'premium/tests/ops-sync-chunks.test.mjs'
+      - '.github/workflows/ops-chunk-integrity.yml'
+  push:
+    branches:
+      - 'fix/ops-large-sync-safe-20261122'
+    paths:
+      - 'premium/src/ops-sync-chunks.mjs'
+      - 'premium/tests/ops-sync-chunks.test.mjs'
+      - '.github/workflows/ops-chunk-integrity.yml'
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate OPS chunk integrity and recovery
+        run: node --test premium/tests/ops-sync-chunks.test.mjs
