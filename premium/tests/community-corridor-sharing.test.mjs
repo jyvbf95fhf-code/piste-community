@@ -20,3 +20,9 @@ test('missing recorded wind never creates a corridor',()=>{
  const source={olfactoryCorridor:{enabled:true},gpsTrack:{segments:[[{latitude:48.1,longitude:7.1,timestamp:t},{latitude:48.1005,longitude:7.1005,timestamp:t+60000}]]}};
  assert.equal(recordedCommunityCorridor(source),null);
 });
+
+test('completed OPS publication uses actual GPS segments instead of missing trace',()=>{
+ const t=Date.parse('2026-11-22T09:00:00Z');
+ const sources=accountCommunitySourceOptions({operational:[{id:'ops-gps',kind:'operational',status:'Archivée',gpsTrack:{segments:[[{latitude:48.1,longitude:7.1,timestamp:t},{latitude:48.2,longitude:7.2,timestamp:t+60000}]]}}]});
+ assert.deepEqual(sources[0].data.map.segments,[[{x:7.1,y:48.1},{x:7.2,y:48.2}]]);
+});
