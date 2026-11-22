@@ -15,7 +15,7 @@ function paint(element,L,geometry,{fullscreen=false}={}){
  }
  // A single start/end marker for the entire shared trace, not one per segment.
  if(bounds.length){
-  const endpoint=(point,label,color,title)=>L.marker(point,{icon:L.divIcon({className:'community-route-marker',html:`<span class="community-route-marker-badge" style="--marker-color:${color}">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]}),title,keyboard:true,zIndexOffset:1000}).addTo(map).bindTooltip(title);
+  const endpoint=(point,label,color,title)=>L.marker(point,{icon:L.divIcon({className:'community-route-marker',html:`<span class="community-route-marker-badge ${label==='D'?'community-route-start':'community-route-end'}">${label}</span>`,iconSize:[36,36],iconAnchor:[18,18]}),title,keyboard:true,zIndexOffset:1000}).addTo(map).bindTooltip(title);
   endpoint(bounds[0],'D','#38e76a','Départ');
   endpoint(bounds.at(-1),'A','#e76b71','Arrivée');
   map.fitBounds(bounds,{padding:[24,24],maxZoom:17});
