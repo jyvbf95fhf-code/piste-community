@@ -1186,10 +1186,14 @@ function outcomeStatsRows(){return pisteCatalogue().sessions.map(outcomeForRow).
 function opsEditAction(mission) {
  if (!mission || mission.ownerUserId !== currentUser?.user_id || mission.status === 'Archivée') return '';
  const label=mission.cloudReadOnly || mission.status==='Terminée' ? 'Rouvrir la fiche OPS' : 'Modifier la mission OPS';
- return `<button type="button" class="button button-gold" data-ops-edit-saved="${escapeHTML(mission.id)}">${label}</button>`;
+ const id=escapeHTML(mission.id);
+ const mayArchive=mission.trackingState==='stopped'&&['À compléter','Terminée'].includes(mission.status);
+ const archiveLabel=mission.status==='Terminée'?'Archiver la mission':'Terminer et archiver la mission';
+ return `<button type="button" class="button button-gold" data-ops-edit-saved="${id}">${label}</button>`+
+  (mayArchive?`<button type="button" class="button button-dark" data-ops-archive-saved="${id}">${archiveLabel}</button>`:'');
 }
 
-async function openSavedOpsMission(id) {
+async function openSavedOpsMission(id,{archive=false}={}) {
  const ownerId=currentUser?.user_id;
  let mission=operationalStore.get(id);
  if (!mission) {
@@ -1207,6 +1211,17 @@ async function openSavedOpsMission(id) {
   } finally { journal.dispose(); }
  }
  if (currentUser?.user_id!==ownerId || operationalStore.get(id)?.cloudRevision!==mission.cloudRevision) throw Error('La mission OPS a changé.');
+ if (archive && (mission.trackingState!=='stopped'||!['À compléter','Terminée'].includes(mission.status))) {
+  throw Error('Arrêtez le suivi GPS avant d’archiver la mission.');
+ }
+ if (archive) {
+  operationalStore.archiveSavedMission(id);
+  accountAuto?.schedule({changed:true});
+  history.replaceState({},'','/sessions/'+encodeURIComponent(id));
+  render(true);
+  Toast(operationalStore.persistenceWarning()||'Mission archivée.');
+  return;
+ }
  operationalStore.reopenSavedMission(id);
  operationalUI={...operationalUI,showDetails:true,terrainMissionId:null};
  history.pushState({},'','/operational/missions/'+encodeURIComponent(id));
@@ -1437,10 +1452,11 @@ document.addEventListener('click',async event=>{
  if(operationalMapMode){const mode=operationalMapMode.dataset.operationalMapMode;const mission=operationalStore.get(resolveOperationalRoute(location.pathname)?.missionId);if(mode==='progress'&&mission?.trackingState!=='active'){Toast('La progression est indisponible pendant la pause.');return;}operationalUI={...operationalUI,mode:operationalUI.mode===mode?'':mode};render();return;}
  const opsControl=event.target.closest('[data-ops]');
  if(opsControl){const action=opsControl.dataset.ops;if(action==='events')operationalUI={...operationalUI,eventsOpen:true,notice:''};else if(action==='close-events')operationalUI={...operationalUI,eventsOpen:false};else if(action==='details')operationalUI={...operationalUI,showDetails:true};else if(action==='cockpit')operationalUI={...operationalUI,showDetails:false};render();return;}
- const savedOpsButton=event.target.closest('[data-ops-edit-saved]');
+ const savedOpsButton=event.target.closest('[data-ops-edit-saved],[data-ops-archive-saved]');
  if(savedOpsButton){
+  const archiveId=savedOpsButton.dataset.opsArchiveSaved;
   savedOpsButton.disabled=true;
-  void openSavedOpsMission(savedOpsButton.dataset.opsEditSaved).catch(error=>Toast(error.message))
+  void openSavedOpsMission(archiveId||savedOpsButton.dataset.opsEditSaved,{archive:!!archiveId}).catch(error=>Toast(error.message))
     .finally(()=>{savedOpsButton.disabled=false;});
   return;
  }

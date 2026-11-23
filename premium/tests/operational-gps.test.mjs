@@ -44,3 +44,25 @@ test('reopening a cloud OPS mission preserves the GPS track and permits completi
   assert.equal(backup.payload.id, original.id);
   assert.equal(backup.payload.details.result, 'Résultat renseigné');
 });
+
+test('a stopped OPS cloud copy can be completed and archived directly', () => {
+  const values = new Map();
+  const storage = {getItem: key => values.get(key) || null, setItem: (key, value) => values.set(key, value)};
+  const original = setup();
+  original.store.enableGps(original.id, 'user-a');
+  original.store.startTracking(original.id);
+  original.store.appendGpsPoint(original.id, fix(start));
+  original.at(10000);
+  const payload = original.store.stopTracking(original.id);
+  const options = {ownerId: 'user-a', storage, clock: () => start + 3600000};
+  const store = createOperationalMissionStore(options);
+  const cloud = store.restoreCloud({
+    kind: 'ops', id: '236d2ca3-2413-4fe4-b470-e4b132a09c08', revision: 1,
+    schemaVersion: 1, deletedAt: null, updatedAt: new Date(start).toISOString(), payload
+  });
+  const archived = store.archiveSavedMission(cloud.id);
+  assert.equal(archived.status, 'Archivée');
+  assert.equal(archived.completedAt, new Date(options.clock()).toISOString());
+  assert.deepEqual(archived.gpsTrack.segments, payload.gpsTrack.segments);
+  assert.equal(createOperationalMissionStore(options).get(cloud.id).status, 'Archivée');
+});

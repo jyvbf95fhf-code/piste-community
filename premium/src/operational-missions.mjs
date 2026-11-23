@@ -317,7 +317,18 @@ export function createOperationalMissionStore({
       if(!OPERATIONAL_MISSION_STATUSES.includes(mission.status))throw Error('Dossier OPS invalide.');const next=[...records.values()].filter(m=>m.cloudReadOnly&&m.id!==mission.id);next.push(mission);
       if(!storage)throw Error('Stockage local indisponible.');storage.setItem(cloudKey,JSON.stringify({version:1,ownerId,missions:next}));records.set(mission.id,mission);return snapshot(mission);
     },
-    reopenSavedMission(id) {
+    archiveSavedMission(id) {
+      const previous = records.get(id);
+      if (!ownerId || previous?.ownerUserId !== ownerId || previous.trackingState !== 'stopped' ||
+          !['À compléter', 'Terminée'].includes(previous.status)) {
+        throw Error('Cette mission OPS ne peut pas être archivée.');
+      }
+      const mission = previous.cloudReadOnly ? this.reopenSavedMission(id, {keepCompletion: true}) : previous;
+      if (mission.status === 'À compléter') this.complete(id);
+      return this.archive(id);
+    },
+
+    reopenSavedMission(id, {keepCompletion = false} = {}) {
       const previous = records.get(id);
       if (!ownerId || previous?.ownerUserId !== ownerId || previous.status === 'Archivée') {
         throw Error('Cette mission OPS ne peut pas être reprise.');
@@ -340,7 +351,7 @@ export function createOperationalMissionStore({
           );
           if (!Number.isFinite(stopAt)) throw Error('Heure du dernier enregistrement OPS indisponible.');
           stopTracking(id, stopAt, false);
-        } else if (mission.status === 'Terminée') {
+        } else if (mission.status === 'Terminée' && !keepCompletion) {
           mission.status = 'À compléter';
           mission.completedAt = null;
         }
