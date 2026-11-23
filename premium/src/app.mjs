@@ -1022,7 +1022,7 @@ function render(focus=false) {
  void communityAutoPublication?.sync(jumolfRawSources());
  reconcileOpsLive();reconcileOpsLiveRoute(route);reconcileFriendLive();void tickOpsLive();updateLiveBadge();
  const operationalRoute=resolveOperationalRoute(route);
- const operationalMission=operationalRoute?.missionId?operationalStore.get(operationalRoute.missionId):null;
+ const operationalMission=operationalRoute?.missionId?(operationalStore.get(operationalRoute.missionId)||pisteCloudMission(operationalRoute.missionId)):null;
  const operationalView=operationalMission?operationalMissionView(operationalMission,{dogs:dogsStore.list()}):null;
  const consultation=resolveConsultationRoute(route);
  if(route!==scientificEntry)history.replaceState({},'',`${route}${location.search}${location.hash}`);
@@ -1064,7 +1064,7 @@ function render(focus=false) {
  if(remoteCoachingKey!==remoteKey){if(remoteCoachingMount&&!['/coaching/session','/new-session'].includes(route))void remoteCoachingMount.endBroadcast?.().catch(()=>Toast('Arrêt du Live Coaching en attente de reconnexion.'));remoteCoachingMount?.destroy();remoteCoachingMount=null;remoteCoachingRoot=null;remoteCoachingKey=remoteKey;}
  if(remoteCoachingRoot)remoteCoachingRoot.remove();
  const remoteMarkup='<div data-remote-premium-slot class="remote-shell remote-embedded"></div>';
- const content=route==='/statistics'?`<section class="statistics-page"><h1>Statistiques terrain</h1>${OutcomeStatistics(outcomeStatsRows())}</section>`:remoteCoaching?remoteMarkup+(route==='/sessions'?renderSessions():''):adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||(auth.assurance==='supabase-auth'?'<section class="card"><h1>Contribution scientifique</h1><p>Aucun dossier réel n’est transmis à un corpus partagé. Vos analyses personnelles restent disponibles dans Science et JUMOLF, selon vos droits et autorisations.</p><a href="/scientific">Science</a></section>':scientificContributionController.screen(route)):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?(operationalRoute.type==='replay'||operationalMission?.cloudReadOnly)?OperationalReplayScreen(operationalReplayView(operationalMission),{weather:(operationalMission?.cloudReadOnly&&operationalMission.weatherSnapshot)||opsWeather.snapshot(operationalMission)}):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:(operationalRoute.type==='after'?accountDogs():trackingDogs()).sort((a,b)=>Number(b.id===defaultTrackingDog()?.id)-Number(a.id===defaultTrackingDog()?.id)),view:operationalView,livePolicy:operationalMission?{...opsLivePolicy(operationalMission.id),premiumRequired:auth.assurance==='supabase-auth'&&!hasLivePremium(jumolfAccess()),broadcastEnded:opsLiveRemote?.broadcastEnded(operationalMission.id)}:{},ui:{...operationalUI,realMode:auth.assurance==='supabase-auth',gps:opsGps.view(),weather:opsWeather.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:currentUser.user_id||'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?renderPisteNotifications():route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?'<div class="dogs-premium-page">'+renderDogs(dogsRoute)+'</div>':communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list(),includeDemoRows:auth.assurance!=='supabase-auth'}),jumolfAccess(),adminStore.accessFor(currentUser).allowed,coachingInvitationCards()+liveNotices(),betaWelcome.visible()?BetaGuide({ownerId:currentUser.user_id}):''):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
+ const content=route==='/statistics'?`<section class="statistics-page"><h1>Statistiques terrain</h1>${OutcomeStatistics(outcomeStatsRows())}</section>`:remoteCoaching?remoteMarkup+(route==='/sessions'?renderSessions():''):adminRoute?adminController.screen(adminRoute):scientificContent||scientificContributionRoute?scientificContent||(auth.assurance==='supabase-auth'?'<section class="card"><h1>Contribution scientifique</h1><p>Aucun dossier réel n’est transmis à un corpus partagé. Vos analyses personnelles restent disponibles dans Science et JUMOLF, selon vos droits et autorisations.</p><a href="/scientific">Science</a></section>':scientificContributionController.screen(route)):profileRoute?renderProfile(profileRoute):jumolfContent|| (operationalTerrain?OperationalTerrainScreen(operationalView):operationalRoute?(operationalRoute.type==='replay'||operationalMission?.cloudReadOnly)?(operationalRoute.type==='mission'?opsEditAction(operationalMission):'')+OperationalReplayScreen(operationalReplayView(operationalMission),{weather:(operationalMission?.cloudReadOnly&&operationalMission.weatherSnapshot)||opsWeather.snapshot(operationalMission)}):OperationalScreen({route:operationalRoute,missions:operationalStore.list(),dogs:(operationalRoute.type==='after'?accountDogs():trackingDogs()).sort((a,b)=>Number(b.id===defaultTrackingDog()?.id)-Number(a.id===defaultTrackingDog()?.id)),view:operationalView,livePolicy:operationalMission?{...opsLivePolicy(operationalMission.id),premiumRequired:auth.assurance==='supabase-auth'&&!hasLivePremium(jumolfAccess()),broadcastEnded:opsLiveRemote?.broadcastEnded(operationalMission.id)}:{},ui:{...operationalUI,realMode:auth.assurance==='supabase-auth',gps:opsGps.view(),weather:opsWeather.view(),allowGps:canUseOperationalGps(operationalGpsContext()),handler:{id:currentUser.user_id||'mock-current-user',name:currentUser.name}}}):route.startsWith('/live')?renderLive(route):route==='/notifications'?renderPisteNotifications():route==='/notifications/preferences'?NotificationPreferencesScreen(communityStore.getNotificationStore(),communityStore.viewerId):dogsRoute?'<div class="dogs-premium-page">'+renderDogs(dogsRoute)+'</div>':communityRoute?renderCommunity(communityRoute):consultation?.type==='session-list'?renderSessions():consultation?.type==='session-detail'?renderSessionDetail(consultation.id):consultation?.type==='session-debrief'?renderSessionDebrief(consultation.id):consultation?.type==='session-replay'?renderSessionReplay(consultation.id):consultation?.type==='track-list'?renderTracks():consultation?.type==='track-detail'?renderTrackDetail(consultation.id):route==='/'?HomeScreen(currentUser,homeActiveSessionView(sessionCatalog,mock.activeSessions,{currentSessionId:coachingDraft.session?.id,...sharedOptions(),operationalMissions:operationalStore.list(),includeDemoRows:auth.assurance!=='supabase-auth'}),jumolfAccess(),adminStore.accessFor(currentUser).allowed,coachingInvitationCards()+liveNotices(),betaWelcome.visible()?BetaGuide({ownerId:currentUser.user_id}):''):route==='/new-session'?CoachingScreen(coachingDraftWithContacts(coachingDraft,communityStore),'',trackLibrary.list(),authorizedCoachingContacts(communityStore),coachingDraft.session?communityLiveStore.getSessionPolicy('coaching',coachingDraft.session.id):{},coachingReferenceAssignmentView(),coachingReferenceDelegationView()):route==='/coaching/session'?renderPreparation():route==='/qa/coaching'?renderCoachingQa():route==='/track-builder'?renderTrackEditor():PlaceholderScreen(route,currentUser,jumolfAccess()));
  const shellMarkup=route.startsWith('/auth') ? AuthScreen(route,{notice:authNotice}) : AppShell((premiumWelcome.visible({ownerId:currentUser?.user_id,access:jumolfAccess(),verified:auth.assurance==='supabase-auth',route})?PremiumRecap({welcome:true,ownerId:currentUser.user_id}):'')+placeOutcomePanel(content,outcomeRoutePanel(route))+exportPanelForRoute(route),route,currentUser.name,currentUser.initials || currentUser.name.slice(0,1),themeForRoute(route),notificationUnreadCount(),{realMode:auth.assurance==='supabase-auth'});
  const archiveRoot=document.querySelector('.tracks-page'),archiveIdentity={route:route+location.search,ownerId:currentUser?.user_id,html:shellMarkup,force:focus};
  if(retainArchiveRender({...archiveIdentity,root:archiveRoot})){
@@ -1183,12 +1183,42 @@ function outcomeForDossier(v,domain,id){const c=outcomeContext(domain,id);return
 function outcomeRoutePanel(route){const op=resolveOperationalRoute(route);if(op?.missionId)return outcomePanel('ops',op.missionId);const match=route.match(/^\/sessions\/([^/]+)(?:\/(?:debrief|replay))?$/);if(match){const id=decodeURIComponent(match[1]);return outcomePanel(operationalStore.get(id)||pisteCloudMission(id)?'ops':'coaching',id);}return '';}
 function outcomeStatsRows(){return pisteCatalogue().sessions.map(outcomeForRow).filter(r=>!['Brouillon','En cours','En préparation','En pause','À reprendre'].includes(r.status));}
 
+function opsEditAction(mission) {
+ if (!mission || mission.ownerUserId !== currentUser?.user_id || mission.status === 'Archivée') return '';
+ const label=mission.cloudReadOnly || mission.status==='Terminée' ? 'Rouvrir la fiche OPS' : 'Modifier la mission OPS';
+ return `<button type="button" class="button button-gold" data-ops-edit-saved="${escapeHTML(mission.id)}">${label}</button>`;
+}
+
+async function openSavedOpsMission(id) {
+ const ownerId=currentUser?.user_id;
+ let mission=operationalStore.get(id);
+ if (!mission) {
+  await accountAuto?.cycle({forcePull:true});
+  mission=operationalStore.get(id);
+ }
+ if (!mission || mission.ownerUserId!==ownerId || currentUser?.user_id!==ownerId) throw Error('Sauvegarde OPS indisponible sur cet appareil.');
+ if (mission.cloudReadOnly) {
+  const journal=createPersistenceJournal({ownerId});
+  try {
+   const record=await journal.lookup({kind:'ops',localId:id});
+   if (!record || record.id!==mission.cloudId || record.revision!==mission.cloudRevision || record.deletedAt) {
+    throw Error('Actualisez la sauvegarde OPS avant de rouvrir cette mission.');
+   }
+  } finally { journal.dispose(); }
+ }
+ if (currentUser?.user_id!==ownerId || operationalStore.get(id)?.cloudRevision!==mission.cloudRevision) throw Error('La mission OPS a changé.');
+ operationalStore.reopenSavedMission(id);
+ operationalUI={...operationalUI,showDetails:true,terrainMissionId:null};
+ history.pushState({},'','/operational/missions/'+encodeURIComponent(id));
+ render(true);
+}
+
 function renderSessionDetail(id){
  const params=new URLSearchParams(location.search),tab=params.get('tab')||'summary',from=params.get('from'),back=from&&/^\/(?:tracks|jumolf\/progress)(?:\?|$)/.test(from)?from:'/tracks';
  const p=sharedIndex?.get(id);
  if(p)return SessionRemovalMenu(sessionPolicy(id))+SessionDossierScreen(outcomeForDossier(sharedSessionDossier(p,{training:trainingMemoryFor(p)}),'coaching',id),{tab,back,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.'});
  const operational=operationalStore.get(id)||pisteCloudMission(id);
- if(operational){const menu=SessionRemovalMenu(sessionPolicy(id));const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return menu+(v?SessionDossierScreen(outcomeForDossier(v,operationalStore.get(id)||pisteCloudMission(id)?'ops':'coaching',id),{tab,back}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)}));}
+ if(operational){const menu=SessionRemovalMenu(sessionPolicy(id));const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return menu+opsEditAction(operational)+(v?SessionDossierScreen(outcomeForDossier(v,operationalStore.get(id)||pisteCloudMission(id)?'ops':'coaching',id),{tab,back}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)}));}
  const record=sessionCatalog.get(id);
  if(record){const v=localSessionDossier(record);return SessionRemovalMenu(sessionPolicy(id))+(v?SessionDossierScreen(outcomeForDossier(v,operationalStore.get(id)||pisteCloudMission(id)?'ops':'coaching',id),{tab,back}):SessionDetailScreen(sessionDetailView(record,{currentSessionId:coachingDraft.session?.id})));}
  const row=auth.assurance!=='supabase-auth'?sessionListView(sessionCatalog,{}).find(item=>item.id===id&&item.kind==='summary-demo'):null;
@@ -1407,6 +1437,13 @@ document.addEventListener('click',async event=>{
  if(operationalMapMode){const mode=operationalMapMode.dataset.operationalMapMode;const mission=operationalStore.get(resolveOperationalRoute(location.pathname)?.missionId);if(mode==='progress'&&mission?.trackingState!=='active'){Toast('La progression est indisponible pendant la pause.');return;}operationalUI={...operationalUI,mode:operationalUI.mode===mode?'':mode};render();return;}
  const opsControl=event.target.closest('[data-ops]');
  if(opsControl){const action=opsControl.dataset.ops;if(action==='events')operationalUI={...operationalUI,eventsOpen:true,notice:''};else if(action==='close-events')operationalUI={...operationalUI,eventsOpen:false};else if(action==='details')operationalUI={...operationalUI,showDetails:true};else if(action==='cockpit')operationalUI={...operationalUI,showDetails:false};render();return;}
+ const savedOpsButton=event.target.closest('[data-ops-edit-saved]');
+ if(savedOpsButton){
+  savedOpsButton.disabled=true;
+  void openSavedOpsMission(savedOpsButton.dataset.opsEditSaved).catch(error=>Toast(error.message))
+    .finally(()=>{savedOpsButton.disabled=false;});
+  return;
+ }
  const operationalAction=event.target.closest('[data-operational-action]');
  if(operationalAction){
   const missionId=operationalAction.closest('[data-operational-status]')?.dataset.operationalMissionId||resolveOperationalRoute(location.pathname)?.missionId;

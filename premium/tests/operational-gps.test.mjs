@@ -1,5 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {createOperationalMissionStore} from '../src/operational-missions.mjs';
+import {preparePersistenceCandidate} from '../src/persistence-domain-adapters.mjs';
 const start=Date.parse('2026-10-13T18:00:00Z');
 const dog={id:'dog',name:'Ninja'},handler={id:'mock-current-user',name:'Conducteur'};
 const fix=(timestamp,longitude=7.39,accuracy=5)=>({timestamp,coords:{latitude:48.29,longitude,accuracy}});
@@ -10,3 +11,36 @@ test('pause freezes active chrono, excludes paused movement and resumes with a g
 test('stop freezes GPS and permits completion and archive without losing the trace',()=>{const f=setup();assert.equal(typeof f.store.enableGps,'function');f.store.enableGps(f.id,'user-a');f.store.startTracking(f.id);f.store.appendGpsPoint(f.id,fix(start));f.at(5000);const stopped=f.store.stopTracking(f.id);assert.equal(stopped.gpsTrack.phase,'finished');assert.equal(stopped.status,'À compléter');assert.throws(()=>f.store.appendGpsPoint(f.id,fix(start+5000)));f.store.complete(f.id);assert.equal(f.store.archive(f.id).gpsTrack.segments.flat().length,1);});
 test('real field events use a fresh GPS point and do not invent an unavailable position',()=>{const f=setup();assert.equal(typeof f.store.enableGps,'function');f.store.enableGps(f.id,'user-a');f.store.startTracking(f.id);let m=f.store.addGpsEvent(f.id,{type:'Indice',note:'Repère',position:fix(start)});assert.equal(m.events[0].point.space,'wgs84');assert.equal(m.events[0].point.latitude,48.29);m=f.store.addGpsEvent(f.id,{type:'Rupture',position:fix(start-30000)});assert.equal(m.events[1].point,null);assert.throws(()=>f.store.addEvent(f.id,{type:'Indice',point:{x:1,y:2}}));});
 test('reload restores owner-scoped real missions with a GPS gap and explicit resume requirement',()=>{const saved=new Map(),storage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)};const f=setup(storage);assert.equal(typeof f.store.enableGps,'function');f.store.enableGps(f.id,'user-a');f.store.startTracking(f.id);f.store.appendGpsPoint(f.id,fix(start));const reloaded=createOperationalMissionStore({clock:f.clock,ownerId:'user-a',storage});assert.equal(reloaded.get(f.id).gpsTrack.segments.flat().length,1);assert.equal(reloaded.get(f.id).gpsNeedsResume,true);assert.equal(reloaded.get(f.id).gpsTrack.gap,true);const other=createOperationalMissionStore({ownerId:'user-b',storage});assert.equal(other.get(f.id),null);});
+
+test('reopening a cloud OPS mission preserves the GPS track and permits completion after reload', () => {
+  const saved = new Map();
+  const storage = {getItem: key => saved.get(key) || null, setItem: (key, value) => saved.set(key, value)};
+  const original = setup();
+  original.store.enableGps(original.id, 'user-a');
+  original.store.startTracking(original.id);
+  original.at(10000);
+  const payload = original.store.appendGpsPoint(original.id, fix(start + 10000));
+  const options = {ownerId: 'user-a', storage, clock: () => start + 3600000};
+  const store = createOperationalMissionStore(options);
+  const cloud = store.restoreCloud({
+    kind: 'ops', id: '236d2ca3-2413-4fe4-b470-e4b132a09c08', revision: 1,
+    schemaVersion: 1, deletedAt: null, updatedAt: new Date(start).toISOString(), payload
+  });
+  const reopened = store.reopenSavedMission(cloud.id);
+  assert.equal(reopened.status, 'À compléter');
+  assert.equal(reopened.trackingStoppedAt, start + 10000);
+  assert.equal(reopened.gpsTrack.phase, 'finished');
+  assert.deepEqual(reopened.gpsTrack.segments, payload.gpsTrack.segments);
+  assert.equal(reopened.liveSharing, false);
+
+  const reloaded = createOperationalMissionStore(options);
+  reloaded.updateDetails(cloud.id, {result: 'Résultat renseigné'});
+  reloaded.complete(cloud.id);
+  const archived = reloaded.archive(cloud.id);
+  assert.equal(archived.details.result, 'Résultat renseigné');
+  assert.equal(archived.originalId, original.id);
+  assert.deepEqual(archived.gpsTrack.segments, payload.gpsTrack.segments);
+  const backup = preparePersistenceCandidate({kind: 'ops', localId: cloud.id, value: archived});
+  assert.equal(backup.payload.id, original.id);
+  assert.equal(backup.payload.details.result, 'Résultat renseigné');
+});

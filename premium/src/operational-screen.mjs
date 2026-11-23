@@ -47,7 +47,7 @@ function OperationalMission({ view, ui = {}, livePolicy = {} } = {}) {
       : view.canComplete
         ? `<button class="button button-gold" type="button" data-operational-action="complete">Terminer la mission</button>`
         : view.canReplay
-          ? `<a class="button button-gold" href="/operational/missions/${encodeURIComponent(view.id)}/replay">Ouvrir le replay</a>${view.canArchive?`<button class="button button-dark" type="button" data-operational-action="archive">Archiver la mission</button>`:''}`
+          ? `<a class="button button-gold" href="/operational/missions/${encodeURIComponent(view.id)}/replay">Ouvrir le replay</a>${view.canArchive?`<button class="button button-dark" type="button" data-operational-action="archive">Archiver la mission</button><button class="button button-dark" type="button" data-ops-edit-saved="${e(view.id)}">Rouvrir la fiche OPS</button>`:''}`
           : '';
   const corridorAction=!ui.realMode&&!view.gpsTrack&&view.canToggleCorridor?`<button type="button" class="operational-corridor-toggle" data-operational-corridor-toggle="${view.corridor.enabled?'off':'on'}" aria-pressed="${view.corridor.enabled}"><span>Couloir olfactif</span><strong>${view.corridor.enabled?'Activé':'Désactivé'}</strong><small>ESTIMÉ · simulation</small></button>`:'';
   const isCockpit = !ui.realMode&&['active', 'paused'].includes(view.trackingState)&&!view.gpsTrack;
