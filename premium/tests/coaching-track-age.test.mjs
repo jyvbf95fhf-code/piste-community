@@ -39,11 +39,11 @@ test('current track age advances during a 10 minute or one hour wait and is inde
  assert.equal(trackAgeSeconds(flow.s,stamp('10:00:00')),0);
  assert.equal(trackAgeSeconds(flow.s,stamp('10:10:00')),600);
  assert.equal(trackAgeSeconds(flow.s,stamp('11:00:00')),3600);
- assert.equal(formatTrackAge(600),'00:10:00');
- assert.equal(formatTrackAge(3600),'01:00:00');
+ assert.equal(formatTrackAge(600),'10 min');
+ assert.equal(formatTrackAge(3600),'1 h 00 min');
  const waiting=SearchScreen(flow.s,simulate(flow.p,{viewerRole:'driver'}),{now:stamp('10:10:00')});
  assert.match(waiting,/Âge de la piste/);
- assert.match(waiting,/00:10:00/);
+ assert.match(waiting,/10 min/);
  const catalog=createSessionCatalog(),snapshot={session:flow.p.session,searchState:flow.s,preparationState:flow.p,tracerState:flow.t};
  catalog.capture(snapshot);
  const returned=catalog.get(flow.p.session.id);
@@ -69,7 +69,7 @@ test('search start freezes age from pose completion and search finish records el
  assert.equal(searchView(flow.s,simulate(driver,{viewerRole:'coach'}),{now:stamp('12:00')}).trackAgeAtSearchStart,null);
  const cockpit=SearchScreen(flow.s,driver);
  assert.match(cockpit,/Âge au départ/);
- assert.match(cockpit,/01:15:00/);
+ assert.match(cockpit,/1 h 15 min/);
  flow.s=advanceSessionSearch(flow.s,driver,'finish',{now:()=>stamp('11:45')});
  assert.equal(flow.s.search_finished_at,new Date(stamp('11:45')).toISOString());
  assert.equal(flow.s.searchDuration,1800);
@@ -87,7 +87,7 @@ test('debrief, replay, detail and history expose available age without inventing
  assert.equal(report.science.trackAge.status,'Horodatages locaux');
  const html=DebriefScreen(flow.s,driver,flow.t);
  assert.match(html,/Âge de piste au départ/);
- assert.match(html,/01:15:00/);
+ assert.match(html,/1 h 15 min/);
  assert.match(html,/Fin de pose/);
  const record={session:{...flow.p.session,id:'age-session'},searchState:flow.s,preparationState:driver,tracerState:flow.t};
  const replay=sessionReplayView(record);

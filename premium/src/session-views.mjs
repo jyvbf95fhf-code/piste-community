@@ -6,7 +6,7 @@ import {modes} from './coaching.mjs';
 import {sessionView,debriefView} from './coaching-session-flow.mjs';
 import {preparationView} from './coaching-preparation.mjs';
 import {operationalSessionRows} from './operational-views.mjs';
-import {formatElapsed,formatTimestamp} from './coaching-time.mjs';
+import {formatElapsed,formatTimestamp,formatTrackAge} from './coaching-time.mjs';
 
 const unavailable='Aucune donnée disponible';
 const roleLabels={coach:'Coach',traceur:'Traceur',driver:'Conducteur',observer:'Observateur'};
@@ -36,7 +36,7 @@ function liveRow(record,currentSessionId){
   distance:phase==='DEBRIEF'||phase==='ARCHIVED'?debriefView(searchState,preparationState,tracerState||{}).summary.searchDistance:unavailable,
   duration:phase==='DEBRIEF'||phase==='ARCHIVED'?debriefView(searchState,preparationState,tracerState||{}).summary.searchSeconds+' s · mock':unavailable,
   trackAgeAtSearchStart:phase==='DEBRIEF'||phase==='ARCHIVED'?searchState.trackAgeAtSearchStart??null:null,
-  trackAgeLabel:phase==='DEBRIEF'||phase==='ARCHIVED'?searchState.trackAgeAtSearchStart==null?unavailable:formatElapsed(searchState.trackAgeAtSearchStart):null,
+  trackAgeLabel:phase==='DEBRIEF'||phase==='ARCHIVED'?searchState.trackAgeAtSearchStart==null?unavailable:formatTrackAge(searchState.trackAgeAtSearchStart):null,
   canResume,kind:'coaching'
  };
 }
@@ -109,7 +109,7 @@ export function sessionDetailView(record,{currentSessionId=''}={}){
  const mode=modeLabel(session.mode);
  if(terminal){
   const report=debriefView(searchState,preparationState,tracerState);
-  return {id:session.id,title:session.title||`Session ${session.code||session.id}`,status,phase,readOnly:true,mode:report.modeLabel,dog:report.summary.dog,participants:report.summary.participants,creatorRole:roleLabels[session.creatorRole]||unavailable,date:report.summary.searchStartedAt?formatTimestamp(report.summary.searchStartedAt):unavailable,distance:report.summary.searchDistance??unavailable,duration:report.summary.totalSeconds===null?unavailable:`${report.summary.totalSeconds} s · mock`,trackAgeAtSearchStart:report.temporal.trackAgeAtSearchStart,trackAgeLabel:report.temporal.trackAgeAtSearchStart==null?unavailable:formatElapsed(report.temporal.trackAgeAtSearchStart),temporal:report.temporal,observations:report.observations.items||[],poseAvailable:!!report.map?.paths?.some(path=>path.kind==='pose'),searchAvailable:!!report.map?.paths?.some(path=>path.kind==='search'),canResume:false,report};
+  return {id:session.id,title:session.title||`Session ${session.code||session.id}`,status,phase,readOnly:true,mode:report.modeLabel,dog:report.summary.dog,participants:report.summary.participants,creatorRole:roleLabels[session.creatorRole]||unavailable,date:report.summary.searchStartedAt?formatTimestamp(report.summary.searchStartedAt):unavailable,distance:report.summary.searchDistance??unavailable,duration:report.summary.totalSeconds===null?unavailable:`${report.summary.totalSeconds} s · mock`,trackAgeAtSearchStart:report.temporal.trackAgeAtSearchStart,trackAgeLabel:report.temporal.trackAgeAtSearchStart==null?unavailable:formatTrackAge(report.temporal.trackAgeAtSearchStart),temporal:report.temporal,observations:report.observations.items||[],poseAvailable:!!report.map?.paths?.some(path=>path.kind==='pose'),searchAvailable:!!report.map?.paths?.some(path=>path.kind==='search'),canResume:false,report};
  }
  const view=sessionView(searchState,preparationState,tracerState);
  const allowed=preparationView(preparationState).team.some(person=>person.id===view.viewerId);

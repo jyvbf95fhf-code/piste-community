@@ -11,12 +11,12 @@ test('âge de piste inférieur à une heure', () => {
 });
 
 test('âge de piste affiche heures et minutes', () => {
-  assert.equal(calculateTrackAge(origin, origin + 102 * 60_000, 'lastContactAt').label, '1 h 42');
-  assert.equal(calculateTrackAge(origin, origin + 313 * 60_000, 'disappearanceAt').label, '5 h 13');
+  assert.equal(calculateTrackAge(origin, origin + 102 * 60_000, 'lastContactAt').label, '1 h 42 min');
+  assert.equal(calculateTrackAge(origin, origin + 313 * 60_000, 'disappearanceAt').label, '5 h 13 min');
 });
 
 test('âge de piste affiche jours et heures', () => {
-  assert.equal(calculateTrackAge(origin, origin + (26 * 60 + 59) * 60_000).label, '1 j 02 h');
+  assert.equal(calculateTrackAge(origin, origin + (26 * 60 + 59) * 60_000).label, '1 j 02 h 59 min');
 });
 
 test('date absente, invalide ou postérieure au départ reste indisponible', () => {

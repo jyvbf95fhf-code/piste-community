@@ -5,7 +5,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222',C='33333333-3333-4333-8333-333333333333';
 test('actual SQL: email, reciprocal acceptance, feed privacy, replay, role grants and account deletion',async()=>{const db=new PGlite();try{
  await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema auth;grant usage on schema auth to service_role;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz);create table auth.sessions(id uuid primary key,user_id uuid,not_after timestamptz);create function auth.uid() returns uuid language sql as $$select null::uuid$$;create schema realtime;create table realtime.messages(extension text);create function realtime.topic() returns text language sql as $$select ''::text$$;create function realtime.send(jsonb,text,text,boolean) returns void language sql as $$select$$;grant usage on schema realtime to service_role;`);
- for(const p of ['supabase/migrations/20261015054625_coaching_remote_core.sql','docs/community-friendships/01-friendships-final.proposed.sql','supabase/migrations/20261016081506_ops_live_v2.sql','docs/social-live/2026-10-28-social-live.sql','docs/contacts/2026-10-28-contact-options.sql','docs/community-feed/community-feed.sql','docs/community-feed/automatic-publication.sql'])await db.exec(await readFile(new URL('../'+p,import.meta.url),'utf8'));
+ for(const p of ['supabase/migrations/20261015054625_coaching_remote_core.sql','docs/community-friendships/01-friendships-final.proposed.sql','supabase/migrations/20261016081506_ops_live_v2.sql','docs/social-live/2026-10-28-social-live.sql','docs/contacts/2026-10-28-contact-options.sql','docs/community-feed/community-feed.sql','docs/community-feed/automatic-publication.sql','docs/community-feed/refresh-session-map.sql'])await db.exec(await readFile(new URL('../'+p,import.meta.url),'utf8'));
  for(const [id,name] of [[A,'Alpha'],[B,'Bravo'],[C,'Charlie']]){await db.query('insert into auth.users values($1,$2,now())',[id,id+'@example.test']);await db.query('insert into coaching_remote_users values($1,$2,true,true)',[id,name]);}await db.exec('update private.community_friendship_control set enabled=true');
  const rpc=async(n,a)=>(await db.query(`select public.${n}(${Object.keys(a).map((k,i)=>k+'=> $'+(i+1)).join(',')}) result`,Object.values(a))).rows[0].result;
  const snap=actor=>rpc('community_feed_snapshot',{p_actor:actor}),command=(actor,body)=>rpc('community_feed_command',{p_actor:actor,p_body:{commandId:crypto.randomUUID(),...body}}),contact=(actor,peer,action,v,id=crypto.randomUUID())=>rpc('community_contact_command',{p_actor:actor,p_peer:peer,p_action:action,p_command_id:id,p_expected:v,p_live:false,p_coaching:true});
@@ -26,6 +26,23 @@ test('actual SQL: email, reciprocal acceptance, feed privacy, replay, role grant
  await command(C,{action:'create-post',post:{...source,visibility:'private'}});assert.equal((await snap(C)).posts.find(p=>p.id===duplicateId).visibility,'private');assert.equal((await snap(C)).posts.find(p=>p.id===first.createdPostId).visibility,'private');
  await command(C,{action:'create-post',post:source});assert.equal((await snap(C)).posts.find(p=>p.id===first.createdPostId).visibility,'private');
  await command(C,{action:'delete-post',postId:first.createdPostId});assert.equal((await command(C,{action:'create-post',post:source})).createdPostId,first.createdPostId);assert.ok(!(await snap(C)).posts.some(p=>p.id===first.createdPostId));
+ const line=[{x:7,y:48},{x:7.01,y:48.01}];
+ const coaching={...source,attachment:{...source.attachment,sourceId:'coaching:shared',fields:{map:{coordinateSpace:'wgs84',segments:[line]}}}};
+ const shared=await command(C,{action:'create-post',post:coaching});
+ const updated={...coaching.attachment,role:'traceur',fields:{map:{coordinateSpace:'wgs84',segments:[],poseSegments:[line]}}};
+ const refresh=(actor)=>rpc('community_feed_refresh_session_map',{p_actor:actor,p_attachment:updated});
+ await db.exec('set role service_role');
+ assert.deepEqual(await refresh(B),{updated:false});
+ assert.deepEqual(await refresh(C),{updated:true});
+ const refreshed=(await snap(C)).posts.find(p=>p.id===shared.createdPostId);
+ assert.equal(refreshed.visibility,'contacts');
+ assert.deepEqual(refreshed.attachment.fields.map.segments,[line]);
+ assert.deepEqual(refreshed.attachment.fields.map.poseSegments,[line]);
+ await command(C,{action:'create-post',post:{...coaching,visibility:'private'}});
+ assert.deepEqual(await refresh(C),{updated:false});
+ await db.exec('set role authenticated');
+ await assert.rejects(refresh(C));
+ await db.exec('reset role');
  const admin={rpc:async(name,args)=>{try{return {data:await rpc(name,args)};}catch(e){return {error:{code:e.code}};}},from(table){assert.equal(table,'coaching_remote_users');let id;const q={select(){return q;},eq(k,v){if(k==='id')id=v;return q;},async maybeSingle(){return {data:(await db.query('select * from coaching_remote_users where id=$1 and enabled',[id])).rows[0]};}};return q;}};
  const handler=createCoachingHandler({admin,authClient:{auth:{getUser:async token=>({data:{user:token===C?{id:C}:null}})}},friendshipsEnabled:true,socialLiveEnabled:true});
  const call=async body=>{const response=await handler(new Request('https://shnwqdkiapgcftbnhilh.supabase.co/functions/v1/coaching',{method:'POST',headers:{authorization:'Bearer '+C,'content-type':'application/json'},body:JSON.stringify(body)}));const data=await response.json();if(!response.ok)throw Error(data.error);return data;};

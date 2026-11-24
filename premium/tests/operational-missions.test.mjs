@@ -101,7 +101,7 @@ test('âge de piste et horodatages sont figés au départ et à l’arrêt, sans
   assert.equal(draft.places.confirmedTrackStart, null);
   clock += 20_000;
   const active = missions.startTracking(draft.id);
-  assert.equal(active.time.trackAgeAtStart.label, '1 h 42');
+  assert.equal(active.time.trackAgeAtStart.label, '1 h 42 min');
   assert.equal(active.time.trackAgeAtStart.source, 'disappearanceAt');
   assert.equal(active.time.trackingStartedAt, clock);
   assert.equal(active.trackingElapsedMs, 0);
@@ -113,8 +113,8 @@ test('âge de piste et horodatages sont figés au départ et à l’arrêt, sans
   const stopped = missions.stopTracking(draft.id);
   assert.equal(stopped.time.trackingActiveDurationMs, 20_000);
   assert.equal(stopped.time.pauseDurationMs, 60_000);
-  assert.equal(stopped.time.trackAgeAtStop.label, '1 h 43');
-  assert.equal(stopped.time.trackAgeAtStart.label, '1 h 42');
+  assert.equal(stopped.time.trackAgeAtStop.label, '1 h 43 min');
+  assert.equal(stopped.time.trackAgeAtStart.label, '1 h 42 min');
 });
 
 test('progression, événements et détails facultatifs sont éditables seulement avant finalisation', () => {

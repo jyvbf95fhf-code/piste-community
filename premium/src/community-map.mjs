@@ -7,11 +7,15 @@ function paint(element,L,geometry,{fullscreen=false}={}){
  const layer=GPS_BASE_LAYERS.aerial;
  let tiles=L.tileLayer(layer.url,{maxZoom:layer.maxZoom,attribution:layer.attribution}).addTo(map);
  const bounds=[];
- for(const segment of geometry.segments||[]){
-  const coords=segment.filter(p=>Number.isFinite(p.y)&&Number.isFinite(p.x)).map(p=>[p.y,p.x]);
-  if(coords.length<2)continue;
-  L.polyline(coords,{color:'#36c9f4',weight:5}).addTo(map);
-  bounds.push(...coords);
+ const searchBounds=[];
+ for(const [segments,color] of [[geometry.poseSegments,'#ef635c'],[geometry.segments,'#36c9f4']]){
+  for(const segment of segments||[]){
+   const coords=segment.filter(p=>Number.isFinite(p.y)&&Number.isFinite(p.x)).map(p=>[p.y,p.x]);
+   if(coords.length<2)continue;
+   L.polyline(coords,{color,weight:5}).addTo(map);
+   bounds.push(...coords);
+   if(segments===geometry.segments)searchBounds.push(...coords);
+  }
  }
  // Reuse only corridor polygons explicitly included in the shared publication.
  // No synthetic wind or reconstructed scent is generated for viewers.
@@ -24,8 +28,8 @@ function paint(element,L,geometry,{fullscreen=false}={}){
  // A single start/end marker for the entire shared trace, not one per segment.
  if(bounds.length){
   const endpoint=(point,label,color,title)=>L.marker(point,{icon:L.divIcon({className:'community-route-marker',html:`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36" role="img" aria-label="${title}"><circle cx="18" cy="18" r="15" fill="#071912" stroke="${color}" stroke-width="4"/><text x="18" y="25" text-anchor="middle" font-family="system-ui,sans-serif" font-weight="800" font-size="20" fill="#fff">${label}</text></svg>`,iconSize:[36,36],iconAnchor:[18,18]}),title,keyboard:true,zIndexOffset:1000}).addTo(map).bindTooltip(title);
-  endpoint(bounds[0],'D','#38e76a','Départ');
-  endpoint(bounds.at(-1),'C','#e76b71','Fin de conduite');
+  endpoint((searchBounds.length?searchBounds:bounds)[0],'D','#38e76a','Départ');
+  endpoint((searchBounds.length?searchBounds:bounds).at(-1),'A','#e76b71',searchBounds.length?'Fin de conduite':'Fin de pose');
   map.fitBounds(bounds,{padding:[24,24],maxZoom:17});
  }
  const switchLayer=id=>{const next=GPS_BASE_LAYERS[id];if(!next)return;const newTiles=L.tileLayer(next.url,{maxZoom:next.maxZoom,attribution:next.attribution});newTiles.addTo(map);map.removeLayer(tiles);tiles=newTiles;};

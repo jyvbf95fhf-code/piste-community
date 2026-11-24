@@ -2,7 +2,7 @@ import {assertParticipation,canParticipate,isCollectivelyClosed,closeSearchPause
 // Conducteur prototype: phase, counters and coordinates live in memory only.
 import {startGpsPose,finishGpsPose} from './coaching-gps-model.mjs';
 import {preparationView} from './coaching-preparation.mjs';
-import {elapsedSeconds,formatElapsed,timestampFrom} from './coaching-time.mjs';
+import {elapsedSeconds,formatElapsed,timestampFrom,formatTrackAge} from './coaching-time.mjs';
 export const searchPhases=Object.freeze({PREPARATION:'Session en attente',LAYING:'Traceur en pose',TRACK_FINISHED:'Pose terminée',LAYING_WAIT:'Traceur en place · attente',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',SEARCH_FINISHED:'Recherche terminée',DEBRIEF:'Débrief · lecture seule',ARCHIVED:'Session archivée · lecture seule',CANCELLED:'Session annulée',INTERRUPTED:'Session interrompue'});
 const offsets=[{x:0,y:0},{x:11,y:-8},{x:23,y:-18},{x:38,y:-13},{x:55,y:-27},{x:68,y:-42},{x:83,y:-49},{x:97,y:-62}];
 const poseFixture=[[{x:70,y:242},{x:91,y:210},{x:131,y:192},{x:180,y:162},{x:223,y:109}]];
@@ -76,9 +76,9 @@ export function searchView(s,p,{now=Date.now()}={}){
   gps:v.gps,gpsLabel:v.gpsLabel,accuracy:v.gps==='fresh'&&own?'± 5 m · mock':null,orientation:v.gps==='fresh'&&own?38:null,
   seconds:recordVisible?s.seconds:null,distance:recordVisible?s.distance:null,resumed:recordVisible?s.resumed:false,progress:recordVisible?Math.round(s.cursor/(offsets.length-1)*100):null,canAct,
   trackAgePreview:canReadTrackAge&&['TRACK_FINISHED','LAYING_WAIT','SEARCH_READY'].includes(s.phase)?elapsedSeconds(s.track_finished_at,now):null,
-  trackAgePreviewLabel:canReadTrackAge&&['TRACK_FINISHED','LAYING_WAIT','SEARCH_READY'].includes(s.phase)?formatElapsed(elapsedSeconds(s.track_finished_at,now)):'Indisponible',
+  trackAgePreviewLabel:canReadTrackAge&&['TRACK_FINISHED','LAYING_WAIT','SEARCH_READY'].includes(s.phase)?formatTrackAge(elapsedSeconds(s.track_finished_at,now)):'Indisponible',
   trackAgeAtSearchStart:canReadTrackAge?s.trackAgeAtSearchStart??null:null,
-  trackAgeAtSearchStartLabel:!canReadTrackAge||s.trackAgeAtSearchStart==null?'Indisponible':formatElapsed(s.trackAgeAtSearchStart),
+  trackAgeAtSearchStartLabel:!canReadTrackAge||s.trackAgeAtSearchStart==null?'Indisponible':formatTrackAge(s.trackAgeAtSearchStart),
   trackAgeAtSearchEnd:canReadTrackAge?s.trackAgeAtSearchEnd??null:null,searchStartedAt:canReadTrackAge?s.search_started_at||null:null,
   action:!canAct?null:s.phase==='SEARCH_READY'?['start','Démarrer la recherche']:s.phase==='SEARCH_RUNNING'&&searchTrackingState==='active'?['pause','Pause']:s.phase==='SEARCH_RUNNING'&&searchTrackingState==='paused'?['resume','Reprendre']:s.phase==='SEARCH_FINISHED'?['debrief','Ouvrir le débrief']:null};
 }

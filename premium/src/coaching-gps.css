@@ -177,3 +177,9 @@ body:has([data-shared-review]){overflow:hidden}
 .shared-review .gps-map{height:min(48dvh,420px);min-height:220px}.shared-review :is(button,a){touch-action:manipulation}.shared-review .button{white-space:normal}
 [data-traceur-preparation] form{display:grid;gap:12px;margin:18px 0}[data-traceur-preparation] :is(input,select){width:100%;min-width:0;box-sizing:border-box}
 @media print{body:has([data-shared-review]){overflow:visible}.shared-review{position:static;height:auto;overflow:visible;padding:0}.shared-review-back{display:none}}
+
+:is(.debrief-flow,.session-dossier,.session-replay-page,.operational-session-detail,.operational-replay-page) .real-map-reader .gps-map-stage{
+ height: min(72dvh, 840px);
+ min-height: 360px;
+ max-height: none;
+}

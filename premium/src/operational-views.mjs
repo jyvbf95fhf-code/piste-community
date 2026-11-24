@@ -1,4 +1,9 @@
+import {formatTrackAge} from './coaching-time.mjs';
 import {retrospectiveMetrics} from './operational-retrospective.mjs';
+const recordedTrackAgeLabel = age => {
+  const minutes = age?.totalMinutes ?? (Number.isFinite(age?.elapsedMs) ? Math.floor(age.elapsedMs / 60_000) : null);
+  return Number.isFinite(minutes) && minutes > 0 ? formatTrackAge(minutes * 60) : age?.label || null;
+};
 const encode = value => encodeURIComponent(value);
 const decode = value => {
   try {
@@ -40,6 +45,7 @@ export function operationalMissionView(mission, { dogs = [] } = {}) {
   const trackingElapsedMs = Number.isFinite(mission.trackingElapsedMs) ? mission.trackingElapsedMs : 0;
   const corridorEnabled = mission.olfactoryCorridorEnabled === true;
   const time = structuredClone(mission.time || {});
+  if (time.trackAgeAtStart) time.trackAgeAtStart.label = recordedTrackAgeLabel(time.trackAgeAtStart);
   const ageReference = resolveTrackAgeReference(time);
   time.trackAgePreview = ageReference ? calculateTrackAge(ageReference.at, Date.now(), ageReference.source) : null;
   const trace = structuredClone(mission.trace || []);
@@ -182,7 +188,7 @@ export function operationalSessionRows(missions = []) {
       roleLabel: mission.handler?.name ? `Conducteur · ${mission.handler.name}` : 'Conducteur',
       sortAt:mission.retrospective?Date.parse(mission.retrospective.interventionDate+'T00:00:00Z'):Date.parse(mission.createdAt||''),
       date: mission.retrospective?.interventionDate || mission.createdAt || unavailable,
-      trackAge: mission.time?.trackAgeAtStart?.label || null,
+      trackAge: recordedTrackAgeLabel(mission.time?.trackAgeAtStart),
       distance: mission.retrospective?retrospectiveMetrics(mission.retrospective).distanceM:mission.gpsTrack?.distanceM ?? null,
       duration: mission.retrospective?(retrospectiveMetrics(mission.retrospective).elapsedMs===null?null:Math.floor(retrospectiveMetrics(mission.retrospective).elapsedMs/60000)+' min écoulées · '+(retrospectiveMetrics(mission.retrospective).timeSource==='gpx'?'GPX':'déclarées')):Number.isFinite(mission.time?.trackingActiveDurationMs) ? `${Math.floor(mission.time.trackingActiveDurationMs / 60_000)} min${mission.gpsTrack?'':' · simulation'}` : null,
       canResume: false,

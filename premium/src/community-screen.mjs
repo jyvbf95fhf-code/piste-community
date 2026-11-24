@@ -1,3 +1,4 @@
+import {formatTrackAge} from './coaching-time.mjs';
 import {escapeHTML as e,StatusBadge,EmptyState} from './components.mjs';
 import {DogPhotoMarkup} from './dogs-screen.mjs';
 import {dogDisciplines} from './dogs.mjs';
@@ -25,21 +26,64 @@ function visibilityBadge(value){return `<span class="community-visibility">${e(v
 function attachmentMarkup(attachment){
  if(!attachment?.fields)return '';
  const fields=attachment.fields,entries=[];
- for(const field of ['title',...COMMUNITY_SHARE_FIELDS]){const value=fields[field];if(value===undefined)continue;if(field==='dog')entries.push(`<span><b>Chien</b> · ${e(value.name||'Aucune donnée disponible')}</span>`);else if(field!=='map'&&field!=='points')entries.push(`<span><b>${e(fieldLabels[field]||field)}</b> · ${e(String(value))}</span>`);}
+ for(const field of ['title',...COMMUNITY_SHARE_FIELDS]){const value=fields[field];if(value===undefined)continue;
+  const legacyMinutes=field==='trackAge'&&typeof value==='string'?value.match(/^(\d+) min$/):null;
+  if(legacyMinutes){entries.push(`<span><b>Âge de piste</b> · ${e(formatTrackAge(Number(legacyMinutes[1])*60))}</span>`);continue;}
+  if(field==='dog')entries.push(`<span><b>Chien</b> · ${e(value.name||'Aucune donnée disponible')}</span>`);else if(field!=='map'&&field!=='points')entries.push(`<span><b>${e(fieldLabels[field]||field)}</b> · ${e(String(value))}</span>`);}
  let trace='';
  if(fields.map?.paths?.length){trace=fields.map.paths.map(path=>`<path d="${e(path.d)}"></path>`).join('');}
  else if(fields.points?.length>1){const groups=[];for(const point of fields.points){if(!groups.length||point.breakBefore)groups.push([]);groups.at(-1).push(point);}trace=groups.filter(group=>group.length>1).map(group=>`<path d="${group.map((point,index)=>`${index?'L':'M'} ${point.x} ${point.y}`).join(' ')}"></path>`).join('');}
- const realMap=fields.map?.coordinateSpace==='wgs84'&&fields.map?.segments?.length?`<div class="community-real-map" data-community-map="${e(JSON.stringify(fields.map))}" role="region" aria-label="Carte de la piste partagée"></div>`:'';
+ const realMap=fields.map?.coordinateSpace==='wgs84'&&(fields.map.segments?.length||fields.map.poseSegments?.length)?`<div class="community-real-map" data-community-map="${e(JSON.stringify(fields.map))}" role="region" aria-label="Carte de la piste partagée"></div>`:'';
  const map=realMap|| (trace?`<svg class="community-trace-map" viewBox="0 0 360 260" role="img" aria-label="Aperçu de tracé partagé en lecture seule"><path class="community-map-grid" d="M0 65h360M0 130h360M0 195h360M90 0v260M180 0v260M270 0v260"></path><g>${trace}</g></svg>`:'');
  if(!entries.length&&!map)return '';
  return `<section class="community-attachment" aria-label="Données choisies pour le partage"><div class="community-attachment-copy">${entries.join('')}</div>${map}<small>Lecture seule · données explicitement partagées</small></section>`;
 }
-function postCard(post,store,dogs,{detail=false,shareMode='post'}={}){
+const teamRoles={driver:'Conducteur',traceur:'Traceur',coach:'Coach',observer:'Observateur'};
+function sharedCoachingCards(posts){
+ const sessions=new Map(),cards=[];
+ for(const post of posts){
+  const attachment=post.attachment;
+  if(attachment?.type!=='session'||!attachment.sourceId?.startsWith('coaching:')||post.visibility==='private'){
+   cards.push({post,team:[]});
+   continue;
+  }
+  const key=JSON.stringify([attachment.sourceId,post.visibility]);
+  if(!sessions.has(key)){
+   const card={post,team:[]};
+   sessions.set(key,card);
+   cards.push(card);
+  }
+  sessions.get(key).team.push(post);
+ }
+ return cards.map(card=>{
+  if(card.team.length<2)return card;
+  const post=card.team.find(post=>post.attachment.role==='driver')||card.team.find(post=>post.attachment.fields?.map?.poseSegments?.length)||card.post;
+  const fields={...post.attachment.fields};
+  for(const entry of card.team){
+   const shared=entry.attachment.fields;
+   if(!shared)continue;
+   for(const field of ['title','dog','distance','trackAge'])fields[field]??=shared[field];
+   if(shared.map?.coordinateSpace!=='wgs84')continue;
+   if(fields.map?.coordinateSpace!=='wgs84'){fields.map=shared.map;continue;}
+   fields.map={...fields.map,
+    segments:fields.map.segments?.length?fields.map.segments:shared.map.segments,
+    poseSegments:fields.map.poseSegments?.length?fields.map.poseSegments:shared.map.poseSegments,
+    corridor:fields.map.corridor?.polygons?.length?fields.map.corridor:shared.map.corridor
+   };
+  }
+  return {...card,post:{...post,attachment:{...post.attachment,fields}}};
+ });
+}
+function postCard(post,store,dogs,{detail=false,shareMode='post',team=[]}={}){
  const state=store.getState(),person=store.getProfile(post.authorId)||{id:post.authorId,displayName:'Membre'},dog=selectedDog(dogs,post.dogId),liked=post.likes.includes(store.viewerId);
  const comments=detail?post.comments.map(comment=>{const author=store.getProfile(comment.authorId)||{displayName:'Membre'};return `<li>${profileLink(author)}<p>${e(comment.text)}</p>${comment.authorId===store.viewerId?htmlButton('delete-comment','Supprimer',`data-post-id="${e(post.id)}" data-comment-id="${e(comment.id)}"`):''}</li>`;}).join(''):'';
  const photo=post.photo?`<img class="community-post-photo" src="${e(post.photo)}" alt="Photo terrain partagée" loading="lazy">`:'';
  const text=post.text?`<p class="community-post-text">${e(post.text)}</p>`:'';
- const body=`${photo}${text}${dog?dogCard(dog):''}${attachmentMarkup(post.attachment)}`;
+ const teamLinks=team.length>1?`<ul class="community-session-team" aria-label="Participants ayant partagé la piste">${team.map(entry=>{
+  const member=store.getProfile(entry.authorId),role=teamRoles[entry.attachment.role];
+  return `<li><a href="/community/post/${encodeURIComponent(entry.id)}">${e(member?.displayName||'Membre')}${role?` · ${e(role)}`:''}</a></li>`;
+ }).join('')}</ul>`:'';
+ const body=`${photo}${text}${dog?dogCard(dog):''}${teamLinks}${attachmentMarkup(post.attachment)}`;
  const menu=`<details class="community-post-menu"><summary aria-label="Actions de modération">···</summary><div>${htmlButton('report-post','Signaler',`data-post-id="${e(post.id)}"`)}${htmlButton('hide-post','Masquer',`data-post-id="${e(post.id)}"`)}${post.authorId===store.viewerId&&post.attachment?.type==='session'&&post.visibility!=='private'&&store.makeOwnPostPrivate?htmlButton('make-private','Rendre privée',`data-post-id="${e(post.id)}"`):''}${post.authorId===store.viewerId?htmlButton('delete-post','Supprimer ma publication',`data-post-id="${e(post.id)}"`):''}</div></details>`;
  const actions=`<div class="community-post-actions">${htmlButton('like',liked?'Ne plus aimer':'J’aime',`data-post-id="${e(post.id)}" aria-pressed="${liked}"`)}<span class="community-like-count">${post.likes.length} J’aime</span><a class="community-comment-link" href="/community/post/${encodeURIComponent(post.id)}">${post.comments.length} commentaire${post.comments.length===1?'':'s'}</a><button type="button" class="button button-subtle" data-community-action="share-post" data-post-id="${e(post.id)}">Partager la publication</button>${post.attachment?.type==='track'?`<button type="button" class="button button-subtle" data-community-action="share-track" data-post-id="${e(post.id)}">Partager la piste</button>`:''}</div>`;
  const commentBlock=detail?`<section class="community-comments"><h2>Commentaires <span>${post.comments.length}</span></h2>${comments?`<ul>${comments}</ul>`:EmptyState('Pas encore de commentaire','Les retours publiés apparaîtront ici.','users')}<form data-community-form="comment" data-post-id="${e(post.id)}"><label for="community-comment-${e(post.id)}">Ajouter un commentaire</label><textarea id="community-comment-${e(post.id)}" name="text" maxlength="600" required></textarea><button class="button button-gold" type="submit">Publier le commentaire</button></form></section>`:'';
@@ -141,7 +185,7 @@ function feedScreen(store,dogs){
  const posts=store.getFeed(),notifications=store.getNotifications(),isDemo=!store.getFriendshipStatus;
  const actions=`<nav class="community-header-actions" aria-label="Actions Communauté"><a class="button community-friends-entry" href="/community/contacts">${store.getFriendshipStatus?'Mes amis':'Contacts'} <span>${store.getContactRequests().contacts.length}</span></a><a class="button button-subtle" href="/community/profile/me">Mon profil</a><a class="button button-gold" href="/community/new">Publier une piste</a>${store.refreshFeed?htmlButton('refresh-feed','Actualiser'):''}</nav>`;
  const notificationItems=notifications.map(item=>`<li>${e(item.type==='contact_request'?'Nouvelle demande de contact':item.type==='contact_accepted'?'Demande de contact acceptée':item.type==='follow'?'Nouvel abonnement':item.type==='like'?'Nouveau J’aime':'Nouveau commentaire')}</li>`).join('');
- return `<section class="community-page community-feed-page" data-community-route="feed">${pageHeader('PISTAGE · CHIENS · TERRAIN','Communauté','Des retours de terrain, des chiens et des traces partagées avec maîtrise.',actions)}${!isDemo?'<p class="community-local-note">Vos prochaines pistes OPS et Coaching terminées apparaissent ici pour vos amis. Menu ··· : rendre privée ou supprimer.</p>':''}${isDemo?'<p class="community-prototype-note">Prototype · publications et profils de démonstration.</p>':''}<details class="community-notifications"><summary>Notifications <span>${notifications.length}</span></summary>${notificationItems?`<ul>${notificationItems}</ul>`:EmptyState('Aucune notification','Les nouvelles interactions apparaîtront ici.','users')}</details>${store.getFeedStatus?.().error?`<p role="status">${e(store.getFeedStatus().error)}</p>`:''}<section class="community-feed" aria-label="Fil communautaire">${posts.length?posts.map(post=>postCard(post,store,dogs)).join(''):EmptyState('Le fil est calme','Les publications visibles apparaîtront ici.','users')}</section></section>`;
+ return `<section class="community-page community-feed-page" data-community-route="feed">${pageHeader('PISTAGE · CHIENS · TERRAIN','Communauté','Des retours de terrain, des chiens et des traces partagées avec maîtrise.',actions)}${!isDemo?'<p class="community-local-note">Vos prochaines pistes OPS et Coaching terminées apparaissent ici pour vos amis. Menu ··· : rendre privée ou supprimer.</p>':''}${isDemo?'<p class="community-prototype-note">Prototype · publications et profils de démonstration.</p>':''}<details class="community-notifications"><summary>Notifications <span>${notifications.length}</span></summary>${notificationItems?`<ul>${notificationItems}</ul>`:EmptyState('Aucune notification','Les nouvelles interactions apparaîtront ici.','users')}</details>${store.getFeedStatus?.().error?`<p role="status">${e(store.getFeedStatus().error)}</p>`:''}<section class="community-feed" aria-label="Fil communautaire">${posts.length?sharedCoachingCards(posts).map(({post,team})=>postCard(post,store,dogs,{team})).join(''):EmptyState('Le fil est calme','Les publications visibles apparaîtront ici.','users')}</section></section>`;
 }
 function postScreen(route,store,dogs,shareMode){
  const post=store.getVisiblePost(route.id);if(!post)return `<section class="community-page community-post-detail" data-community-route="post">${EmptyState('Publication indisponible','Elle est privée ou n’est pas disponible pour ce profil.','users')}<a class="button button-dark" href="/community">Retour au fil</a></section>`;

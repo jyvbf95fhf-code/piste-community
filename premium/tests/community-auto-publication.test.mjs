@@ -12,3 +12,26 @@ test('no-GPS server completion publishes, undated historical completion does not
 test('restored OPS uses original source identity and completion time',async()=>{const calls=[],q=createCommunityAutoPublication({ownerId:owner,storage:memory(),call:async b=>{calls.push(b);return {createdPostId:b.commandId};}});await q.sync({operational:[{...row(),finishedAt:null,communityCompletedAt:after},{...row('ops:cloud-uuid'),communityId:'ops:one',communityCompletedAt:after}]});assert.equal(calls.length,1);assert.equal(calls[0].post.attachment.sourceId,'ops:one');q.dispose();});
 
 test('account projection uses server finish time and excludes old retrospective imports',async()=>{const {buildAccountAnalysisSources}=await import('../src/account-analysis-sources.mjs');const calls=[],q=createCommunityAutoPublication({ownerId:owner,storage:memory(),call:async b=>{calls.push(b);return {createdPostId:b.commandId};}});const raw=buildAccountAnalysisSources({ownerId:owner,sharedOwnerId:owner,sharedSessions:[{id:'fresh',phase:'DEBRIEF',searchCompletedAt:Date.parse(after),team:[],dog:'Bobby'}],operationalMissions:[{id:'old-import',ownerUserId:owner,status:'Archivée',entryMode:'retrospective',completedAt:after,retrospective:{finishedAt:'2020-01-01T12:00:00Z'}}]});assert.equal(raw.sessions[0].communityCompletedAt,after);await q.sync(raw);assert.equal(calls.length,1);assert.equal(calls[0].post.attachment.sourceId,'coaching:fresh');q.dispose();});
+
+test('a completed Coaching share refreshes once when previously missing pose and weather arrive',async()=>{
+ const calls=[],storage=memory();
+ const queue=createCommunityAutoPublication({ownerId:owner,storage,call:async body=>{
+  calls.push(body);
+  return body.action==='create-post'?{createdPostId:body.commandId}:{updated:true};
+ }});
+ const completed={...row('coaching:shared'),kind:'coaching',mode:'normal',status:'DEBRIEF',communityRole:'driver'};
+ await queue.sync({sessions:[completed]});
+ const t=Date.parse(after);
+ const pose={segments:[[{latitude:48,longitude:7,timestamp:t},{latitude:48.001,longitude:7.001,timestamp:t+60000}]]};
+ const withPose={...completed,referenceTrace:completed.trace.slice(0,2),
+  communityCorridorPose:{pose,weather:{wind_speed_kmh:12,wind_direction_deg:270,observedAt:t}}};
+ await queue.sync({sessions:[withPose]});
+ await queue.sync({sessions:[withPose]});
+ assert.deepEqual(calls.map(body=>body.action),['create-post','refresh-session-map']);
+ const {role,fields}=calls[1].post.attachment;
+ assert.equal(role,'driver');
+ assert.ok(fields.map.segments.length);
+ assert.ok(fields.map.poseSegments.length);
+ assert.ok(fields.map.corridor.polygons.length);
+ queue.dispose();
+});

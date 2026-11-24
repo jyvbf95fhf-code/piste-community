@@ -20,3 +20,12 @@ export function formatTimestamp(value){
  if(!value||!Number.isFinite(Date.parse(value)))return 'Indisponible';
  return new Intl.DateTimeFormat('fr-FR',{dateStyle:'short',timeStyle:'medium'}).format(new Date(value));
 }
+
+export function formatTrackAge(seconds){
+ if(!Number.isFinite(seconds)||seconds<0)return 'Indisponible';
+ const totalMinutes=Math.floor(seconds/60);
+ const days=Math.floor(totalMinutes/1440),hours=Math.floor(totalMinutes/60)%24,minutes=totalMinutes%60;
+ if(days)return `${days} j ${String(hours).padStart(2,'0')} h ${String(minutes).padStart(2,'0')} min`;
+ if(hours)return `${hours} h ${String(minutes).padStart(2,'0')} min`;
+ return `${minutes} min`;
+}

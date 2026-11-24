@@ -9,8 +9,10 @@ export function normalizeCommunityPublication(input){
   for(const [k,v] of Object.entries(a.fields)){
    if(!['title','dog','distance','trackAge','provenance','map'].includes(k))fail();
    if(k==='map'){
-    if(!obj(v)||v.coordinateSpace!=='wgs84'||!Array.isArray(v.segments)||!v.segments.length||Object.keys(v).some(k=>!['coordinateSpace','segments','corridor'].includes(k)))fail();let count=0;
-    fields.map={coordinateSpace:'wgs84',segments:v.segments.map(s=>{if(!Array.isArray(s)||s.length<2)fail();count+=s.length;if(count>5000)fail();return s.map(p=>{if(!obj(p)||Object.keys(p).some(k=>!['x','y'].includes(k))||typeof p.x!=='number'||typeof p.y!=='number'||!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>180||Math.abs(p.y)>90)fail();return {x:p.x,y:p.y};});})};
+    if(!obj(v)||v.coordinateSpace!=='wgs84'||!Array.isArray(v.segments)||(!v.segments.length&&!v.poseSegments?.length)||Object.keys(v).some(k=>!['coordinateSpace','segments','poseSegments','corridor'].includes(k)))fail();let count=0;
+    const segments=lines=>{if(!Array.isArray(lines))fail();return lines.map(s=>{if(!Array.isArray(s)||s.length<2)fail();count+=s.length;if(count>5000)fail();return s.map(p=>{if(!obj(p)||Object.keys(p).some(k=>!['x','y'].includes(k))||typeof p.x!=='number'||typeof p.y!=='number'||!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>180||Math.abs(p.y)>90)fail();return {x:p.x,y:p.y};});});};
+    fields.map={coordinateSpace:'wgs84',segments:segments(v.segments)};
+    if(v.poseSegments!==undefined)fields.map.poseSegments=segments(v.poseSegments);
     if(v.corridor!==undefined){
      const c=v.corridor;
      if(!obj(c)||c.provenance!=='estimated'||!Array.isArray(c.polygons)||c.polygons.length>120||Object.keys(c).some(key=>!['provenance','polygons'].includes(key)))fail();
@@ -22,6 +24,10 @@ export function normalizeCommunityPublication(input){
    }else if(typeof v==='number'&&['distance','trackAge'].includes(k)){if(!Number.isFinite(v)||v<0)fail();fields[k]=v;}else fields[k]=str(v,300);
   }
   if(!Object.keys(fields).length&&!text)fail();attachment={type:a.type,sourceId:a.sourceId,readOnly:true,fields};
+  if(a.role!==undefined){
+   if(a.type!=='session'||!a.sourceId.startsWith('coaching:')||!['driver','traceur','coach','observer'].includes(a.role))fail();
+   attachment.role=a.role;
+  }
  }
  if(!text&&!attachment)fail();return {text,visibility,type:attachment?.type??'text',attachment};
 }

@@ -177,7 +177,7 @@ test('la projection Sessions expose âge/durée opérationnels uniquement lorsqu
   clock+=12*60_000;
   store.stopTracking(draft.id);
   const row=operationalSessionRows(store.list())[0];
-  assert.equal(row.trackAge,'1 h 30');
+  assert.equal(row.trackAge,'1 h 30 min');
   assert.equal(row.duration,'12 min · simulation');
   const noData=operationalSessionRows([setup().draft])[0];
   assert.equal(noData.trackAge,null);

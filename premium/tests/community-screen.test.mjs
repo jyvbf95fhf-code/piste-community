@@ -119,3 +119,28 @@ test('Prototype describes demo content only, never the real account Contacts vie
 });
 
 test('add friend search precedes requests and contacts for real accounts',()=>{const base=createCommunityStore();const store=new Proxy(base,{get(t,k){return k==='getFriendshipStatus'?()=>({message:'Synchronisé'}):t[k];}});const html=page({type:'contacts'},{store});const search=html.indexOf('community-contact-search');assert.ok(search>=0);for(const heading of ['Demandes reçues','Demandes envoyées','Mes contacts'])assert.ok(search<html.indexOf(heading),heading);assert.equal((html.match(/data-community-form="contact-search"/g)||[]).length,1);});
+
+test('Community groups visible publications of one Coaching session with their map layers',()=>{
+ const line=[{x:7,y:48},{x:7.01,y:48.01}],pose=[{x:7,y:48},{x:7.02,y:48.02}];
+ const post=(id,authorId,role,map,visibility='contacts')=>({
+  id,authorId,type:'session',text:'',visibility,likes:[],comments:[],
+  attachment:{type:'session',sourceId:'coaching:shared',role,fields:{trackAge:'1572 min',...(map?{map}:{} )}}
+ });
+ const posts=[
+  post('observer','o','observer'),
+  post('driver','d','driver',{coordinateSpace:'wgs84',segments:[line]}),
+  post('traceur','t','traceur',{coordinateSpace:'wgs84',segments:[],poseSegments:[pose],corridor:{provenance:'estimated',polygons:[[...pose,line[1]]]}}),
+  post('private','self','coach',null,'private')
+ ];
+ const store={
+  ...createCommunityStore(),
+  getFeed:()=>posts,
+  getProfile:id=>({id,displayName:({d:'Alice',t:'Bob',o:'Camille',self:'Privé'})[id]})
+ };
+ const html=page({type:'feed'},{store});
+ assert.equal((html.match(/data-community-post=/g)||[]).length,2);
+ for(const member of ['Alice · Conducteur','Bob · Traceur','Camille · Observateur'])assert.ok(html.includes(member));
+ assert.match(html,/1 j 02 h 12 min/);
+ assert.match(html,/&quot;poseSegments&quot;/);
+ assert.match(html,/&quot;corridor&quot;/);
+});
