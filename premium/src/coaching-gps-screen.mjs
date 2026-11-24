@@ -23,12 +23,37 @@ function syncBaseControls(root,id){for(const button of root?.querySelectorAll?.(
 function mapNotice(row,text){const el=row.root?.querySelector?.('[data-gps-map-status]');if(el)el.textContent=text;}
 function setBase(row,id){if(row.base===id)return;const def=GPS_BASE_LAYERS[id],old=row.tiles,tiles=row.L.tileLayer(def.url,{maxZoom:def.maxZoom,attribution:def.attribution});row.base=id;row.tiles=tiles;tiles.addTo(row.map);if(old)row.map.removeLayer(old);syncBaseControls(row.root,id);mapNotice(row,'');tiles.on('tileerror',()=>{if(row.tiles!==tiles||!mounted.includes(row))return;row.element.dataset.tileError='true';if(id==='aerial'&&row.root){preferredBase='plan';setBase(row,'plan');mapNotice(row,'Vue aérienne indisponible · fond Plan affiché.');}else mapNotice(row,'Fond indisponible · les points GPS restent conservés.');});tiles.on('tileload',()=>{if(row.tiles===tiles){delete row.element.dataset.tileError;}});}
 export function selectGpsBaseLayer(id){if(!Object.hasOwn(GPS_BASE_LAYERS,id))return false;preferredBase=id;for(const row of mounted)if(row.root)setBase(row,id);return true;}
+function openMapFullscreen(root,button){
+ const doc=root.ownerDocument,stage=root.querySelector('.gps-map-stage');
+ const dialog=doc.createElement('dialog');
+ if(!stage||typeof dialog.showModal!=='function')return;
+ dialog.className='gps-fullscreen-map';
+ dialog.setAttribute('aria-label','Carte en plein écran');
+ const close=doc.createElement('button');
+ close.type='button';
+ close.className='button button-dark gps-close-fullscreen';
+ close.textContent='Fermer la carte';
+ close.addEventListener('click',()=>dialog.close());
+ const placeholder=doc.createComment('map');
+ stage.before(placeholder);
+ dialog.append(stage,close);
+ root.append(dialog);
+ const resize=()=>mounted.find(row=>row.root===root)?.map.invalidateSize();
+ dialog.addEventListener('close',()=>{
+  placeholder.replaceWith(stage);
+  dialog.remove();
+  resize();
+  button.focus();
+ },{once:true});
+ dialog.showModal();
+ resize();
+}
 function bindMapControls(root){if(!root||boundControls.has(root))return;boundControls.add(root);syncBaseControls(root,preferredBase);
  const panel=root.querySelector?.('.gps-touch-lock-panel'),unlockButton=root.querySelector?.('[data-gps-touch-unlock]'),keyboard=root.querySelector?.('[data-gps-touch-keyboard]');
  let inert=[],cancelHold=()=>{};
  const guard=panel?createGpsTouchGuard({onLock:()=>{inert=[...root.children].filter(el=>el!==panel).map(el=>[el,el.inert]);for(const [el] of inert)el.inert=true;panel.hidden=false;unlockButton.focus();},onUnlock:()=>{cancelHold();panel.hidden=true;for(const [el,value] of inert)el.inert=value;root.querySelector('[data-gps="touch-lock"]')?.focus();root.dispatchEvent?.(new Event('gps-touch-unlocked',{bubbles:true}));}}):null;
  if(guard){touchGuards.set(root,guard);cancelHold=bindGpsTouchUnlock(unlockButton,guard);keyboard.addEventListener('click',event=>{if(event.detail===0)guard.unlock();});}
- root.addEventListener?.('click',event=>{const center=event.target.closest?.('[data-gps-center]'),choice=event.target.closest?.('[data-gps-layer]'),lock=event.target.closest?.('[data-gps="touch-lock"]');if(lock){guard?.lock();return;}if(center){if(root.dataset?.gpsFollowSession&&observerView?.id===root.dataset.gpsFollowSession)observerView.following=true;centerGpsMap(root);return;}if(choice){selectGpsBaseLayer(choice.dataset.gpsLayer);syncBaseControls(root,preferredBase);const picker=choice.closest('.gps-layer-picker');if(picker)picker.open=false;}});
+ root.addEventListener?.('click',event=>{const expand=event.target.closest?.('[data-gps-expand-map]');if(expand){openMapFullscreen(root,expand);return;}const center=event.target.closest?.('[data-gps-center]'),choice=event.target.closest?.('[data-gps-layer]'),lock=event.target.closest?.('[data-gps="touch-lock"]');if(lock){guard?.lock();return;}if(center){if(root.dataset?.gpsFollowSession&&observerView?.id===root.dataset.gpsFollowSession)observerView.following=true;centerGpsMap(root);return;}if(choice){selectGpsBaseLayer(choice.dataset.gpsLayer);syncBaseControls(root,preferredBase);const picker=choice.closest('.gps-layer-picker');if(picker)picker.open=false;}});
 }
 export function destroyGpsMaps({preserveView=false}={}){retainedViews=preserveView?mounted.filter(row=>row.position&&row.root?.dataset.gpsSessionId&&row.map.getCenter).map(row=>({id:row.root.dataset.gpsSessionId,kind:row.root.dataset.gpsKind,center:row.map.getCenter(),zoom:row.map.getZoom()})):[];for(const guard of touchGuards.values())guard.dispose();touchGuards.clear();for(const row of mounted){row.corridor?.dispose();row.resizeObserver?.disconnect();row.map.remove();}mounted=[];}
 export function mountGpsMaps({document=globalThis.document,L=globalThis.L,livePose=null,lastFix=null,ResizeObserver=globalThis.ResizeObserver}={}){if(!document)return;const containers=[...document.querySelectorAll('[data-gps-map]')];

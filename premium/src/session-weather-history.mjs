@@ -16,3 +16,13 @@ export function selectHistoricalWeather(history,at){
  if(!Number.isFinite(at))return null;
  return (Array.isArray(history)?history:[]).map(row=>row?.weather).filter(w=>w?.source==='Open-Meteo'&&w.provenance==='estimated'&&Number.isFinite(w.observedAt)&&Number.isFinite(w.capturedAt)&&w.observedAt<=at+300000&&w.observedAt>=at-7200000).sort((a,b)=>Math.abs(a.observedAt-at)-Math.abs(b.observedAt-at))[0]||null;
 }
+
+export function selectCorridorWeather(history,at,snapshot){
+ if(!Number.isFinite(at))return null;
+ const useful=weather=>Number.isFinite(weather?.wind_speed_kmh)&&Number.isFinite(weather?.wind_direction_deg);
+ const archived=selectHistoricalWeather((Array.isArray(history)?history:[]).filter(row=>useful(row?.weather)),at);
+ if(archived)return archived;
+ const weather=snapshot?.weather??snapshot;
+ if(!useful(weather)||!Number.isFinite(weather.observedAt)||weather.observedAt<at-7200000||weather.observedAt>at+300000)return null;
+ return weather;
+}

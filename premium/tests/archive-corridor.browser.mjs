@@ -20,6 +20,12 @@ try{
  const polygons=()=>page.locator('.leaflet-gpsCorridor-pane path');
  await page.waitForFunction(()=>document.querySelectorAll('.leaflet-gpsCorridor-pane path').length===2);
  assert.ok(!(await page.locator('body').innerText()).includes('Météo historique indisponible'));
+ await page.getByRole('button',{name:'Plein écran'}).click();
+ await page.getByRole('dialog',{name:'Carte en plein écran'}).waitFor();
+ assert.equal(await polygons().count(),2);
+ await page.getByRole('button',{name:'Fermer la carte'}).click();
+ await page.getByRole('dialog',{name:'Carte en plein écran'}).waitFor({state:'hidden'});
+ assert.equal(await polygons().count(),2);
  await page.locator('[data-corridor-summary]').click();
  await page.getByRole('button',{name:'Masquer le couloir',exact:true}).click();assert.equal(await polygons().count(),0);
  await page.getByText('Couloir historique masqué.',{exact:true}).waitFor();

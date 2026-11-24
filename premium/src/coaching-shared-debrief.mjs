@@ -30,7 +30,7 @@ export function SharedCoachingDebrief(p,{tab='summary',profile={},drafts={},busy
  if(corridorAllowed&&tab==='map'){
   const marker='class="real-map-reader"',at=html.indexOf(marker);
   if(at!==-1){
-   html=html.replace(marker,`class="real-map-reader coaching-scent-review" data-gps-session-id="${e(p.id)}" data-gps-corridor-allowed="true" data-gps-corridor-basis="coaching-pose" data-gps-corridor-review="true" data-gps-corridor-history="${e(JSON.stringify(p.weatherHistory||[]))}" data-scent-replay-target="${search?'reference':'pose'}"`);
+   html=html.replace(marker,`class="real-map-reader coaching-scent-review" data-gps-session-id="${e(p.id)}" data-gps-corridor-allowed="true" data-gps-corridor-basis="coaching-pose" data-gps-corridor-review="true" data-gps-corridor-history="${e(JSON.stringify(p.weatherHistory||[]))}" data-gps-corridor-weather="${e(JSON.stringify(p.weatherSnapshot||null))}" data-scent-replay-target="${search?'reference':'pose'}"`);
    const end=html.indexOf('</section>',at);
    const controls=`<h2>Couloir olfactif · débriefing</h2><p>${e(historicalStatus)}</p>${replayControls}<div class="remote-scent-controls"><button type="button" data-corridor-toggle aria-pressed="false" ${historicalReady?'':'disabled'}>${historicalReady?'Masquer le couloir':'Météo historique indisponible'}</button><small data-corridor-status>${e(historicalStatus)}</small></div>`;
    html=html.slice(0,end)+controls+html.slice(end);

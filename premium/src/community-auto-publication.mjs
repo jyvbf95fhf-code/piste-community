@@ -14,7 +14,7 @@ export function createCommunityAutoPublication({ownerId,getOwnerId=()=>ownerId,s
    const sources=accountCommunitySourceOptions({sessions:eligible.filter(s=>s.kind==='coaching'),operational:eligible.filter(s=>s.kind==='operational')});
    for(const source of sources){const refreshMap=state.done.includes(source.id);
     if(state.pending.some(p=>p.sourceId===source.id))continue;
-    if(refreshMap&&(!source.id.startsWith('coaching:')||!source.data.map?.poseSegments?.length))continue;
+    if(refreshMap&&!(source.data.map?.poseSegments?.length||source.id.startsWith('ops:')&&source.data.map?.corridor?.polygons?.length))continue;
     const fields=structuredClone(source.data);
     // Bound transfer size using actual recorded coordinates; keep segment endpoints.
     if(fields.map){const groups=[fields.map.segments,fields.map.poseSegments||[]];

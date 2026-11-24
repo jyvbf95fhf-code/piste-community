@@ -1,3 +1,4 @@
+import {selectCorridorWeather} from './session-weather-history.mjs';
 import {formatTrackAge} from './coaching-time.mjs';
 import {segmentCoordinates} from './track-route-segments.mjs';
 import {buildGpsCorridor} from './coaching-corridor-model.mjs';
@@ -41,7 +42,8 @@ export function expandSegmentCoordinates(points=[]){
 // source contains a real GPS pose and recorded wind data. No weather lookup.
 export function recordedCommunityCorridor(source){
  if(source?.olfactoryCorridor?.enabled!==true||!source?.gpsTrack?.segments?.length)return null;
- return communityCorridor(source.gpsTrack,source.weatherSnapshot?.weather??source.weatherSnapshot);
+ const end=source.gpsTrack.segments.flat().at(-1)?.timestamp;
+ return communityCorridor(source.gpsTrack,selectCorridorWeather([],end,source.weatherSnapshot));
 }
 
 function communityCorridor(pose,weather){

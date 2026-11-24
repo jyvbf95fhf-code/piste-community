@@ -8,7 +8,7 @@ export function createCommunityFeedService(admin){return {
   if(body.action==='create-post')b.post=normalizeCommunityPublication(body.post);
   else if(body.action==='refresh-session-map'){
    const attachment=normalizeCommunityPublication(body.post).attachment;
-   if(attachment?.type!=='session'||!attachment.sourceId.startsWith('coaching:')||!attachment.fields.map?.poseSegments?.length)fail('Demande invalide.');
+   if(attachment?.type!=='session'||!(attachment.sourceId.startsWith('coaching:')&&attachment.fields.map?.poseSegments?.length||attachment.sourceId.startsWith('ops:')&&attachment.fields.map?.corridor?.polygons?.length))fail('Demande invalide.');
    return rpc(admin,'community_feed_refresh_session_map',{p_actor:actorId,p_attachment:attachment});
   }
   else if(body.action==='update-profile'){if(typeof body.displayName!=='string'||!body.displayName.trim()||body.displayName.length>80)fail('Nom invalide.');b.displayName=body.displayName.trim();}
