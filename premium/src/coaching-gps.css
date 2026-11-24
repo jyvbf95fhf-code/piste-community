@@ -197,3 +197,10 @@ body:has([data-shared-review]){overflow:hidden}
  top:max(12px,env(safe-area-inset-top));
 }
 .gps-fullscreen-map .gps-map-controls{top:max(12px,env(safe-area-inset-top))}
+
+.offline-shell-update{
+ position:fixed;z-index:1100;top:max(12px,env(safe-area-inset-top));right:12px;
+ display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+ max-width:min(420px,calc(100vw - 24px));padding:12px;border-radius:12px;
+ background:#102438;color:#fff;box-shadow:0 6px 24px #0007;
+}
