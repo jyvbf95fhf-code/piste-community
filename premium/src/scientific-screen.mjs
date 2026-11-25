@@ -1,3 +1,4 @@
+import {Icon} from './icons.mjs';
 import {ReadOnlyRealMap} from './read-only-real-map.mjs';
 import {escapeHTML} from './components.mjs';
 import {scientificProvenance} from './scientific-provenance.mjs';
@@ -27,27 +28,37 @@ function dashboard(data){
   if(Object.values(inputs).every(Boolean))counts.complete++;
  }
  const tools=[
-  ['/scientific/sessions','Explorer les sessions','Retrouver les dossiers et vérifier les données disponibles.'],
-  ['/scientific/cohorts','Construire une cohorte','Sélectionner des sessions comparables selon tes critères.'],
-  ['/scientific/corpus','Corpus scientifique · contributions pseudonymisées','Consulter les contributions autorisées pour la recherche.']
+  ['/scientific/sessions','Explorer les sessions','navSessions'],
+  ['/scientific/cohorts','Créer une cohorte','users'],
+  ['/scientific/corpus','Corpus scientifique','science']
  ];
  const options=[['/scientific/compare','Comparer des cohortes'],['/scientific/data-quality','Qualité et provenance'],['/scientific/hypotheses','Hypothèses de recherche'],['/scientific/annotations','Annotations'],['/scientific/longitudinal','Profil longitudinal'],['/scientific/runs','Historique des analyses'],['/scientific/blind','Analyses en aveugle'],['/scientific/benchmarks','Benchmarks'],['/scientific/anomalies','Anomalies'],['/scientific/evaluation','Évaluation JUMOLF'],['/scientific/errors','Bibliothèque des erreurs']];
  const period=summary.period?.start&&summary.period?.end?`${e(summary.period.start.slice(0,10))} → ${e(summary.period.end.slice(0,10))}`:'Période indisponible';
- return shell('Espace scientifique privé','Documenter les observations de pistage et préparer des comparaisons entre séances.',`
-  <nav class="scientific-workflow" aria-label="Outils de recherche">${tools.map(([href,title,description])=>`<a href="${href}"><strong>${title}</strong><span>${description}</span></a>`).join('')}</nav>
+ return `<main class="scientific-page scientific-dashboard">
+  <header class="scientific-dashboard-heading">
+   <h1>Espace scientifique privé</h1>
+   <p>Étudier les séances de pistage et comparer les observations.</p>
+  </header>
   <div class="scientific-overview">
    <section class="scientific-panel scientific-observations">
-    <h2>Étudier le couloir olfactif</h2>
-    <p>Pour comparer la pose et le suivi au couloir estimé, retrouve les séances qui réunissent les quatre données ci-dessous.</p>
-    <div class="scientific-observation-coverage">${observationLabels(recorded).map(([key,label])=>`<div><span>${label}</span><strong>${counts[key]} / ${summary.total}</strong></div>`).join('')}</div>
-    ${counts.complete?`<a class="scientific-observation-link" href="/scientific/sessions?observation=true">Voir ${counts.complete} séance${counts.complete===1?'':'s'} avec ces données</a>`:'<p>Aucune séance ne réunit encore ces quatre données.</p>'}
+    <div class="scientific-observation-heading">
+     ${Icon('olfactorySignal')}
+     <div><h2>Couloir olfactif</h2><p>Données disponibles pour comparer la pose et le suivi.</p></div>
+    </div>
+    <dl class="scientific-observation-coverage">${observationLabels(recorded).map(([key,label])=>`<div>
+     <dt>${label}</dt><dd>${counts[key]} <span>/ ${summary.total}</span></dd>
+     ${summary.total?`<meter aria-label="${label}" min="0" max="${summary.total}" value="${counts[key]}"></meter>`:''}
+    </div>`).join('')}</dl>
+    ${counts.complete?`<a class="scientific-observation-link" href="/scientific/sessions?observation=true"><span>Voir ${counts.complete} séance${counts.complete===1?'':'s'} avec ces données</span>${Icon('arrow')}</a>`:'<p class="scientific-observation-empty">Aucune séance ne réunit encore ces quatre données.</p>'}
    </section>
    <section class="scientific-panel scientific-overview-source">
-    <h2>${recorded?'Dossiers du compte':'Jeu de démonstration'}</h2><p>${period}</p>
+    <h2>${recorded?'Dossiers':'Jeu de démonstration'}</h2><p>${period}</p>
     <dl class="scientific-dl">${[['Sessions',summary.total],['Entraînements',summary.training],['Opérationnelles',summary.operational],['Annotations',data.annotations.length]].map(([label,value])=>`<div><dt>${label}</dt><dd>${q(value)}</dd></div>`).join('')}</dl>
    </section>
   </div>
-  <section class="scientific-tools"><h2>Outils d’analyse</h2><nav class="scientific-quick-links" aria-label="Outils d’analyse">${options.map(([href,label])=>`<a href="${href}">${label}</a>`).join('')}</nav></section>`,'scientific-dashboard');
+  <nav class="scientific-workflow" aria-label="Outils de recherche">${tools.map(([href,title,icon])=>`<a href="${href}" ${href.endsWith('/corpus')?'aria-label="Corpus scientifique · contributions pseudonymisées"':''}>${Icon(icon)}<strong>${title}</strong>${Icon('arrow','scientific-workflow-arrow')}</a>`).join('')}</nav>
+  <section class="scientific-tools"><h2>Outils d’analyse</h2><nav class="scientific-quick-links" aria-label="Outils d’analyse">${options.map(([href,label])=>`<a href="${href}">${label}</a>`).join('')}</nav></section>
+ </main>`;
 }
 function explorer(data,query){
  const filters=data.filters||{},rows=data.pageRows||[],options=(values,current)=>values.map(([value,label])=>`<option value="${value}" ${current===value?'selected':''}>${label}</option>`).join(''),filterOptions=data.filterOptions||{environments:[],substrates:[]};

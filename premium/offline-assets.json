@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "a29a1a2b1a5a0270",
+  "revision": "5825275042f8612c",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -359,5 +359,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6907001
+  "bytes": 6911152
 }
