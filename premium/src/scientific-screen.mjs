@@ -40,7 +40,7 @@ function dashboard(data){
    <p>Étudier les séances de pistage et comparer les observations.</p>
   </header>
   <div class="scientific-overview">
-   <section class="scientific-panel scientific-observations">
+   <section class="scientific-observations">
     <div class="scientific-observation-heading">
      ${Icon('olfactorySignal')}
      <div><h2>Couloir olfactif</h2><p>Données disponibles pour comparer la pose et le suivi.</p></div>
@@ -51,7 +51,7 @@ function dashboard(data){
     </div>`).join('')}</dl>
     ${counts.complete?`<a class="scientific-observation-link" href="/scientific/sessions?observation=true"><span>Voir ${counts.complete} séance${counts.complete===1?'':'s'} avec ces données</span>${Icon('arrow')}</a>`:'<p class="scientific-observation-empty">Aucune séance ne réunit encore ces quatre données.</p>'}
    </section>
-   <section class="scientific-panel scientific-overview-source">
+   <section class="scientific-overview-source">
     <h2>${recorded?'Dossiers':'Jeu de démonstration'}</h2><p>${period}</p>
     <dl class="scientific-dl">${[['Sessions',summary.total],['Entraînements',summary.training],['Opérationnelles',summary.operational],['Annotations',data.annotations.length]].map(([label,value])=>`<div><dt>${label}</dt><dd>${q(value)}</dd></div>`).join('')}</dl>
    </section>
