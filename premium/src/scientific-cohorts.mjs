@@ -1,3 +1,4 @@
+import {hasScientificObservationInputs} from './scientific-quality.mjs';
 const valueAt=(session,key)=>({kind:session.kind,type:session.type,environment:session.environment?.primary,substrate:session.surface,pollution:session.scentPollution?.level,quality:session.quality?.level,result:session.result,ruptures:session.ruptures,resumptions:session.resumptions,ageBand:session.trackAge?.band,benchmark:session.benchmark_session,blind:session.blind_analysis_available,reference:Boolean(session.referenceTrace),difficulty:session.difficulty?.level,rain:session.weather?.rain,windDirection:session.weather?.windDirection})[key];
 export function filterScientificSessions(sessions=[],filters={}){
  const anomalyIds=new Set(filters.anomalyIds||[]);
@@ -8,6 +9,7 @@ export function filterScientificSessions(sessions=[],filters={}){
   if(f.dateFrom&&started<Date.parse(f.dateFrom))return false;if(f.dateTo&&started>Date.parse(`${f.dateTo}T23:59:59`))return false;
   if(f.ageMin!=null&&(age===null||age<Number(f.ageMin)))return false;if(f.ageMax!=null&&(age===null||age>Number(f.ageMax)))return false;
   if(f.benchmark===true&&!row.benchmark_session)return false;if(f.blind===true&&!row.blind_analysis_available)return false;
+  if(f.observation===true&&!hasScientificObservationInputs(row))return false;
   if(f.reference!==undefined&&Boolean(row.referenceTrace)!==Boolean(f.reference))return false;
   if(f.anomaly===true&&!anomalyIds.has(row.id))return false;
   for(const [filterKey,value] of [['humidityMin',row.weather?.humidityPercent],['humidityMax',row.weather?.humidityPercent],['temperatureMin',row.weather?.temperatureC],['temperatureMax',row.weather?.temperatureC],['windSpeedMin',row.weather?.windSpeedKmh],['windSpeedMax',row.weather?.windSpeedKmh],['rupturesMin',row.ruptures],['rupturesMax',row.ruptures],['resumptionsMin',row.resumptions],['resumptionsMax',row.resumptions]]){

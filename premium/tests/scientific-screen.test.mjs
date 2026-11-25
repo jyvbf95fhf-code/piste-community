@@ -21,3 +21,21 @@ test('cohort comparison exposes sample sizes, missing values and distribution sp
  const html=ScientificScreen({route:{type:'compare'},data:{...data,comparison:{sampleA:12,sampleB:8,qualityA:{mean:80},qualityB:{mean:70},caveat:'Différence observée dans cet échantillon.',metrics:[{label:'Confiance',first:{n:10,missing:2,min:20,q1:40,median:60,q3:75,max:90,mean:58,spread:70},second:{n:7,missing:1,min:30,q1:45,median:65,q3:80,max:95,mean:63,spread:65},difference:5}]}}});
  assert.match(html,/manquants A/);assert.match(html,/Q1 A/);assert.match(html,/Q3 B/);assert.match(html,/Différence observée dans cet échantillon/);
 });
+
+test('research dashboard, dossier and filters agree on complete archived Coaching inputs',async()=>{
+ const {filterScientificSessions}=await import('../src/scientific-cohorts.mjs');
+ const complete={
+  ...dataset.sessions[0],source:'account',synthetic:false,
+  trace:[{},{}],referenceTrace:[{},{}],trackAge:{seconds:0},
+  communityCorridorPose:{weather:{wind_speed_kmh:0,wind_direction_deg:0}}
+ };
+ const incomplete={...complete,id:'incomplete',communityCorridorPose:null};
+ const view=buildScientificDatasetView({mode:'account',sessions:[complete,incomplete]});
+ const accountData={...data,view};
+ assert.match(ScientificScreen({data:accountData}),/Voir 1 séance/);
+ assert.deepEqual(filterScientificSessions(view.sessions,{observation:true}).map(row=>row.id),[complete.id]);
+ const detail=ScientificScreen({route:{type:'session'},data:accountData,session:incomplete});
+ assert.match(detail,/Vent archivé pour la pose<\/dt><dd>Indisponible/);
+ const page=ScientificScreen({route:{type:'sessions'},data:{...accountData,pageCount:2},query:{observation:'true'}});
+ assert.match(page,/observation=true&amp;page=2/);
+});

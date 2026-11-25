@@ -1,0 +1,21 @@
+/* Scientific dashboard */
+.scientific-workflow,.scientific-overview { display:grid; gap:12px; }
+.scientific-workflow { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.scientific-workflow a {
+ display:grid; gap:7px; padding:16px; border:1px solid var(--sci-line);
+ border-radius:14px; background:#142a3d; text-decoration:none;
+}
+.scientific-workflow a:hover { border-color:var(--sci-cyan); }
+.scientific-workflow span { color:var(--sci-muted); font-size:.84rem; line-height:1.45; }
+.scientific-overview { grid-template-columns:minmax(0,2fr) minmax(0,1fr); align-items:start; }
+.scientific-observation-coverage { display:grid; gap:7px; margin:14px 0; }
+.scientific-observation-coverage div {
+ display:flex; justify-content:space-between; gap:12px; padding:9px 10px;
+ background:#102436; border-radius:8px;
+}
+.scientific-observation-coverage strong { color:var(--sci-cyan); white-space:nowrap; }
+.scientific-observation-link { display:inline-block; padding-block:8px; }
+.scientific-tools h2 { font-size:1rem; margin:0 0 10px; }
+@media (max-width:680px) {
+ .scientific-workflow,.scientific-overview { grid-template-columns:minmax(0,1fr); }
+}

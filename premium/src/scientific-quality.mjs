@@ -10,3 +10,19 @@ export function scientificQualitySummary(session){
  const dimensions=explainScientificQuality(session),counts=Object.fromEntries(['high','medium','low','insufficient','missing'].map(status=>[status,dimensions.filter(item=>item.status===status).length]));
  return{level:statusFor(session?.quality?.level),score:session?.quality?.score??null,dimensions,counts,explanation:session?.quality?.explanation||'Qualité indisponible'};
 }
+
+export function scientificObservationInputs(session){
+ const recorded=session.source==='account';
+ const wind=session.communityCorridorPose?.weather;
+ return {
+  reference:session.referenceTrace?.length>=2,
+  search:session.trace?.length>=2,
+  age:Number.isFinite(session.trackAge?.seconds)&&session.trackAge.seconds>=0,
+  wind:recorded?Number.isFinite(wind?.wind_speed_kmh)&&Number.isFinite(wind?.wind_direction_deg):
+   Number.isFinite(session.weather?.windSpeedKmh)&&Boolean(session.weather?.windDirection)
+ };
+}
+
+export function hasScientificObservationInputs(session){
+ return Object.values(scientificObservationInputs(session)).every(Boolean);
+}
