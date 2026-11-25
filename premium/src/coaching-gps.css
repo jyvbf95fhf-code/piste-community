@@ -178,7 +178,7 @@ body:has([data-shared-review]){overflow:hidden}
 [data-traceur-preparation] form{display:grid;gap:12px;margin:18px 0}[data-traceur-preparation] :is(input,select){width:100%;min-width:0;box-sizing:border-box}
 @media print{body:has([data-shared-review]){overflow:visible}.shared-review{position:static;height:auto;overflow:visible;padding:0}.shared-review-back{display:none}}
 
-:is(.debrief-flow,.session-dossier,.session-replay-page,.operational-session-detail,.operational-replay-page) .real-map-reader .gps-map-stage{
+:is(.debrief-flow,.session-dossier,.session-replay-page,.operational-session-detail,.operational-replay-page) .real-map-reader > .gps-map-stage{
  height: min(72dvh, 840px);
  min-height: 360px;
  max-height: none;
@@ -187,10 +187,13 @@ body:has([data-shared-review]){overflow:hidden}
 .gps-expand-map{margin-bottom:10px}
 .gps-fullscreen-map{
  position:fixed;inset:0;margin:0;padding:0;border:0;
- width:100%;height:100%;max-width:none;max-height:none;background:#102438;
+ width:100%;height:100dvh;max-width:none;max-height:none;border-radius:0;box-sizing:border-box;overflow:hidden;background:#102438;
 }
 .real-map-reader .gps-fullscreen-map .gps-map-stage{
- width:100%;height:100%;min-height:0;max-height:none;border-radius:0;
+ position:absolute;inset:0;width:100%;height:100%;min-height:0;max-height:none;border-radius:0;
+}
+.real-map-reader .gps-fullscreen-map .gps-map{
+ position:absolute;inset:0;width:100%;height:100%;min-height:0;max-height:none;border:0;border-radius:0;
 }
 .gps-close-fullscreen{
  position:absolute;z-index:600;left:max(12px,env(safe-area-inset-left));

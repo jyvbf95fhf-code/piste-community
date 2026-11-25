@@ -46,17 +46,22 @@ export function recordedCommunityCorridor(source){
  return communityCorridor(source.gpsTrack,selectCorridorWeather([],end,source.weatherSnapshot));
 }
 
-function communityCorridor(pose,weather){
+export function communityCorridor(pose,weather){
  const end=pose.segments.flat().at(-1)?.timestamp;
  if(!Number.isFinite(end))return null;
  const result=buildGpsCorridor({pose,weather,allowed:true,enabled:true,now:end+1000});
  if(result.state!=='available')return null;
  const polygons=[];
+ const maxSidePoints=Math.min(500,Math.floor(6000/(4*result.features.length)));
+ if(result.features.length>60)return null;
  for(const feature of result.features){
   for(const boundary of ['outerBoundary','innerBoundary']){
    const poly=feature?.[boundary];
-   if(!Array.isArray(poly)||poly.length<3||poly.length>1000)return null;
-   const converted=poly.map(p=>({x:p.lon,y:p.lat}));
+   if(!Array.isArray(poly)||poly.length<4||poly.length%2!==0)return null;
+   const half=poly.length/2;
+   const keep=Math.min(half,maxSidePoints);
+   const sample=offset=>Array.from({length:keep},(_,i)=>poly[offset+Math.round(i*(half-1)/(keep-1))]);
+   const converted=[...sample(0),...sample(half)].map(p=>({x:p.lon,y:p.lat}));
    if(!converted.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&Math.abs(p.x)<=180&&Math.abs(p.y)<=90))return null;
    polygons.push(converted);
   }

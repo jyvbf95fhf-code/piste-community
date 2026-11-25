@@ -26,3 +26,11 @@ test('completed OPS publication uses actual GPS segments instead of missing trac
  const sources=accountCommunitySourceOptions({operational:[{id:'ops-gps',kind:'operational',status:'Archivée',gpsTrack:{segments:[[{latitude:48.1,longitude:7.1,timestamp:t},{latitude:48.2,longitude:7.2,timestamp:t+60000}]]}}]});
  assert.deepEqual(sources[0].data.map.segments,[[{x:7.1,y:48.1},{x:7.2,y:48.2}]]);
 });
+
+test('a 522-point recorded pose retains both bounded corridor polygons',()=>{
+ const t=Date.parse('2026-11-24T09:00:00Z');
+ const segments=[Array.from({length:522},(_,i)=>({latitude:48.1+i/100000,longitude:7.1+i/100000,timestamp:t+i*1000}))];
+ const corridor=recordedCommunityCorridor({olfactoryCorridor:{enabled:true},gpsTrack:{segments},weatherSnapshot:{wind_speed_kmh:12,wind_direction_deg:113,observedAt:t}});
+ assert.equal(corridor?.polygons.length,2);
+ for(const polygon of corridor.polygons)assert.equal(polygon.length,1000);
+});

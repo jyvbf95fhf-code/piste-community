@@ -22,6 +22,8 @@ try{
  assert.ok(!(await page.locator('body').innerText()).includes('Météo historique indisponible'));
  await page.getByRole('button',{name:'Plein écran'}).click();
  await page.getByRole('dialog',{name:'Carte en plein écran'}).waitFor();
+ const fullMap=await page.locator('.gps-fullscreen-map .gps-map').boundingBox();
+ assert.ok(fullMap?.height>=840 && fullMap.width>=388,JSON.stringify(fullMap));
  assert.equal(await polygons().count(),2);
  await page.getByRole('button',{name:'Fermer la carte'}).click();
  await page.getByRole('dialog',{name:'Carte en plein écran'}).waitFor({state:'hidden'});
