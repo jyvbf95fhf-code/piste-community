@@ -68,3 +68,18 @@ test('archived weather reaches Science without duplicating pose GPS and builds a
  assert.equal((opened.match(/data-scientific-layer=/g)||[]).length,3);
  assert.match(opened,/12\.9 km\/h · venant de 113°/);
 });
+
+test('statistics use every filtered session and preserve filters on tabs, axes and comparison',()=>{
+ const filtered=Array.from({length:23},(_,index)=>({
+  id:'row-'+index,title:'Séance '+index,kind:'training',trackAge:{seconds:12000+index},durationMinutes:index,
+  weather:{windSpeedKmh:5,windDirection:'face'}
+ }));
+ const query={kind:'training',environment:'Forêt',view:'statistics',page:'2'};
+ const html=ScientificScreen({route:{type:'sessions'},data:{...data,filtered,pageRows:filtered.slice(20),filters:{kind:'training',environment:'Forêt'}},query});
+ assert.match(html,/23 séances avec les deux mesures/);
+ assert.match(html,/href="\/scientific\/session\/row-0"/);
+ assert.match(html,/href="\/scientific\/session\/row-22"/);
+ assert.match(html,/name="environment" value="Forêt"/);
+ assert.match(html,/\/scientific\/compare\?kind=training&amp;environment=For%C3%AAt&amp;terrain=For%C3%AAt/);
+ assert.doesNotMatch(html,/data-scientific-map|20 par page/);
+});

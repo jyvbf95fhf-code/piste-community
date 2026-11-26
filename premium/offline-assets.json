@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "366d37b0570ac02c",
+  "revision": "dd438fd11a298a36",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -297,6 +297,8 @@
     "/src/scientific-dashboard.css",
     "/src/scientific-dataset.mjs",
     "/src/scientific-evaluation.mjs",
+    "/src/scientific-filtered-analysis.mjs",
+    "/src/scientific-filtered-charts.mjs",
     "/src/scientific-hypotheses.mjs",
     "/src/scientific-longitudinal.mjs",
     "/src/scientific-provenance.mjs",
@@ -360,5 +362,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6920928
+  "bytes": 6938339
 }

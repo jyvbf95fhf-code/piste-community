@@ -6,7 +6,8 @@ export function filterScientificSessions(sessions=[],filters={}){
   const f=filters,started=Date.parse(row.startedAt),age=Number.isFinite(row.trackAge?.seconds)?row.trackAge.seconds/60:null;
   const checks=[['kind',f.kind],['environment',f.environment],['substrate',f.substrate],['pollution',f.pollution],['quality',f.quality],['result',f.result],['ageBand',f.ageBand],['kind',f.type]];
   if(checks.some(([key,want])=>want&&want!=='all'&&valueAt(row,key)!==want))return false;
-  if(f.dateFrom&&started<Date.parse(f.dateFrom))return false;if(f.dateTo&&started>Date.parse(`${f.dateTo}T23:59:59`))return false;
+  if((f.dateFrom||f.dateTo)&&!Number.isFinite(started))return false;
+  if(f.dateFrom&&started<Date.parse(f.dateFrom))return false;if(f.dateTo&&started>Date.parse(`${f.dateTo}T23:59:59.999Z`))return false;
   if(f.ageMin!=null&&(age===null||age<Number(f.ageMin)))return false;if(f.ageMax!=null&&(age===null||age>Number(f.ageMax)))return false;
   if(f.benchmark===true&&!row.benchmark_session)return false;if(f.blind===true&&!row.blind_analysis_available)return false;
   if(scientificObservationKeys.includes(f.input)&&Boolean(scientificObservationInputs(row)[f.input])!==(f.availability!=='missing'))return false;

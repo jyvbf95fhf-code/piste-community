@@ -34,8 +34,8 @@ export function createScientificController({actor,dataset,getDataset=null,analyt
   refresh();const state=snapshot(),filters={};for(const key of ['search','kind','ageBand','environment','substrate','pollution','quality','result','difficulty','dateFrom','dateTo','benchmark','blind','reference','observation','input','availability','anomaly','ageMin','ageMax','weather','windDirection','humidityMin','humidityMax','temperatureMin','temperatureMax','windSpeedMin','windSpeedMax','rupturesMin','rupturesMax','resumptionsMin','resumptionsMax'])if(query.has(key)){const value=query.get(key);filters[key]=['benchmark','blind','reference','observation','anomaly'].includes(key)?value==='true':value;}
   const filtered=sessions(filters),pageCount=Math.max(1,Math.ceil(filtered.length/20)),page=Math.min(pageCount,Math.max(1,Number(query.get('page'))||1));
   let comparison=null;if(route.type==='compare'&&query.has('a')&&query.has('b')){const a=state.cohorts.find(item=>item.id===query.get('a')),b=state.cohorts.find(item=>item.id===query.get('b'));if(a&&b)comparison=compareScientificCohorts(resolveCohort(view.sessions,a),resolveCohort(view.sessions,b));}
-  const terrains=[...new Set(view.sessions.map(row=>row.environment?.primary).filter(x=>x&&x!=='Indisponible'))].sort();
-  if(route.type==='compare'&&terrains.includes(query.get('terrain')))comparison=compareScientificTrackAges(view.sessions,query.get('terrain'));
+  const terrains=[...new Set(filtered.map(row=>row.environment?.primary).filter(x=>x&&x!=='Indisponible'))].sort();
+  if(route.type==='compare'&&terrains.includes(query.get('terrain')))comparison=compareScientificTrackAges(filtered,query.get('terrain'));
   const selectedBlind=byId(query.get('session'));
   const allRows=state.runs;
   const anomalyDetails=derivedAnomalies.map(item=>explainScientificAnomaly(item,byId(item.sessionId),sourceSessions)).filter(Boolean);
@@ -57,12 +57,12 @@ export function createScientificController({actor,dataset,getDataset=null,analyt
    else if(action==='cohort-from-hypothesis'){const hypothesis=snapshot().hypotheses.find(item=>item.id===node.dataset.hypothesisId);if(hypothesis){const cohort=createCohort({name:`Vérification · ${hypothesis.title}`,criteria:cohortCriteriaFromHypothesis(hypothesis)});navigate(`/scientific/cohort/${encodeURIComponent(cohort.id)}`);}
    }else return false;notify(dataset?.mode==='account'?'Travaux Science enregistrés sur cet appareil.':'Modification conservée pour cette visite.');return true;}catch(error){toast(error.message);return true;}},
   handleSubmit(event){const form=event.target.closest?.('[data-scientific-form]');if(!form)return false;const kind=form.dataset.scientificForm;try{const values=readForm(form);
-    if(kind==='filter'){event.preventDefault();const params=new URLSearchParams();for(const [key,value]of Object.entries(values))if(value&&value!=='all')params.set(key,value);navigate(`/scientific/sessions${params.size?`?${params}`:''}`);render();return true;}
+    if(kind==='filter'||kind==='stats-axes'){event.preventDefault();const params=new URLSearchParams();for(const [key,value]of Object.entries(values))if(value&&value!=='all')params.set(key,value);navigate(`/scientific/sessions${params.size?`?${params}`:''}`);render();return true;}
     event.preventDefault();
     if(kind==='cohort'){const criteria={kind:values.kind,environment:values.environment,pollution:values.pollution};for(const key of Object.keys(criteria))if(criteria[key]==='all')delete criteria[key];createCohort({name:values.name,criteria});}
     else if(kind==='cohort-edit'){const criteria={kind:values.kind,environment:values.environment,pollution:values.pollution};for(const key of Object.keys(criteria))if(criteria[key]==='all')delete criteria[key];controller.updateCohort(values.cohortId,{name:values.name,criteria});}
     else if(kind==='cohort-from-filter'){let criteria={};try{criteria=JSON.parse(values.criteria||'{}');}catch{throw new Error('Filtres de cohorte invalides.');}createCohort({name:values.name,criteria});}
-    else if(kind==='compare-age'){navigate('/scientific/compare?'+new URLSearchParams({terrain:values.terrain}));return true;}
+    else if(kind==='compare-age'){navigate('/scientific/compare?'+new URLSearchParams(values));return true;}
     else if(kind==='compare'){const result=controller.compareCohorts(values.a,values.b);navigate(`/scientific/compare?a=${encodeURIComponent(values.a)}&b=${encodeURIComponent(values.b)}`);return Boolean(result);}
     else if(kind==='annotation')controller.annotate({...values,tags:values.tags.split(',').map(item=>item.trim()).filter(Boolean)});
     else if(kind==='revise-annotation')controller.reviseAnnotation(values.annotationId,{text:values.text});
