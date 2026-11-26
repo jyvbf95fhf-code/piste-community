@@ -13,7 +13,7 @@ export function scientificQualitySummary(session){
 
 export function scientificObservationInputs(session){
  const recorded=session.source==='account';
- const wind=session.communityCorridorPose?.weather;
+ const wind=session.poseWind;
  return {
   reference:session.referenceTrace?.length>=2,
   search:session.trace?.length>=2,
@@ -25,4 +25,16 @@ export function scientificObservationInputs(session){
 
 export function hasScientificObservationInputs(session){
  return Object.values(scientificObservationInputs(session)).every(Boolean);
+}
+
+export const scientificObservationKeys=['reference','search','age','wind'];
+
+export function scientificObservationStatus(session,key){
+ if(scientificObservationInputs(session)[key])return 'Disponible';
+ return ({
+  reference:'Trace de pose absente du dossier.',
+  search:'Trace de suivi absente du dossier.',
+  age:'Âge de piste au départ indisponible.',
+  wind:session.source==='account'?'Aucun relevé de vent exploitable associé à la pose.':'Vent simulé indisponible.'
+ })[key]||'Indisponible';
 }

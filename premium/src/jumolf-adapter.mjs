@@ -8,7 +8,7 @@ function projectPoints(value){
   ['space',point.space],['accuracy',point.accuracy],['latitude',point.latitude],['longitude',point.longitude],['sequence',point.sequence],['x',point.x],['y',point.y],['timestamp',point.timestamp||point.at],['distanceM',point.distanceM],['breakBefore',typeof point.breakBefore==='boolean'?point.breakBefore:undefined]
  ].filter(([,field])=>available(field))));
 }
-function projectSession(record){
+function projectSession(record,forScience){
  const session=record?.session||record||{}, search=record?.searchState||{};
  const dog=session.dog||record?.dog||null;
  const trace=projectPoints(session.searchTrace||session.trace||record?.searchTrace||search.trace||search.path);
@@ -19,6 +19,7 @@ function projectSession(record){
   dog:dog?{...(available(dog.id)?{id:dog.id}:{}),...(available(dog.name)?{name:dog.name}:{}),...(available(dog.breed)?{breed:dog.breed}:{}),...(available(dog.age)?{age:dog.age}:{})}:null,
   dogId:session.dogId||dog?.id||null,trackAge:session.trackAge?clone(session.trackAge):null,startedAt:session.startedAt||session.started_at||null,finishedAt:session.finishedAt||session.finished_at||null,
   terrain:session.terrain||session.environment||null,weather:weather?{...(available(weather.temperature)?{temperature:weather.temperature}:{}),...(available(weather.humidity)?{humidity:weather.humidity}:{}),...(available(weather.label)?{label:weather.label}:{}),...(available(weather.provenance)?{provenance:weather.provenance}:{}),...(weather.observedAt?{observedAt:weather.observedAt}:{}),...(weather.source?{source:weather.source}:{}),...(weather.wind?{wind:clone(weather.wind)}:{})}:null,
+  ...(forScience&&session.communityCorridorPose?.weather?{poseWind:clone(session.communityCorridorPose.weather)}:{}),
   wind:session.wind||weather?.wind||null,trace,referenceTrace,plannedReferenceTrace:projectPoints(session.plannedReferenceTrace),
   events:Array.isArray(session.events)?session.events.map(item=>({...(item.id?{id:String(item.id)}:{}),type:item.type||item.label||null,timestamp:item.timestamp||item.at||null,...(item.point&&Number.isFinite(item.point.x)&&Number.isFinite(item.point.y)?{point:{x:item.point.x,y:item.point.y}}:{})})):[],
   corridor:session.corridor&&Array.isArray(session.corridor.geometry)?{geometry:projectPoints(session.corridor.geometry),provenance:'estimated'}:null,
@@ -49,7 +50,7 @@ function projectOperational(mission){
  };
 }
 
-export function buildJumolfSources({dogs=[],sessions=[],tracks=[],operational=[]}={}){
+export function buildJumolfSources({dogs=[],sessions=[],tracks=[],operational=[]}={},{forScience=false}={}){
  const safeDogs=clone(dogs).map(dog=>({id:String(dog.id),name:dog.name||null,breed:dog.breed||null,age:dog.age||null,specialty:dog.specialty||null,disciplines:Array.isArray(dog.disciplines)?[...dog.disciplines]:[]}));
- return {dogs:safeDogs,sessions:clone(sessions).map(projectSession).filter(row=>row.id),tracks:clone(tracks).map(projectTrack).filter(row=>row.id),operational:clone(operational).map(projectOperational).filter(row=>row.id)};
+ return {dogs:safeDogs,sessions:clone(sessions).map(row=>projectSession(row,forScience)).filter(row=>row.id),tracks:clone(tracks).map(projectTrack).filter(row=>row.id),operational:clone(operational).map(projectOperational).filter(row=>row.id)};
 }

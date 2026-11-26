@@ -27,9 +27,9 @@ test('research dashboard, dossier and filters agree on complete archived Coachin
  const complete={
   ...dataset.sessions[0],source:'account',synthetic:false,
   trace:[{},{}],referenceTrace:[{},{}],trackAge:{seconds:0},
-  communityCorridorPose:{weather:{wind_speed_kmh:0,wind_direction_deg:0}}
+  poseWind:{wind_speed_kmh:0,wind_direction_deg:0}
  };
- const incomplete={...complete,id:'incomplete',communityCorridorPose:null};
+ const incomplete={...complete,id:'incomplete',poseWind:null};
  const view=buildScientificDatasetView({mode:'account',sessions:[complete,incomplete]});
  const accountData={...data,view};
  assert.match(ScientificScreen({data:accountData}),/Voir 1 séance/);
@@ -38,4 +38,33 @@ test('research dashboard, dossier and filters agree on complete archived Coachin
  assert.match(detail,/Vent archivé pour la pose<\/dt><dd>Indisponible/);
  const page=ScientificScreen({route:{type:'sessions'},data:{...accountData,pageCount:2},query:{observation:'true'}});
  assert.match(page,/observation=true&amp;page=2/);
+});
+
+test('archived weather reaches Science without duplicating pose GPS and builds a map only on request',async()=>{
+ const {buildAccountAnalysisSources,buildAccountScientificDataset}=await import('../src/account-analysis-sources.mjs');
+ const {buildJumolfSources}=await import('../src/jumolf-adapter.mjs');
+ const {filterScientificSessions}=await import('../src/scientific-cohorts.mjs');
+ const t=1795509000000;
+ const weather={source:'Open-Meteo',provenance:'estimated',observedAt:t,capturedAt:t+10000,wind_speed_kmh:12.9,wind_direction_deg:113};
+ const gps=(from,lat)=>({provenance:'device-geolocation',startedAt:from,endedAt:from+60000,segments:[[
+  {latitude:lat,longitude:1.2,timestamp:from},{latitude:lat+.001,longitude:1.201,timestamp:from+60000}
+ ]]});
+ const raw=buildAccountAnalysisSources({ownerId:'account',sharedOwnerId:'account',sharedSessions:[{
+  id:'vol-fixture',phase:'ARCHIVED',mode:'normal',role:'observer',dog:'Volverine',
+  pose:gps(t+10000,48.1),search:gps(t+22000000,48.1001),weatherHistory:[{kind:'pose',weather}]
+ }]});
+ assert.equal(buildJumolfSources(raw).sessions[0].poseWind,undefined);
+ const sources=buildJumolfSources(raw,{forScience:true});
+ assert.equal(sources.sessions[0].communityCorridorPose,undefined);
+ const view=buildScientificDatasetView(buildAccountScientificDataset(sources,'account'));
+ const [session]=view.sessions;
+ assert.equal(session.poseWind.wind_direction_deg,113);
+ assert.equal(filterScientificSessions(view.sessions,{input:'wind',availability:'present'}).length,1);
+ assert.equal(filterScientificSessions(view.sessions,{input:'wind',availability:'missing'}).length,0);
+ const input={route:{type:'session'},data:{...data,view},session};
+ assert.doesNotMatch(ScientificScreen(input),/data-scientific-map/);
+ const opened=ScientificScreen({...input,query:{map:'1'}});
+ assert.match(opened,/data-scientific-map/);
+ assert.equal((opened.match(/data-scientific-layer=/g)||[]).length,3);
+ assert.match(opened,/12\.9 km\/h · venant de 113°/);
 });

@@ -1,3 +1,4 @@
+import {mountScientificMap} from './scientific-session-map.mjs';
 import {hasLivePremium,LivePremiumGate} from './live-premium.mjs';
 import {createPremiumWelcome,PremiumRecap} from './premium-recap.mjs';
 import {dogMileageTotals} from './dog-mileage.mjs';
@@ -931,7 +932,7 @@ function jumolfRawSources(){
  raw.operational=raw.operational.map(r=>{const id=r.id.replace(/^ops:/,''),m=operationalStore.get(id);return {...r,searchOutcome:sharedIndex?.outcome('ops:'+(m?.originalId||id))||m?.retrospective?.searchOutcome||null};});
  return raw;
 }
-function accountScientificDataset(){return buildAccountScientificDataset(buildJumolfSources(jumolfRawSources()),currentUser?.user_id);}
+function accountScientificDataset(){return buildAccountScientificDataset(buildJumolfSources(jumolfRawSources(),{forScience:true}),currentUser?.user_id);}
 function scienceDataset(){return auth.assurance==='supabase-auth'?accountScientificDataset():scientificDataset;}
 function prepareJumolfTraining(preparation){
  if(auth.assurance!=='supabase-auth'||!currentUser?.user_id)throw Error('Un compte connecté est nécessaire.');
@@ -1082,6 +1083,7 @@ function render(focus=false) {
  const restoredExport=document.querySelector('[data-data-exports]');if(restoredExport&&exportUi){restoredExport.open=exportUi.open;for(const name of ['domain','format']){const field=restoredExport.querySelector(`[name=${name}]`);if([...field.options].some(o=>o.value===exportUi[name]))field.value=exportUi[name];}}
  updateNotificationBadge();
  if(remoteCoaching){const slot=document.querySelector('[data-remote-premium-slot]');if(loboAccount.snapshot()?.status==='loading'&&!trackingDogs().length){slot.innerHTML='<p role="status">Chargement de votre chien autorisé…</p>';}else if(remoteCoachingRoot){slot.replaceWith(remoteCoachingRoot);remoteCoachingMount?.refreshReferences();}else {const index=sharedIndex,ownedDogs={get:id=>localDog(id)},wizardOwnerId=currentUser.user_id;remoteCoachingRoot=slot;remoteCoachingMount=mountRemoteCoaching({root:slot,client:accountClient,embedded:true,resumeStoredSession:route!=='/new-session',initialWizardState:coachingWizardState,resolveJumolfPreparation:p=>jumolfController.currentTrainingPreparation(p),getTracks:ownerId=>currentUser?.user_id===ownerId&&trackLibraryOwnerId===ownerId?trackLibrary.list():[],onWizardChange:value=>{if(currentUser?.user_id===wizardOwnerId){coachingWizardState=value;try{index?.saveTrainingDraft(value);}catch(error){Toast(error.message);}}},dogs:trackingDogs(),primaryDogId:profileStore.snapshot().primary_dog_id,entry:new URLSearchParams(location.search).has('join')?'list':'create',preferList:route!=='/coaching/session'||new URLSearchParams(location.search).has('join'),sessionId:new URLSearchParams(location.search).get('session'),initialTab:new URLSearchParams(location.search).get('tab')||'summary',onProjection:(p,id)=>{p?index?.accept(p):id&&index?.forget(id);void communityAutoPublication?.sync(jumolfRawSources());},onSessions:list=>{list.forEach(p=>{index?.accept(p);});void communityAutoPublication?.sync(jumolfRawSources());},onCreated:(p,dogId,memory)=>{if(currentUser?.user_id!==wizardOwnerId)return;index?.accept(p);const dog=ownedDogs.get(dogId);if(dog){index.linkDog(p.id,dog);if(memory)try{index.linkTraining(p.id,memory);}catch(error){Toast('Session créée, mémoire pédagogique non enregistrée : '+error.message);}}const request=coachingWizardState?.draft?.jumolfPreparation;if(currentUser?.user_id===wizardOwnerId&&(!request||resolveDogId(trackingDogs(),request.dogId)===dogId))jumolfController.confirmTrainingCreated({token:request?.token,dogId:request?.dogId||dogId,sessionId:'coaching:'+p.id});},onDogLink:(id,dogId)=>{const dog=ownedDogs.get(dogId);if(!dog)throw Error('Chien indisponible.');index.linkDog(id,dog);},associationMarkup:sharedDogAssociation});}}
+ mountScientificMap(document,{ownerId:currentUser?.user_id});
  const selectedDossierTab=document.querySelector('.dossier-tabs [aria-current=page]');if(selectedDossierTab){const nav=selectedDossierTab.parentElement;nav.scrollLeft=selectedDossierTab.offsetLeft-nav.offsetLeft-(nav.clientWidth-selectedDossierTab.offsetWidth)/2;}
  trackSmart.reconcile();
  mountRexMaps();

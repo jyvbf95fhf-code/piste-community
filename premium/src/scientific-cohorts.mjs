@@ -1,14 +1,15 @@
-import {hasScientificObservationInputs} from './scientific-quality.mjs';
+import {hasScientificObservationInputs,scientificObservationInputs,scientificObservationKeys} from './scientific-quality.mjs';
 const valueAt=(session,key)=>({kind:session.kind,type:session.type,environment:session.environment?.primary,substrate:session.surface,pollution:session.scentPollution?.level,quality:session.quality?.level,result:session.result,ruptures:session.ruptures,resumptions:session.resumptions,ageBand:session.trackAge?.band,benchmark:session.benchmark_session,blind:session.blind_analysis_available,reference:Boolean(session.referenceTrace),difficulty:session.difficulty?.level,rain:session.weather?.rain,windDirection:session.weather?.windDirection})[key];
 export function filterScientificSessions(sessions=[],filters={}){
  const anomalyIds=new Set(filters.anomalyIds||[]);
  return sessions.filter(row=>(row.synthetic===true||row.source==='account')).filter(row=>{
-  const f=filters,started=Date.parse(row.startedAt),age=row.trackAge?.seconds===null?null:(row.trackAge?.seconds??null)/60;
+  const f=filters,started=Date.parse(row.startedAt),age=Number.isFinite(row.trackAge?.seconds)?row.trackAge.seconds/60:null;
   const checks=[['kind',f.kind],['environment',f.environment],['substrate',f.substrate],['pollution',f.pollution],['quality',f.quality],['result',f.result],['ageBand',f.ageBand],['kind',f.type]];
   if(checks.some(([key,want])=>want&&want!=='all'&&valueAt(row,key)!==want))return false;
   if(f.dateFrom&&started<Date.parse(f.dateFrom))return false;if(f.dateTo&&started>Date.parse(`${f.dateTo}T23:59:59`))return false;
   if(f.ageMin!=null&&(age===null||age<Number(f.ageMin)))return false;if(f.ageMax!=null&&(age===null||age>Number(f.ageMax)))return false;
   if(f.benchmark===true&&!row.benchmark_session)return false;if(f.blind===true&&!row.blind_analysis_available)return false;
+  if(scientificObservationKeys.includes(f.input)&&Boolean(scientificObservationInputs(row)[f.input])!==(f.availability!=='missing'))return false;
   if(f.observation===true&&!hasScientificObservationInputs(row))return false;
   if(f.reference!==undefined&&Boolean(row.referenceTrace)!==Boolean(f.reference))return false;
   if(f.anomaly===true&&!anomalyIds.has(row.id))return false;

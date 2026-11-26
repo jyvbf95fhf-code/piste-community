@@ -194,3 +194,15 @@
  .scientific-tools { order:3; }
  .scientific-tools .scientific-quick-links { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+.scientific-observation-coverage dd a { display:flex; align-items:baseline; gap:4px; color:inherit; text-decoration:none; }
+.scientific-observation-coverage dd a svg { margin-left:auto; width:15px; height:15px; }
+.scientific-observation-coverage dd a:hover { color:var(--sci-accent); }
+.scientific-tools summary { padding:5px 0 10px; cursor:pointer; font-weight:700; }
+.scientific-map-controls { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin-bottom:8px; }
+.scientific-map-layer { display:inline-flex; align-items:center; gap:4px; min-height:36px; font-size:.88rem; }
+.scientific-map-layer-pose input { accent-color:#ff405d; }
+.scientific-map-layer-search input { accent-color:#62c6e5; }
+.scientific-map-layer-corridor input { accent-color:#bca7ef; }
+.scientific-session-map { height:clamp(290px,56dvh,620px); border-radius:9px; background:#142a39; }
+.scientific-wind-details { margin-top:10px; }
+.scientific-dl dd small { display:block; margin-top:3px; color:var(--sci-muted); }
