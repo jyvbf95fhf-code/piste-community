@@ -88,7 +88,9 @@ async function join(state){
    if(state.room!==room||track.kind!=='video')return;
    state.media?.remove();state.media=null;state.message='En attente de la caméra du Conducteur.';paint(state);
   });
-  room.on(RoomEvent.Disconnected,()=>{if(state.room===room)void close(state,'Vidéo interrompue.');});
+  room.on(RoomEvent.Disconnected,reason=>{
+   if(state.room===room&&!state.busy)void close(state,'Vidéo interrompue'+(Number.isInteger(reason)?' · code LiveKit '+reason:'')+'.');
+  });
   await room.connect(url,token);
   if(!active()){await room.disconnect();return;}
   if(state.kind==='camera'){
@@ -104,7 +106,13 @@ async function join(state){
    }catch{if(active())await close(state,'Connexion vidéo interrompue.');}
   },20000);
  }catch(error){
-  if(active())await close(state,error?.name==='NotAllowedError'?'Autorise la caméra dans les réglages de ton navigateur.':'Vidéo indisponible. Le suivi GPS reste accessible.');
+  if(!active())return;
+  const detail=String(error?.message||'');
+  const message=error?.name==='NotAllowedError'?'Autorise la caméra dans les réglages de ton navigateur.'
+   :/401|invalid token|invalid api key|unauthorized/i.test(detail)?'LiveKit refuse les identifiants du pilote.'
+   :/websocket|network|signal|connect|fetch/i.test(detail)?'Connexion LiveKit impossible.'
+   :'Impossible de démarrer la vidéo.';
+  await close(state,message);
  }
 }
 
