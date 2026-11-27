@@ -10,9 +10,10 @@ const env={VERCEL_ENV:'preview',PISTE_VIDEO_PILOT:'1',PISTE_VIDEO_PUBLISHER_ID:o
 const config=videoPilotConfig(env);
 const base={id,mode:'normal',phase:'SEARCH_RUNNING'};
 const plan=(kind,identity,projection)=>({identity,sessionId:id,kind,projection});
-test('pilot fails closed without preview deployment, trusted identity configuration or provider',()=>{
+test('pilot fails closed outside production and preview or without trusted configuration',()=>{
  assert.ok(config);
- for(const values of [{VERCEL_ENV:'production'},{PISTE_VIDEO_PILOT:''},{LIVEKIT_API_SECRET:''},{LIVEKIT_URL:'wss://other.example'},{PISTE_VIDEO_PUBLISHER_ID:'invalid'}]){
+ for(const type of ['ops','coaching'])assert.equal(videoPilotConfig({...env,VERCEL_ENV:'production'},type).publisher,owner);
+ for(const values of [{VERCEL_ENV:'development'},{PISTE_VIDEO_PILOT:''},{LIVEKIT_API_SECRET:''},{LIVEKIT_URL:'wss://other.example'},{PISTE_VIDEO_PUBLISHER_ID:'invalid'}]){
   assert.equal(videoPilotConfig({...env,...values}),null);
  }
 });

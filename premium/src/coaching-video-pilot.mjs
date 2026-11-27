@@ -18,7 +18,7 @@ function paint(state){
  if(!slot?.isConnected)return;
  slot.replaceChildren();
  const camera=state.kind==='camera';
- const placeholder=camera&&state.sessionType==='ops'&&(!state.sessionId||state.unavailable);
+ const placeholder=camera&&(!state.sessionId||state.unavailable);
  if(!state.allowed&&!placeholder){
   if(state.message){
    const status=document.createElement('small');
@@ -211,12 +211,12 @@ async function checkAccess(state){
   if(current!==state)return;
   state.allowed=response.ok;
   state.unavailable=error?.code==='publisher-unavailable';
-  state.message=!response.ok&&!state.unavailable&&state.sessionType==='ops'&&state.kind==='camera'
-   ?error?.error||'Caméra OPS indisponible · HTTP '+response.status+'.':'';
+  state.message=!response.ok&&!state.unavailable&&state.kind==='camera'
+   ?error?.error||'Caméra indisponible · HTTP '+response.status+'.':'';
   paint(state);
  }catch{
-  if(current!==state||state.sessionType!=='ops'||state.kind!=='camera')return;
-  state.message='Caméra OPS indisponible · connexion au service vidéo impossible.';
+  if(current!==state||state.kind!=='camera')return;
+  state.message='Caméra indisponible · connexion au service vidéo impossible.';
   paint(state);
  }finally{state.checking=false;}
 }
