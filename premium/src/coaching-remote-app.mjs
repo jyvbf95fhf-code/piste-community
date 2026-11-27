@@ -1,3 +1,4 @@
+import {syncCoachingVideo} from './coaching-video-pilot.mjs';
 import {TraceurSourceActions,TraceurPreparationSheet,SharedCoachingClosed,SharedReviewFrame} from './coaching-shared-review.mjs';
 import {performPoseHandoff,poseHandoffStatus} from './coaching-pose-handoff.mjs';
 import {requestCoachingLiveEnd,flushCoachingLiveEnds} from './coaching-live-exit.mjs';
@@ -47,7 +48,16 @@ function reuseCockpit(previous,next){
  for(const name of Object.keys(previous.dataset))if(!(name in next.dataset))delete previous.dataset[name];
  Object.assign(previous.dataset,next.dataset);previous.replaceChildren(...children);return previous;
 }
-function render(){if(disposed)return;if(root.querySelector('.gps-touch-lock-panel:not([hidden])')){deferredRender=true;return;}deferredRender=false;const inviteRole=root.querySelector('[data-remote-form=invite] [name=role]')?.value;const focused=root.contains(document.activeElement)?{name:document.activeElement.name,form:document.activeElement.closest('[data-remote-form]')?.dataset.remoteForm,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;root.setAttribute('aria-busy',String(busy||Boolean(opening&&!opening.error)));rendering=true;const p=state.projection,previous=root.querySelector('.shared-terrain'),retainedCockpit=embedded&&!opening&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(p?.phase)&&previous?.dataset.remoteViewKey===cockpitKey(p)?previous:null;if(!retainedCockpit)destroyGpsMaps({preserveView:embedded});root.classList.toggle('remote-shell',!embedded||Boolean(p)&&!retainedCockpit);
+async function videoAccessToken(){
+ const {data}=await client.auth.getSession();
+ return data?.session?.access_token||null;
+}
+function render(){
+ if(disposed)return;
+ renderCockpit();
+ if(embedded&&root.isConnected)syncCoachingVideo(root,{ownerId:profile?.id,getAccessToken:videoAccessToken});
+}
+function renderCockpit(){if(root.querySelector('.gps-touch-lock-panel:not([hidden])')){deferredRender=true;return;}deferredRender=false;const inviteRole=root.querySelector('[data-remote-form=invite] [name=role]')?.value;const focused=root.contains(document.activeElement)?{name:document.activeElement.name,form:document.activeElement.closest('[data-remote-form]')?.dataset.remoteForm,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;root.setAttribute('aria-busy',String(busy||Boolean(opening&&!opening.error)));rendering=true;const p=state.projection,previous=root.querySelector('.shared-terrain'),retainedCockpit=embedded&&!opening&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(p?.phase)&&previous?.dataset.remoteViewKey===cockpitKey(p)?previous:null;if(!retainedCockpit)destroyGpsMaps({preserveView:embedded});root.classList.toggle('remote-shell',!embedded||Boolean(p)&&!retainedCockpit);
  const head=`<div class="remote-topbar"><a href="/" class="back-link">← PISTE</a>${profile&&!embedded?'<button type="button" class="button button-dark" data-remote="logout">Se déconnecter</button>':''}</div><header><span class="eyebrow">PISTE · COACHING PARTAGÉ</span><h1>${p?'Vous et '+e(p.dog):embedded?(entry==='list'?'Mes sessions Coaching':'Préparer une session'):'Une session, plusieurs téléphones.'}</h1><p>${profile?e(profile.name):'Accès privé V2 · comptes autorisés uniquement'}</p>${profile?.qa?'<p class="badge cyan">Compte de test · données QA séparées</p>':''}</header><p class="remote-notice" role="status" data-remote-status>${e(notice||state.status||(profile?'Votre espace Coaching est prêt.':'Connectez-vous pour rejoindre une session.'))}</p>`;
  if(opening&&(initializing||profile||opening.error)){root.innerHTML=`<section class="card" data-remote-opening role="status" aria-live="polite"><span class="eyebrow">COACHING PARTAGÉ</span><h1>${opening.error?'Ouverture de la session impossible':'Ouverture de votre session…'}</h1><p>${e(opening.error||'Chargement de la carte et de votre rôle autorisé.')}</p>${opening.error?'<button type="button" class="button button-dark" data-remote="retry-open">Réessayer l’ouverture</button>':''}<a class="button button-dark" href="/sessions">Retour aux sessions</a></section>`;rendering=false;return;}
  if(!profile&&embedded){root.innerHTML=`<p class="remote-notice" role="status">${e(notice||'Chargement de votre espace Coaching…')}</p>`;rendering=false;return;}

@@ -209,3 +209,9 @@ body:has([data-shared-review]){overflow:hidden}
 }
 
 .gps-tracer-marker .gps-conductor-badge{border-color:#ff667d}
+
+.coaching-video-pilot:empty { display:none; }
+.coaching-video-pilot { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.coaching-video-pilot small { padding:5px 8px; border-radius:8px; background:#0b2433; color:#d5e9f2; }
+.coaching-video-pilot video { width:min(100%,36rem); max-height:42dvh; border-radius:10px; background:#071720; }
+.gps-actions .coaching-video-pilot video { width:125px; max-height:88px; object-fit:cover; }

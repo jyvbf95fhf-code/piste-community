@@ -1,0 +1,26 @@
+import {COACHING_REMOTE} from '../src/coaching-remote-config.mjs';
+import {validVideoPilotRequest,videoPilotAccess,videoPilotConfig,videoPilotToken} from '../src/server/coaching-video-pilot.mjs';
+
+export default async function handler(req,res){
+ res.setHeader('Cache-Control','no-store');
+ if(req.method!=='POST')return res.status(405).json({error:'Méthode invalide.'});
+ const pilot=videoPilotConfig(process.env);
+ if(!pilot)return res.status(503).json({error:'Vidéo de test non configurée.'});
+ const token=/^Bearer (.+)$/i.exec(req.headers.authorization||'')?.[1],body=req.body;
+ if(!token)return res.status(401).json({error:'Connexion requise.'});
+ if(!validVideoPilotRequest(body))return res.status(400).json({error:'Demande vidéo invalide.'});
+ const headers={apikey:COACHING_REMOTE.publishableKey,Authorization:'Bearer '+token,'Content-Type':'application/json'};
+ try{
+  const identity=await fetch(COACHING_REMOTE.url+'/auth/v1/user',{headers,signal:AbortSignal.timeout(6000)});
+  if(!identity.ok)return res.status(401).json({error:'Compte non vérifié.'});
+  const {id}=await identity.json();
+  if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.'});
+  const access=await fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,body:JSON.stringify({
+   operation:body.kind==='camera'?'read':'community-live-read',sessionId:body.sessionId
+  }),signal:AbortSignal.timeout(8000)});
+  if(!access.ok)return res.status(access.status>=500?503:403).json({error:'Accès vidéo indisponible.'});
+  const {projection}=await access.json();
+  if(!videoPilotAccess(pilot,id,{...body,projection}))return res.status(403).json({error:'Vidéo non autorisée pour cette séance.'});
+  return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id})});
+ }catch{return res.status(503).json({error:'Service vidéo indisponible.'});}
+}

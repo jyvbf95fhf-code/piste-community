@@ -1,3 +1,4 @@
+import {coachingVideoSlot} from './coaching-video-pilot.mjs';
 import {ReadOnlyRealMap} from './read-only-real-map.mjs';
 import {escapeHTML as e,EmptyState,StatusBadge} from './components.mjs';
 
@@ -62,6 +63,7 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
    ${details?`<p>${e(details)}</p>`:''}
   </header>
   ${resultScreen?`<div class="live-observer-result" role="status"><span>Mission terminée</span><strong>${e(outcome||'Résultat en attente')}</strong></div>`:''}
+  ${!ops&&projection.mode==='normal'&&projection.phase==='SEARCH_RUNNING'?coachingVideoSlot(projection.id,'viewer'):''}
   <div class="live-observer-map">
    ${expanded?`<div class="live-map-overlay-top"><strong>${e(dog||'Live OPS')}</strong><span>Lecture seule</span><a href="?ecran=0" class="live-map-close" aria-label="Fermer la carte">✕ Fermer la carte</a></div>`:''}
    <div class="live-observer-status" data-observer-activity="${activityState}" ${!resultScreen&&(phase||gps)?'':'hidden'}>

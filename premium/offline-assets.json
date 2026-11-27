@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "4ee28b82e9df11d6",
+  "revision": "1135eea4758c1ed8",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -114,6 +114,7 @@
     "/src/coaching-time.mjs",
     "/src/coaching-tracer-screen.mjs",
     "/src/coaching-tracer.mjs",
+    "/src/coaching-video-pilot.mjs",
     "/src/coaching.mjs",
     "/src/community-auto-publication.mjs",
     "/src/community-coaching-contacts.mjs",
@@ -363,5 +364,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6940873
+  "bytes": 6947448
 }

@@ -1,3 +1,4 @@
+import {coachingVideoSlot} from './coaching-video-pilot.mjs';
 import {poseHandoffStatus} from './coaching-pose-handoff.mjs';
 import {sharedCoachingEntry} from './coaching-shared-entry.mjs';
 import {DriverGpsScreen} from './coaching-driver-gps-screen.mjs';
@@ -31,6 +32,6 @@ export function SharedCoachingCockpit(p,state={},ui={}){
  if(actions===undefined){const button=(id,label)=>GpsButton('remote',id,label);actions=p.phase==='SEARCH_RUNNING'&&['driver','coach'].includes(p.role)?button(p.trackingState==='paused'?'resume-search':'pause-search',p.trackingState==='paused'?'Reprendre':'Pause')+(p.role==='driver'?button('finish-search','Terminer la recherche'):''):'';}
  if(!actions.includes('data-remote="open-messages"')&&p.role!=='observer')actions+=GpsButton('remote','open-messages',`Messages${p.unread?' · '+p.unread:''}`);
  const start=html.indexOf('<div class="gps-actions">');
- html=html.slice(0,start)+`<div class="gps-actions">${actions}${(state.pending||!state.gpsRunning)&&state.status?`<p class="gps-start-status" role="status">${e(state.status)}</p>`:''}</div><details class="gps-tools"><summary>Options terrain</summary>${poseView&&p.phase==='PREPARATION'&&p.canProposeReference?`<button type="button" class="button button-dark" data-remote="open-session">${entry.reference?'Modifier le tracé':'Choisir un tracé'}</button>`:''}<p role="status" data-remote-status>${e(ui.notice||state.status||'Session partagée · GPS réel')}</p><button type="button" class="button button-dark" data-remote="open-session">Équipe et options de session</button></details>${GpsTouchLockMarkup()}</section>`;
+ html=html.slice(0,start)+`<div class="gps-actions">${actions}${p.role==='driver'&&p.mode==='normal'&&p.phase==='SEARCH_RUNNING'&&!p.liveEnded?coachingVideoSlot(p.id,'camera'):''}${(state.pending||!state.gpsRunning)&&state.status?`<p class="gps-start-status" role="status">${e(state.status)}</p>`:''}</div><details class="gps-tools"><summary>Options terrain</summary>${poseView&&p.phase==='PREPARATION'&&p.canProposeReference?`<button type="button" class="button button-dark" data-remote="open-session">${entry.reference?'Modifier le tracé':'Choisir un tracé'}</button>`:''}<p role="status" data-remote-status>${e(ui.notice||state.status||'Session partagée · GPS réel')}</p><button type="button" class="button button-dark" data-remote="open-session">Équipe et options de session</button></details>${GpsTouchLockMarkup()}</section>`;
  return html;
 }
