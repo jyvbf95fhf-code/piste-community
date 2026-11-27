@@ -24,9 +24,11 @@ export default async function handler(req,res){
    const head=await requestOps('head');
    const active=head?.id===body.sessionId&&head.closed===false&&head.missionFinished!==true&&
     ['En cours','Pause'].includes(head.metadata?.state)&&Number.isSafeInteger(head.generation);
-   const pilotMission=active&&(await requestOps('list'))?.some(row=>
-    row.id===head.id&&row.ownerId===pilot.publisher&&row.generation===head.generation&&!row.closed);
-   if(!pilotMission||(body.kind==='viewer'&&id===pilot.publisher))return res.status(403).json({error:'Vidéo non autorisée pour ce Live OPS.'});
+   // OPS returns ownership relative to the authenticated caller, never the owner's ID.
+   const permitted=active&&(body.kind==='camera'
+    ?(await requestOps('list'))?.some(row=>row.id===head.id&&row.isOwner===true&&row.generation===head.generation&&!row.closed)
+    :id!==pilot.publisher);
+   if(!permitted)return res.status(403).json({error:'Vidéo non autorisée pour ce Live OPS.'});
    return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id,generation:head.generation})});
   }
   const access=await fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,body:JSON.stringify({
