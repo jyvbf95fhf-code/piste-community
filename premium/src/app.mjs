@@ -1290,6 +1290,17 @@ function pisteCatalogue(){
  return {tracks:tracks.map(r=>archivePresentation(r)),sessions:sessions.map(outcomeForRow).map(present),rows,options};
 }
 function renderTracks(){refreshSharedCatalog();const c=pisteCatalogue(),notice=sharedIndex?.error()||(auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id?'Chargement du catalogue complet…':'');return (notice?`<p class="archive-load" role="status">${escapeHTML(notice)}</p>`:'')+TrackListScreen(c.tracks,c.sessions,{...c.options,selectedIds:pisteSelection.ids(),selectionMode:pisteMode,busy:pisteBusy,results:pisteResultsMarkup()});}
+function updatePisteSelectionUi(checkbox){
+ const root=document.querySelector('.tracks-page');
+ if(!root)return;
+ for(const input of checkbox?[checkbox]:root.querySelectorAll('[data-piste-select]')){
+  input.checked=pisteSelection.has(input.dataset.pisteSelect);
+ }
+ const count=pisteSelection.size(),label=root.querySelector('[data-piste-selection-count]');
+ const confirm=root.querySelector('[data-piste-bulk="confirm"]');
+ if(label)label.textContent=`${count} élément(s) sélectionné(s)`;
+ if(confirm)confirm.disabled=!count||pisteBusy;
+}
 function pisteResultsMarkup(){
  if(!pisteResults.length)return '';
  const success=pisteResults.filter(r=>['hidden','deleted','already-deleted'].includes(r.status)).length,refused=pisteResults.filter(r=>r.status==='refused').length,failed=pisteResults.filter(r=>r.status==='failed').length;
@@ -1454,11 +1465,27 @@ document.addEventListener('click',async event=>{
  if(event.target.closest('[data-refresh-friend-live]')){void Promise.all([tickFriendLive(true),opsLiveRemote?.refresh()]);return;}
  if(event.target.closest('[data-refresh-coaching-invitations]')){void coachingInvitations?.refresh();return;}
  const invitationAction=event.target.closest('[data-coaching-invitation]');if(invitationAction){event.preventDefault();const inbox=coachingInvitations,owner=coachingInvitationsOwner,id=invitationAction.dataset.sessionId,role=invitationAction.dataset.role,accept=invitationAction.dataset.coachingInvitation==='accept';try{const p=await inbox.respond(id,role,accept);if(coachingInvitations!==inbox||auth.getSession().user?.user_id!==owner)return;if(p){sharedIndex?.accept(p);history.pushState({},'','/coaching/session?session='+encodeURIComponent(p.id));render(true);}else Toast('Invitation Coaching refusée.');}catch(error){Toast(error.message);void inbox?.refresh();}return;}
- const bulk=event.target.closest('[data-piste-bulk]');if(bulk){event.preventDefault();if(pisteBusy)return;const c=pisteCatalogue(),action=bulk.dataset.pisteBulk;if(action==='mode'){pisteMode=!pisteMode;pisteSelection.clear();}else if(action==='all')pisteSelection.selectAll();else if(action==='none')pisteSelection.clear();else if(action==='confirm'){confirmPisteBatch(c.rows.filter(r=>pisteSelection.ids().includes(r.selectionKey)));return;}else if(action==='force'){confirmPisteBatch(pisteFailed,true);return;}render();return;}
+ const bulk=event.target.closest('[data-piste-bulk]');
+ if(bulk){
+  event.preventDefault();
+  if(pisteBusy)return;
+  switch(bulk.dataset.pisteBulk){
+   case 'mode':pisteMode=!pisteMode;pisteSelection.clear();render();break;
+   case 'all':pisteSelection.selectAll();updatePisteSelectionUi();break;
+   case 'none':pisteSelection.clear();updatePisteSelectionUi();break;
+   case 'confirm':{
+    const {rows}=pisteCatalogue();
+    confirmPisteBatch(rows.filter(row=>pisteSelection.has(row.selectionKey)));
+    break;
+   }
+   case 'force':confirmPisteBatch(pisteFailed,true);break;
+  }
+  return;
+ }
  const pisteCard=event.target.closest('.tracks-page .archive-main');
  if(pisteMode&&pisteCard){
   const checkbox=pisteCard.parentElement.querySelector('[data-piste-select]');
-  if(checkbox){event.preventDefault();if(!pisteBusy){pisteSelection.toggle(checkbox.dataset.pisteSelect,!checkbox.checked);render();}return;}
+  if(checkbox){event.preventDefault();if(!pisteBusy){pisteSelection.toggle(checkbox.dataset.pisteSelect,!checkbox.checked);updatePisteSelectionUi(checkbox);}return;}
  }
  if(event.target.closest('[data-refresh-shared-sessions]')){sessionCloudReadAt=0;loadSessionCloudMappings();refreshSharedCatalog(true);return;}
  const help=event.target.closest('[data-coaching-help]');if(help){openCoachingHelp(document,help.dataset.coachingHelp,help);return;}
@@ -1816,7 +1843,7 @@ document.addEventListener('pointerup',event=>{
 document.addEventListener('change',event=>{
  const pisteCheckbox=event.target.closest('[data-piste-select]');
  if(pisteCheckbox){
-  if(!pisteBusy){pisteSelection.toggle(pisteCheckbox.dataset.pisteSelect,pisteCheckbox.checked);render();}
+  if(!pisteBusy){pisteSelection.toggle(pisteCheckbox.dataset.pisteSelect,pisteCheckbox.checked);updatePisteSelectionUi(pisteCheckbox);}
   return;
  }
  const field=event.target;

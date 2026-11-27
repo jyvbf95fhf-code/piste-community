@@ -11,7 +11,7 @@ export function createPisteSelection(){
    selected=new Set([...selected].map(key=>visible.has(key)?key:byIdentity.get(previous.get(key))).filter(Boolean));
   },
   toggle(id,checked){if(!visible.has(id))return;if(checked)selected.add(id);else selected.delete(id);},
-  selectAll(){selected=new Set(visible.keys());},clear(){selected.clear();},ids(){return [...selected];}
+  selectAll(){selected=new Set(visible.keys());},clear(){selected.clear();},size(){return selected.size;},has(id){return selected.has(id);},ids(){return [...selected];}
  };
 }
 export const pisteKey=r=>r.selectionKey||`${r.kind==='operational'?'ops':r.libraryId?'track':'coaching'}:${r.libraryId||r.id}`;
