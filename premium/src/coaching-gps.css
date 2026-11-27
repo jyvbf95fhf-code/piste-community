@@ -260,3 +260,25 @@ body:has([data-shared-review]){overflow:hidden}
 }
 .ops-video-fullscreen[open]{display:flex;flex-direction:column;align-items:center;gap:12px}
 .live-observer-map .ops-video-fullscreen video{flex:1;min-height:0;max-height:none;object-fit:contain}
+
+.field-media-controls{
+ order:4;
+ display:flex;
+ flex:0 0 100%;
+ flex-wrap:wrap;
+ align-items:center;
+ justify-content:center;
+ gap:6px;
+ margin-top:28px;
+}
+.field-media-controls .button{width:auto;min-height:44px;padding:8px 12px}
+.field-media-controls video{width:100px;max-height:76px;border-radius:8px;background:#071720}
+.field-media-controls strong,.field-media-controls small:not(:empty){
+ padding:5px 8px;
+ border-radius:8px;
+ color:#f4f9fb;
+ background:#0b2433;
+}
+.field-media-controls strong{color:#ffb6bd}
+.field-media-album img,.field-media-album video{display:block;max-width:100%;max-height:55dvh;margin-top:8px}
+.field-media-album article{margin-top:12px}

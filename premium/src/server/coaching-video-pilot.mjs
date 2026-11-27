@@ -15,7 +15,7 @@ export function videoPilotConfig(env,sessionType='coaching'){
 
 export function videoPilotAccess(config,identity,{sessionId,kind,projection}={}){
  if(!config||!uuid.test(identity||'')||!uuid.test(sessionId||'')||!['camera','viewer'].includes(kind))return false;
- if(projection?.id!==sessionId||projection.mode!=='normal'||projection.phase!=='SEARCH_RUNNING'||projection.liveEnded||projection.ended||projection.status==='ended')return false;
+ if(projection?.id!==sessionId||!['normal','simple_blind','full_blind'].includes(projection.mode)||projection.phase!=='SEARCH_RUNNING'||projection.liveEnded||projection.ended||projection.status==='ended')return false;
  if(kind==='camera')return identity===config.publisher&&projection.role==='driver';
  return identity!==config.publisher&&projection.readOnly===true&&projection.role==='observer';
 }

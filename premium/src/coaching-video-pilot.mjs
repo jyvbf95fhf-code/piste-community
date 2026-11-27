@@ -1,12 +1,17 @@
+import {fieldMediaTrack} from './field-media.mjs';
 import {escapeHTML as e} from './components.mjs';
 
-export function coachingVideoSlot(sessionId,kind,sessionType='coaching'){
- return sessionId||(kind==='camera'&&sessionType==='ops')?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId||'')}" data-video-type="${e(sessionType)}"></div>`:'';
+export function coachingVideoSlot(sessionId,kind,sessionType='coaching',localId=sessionId){
+ return sessionId||(kind==='camera'&&sessionType==='ops')?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId||'')}" data-video-type="${e(sessionType)}" data-field-live-local="${e(localId||'')}"></div>`:'';
 }
 
 // Load the pinned SDK only when the user opens a video room.
 const sdkUrl=new URL('./vendor/livekit-client.mjs',import.meta.url).href;
 let current;
+
+export function liveCameraTrack(sessionId,type){
+ return (current?.slot.dataset.fieldLiveLocal||current?.sessionId)===sessionId&&current?.sessionType===type?current.cameraTrack:null;
+}
 
 function paint(state){
  const slot=state.slot;
@@ -97,6 +102,7 @@ async function close(state,message=''){
  state.room=null;
  state.media?.remove();
  state.media=null;
+ state.cameraTrack=null;
  state.expanded=false;
  state.busy=false;
  state.message=message;
@@ -141,9 +147,20 @@ async function join(state){
   await room.connect(url,token);
   if(!active()){await room.disconnect();return;}
   if(state.kind==='camera'){
-   const publication=await room.localParticipant.setCameraEnabled(true,{facingMode:'environment',resolution:{width:640,height:480,frameRate:15}},{simulcast:false,videoCodec:'h264',videoEncoding:{maxBitrate:550000,maxFramerate:15}});
+   const options={simulcast:false,videoCodec:'h264',videoEncoding:{maxBitrate:550000,maxFramerate:15}};
+   const existing=fieldMediaTrack(state.slot.dataset.fieldLiveLocal||state.sessionId,state.sessionType);
+   const liveTrack=existing?.clone();
+   let publication;
+   try{
+    publication=liveTrack
+     ?await room.localParticipant.publishTrack(liveTrack,{...options,source:'camera'})
+     :await room.localParticipant.setCameraEnabled(true,{facingMode:'environment',resolution:{width:640,height:480,frameRate:15}},options);
+   }catch(error){liveTrack?.stop();throw error;}
    if(!active()){publication?.track?.stop();await room.disconnect();return;}
-   if(publication?.track)showTrack(state,publication.track);
+   if(publication?.track){
+    state.cameraTrack=publication.track.mediaStreamTrack;
+    showTrack(state,publication.track);
+   }
   }else if(!state.media)state.message='En attente de la caméra du Conducteur.';
   state.busy=false;paint(state);
   state.timer=setInterval(async()=>{

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "1135eea4758c1ed8",
+  "revision": "685a18f728e8c82e",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -143,6 +143,7 @@
     "/src/dog-selection.mjs",
     "/src/dogs-screen.mjs",
     "/src/dogs.mjs",
+    "/src/field-media.mjs",
     "/src/foreground-refresh.mjs",
     "/src/forest-scenes-trial.css",
     "/src/forest-scenes-trial.mjs",
@@ -364,5 +365,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6947448
+  "bytes": 6965207
 }

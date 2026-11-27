@@ -16,11 +16,12 @@ test('pilot fails closed without preview deployment, trusted identity configurat
   assert.equal(videoPilotConfig({...env,...values}),null);
  }
 });
-test('camera publishing is scoped to the sole owner driving an active normal Coaching search',()=>{
+test('camera publishing is scoped to the sole owner driving an active Coaching search',()=>{
  const projection={...base,role:'driver'};
+ for(const mode of ['simple_blind','full_blind'])assert.equal(videoPilotAccess(config,owner,plan('camera',owner,{...projection,mode})),true);
  assert.equal(videoPilotAccess(config,owner,plan('camera',owner,projection)),true);
  assert.equal(videoPilotAccess(config,guest,plan('camera',guest,projection)),false);
- for(const change of [{role:'observer'},{mode:'full_blind'},{phase:'DEBRIEF'},{liveEnded:true},{id:guest}]){
+ for(const change of [{role:'observer'},{mode:'invalid'},{phase:'DEBRIEF'},{liveEnded:true},{id:guest}]){
   assert.equal(videoPilotAccess(config,owner,plan('camera',owner,{...projection,...change})),false);
  }
 });
@@ -35,10 +36,15 @@ test('existing authorized Live spectator gets only a short-lived video subscript
  assert.equal(claims('viewer').exp,160);
  assert.deepEqual(claims('camera').video.canPublishSources,['camera']);
 });
-test('video controls are only offered in the active Normal Coaching screens',()=>{
+test('video and capture controls are restricted to active conductors and authorized Live viewing',()=>{
  const p={...base,role:'driver',dog:'QA',search:null,pose:null};
  assert.match(SharedCoachingCockpit(p),/data-coaching-video="camera"/);
- assert.doesNotMatch(SharedCoachingCockpit({...p,mode:'simple_blind'}),/data-coaching-video/);
+ for(const mode of ['normal','simple_blind','full_blind']){
+  assert.match(SharedCoachingCockpit({...p,mode}),/data-field-capture/);
+  assert.match(SharedCoachingCockpit({...p,mode}),/data-coaching-video="camera"/);
+  assert.doesNotMatch(SharedCoachingCockpit({...p,mode,role:'coach'}),/data-coaching-video|data-field-capture/);
+ }
+ assert.doesNotMatch(SharedCoachingCockpit({...p,phase:'SEARCH_READY'}),/data-field-capture/);
  assert.match(LiveDetailScreen({...base,map:{}}),/data-coaching-video="viewer"/);
  assert.doesNotMatch(LiveDetailScreen({...base,map:{},sessionType:'ops'}),/data-coaching-video/);
 });
