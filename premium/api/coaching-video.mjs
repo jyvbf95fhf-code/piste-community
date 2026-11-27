@@ -16,6 +16,10 @@ export default async function handler(req,res){
   if(!identity.ok)return res.status(401).json({error:'Compte non vérifié.'});
   const {id}=await identity.json();
   if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'});
+  const premium=await fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,
+   body:JSON.stringify({operation:'authorize-feature',feature:'premium'}),signal:AbortSignal.timeout(6000)});
+  if(premium.status===403)return res.status(403).json({error:'Un accès Premium actif est nécessaire pour la vidéo en direct.'});
+  if(!premium.ok||(await premium.json()).authorized!==true)return res.status(503).json({error:'Vérification Premium indisponible.'});
   if(body.sessionType==='ops'){
    const requestOps=async operation=>{
     const response=await fetch(COACHING_REMOTE.url+'/functions/v1/ops-live',{method:'POST',headers,

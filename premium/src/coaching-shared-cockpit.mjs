@@ -1,4 +1,4 @@
-import {fieldMediaControls} from './field-media.mjs';
+import {fieldMediaControls,fieldMediaPremiumLink} from './field-media.mjs';
 import {coachingVideoSlot} from './coaching-video-pilot.mjs';
 import {poseHandoffStatus} from './coaching-pose-handoff.mjs';
 import {sharedCoachingEntry} from './coaching-shared-entry.mjs';
@@ -34,11 +34,14 @@ export function SharedCoachingCockpit(p,state={},ui={}){
  if(!actions.includes('data-remote="open-messages"')&&p.role!=='observer')actions+=GpsButton('remote','open-messages',`Messages${p.unread?' · '+p.unread:''}`);
  const driverSearching=p.role==='driver'&&p.phase==='SEARCH_RUNNING';
  const tracerLaying=p.role==='traceur'&&p.phase==='LAYING'&&poseView;
- const capture=driverSearching?fieldMediaControls(p.id,'coaching'):tracerLaying?fieldMediaControls(p.id,'coaching',{photoOnly:true}):'';
  const activeLive=p.phase==='SEARCH_RUNNING'&&!p.liveEnded;
- const camera=activeLive&&['driver','coach','observer'].includes(p.role)?coachingVideoSlot(p.id,'camera'):'';
- const viewer=activeLive&&p.role==='traceur'?coachingVideoSlot(p.id,'viewer','coaching',p.id,'session'):'';
+ const canPublish=activeLive&&['driver','coach','observer'].includes(p.role);
+ const canWatch=activeLive&&p.role==='traceur';
+ const capture=ui.mediaPremium?(driverSearching?fieldMediaControls(p.id,'coaching'):tracerLaying?fieldMediaControls(p.id,'coaching',{photoOnly:true}):''):'';
+ const camera=ui.mediaPremium&&canPublish?coachingVideoSlot(p.id,'camera'):'';
+ const viewer=ui.mediaPremium&&canWatch?coachingVideoSlot(p.id,'viewer','coaching',p.id,'session'):'';
+ const premiumLink=!ui.mediaPremium&&(driverSearching||tracerLaying||canPublish||canWatch)?fieldMediaPremiumLink():'';
  const start=html.indexOf('<div class="gps-actions">');
- html=html.slice(0,start)+`<div class="gps-actions">${actions}${camera}${viewer}${capture}${(state.pending||!state.gpsRunning)&&state.status?`<p class="gps-start-status" role="status">${e(state.status)}</p>`:''}</div><details class="gps-tools"><summary>Options terrain</summary>${poseView&&p.phase==='PREPARATION'&&p.canProposeReference?`<button type="button" class="button button-dark" data-remote="open-session">${entry.reference?'Modifier le tracé':'Choisir un tracé'}</button>`:''}<p role="status" data-remote-status>${e(ui.notice||state.status||'Session partagée · GPS réel')}</p><button type="button" class="button button-dark" data-remote="open-session">Équipe et options de session</button></details>${GpsTouchLockMarkup()}</section>`;
+ html=html.slice(0,start)+`<div class="gps-actions">${actions}${camera}${viewer}${capture}${premiumLink}${(state.pending||!state.gpsRunning)&&state.status?`<p class="gps-start-status" role="status">${e(state.status)}</p>`:''}</div><details class="gps-tools"><summary>Options terrain</summary>${poseView&&p.phase==='PREPARATION'&&p.canProposeReference?`<button type="button" class="button button-dark" data-remote="open-session">${entry.reference?'Modifier le tracé':'Choisir un tracé'}</button>`:''}<p role="status" data-remote-status>${e(ui.notice||state.status||'Session partagée · GPS réel')}</p><button type="button" class="button button-dark" data-remote="open-session">Équipe et options de session</button></details>${GpsTouchLockMarkup()}</section>`;
  return html;
 }

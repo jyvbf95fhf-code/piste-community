@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {coachingCameraInUse,validVideoPilotRequest,videoPilotAccess,videoPilotConfig,videoPilotToken} from '../src/server/coaching-video-pilot.mjs';
 import {SharedCoachingCockpit} from '../src/coaching-shared-cockpit.mjs';
+import {OperationalGpsScreen} from '../src/operational-gps-screen.mjs';
+import {JumolfPremiumScreen} from '../src/jumolf-premium-screen.mjs';
 import {LiveDetailScreen} from '../src/live-screen.mjs';
 import videoHandler from '../api/coaching-video.mjs';
 const owner='11111111-1111-4111-8111-111111111111';
@@ -10,6 +12,7 @@ const id='33333333-3333-4333-8333-333333333333';
 const env={VERCEL_ENV:'preview',PISTE_VIDEO_PILOT:'1',PISTE_VIDEO_PUBLISHER_ID:owner,LIVEKIT_URL:'wss://pilot.livekit.cloud',LIVEKIT_API_KEY:'test-key',LIVEKIT_API_SECRET:'test-secret'};
 const config=videoPilotConfig(env);
 const base={id,mode:'normal',phase:'SEARCH_RUNNING'};
+const premiumCockpit=p=>SharedCoachingCockpit(p,{}, {mediaPremium:true});
 const plan=(kind,identity,projection)=>({identity,sessionId:id,kind,projection});
 test('pilot fails closed outside production and preview or without trusted configuration',()=>{
  assert.ok(config);
@@ -75,21 +78,21 @@ test('Coaching cameras share one publisher identity while OPS keeps its separate
 });
 test('Coaching shows camera and viewer controls for their corresponding roles',()=>{
  const p={...base,role:'driver',dog:'QA',search:null,pose:null};
- assert.match(SharedCoachingCockpit(p),/data-coaching-video="camera"/);
+ assert.match(premiumCockpit(p),/data-coaching-video="camera"/);
  for(const mode of ['normal','simple_blind','full_blind']){
-  assert.match(SharedCoachingCockpit({...p,mode}),/data-field-capture/);
-  assert.match(SharedCoachingCockpit({...p,mode}),/data-coaching-video="camera"/);
+  assert.match(premiumCockpit({...p,mode}),/data-field-capture/);
+  assert.match(premiumCockpit({...p,mode}),/data-coaching-video="camera"/);
   for(const role of ['coach','observer']){
-   const html=SharedCoachingCockpit({...p,mode,role});
+   const html=premiumCockpit({...p,mode,role});
    assert.match(html,/data-coaching-video="camera"/);
    assert.doesNotMatch(html,/data-field-capture/);
   }
-  const traceur=SharedCoachingCockpit({...p,mode,role:'traceur'});
+  const traceur=premiumCockpit({...p,mode,role:'traceur'});
   assert.match(traceur,/data-coaching-video="viewer".*data-video-surface="session"/);
   assert.doesNotMatch(traceur,/data-coaching-video="camera"/);
  }
- assert.doesNotMatch(SharedCoachingCockpit({...p,liveEnded:true}),/data-coaching-video/);
- assert.doesNotMatch(SharedCoachingCockpit({...p,phase:'SEARCH_READY'}),/data-field-capture/);
+ assert.doesNotMatch(premiumCockpit({...p,liveEnded:true}),/data-coaching-video/);
+ assert.doesNotMatch(premiumCockpit({...p,phase:'SEARCH_READY'}),/data-field-capture/);
  assert.match(LiveDetailScreen({...base,map:{}}),/data-coaching-video="viewer"/);
  assert.doesNotMatch(LiveDetailScreen({...base,map:{},sessionType:'ops'}),/data-coaching-video/);
 });
@@ -97,11 +100,28 @@ test('Coaching shows camera and viewer controls for their corresponding roles',(
 test('traceur can capture photos only during their own GPS pose in every Coaching mode',()=>{
  for(const mode of ['normal','simple_blind','full_blind']){
   const traceur={...base,mode,role:'traceur',poseRecorder:'traceur',phase:'LAYING',dog:'QA'};
-  assert.match(SharedCoachingCockpit(traceur),/data-field-capture-mode="photo"/);
-  assert.doesNotMatch(SharedCoachingCockpit(traceur),/data-coaching-video/);
-  assert.doesNotMatch(SharedCoachingCockpit({...traceur,phase:'TRACK_FINISHED'}),/data-field-capture/);
-  assert.doesNotMatch(SharedCoachingCockpit({...traceur,poseRecorder:'driver'}),/data-field-capture/);
+  assert.match(premiumCockpit(traceur),/data-field-capture-mode="photo"/);
+  assert.doesNotMatch(premiumCockpit(traceur),/data-coaching-video/);
+  assert.doesNotMatch(premiumCockpit({...traceur,phase:'TRACK_FINISHED'}),/data-field-capture/);
+  assert.doesNotMatch(premiumCockpit({...traceur,poseRecorder:'driver'}),/data-field-capture/);
  }
+});
+
+test('free sessions show the Premium offer without mounting media controls',()=>{
+ for(const [role,phase] of [['driver','SEARCH_RUNNING'],['coach','SEARCH_RUNNING'],['observer','SEARCH_RUNNING'],['traceur','SEARCH_RUNNING'],['traceur','LAYING']]){
+  const html=SharedCoachingCockpit({...base,role,phase,poseRecorder:'traceur',dog:'QA'});
+  assert.match(html,/href="\/jumolf\/premium"/);
+  assert.doesNotMatch(html,/data-coaching-video|data-field-capture/);
+ }
+ const mission={id,dogName:'QA',trackingState:'active',gpsTrack:{sessionId:id,segments:[],distanceM:0},events:[]};
+ const free=OperationalGpsScreen(mission,{}, {realMode:true,videoPublicationId:id});
+ const paid=OperationalGpsScreen(mission,{}, {realMode:true,videoPublicationId:id,mediaPremium:true});
+ assert.match(free,/href="\/jumolf\/premium"/);
+ assert.doesNotMatch(free,/data-coaching-video|data-field-capture/);
+ assert.match(paid,/data-coaching-video="camera"/);
+ assert.match(paid,/data-field-capture/);
+ assert.match(JumolfPremiumScreen(),/Caméra en direct, photos et vidéos de terrain/);
+ assert.match(JumolfPremiumScreen(),/diffusion en phase pilote/);
 });
 
 test('the endpoint distinguishes Coaching team roles from read-only Live contacts',async t=>{
@@ -113,13 +133,17 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
    else process.env[key]=value;
   }
  });
- let identity=guest,member=null,liveAllowed=true,cameraBusy=false;
+ let identity=guest,member=null,liveAllowed=true,cameraBusy=false,premiumActive=true;
  const calls=[];
  t.mock.method(globalThis,'fetch',async(input,options)=>{
   const url=new URL(input);
   if(url.pathname==='/auth/v1/user')return Response.json({id:identity});
   const {operation}=JSON.parse(options.body);
   calls.push(operation||url.pathname);
+  if(operation==='authorize-feature'){
+   assert.equal(JSON.parse(options.body).feature,'premium');
+   return premiumActive?Response.json({authorized:true}):new Response(null,{status:403});
+  }
   if(operation==='read')return member?Response.json({projection:member}):new Response(null,{status:403});
   if(operation==='community-live-read')return liveAllowed
    ?Response.json({projection:{...base,mode:'full_blind',role:'observer',readOnly:true}})
@@ -127,15 +151,15 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
   if(url.pathname.endsWith('/ListParticipants'))return Response.json({participants:cameraBusy?[{permission:{canPublish:true}}]:[]});
   throw Error('Unexpected request');
  });
- async function request(kind,surface,action='join'){
+ async function request(kind,surface,action='join',sessionType='coaching'){
   calls.length=0;
-  const req={method:'POST',headers:{authorization:'Bearer test'},body:{sessionId:id,sessionType:'coaching',kind,surface,action}};
+  const req={method:'POST',headers:{authorization:'Bearer test'},body:{sessionId:id,sessionType,kind,surface,action}};
   const res={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){return {status:this.code,body};}};
   return videoHandler(req,res);
  }
  assert.deepEqual(await request('camera'),{status:403,body:{error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'}});
  assert.equal((await request('viewer')).status,200);
- assert.deepEqual(calls,['read','community-live-read']);
+ assert.deepEqual(calls,['authorize-feature','read','community-live-read']);
  member={...base,mode:'full_blind',role:'driver'};
  assert.equal((await request('viewer')).status,403);
  member={...base,role:'coach'};
@@ -146,17 +170,27 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
  for(const role of ['coach','observer']){
   member={...base,role};
   assert.equal((await request('camera')).status,200);
-  assert.deepEqual(calls,['read','/twirp/livekit.RoomService/ListParticipants']);
+  assert.deepEqual(calls,['authorize-feature','read','/twirp/livekit.RoomService/ListParticipants']);
  }
  cameraBusy=true;
  assert.equal((await request('camera')).status,409);
  assert.equal((await request('camera',undefined,'check')).status,200);
- assert.deepEqual(calls,['read']);
+ assert.deepEqual(calls,['authorize-feature','read']);
  identity=guest;
  member={...base,role:'traceur'};
  liveAllowed=false;
  assert.equal((await request('viewer','session')).status,200);
- assert.deepEqual(calls,['read']);
+ assert.deepEqual(calls,['authorize-feature','read']);
+ premiumActive=false;
+ assert.equal((await request('viewer','session')).status,403);
+ assert.deepEqual(calls,['authorize-feature']);
+ assert.equal((await request('viewer',undefined,'join','ops')).status,403);
+ assert.deepEqual(calls,['authorize-feature']);
+ identity=owner;
+ assert.equal((await request('camera',undefined,'join','ops')).status,403);
+ assert.equal((await request('camera')).status,403);
+ premiumActive=true;
+ identity=guest;
  member={...member,phase:'LAYING'};
  assert.equal((await request('viewer','session')).status,403);
 });

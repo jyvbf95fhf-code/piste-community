@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "0ca5d2f340d84d1d",
+  "revision": "7e21635a5499a0c9",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -262,6 +262,7 @@
     "/src/piste-account-auth.mjs",
     "/src/piste-bulk.mjs",
     "/src/piste-history-client.mjs",
+    "/src/premium-access-policy.mjs",
     "/src/premium-archives.css",
     "/src/premium-feature-catalog.mjs",
     "/src/premium-pictograms.mjs",
@@ -365,5 +366,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6975526
+  "bytes": 6978876
 }

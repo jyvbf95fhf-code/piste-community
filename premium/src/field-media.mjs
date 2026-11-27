@@ -34,6 +34,10 @@ export function fieldMediaControls(sessionId,type,{photoOnly=false}={}){
  return sessionId?`<div class="field-media-controls" data-field-capture data-field-capture-mode="${photoOnly?'photo':'all'}" data-field-session="${e(sessionId)}" data-field-type="${e(type)}"></div>`:'';
 }
 
+export function fieldMediaPremiumLink(){
+ return '<a class="button button-dark field-media-premium" href="/jumolf/premium">Photos et vidéo · Découvrir Premium</a>';
+}
+
 export function fieldMediaAlbum(sessionId,type){
  return sessionId?`<div class="field-media-album" data-field-album data-field-session="${e(sessionId)}" data-field-type="${e(type)}"><h2>Photos et vidéos</h2><p>Enregistrées sur cet appareil.</p><div data-field-items></div></div>`:'';
 }

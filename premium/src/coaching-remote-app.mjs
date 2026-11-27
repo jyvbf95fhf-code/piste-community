@@ -1,4 +1,5 @@
 import {mountFieldMedia} from './field-media.mjs';
+import {resolvePremiumAccess} from './premium-access-policy.mjs';
 import {liveCameraTrack,syncCoachingVideo} from './coaching-video-pilot.mjs';
 import {TraceurSourceActions,TraceurPreparationSheet,SharedCoachingClosed,SharedReviewFrame} from './coaching-shared-review.mjs';
 import {performPoseHandoff,poseHandoffStatus} from './coaching-pose-handoff.mjs';
@@ -103,7 +104,10 @@ function renderCockpit(){if(root.querySelector('.gps-touch-lock-panel:not([hidde
   const session=root.querySelector('[data-remote-session-id]');
   if(associationMarkup(p))session.insertAdjacentHTML('beforeend',associationMarkup(p));
   const panels=[...session.children].filter(el=>!el.matches('.remote-row,.remote-phase,[data-remote-external],.tracer-gps'));
-  const wrapper=document.createElement('div');wrapper.innerHTML=SharedCoachingCockpit(p,state,{actions,notice});
+  const mediaPremium=profile.permissions?.premium===true&&resolvePremiumAccess({
+   adminRole:profile.admin_role,premiumEntitlement:profile.premium_entitlement
+  }).premium;
+  const wrapper=document.createElement('div');wrapper.innerHTML=SharedCoachingCockpit(p,state,{actions,notice,mediaPremium});
   let cockpit=wrapper.firstElementChild;cockpit.classList.add('shared-terrain');cockpit.dataset.remoteViewKey=cockpitKey(p);
   const panel=document.createElement('section');panel.className='tracer-sheet shared-session-sheet remote-shell';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',sharedSheet==='messages'?'Messages de la session':'Options de la session');panel.hidden=!sharedSheet;
   panel.innerHTML='<button type="button" class="button button-dark shared-close" data-remote="close-session">Fermer</button>';
