@@ -4719,3 +4719,9 @@ dialog [data-exit-reason]{display:block;width:100%;box-sizing:border-box;margin:
 .dog-mileage>span{color:#bfd1d9;font-size:9px;line-height:1.35}
 .dog-mileage-note{color:#aabec9;font-size:12px;line-height:1.5;margin:12px 0}
 @media(max-width:360px){.dog-mileage{padding:7px}.dog-mileage>b{font-size:23px}}
+
+.tracks-page[data-selection-mode="true"] .archive-main{cursor:pointer}
+.tracks-page[data-selection-mode="true"] .archive-row:has([data-piste-select]:checked){
+ border-color:#93dabc;
+ background-color:#162f39;
+}

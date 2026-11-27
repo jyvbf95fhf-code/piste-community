@@ -20,3 +20,12 @@ test('separate sections, exact category counts, accessible selection and dog/dat
 import {createTrackLibrary} from '../src/track-library.mjs';
 test('prepared deletion refuses stale tabs instead of overwriting newly added tracks',()=>{const saved=new Map(),storage={getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v)},args={ownerId:'owner',storage};const first=createTrackLibrary(args);const one=first.createPrepared({name:'One',geometry:{points:[{x:1,y:1},{x:2,y:2}]}});const second=createTrackLibrary(args);second.createPrepared({name:'Two',geometry:{points:[{x:1,y:1},{x:2,y:2}]}});assert.throws(()=>first.remove(one.id),/autre onglet/);assert.equal(createTrackLibrary(args).list().filter(t=>t.ownerId==='self').length,2);});
 test('only explicitly linked training sessions move to Entraînements',async()=>{const {classifyPisteSessions}=await import('../src/piste-bulk.mjs');const classified=classifyPisteSessions(rows,new Set(['old']));assert.equal(classified[0].kind,'training');assert.equal(classified[0].sessionType,'coaching');assert.equal(classified[1].kind,'operational');assert.equal(pisteSessionRows(classified,{category:'training'}).length,2);assert.equal(pisteSessionRows(classified).length,3);});
+
+test('selection survives catalogue assigning a cloud key to the same visible record',()=>{
+ const selection=createPisteSelection();
+ const local={id:'bobby',kind:'operational',selectionKey:'local-ops:bobby'};
+ selection.reconcile('account:all',[local]);
+ selection.toggle(local.selectionKey,true);
+ selection.reconcile('account:all',[{...local,selectionKey:'ops:canonical'}]);
+ assert.deepEqual(selection.ids(),['ops:canonical']);
+});

@@ -50,6 +50,11 @@ try{
   await page.setViewportSize({width,height:844});
   assert.equal(await page.locator('.archive-prepared .archive-main').evaluate(el=>getComputedStyle(el).flexDirection),'row','prepared archives stay horizontal at '+width);
   await page.getByRole('button',{name:'Sélectionner',exact:true}).click();
+  const sharedCard=page.locator('[data-history-session="'+sessionId+'"]');
+  await sharedCard.locator('.archive-main').click();
+  assert.equal(await sharedCard.getByRole('checkbox').isChecked(),true);
+  await sharedCard.locator('.piste-checkbox span').click();
+  assert.equal(await sharedCard.getByRole('checkbox').isChecked(),false);
   await page.getByRole('button',{name:'Tout sélectionner',exact:true}).click();
   assert.equal(await page.locator('[data-piste-select]:checked').count(),3);if(width===390)await page.screenshot({path:'/tmp/piste-bulk-390-selected.png',fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'overflow '+width);

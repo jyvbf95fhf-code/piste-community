@@ -1289,7 +1289,7 @@ function pisteCatalogue(){
  const present=r=>archivePresentation(r,{mission:r.kind==='operational'?(operationalStore.get(r.id)||pisteCloudMission(r.id)):undefined,projection:r.source==='shared'?sharedIndex?.get(r.id):undefined,record:r.source==='shared'?undefined:sessionCatalog.get(r.id)});
  return {tracks:tracks.map(r=>archivePresentation(r)),sessions:sessions.map(outcomeForRow).map(present),rows,options};
 }
-function renderTracks(){refreshSharedCatalog();const c=pisteCatalogue(),notice=sharedIndex?.error()||(auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id?'Chargement du catalogue complet…':'');return (notice?`<p class="archive-load" role="status">${escapeHTML(notice)}</p>`:'')+TrackListScreen(c.tracks,c.sessions,{...c.options,selectedIds:pisteSelection.ids(),selectionMode:pisteMode,busy:pisteBusy||auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id,results:pisteResultsMarkup()});}
+function renderTracks(){refreshSharedCatalog();const c=pisteCatalogue(),notice=sharedIndex?.error()||(auth.assurance==='supabase-auth'&&pisteReadyOwner!==currentUser?.user_id?'Chargement du catalogue complet…':'');return (notice?`<p class="archive-load" role="status">${escapeHTML(notice)}</p>`:'')+TrackListScreen(c.tracks,c.sessions,{...c.options,selectedIds:pisteSelection.ids(),selectionMode:pisteMode,busy:pisteBusy,results:pisteResultsMarkup()});}
 function pisteResultsMarkup(){
  if(!pisteResults.length)return '';
  const success=pisteResults.filter(r=>['hidden','deleted','already-deleted'].includes(r.status)).length,refused=pisteResults.filter(r=>r.status==='refused').length,failed=pisteResults.filter(r=>r.status==='failed').length;
@@ -1455,7 +1455,11 @@ document.addEventListener('click',async event=>{
  if(event.target.closest('[data-refresh-coaching-invitations]')){void coachingInvitations?.refresh();return;}
  const invitationAction=event.target.closest('[data-coaching-invitation]');if(invitationAction){event.preventDefault();const inbox=coachingInvitations,owner=coachingInvitationsOwner,id=invitationAction.dataset.sessionId,role=invitationAction.dataset.role,accept=invitationAction.dataset.coachingInvitation==='accept';try{const p=await inbox.respond(id,role,accept);if(coachingInvitations!==inbox||auth.getSession().user?.user_id!==owner)return;if(p){sharedIndex?.accept(p);history.pushState({},'','/coaching/session?session='+encodeURIComponent(p.id));render(true);}else Toast('Invitation Coaching refusée.');}catch(error){Toast(error.message);void inbox?.refresh();}return;}
  const bulk=event.target.closest('[data-piste-bulk]');if(bulk){event.preventDefault();if(pisteBusy)return;const c=pisteCatalogue(),action=bulk.dataset.pisteBulk;if(action==='mode'){pisteMode=!pisteMode;pisteSelection.clear();}else if(action==='all')pisteSelection.selectAll();else if(action==='none')pisteSelection.clear();else if(action==='confirm'){confirmPisteBatch(c.rows.filter(r=>pisteSelection.ids().includes(r.selectionKey)));return;}else if(action==='force'){confirmPisteBatch(pisteFailed,true);return;}render();return;}
- const checkbox=event.target.closest('[data-piste-select]');if(checkbox){pisteSelection.toggle(checkbox.dataset.pisteSelect,checkbox.checked);render();return;}
+ const pisteCard=event.target.closest('.tracks-page .archive-main');
+ if(pisteMode&&pisteCard){
+  const checkbox=pisteCard.parentElement.querySelector('[data-piste-select]');
+  if(checkbox){event.preventDefault();if(!pisteBusy){pisteSelection.toggle(checkbox.dataset.pisteSelect,!checkbox.checked);render();}return;}
+ }
  if(event.target.closest('[data-refresh-shared-sessions]')){sessionCloudReadAt=0;loadSessionCloudMappings();refreshSharedCatalog(true);return;}
  const help=event.target.closest('[data-coaching-help]');if(help){openCoachingHelp(document,help.dataset.coachingHelp,help);return;}
  if(profileController.handleClick(event))return;
@@ -1810,6 +1814,11 @@ document.addEventListener('pointerup',event=>{
  else {trackEditor={...trackEditor,selectedPointId:drag.id};render();}
 });
 document.addEventListener('change',event=>{
+ const pisteCheckbox=event.target.closest('[data-piste-select]');
+ if(pisteCheckbox){
+  if(!pisteBusy){pisteSelection.toggle(pisteCheckbox.dataset.pisteSelect,pisteCheckbox.checked);render();}
+  return;
+ }
  const field=event.target;
  if(field.matches('[data-smart-option]')){const busy=trackSmart.view().busy,key=field.dataset.smartOption;trackSmart.setOptions({[key]:field.value});if(busy||['level','dogId','skill'].includes(key)){render();document.querySelector(`[data-smart-option="${key}"]`)?.focus();}else{document.querySelector('.smart-proposals')?.replaceChildren();document.querySelector('.smart-feedback')?.remove();}return;}
  if(field.matches('[data-editor-gpx-file]')){const file=field.files?.[0];field.value='';if(file)void importEditorGpx(file);return;}

@@ -1,10 +1,17 @@
 // Selection is transient and limited to currently visible results, never hidden pages.
 export function createPisteSelection(){
- let scope='',visible=new Set(),selected=new Set();
+ let scope='',visible=new Map(),selected=new Set();
+ const identity=row=>JSON.stringify([row.kind,row.source,row.libraryId||row.id]);
  return {
-  reconcile(next,rows){if(next!==scope){scope=next;selected.clear();}visible=new Set(rows.map(r=>r.selectionKey||r.id));selected=new Set([...selected].filter(id=>visible.has(id)));},
+  reconcile(next,rows){
+   if(next!==scope){scope=next;selected.clear();}
+   const previous=visible;
+   visible=new Map(rows.map(row=>[row.selectionKey||row.id,identity(row)]));
+   const byIdentity=new Map([...visible].map(([key,id])=>[id,key]));
+   selected=new Set([...selected].map(key=>visible.has(key)?key:byIdentity.get(previous.get(key))).filter(Boolean));
+  },
   toggle(id,checked){if(!visible.has(id))return;if(checked)selected.add(id);else selected.delete(id);},
-  selectAll(){selected=new Set(visible);},clear(){selected.clear();},ids(){return [...selected];}
+  selectAll(){selected=new Set(visible.keys());},clear(){selected.clear();},ids(){return [...selected];}
  };
 }
 export const pisteKey=r=>r.selectionKey||`${r.kind==='operational'?'ops':r.libraryId?'track':'coaching'}:${r.libraryId||r.id}`;
