@@ -4,11 +4,12 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 
 export function videoPilotConfig(env){
- if(env.VERCEL_ENV!=='preview'||env.PISTE_VIDEO_PILOT!=='1'||!uuid.test(env.PISTE_VIDEO_PUBLISHER_ID||'')||!env.LIVEKIT_API_KEY||!env.LIVEKIT_API_SECRET)return null;
+ const key=env.LIVEKIT_API_KEY?.trim(),secret=env.LIVEKIT_API_SECRET?.trim();
+ if(env.VERCEL_ENV!=='preview'||env.PISTE_VIDEO_PILOT!=='1'||!uuid.test(env.PISTE_VIDEO_PUBLISHER_ID||'')||!key||!secret)return null;
  try{
   const url=new URL(env.LIVEKIT_URL);
   if(url.protocol!=='wss:'||!url.hostname.endsWith('.livekit.cloud')||url.username||url.password||url.search||url.hash||url.pathname!=='/')return null;
-  return {url:url.origin,key:env.LIVEKIT_API_KEY,secret:env.LIVEKIT_API_SECRET,publisher:env.PISTE_VIDEO_PUBLISHER_ID};
+  return {url:url.origin,key,secret,publisher:env.PISTE_VIDEO_PUBLISHER_ID};
  }catch{return null;}
 }
 
