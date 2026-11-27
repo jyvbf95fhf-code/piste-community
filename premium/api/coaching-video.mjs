@@ -19,16 +19,18 @@ export default async function handler(req,res){
    const requestOps=async operation=>{
     const response=await fetch(COACHING_REMOTE.url+'/functions/v1/ops-live',{method:'POST',headers,
      body:JSON.stringify({operation,id:body.sessionId}),signal:AbortSignal.timeout(8000)});
-    return response.ok?(await response.json()).result:null;
+    if(!response.ok)throw Object.assign(Error('OPS Live'),{opsStatus:response.status,operation});
+    return (await response.json()).result;
    };
    const head=await requestOps('head');
    const active=head?.id===body.sessionId&&head.closed===false&&head.missionFinished!==true&&
     ['En cours','Pause'].includes(head.metadata?.state)&&Number.isSafeInteger(head.generation);
+   if(!active)return res.status(409).json({error:'Le Live OPS doit être actif sur cette mission.'});
    // OPS returns ownership relative to the authenticated caller, never the owner's ID.
    const permitted=active&&(body.kind==='camera'
     ?(await requestOps('list'))?.some(row=>row.id===head.id&&row.isOwner===true&&row.generation===head.generation&&!row.closed)
     :id!==pilot.publisher);
-   if(!permitted)return res.status(403).json({error:'Vidéo non autorisée pour ce Live OPS.'});
+   if(!permitted)return res.status(403).json({error:'Droits du propriétaire de la mission OPS non confirmés.'});
    return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id,generation:head.generation})});
   }
   const access=await fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,body:JSON.stringify({
@@ -38,5 +40,8 @@ export default async function handler(req,res){
   const {projection}=await access.json();
   if(!videoPilotAccess(pilot,id,{...body,projection}))return res.status(403).json({error:'Vidéo non autorisée pour cette séance.'});
   return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id})});
- }catch{return res.status(503).json({error:'Service vidéo indisponible.'});}
+ }catch(error){
+  if(error?.opsStatus)return res.status(503).json({error:'Vérification Live OPS indisponible ('+error.operation+' · HTTP '+error.opsStatus+').'});
+  return res.status(503).json({error:'Service vidéo indisponible.'});
+ }
 }
