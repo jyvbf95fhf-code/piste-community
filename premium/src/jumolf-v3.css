@@ -111,3 +111,12 @@
 .adaptive-next { padding:18px 0; border-top:1px solid #365367; margin-top:16px; }
 .adaptive-next h3 { color:#e6c895; }
 .longitudinal a { overflow-wrap:anywhere; }
+
+.jumolf-question-panel{max-width:720px;margin:18px auto}
+.jumolf-question-form{display:grid;gap:12px;margin:18px 0}
+.jumolf-question-form textarea{width:100%;padding:12px;border:1px solid #536e84;border-radius:12px;background:#0d2133;color:#eef6fa;font:inherit;resize:vertical}
+.jumolf-question-suggestions{display:flex;flex-wrap:wrap;gap:8px}
+.jumolf-question-thread{list-style:none;padding:0;display:grid;gap:12px}
+.jumolf-question-thread li{overflow-wrap:anywhere}
+.jumolf-question-thread>li{padding:10px 14px;border:1px solid #537187;border-radius:12px;background:#0d2133}
+.jumolf-question-thread a{color:#a7e4f0;text-decoration:underline}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "7e21635a5499a0c9",
+  "revision": "4bd13459ead4513e",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -194,6 +194,7 @@
     "/src/jumolf-progress-tracker.mjs",
     "/src/jumolf-provenance.mjs",
     "/src/jumolf-quality.mjs",
+    "/src/jumolf-questions.mjs",
     "/src/jumolf-real-learning-screen.mjs",
     "/src/jumolf-real-learning.mjs",
     "/src/jumolf-real-science-screen.mjs",
@@ -366,5 +367,5 @@
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6978876
+  "bytes": 6988747
 }
