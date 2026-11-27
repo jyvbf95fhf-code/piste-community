@@ -1,8 +1,8 @@
 import {fieldMediaTrack} from './field-media.mjs';
 import {escapeHTML as e} from './components.mjs';
 
-export function coachingVideoSlot(sessionId,kind,sessionType='coaching',localId=sessionId){
- return sessionId||(kind==='camera'&&sessionType==='ops')?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId||'')}" data-video-type="${e(sessionType)}" data-field-live-local="${e(localId||'')}"></div>`:'';
+export function coachingVideoSlot(sessionId,kind,sessionType='coaching',localId=sessionId,surface){
+ return sessionId||(kind==='camera'&&sessionType==='ops')?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId||'')}" data-video-type="${e(sessionType)}" data-field-live-local="${e(localId||'')}"${surface?' data-video-surface="'+e(surface)+'"':''}></div>`:'';
 }
 
 // Load the pinned SDK only when the user opens a video room.
@@ -68,7 +68,7 @@ function paint(state){
   status.textContent=state.message;slot.append(status);
  }
  if(!state.media)return;
- if(camera||state.sessionType!=='ops'){
+ if(camera){
   slot.append(state.media);
   return;
  }
@@ -86,7 +86,7 @@ function paint(state){
  if(state.expanded){
   const dialog=document.createElement('dialog');
   dialog.className='ops-video-fullscreen';
-  dialog.setAttribute('aria-label','Vidéo OPS en direct');
+  dialog.setAttribute('aria-label',state.sessionType==='ops'?'Vidéo OPS en direct':'Vidéo Coaching en direct');
   dialog.addEventListener('cancel',event=>{event.preventDefault();toggleSize();});
   dialog.append(resize,state.media);
   slot.append(dialog);
@@ -98,7 +98,7 @@ async function request(state,action){
  const accessToken=await state.getAccessToken();
  if(!accessToken)throw Error('Connexion requise.');
  return fetch('/api/coaching-video',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-  body:JSON.stringify({sessionId:state.sessionId,kind:state.kind,sessionType:state.sessionType,action}),signal:AbortSignal.timeout(18000)});
+  body:JSON.stringify({sessionId:state.sessionId,kind:state.kind,sessionType:state.sessionType,surface:state.surface,action}),signal:AbortSignal.timeout(18000)});
 }
 
 async function close(state,message=''){
@@ -137,6 +137,10 @@ async function join(state){
  state.busy=true;state.message='';paint(state);
  try{
   const response=await request(state,'join');
+  if(response.status===409&&state.sessionType==='coaching'&&state.kind==='camera'){
+   if(active())await close(state,'Une caméra diffuse déjà dans cette séance.');
+   return;
+  }
   if(!response.ok)throw Error('Accès vidéo indisponible.');
   const {url,token}=await response.json();
   const {Room,RoomEvent}=await import(sdkUrl);
@@ -146,7 +150,7 @@ async function join(state){
   room.on(RoomEvent.TrackSubscribed,track=>showTrack(state,track));
   room.on(RoomEvent.TrackUnsubscribed,track=>{
    if(state.room!==room||track.kind!=='video')return;
-   state.media?.remove();state.media=null;state.expanded=false;state.message='En attente de la caméra du Conducteur.';paint(state);
+   state.media?.remove();state.media=null;state.expanded=false;state.message='En attente d’une caméra en direct.';paint(state);
   });
   room.on(RoomEvent.Disconnected,reason=>{
    if(state.room===room&&!state.busy)void close(state,'Vidéo interrompue'+(Number.isInteger(reason)?' · code LiveKit '+reason:'')+'.');
@@ -168,7 +172,7 @@ async function join(state){
     state.cameraTrack=publication.track.mediaStreamTrack;
     showTrack(state,publication.track);
    }
-  }else if(!state.media)state.message='En attente de la caméra du Conducteur.';
+  }else if(!state.media)state.message='En attente d’une caméra en direct.';
   state.busy=false;paint(state);
   state.timer=setInterval(async()=>{
    try{
@@ -189,14 +193,14 @@ async function join(state){
 
 export function syncCoachingVideo(document,{ownerId,getAccessToken}={}){
  const slot=ownerId&&document.querySelector('[data-coaching-video]');
- const key=slot&&[ownerId,slot.dataset.videoSession,slot.dataset.coachingVideo,slot.dataset.videoType].join(':');
+ const key=slot&&[ownerId,slot.dataset.videoSession,slot.dataset.coachingVideo,slot.dataset.videoType,slot.dataset.videoSurface].join(':');
  if(current?.key===key&&key){
   if(current.slot!==slot){current.slot=slot;paint(current);}
   return;
  }
  if(current){const previous=current;current=null;void close(previous);}
  if(!slot)return;
- const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,sessionType:slot.dataset.videoType,attempt:0,allowed:false};
+ const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,sessionType:slot.dataset.videoType,surface:slot.dataset.videoSurface,attempt:0,allowed:false};
  current=state;
  if(state.sessionId)void checkAccess(state);
  else paint(state);

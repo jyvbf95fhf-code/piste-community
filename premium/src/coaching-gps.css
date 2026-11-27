@@ -243,7 +243,7 @@ body:has([data-shared-review]){overflow:hidden}
  background:#081a27ed;
 }
 .live-observer-map>[data-coaching-video="viewer"][data-video-type="ops"]:empty{display:none}
-.live-observer-map>[data-coaching-video="viewer"][data-video-type="ops"] video{width:100%;aspect-ratio:4/3;object-fit:contain}
+.live-observer-map>[data-coaching-video="viewer"][data-video-type="ops"]>video{width:100%;aspect-ratio:4/3;object-fit:contain}
 .ops-video-fullscreen{
  position:fixed;
  inset:0;
@@ -259,7 +259,15 @@ body:has([data-shared-review]){overflow:hidden}
  color:#f0f7fa;
 }
 .ops-video-fullscreen[open]{display:flex;flex-direction:column;align-items:center;gap:12px}
-.live-observer-map .ops-video-fullscreen video{flex:1;min-height:0;max-height:none;object-fit:contain}
+.coaching-video-pilot .ops-video-fullscreen video{
+ flex:1;
+ min-height:0;
+ width:100%;
+ max-height:none;
+ aspect-ratio:auto;
+ object-fit:contain;
+}
+.gps-actions .coaching-video-pilot[data-video-surface="session"]{flex:0 0 100%;justify-content:center}
 
 .field-media-controls{
  order:4;

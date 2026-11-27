@@ -1,5 +1,5 @@
 import {COACHING_REMOTE} from '../src/coaching-remote-config.mjs';
-import {validVideoPilotRequest,videoPilotAccess,videoPilotConfig,videoPilotToken} from '../src/server/coaching-video-pilot.mjs';
+import {coachingCameraInUse,validVideoPilotRequest,videoPilotAccess,videoPilotConfig,videoPilotToken} from '../src/server/coaching-video-pilot.mjs';
 
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
@@ -15,8 +15,8 @@ export default async function handler(req,res){
   const identity=await fetch(COACHING_REMOTE.url+'/auth/v1/user',{headers,signal:AbortSignal.timeout(6000)});
   if(!identity.ok)return res.status(401).json({error:'Compte non vérifié.'});
   const {id}=await identity.json();
-  if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'});
   if(body.sessionType==='ops'){
+   if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'});
    const requestOps=async operation=>{
     const response=await fetch(COACHING_REMOTE.url+'/functions/v1/ops-live',{method:'POST',headers,
      body:JSON.stringify({operation,id:body.sessionId}),signal:AbortSignal.timeout(8000)});
@@ -34,12 +34,21 @@ export default async function handler(req,res){
    if(!permitted)return res.status(403).json({error:'Droits du propriétaire de la mission OPS non confirmés.'});
    return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id,generation:head.generation})});
   }
-  const access=await fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,body:JSON.stringify({
-   operation:body.kind==='camera'?'read':'community-live-read',sessionId:body.sessionId
-  }),signal:AbortSignal.timeout(8000)});
-  if(!access.ok)return res.status(access.status>=500?503:403).json({error:'Accès vidéo indisponible.'});
-  const {projection}=await access.json();
-  if(!videoPilotAccess(pilot,id,{...body,projection}))return res.status(403).json({error:'Vidéo non autorisée pour cette séance.'});
+  const readCoaching=operation=>fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,
+   body:JSON.stringify({operation,sessionId:body.sessionId}),signal:AbortSignal.timeout(8000)});
+  const session=await readCoaching('read');
+  if(!session.ok&&session.status!==403)return res.status(503).json({error:'Accès vidéo indisponible.'});
+  const member=session.ok?(await session.json()).projection:null;
+  let projection=member;
+  if(body.kind==='viewer'&&body.surface!=='session'){
+   const live=await readCoaching('community-live-read');
+   if(!live.ok)return res.status(live.status>=500?503:403).json({error:'Accès vidéo indisponible.'});
+   ({projection}=await live.json());
+  }
+  if(!videoPilotAccess(pilot,id,{...body,projection,member}))return res.status(403).json({error:'Vidéo non autorisée pour cette séance.'});
+  if(body.kind==='camera'&&body.action==='join'&&await coachingCameraInUse(pilot,body.sessionId)){
+   return res.status(409).json({error:'Une caméra diffuse déjà dans cette séance.'});
+  }
   return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id})});
  }catch(error){
   if(error?.opsStatus)return res.status(503).json({error:'Vérification Live OPS indisponible ('+error.operation+' · HTTP '+error.opsStatus+').'});

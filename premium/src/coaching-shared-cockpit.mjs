@@ -35,7 +35,10 @@ export function SharedCoachingCockpit(p,state={},ui={}){
  const driverSearching=p.role==='driver'&&p.phase==='SEARCH_RUNNING';
  const tracerLaying=p.role==='traceur'&&p.phase==='LAYING'&&poseView;
  const capture=driverSearching?fieldMediaControls(p.id,'coaching'):tracerLaying?fieldMediaControls(p.id,'coaching',{photoOnly:true}):'';
+ const activeLive=p.phase==='SEARCH_RUNNING'&&!p.liveEnded;
+ const camera=activeLive&&['driver','coach','observer'].includes(p.role)?coachingVideoSlot(p.id,'camera'):'';
+ const viewer=activeLive&&p.role==='traceur'?coachingVideoSlot(p.id,'viewer','coaching',p.id,'session'):'';
  const start=html.indexOf('<div class="gps-actions">');
- html=html.slice(0,start)+`<div class="gps-actions">${actions}${driverSearching&&!p.liveEnded?coachingVideoSlot(p.id,'camera'):''}${capture}${(state.pending||!state.gpsRunning)&&state.status?`<p class="gps-start-status" role="status">${e(state.status)}</p>`:''}</div><details class="gps-tools"><summary>Options terrain</summary>${poseView&&p.phase==='PREPARATION'&&p.canProposeReference?`<button type="button" class="button button-dark" data-remote="open-session">${entry.reference?'Modifier le tracé':'Choisir un tracé'}</button>`:''}<p role="status" data-remote-status>${e(ui.notice||state.status||'Session partagée · GPS réel')}</p><button type="button" class="button button-dark" data-remote="open-session">Équipe et options de session</button></details>${GpsTouchLockMarkup()}</section>`;
+ html=html.slice(0,start)+`<div class="gps-actions">${actions}${camera}${viewer}${capture}${(state.pending||!state.gpsRunning)&&state.status?`<p class="gps-start-status" role="status">${e(state.status)}</p>`:''}</div><details class="gps-tools"><summary>Options terrain</summary>${poseView&&p.phase==='PREPARATION'&&p.canProposeReference?`<button type="button" class="button button-dark" data-remote="open-session">${entry.reference?'Modifier le tracé':'Choisir un tracé'}</button>`:''}<p role="status" data-remote-status>${e(ui.notice||state.status||'Session partagée · GPS réel')}</p><button type="button" class="button button-dark" data-remote="open-session">Équipe et options de session</button></details>${GpsTouchLockMarkup()}</section>`;
  return html;
 }
