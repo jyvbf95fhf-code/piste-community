@@ -18,13 +18,14 @@ test('pilot fails closed outside production and preview or without trusted confi
   assert.equal(videoPilotConfig({...env,...values}),null);
  }
  assert.equal(videoPilotConfig({...env,PISTE_VIDEO_PUBLISHER_ID:''},'ops'),null);
- assert.ok(videoPilotConfig({...env,PISTE_VIDEO_PUBLISHER_ID:''},'coaching'));
+ assert.equal(videoPilotConfig({...env,PISTE_VIDEO_PUBLISHER_ID:''},'coaching'),null);
 });
-test('only active Coaching members assigned to the driver, coach or observer role can publish',()=>{
+test('only the pilot in an active driver, coach or observer role can publish',()=>{
  const projection={...base,role:'driver'};
  for(const mode of ['normal','simple_blind','full_blind']){
   for(const role of ['driver','coach','observer']){
-   assert.equal(videoPilotAccess(config,guest,plan('camera',guest,{...projection,mode,role})),true);
+   assert.equal(videoPilotAccess(config,owner,plan('camera',owner,{...projection,mode,role})),true);
+   assert.equal(videoPilotAccess(config,guest,plan('camera',guest,{...projection,mode,role})),false);
   }
  }
  for(const change of [{role:'traceur'},{role:'observer',readOnly:true},{mode:'invalid'},{phase:'DEBRIEF'},{liveEnded:true},{id:guest}]){
@@ -112,11 +113,11 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
    else process.env[key]=value;
   }
  });
- let member=null,liveAllowed=true,cameraBusy=false;
+ let identity=guest,member=null,liveAllowed=true,cameraBusy=false;
  const calls=[];
  t.mock.method(globalThis,'fetch',async(input,options)=>{
   const url=new URL(input);
-  if(url.pathname==='/auth/v1/user')return Response.json({id:guest});
+  if(url.pathname==='/auth/v1/user')return Response.json({id:identity});
   const {operation}=JSON.parse(options.body);
   calls.push(operation||url.pathname);
   if(operation==='read')return member?Response.json({projection:member}):new Response(null,{status:403});
@@ -132,11 +133,16 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
   const res={code:200,setHeader(){},status(code){this.code=code;return this;},json(body){return {status:this.code,body};}};
   return videoHandler(req,res);
  }
- assert.equal((await request('camera')).status,403);
+ assert.deepEqual(await request('camera'),{status:403,body:{error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'}});
  assert.equal((await request('viewer')).status,200);
  assert.deepEqual(calls,['read','community-live-read']);
  member={...base,mode:'full_blind',role:'driver'};
  assert.equal((await request('viewer')).status,403);
+ member={...base,role:'coach'};
+ assert.equal((await request('camera')).status,403);
+ identity=owner;
+ member=null;
+ assert.equal((await request('camera')).status,403);
  for(const role of ['coach','observer']){
   member={...base,role};
   assert.equal((await request('camera')).status,200);
@@ -146,6 +152,7 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
  assert.equal((await request('camera')).status,409);
  assert.equal((await request('camera',undefined,'check')).status,200);
  assert.deepEqual(calls,['read']);
+ identity=guest;
  member={...base,role:'traceur'};
  liveAllowed=false;
  assert.equal((await request('viewer','session')).status,200);

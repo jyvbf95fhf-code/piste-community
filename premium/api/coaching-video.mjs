@@ -15,8 +15,8 @@ export default async function handler(req,res){
   const identity=await fetch(COACHING_REMOTE.url+'/auth/v1/user',{headers,signal:AbortSignal.timeout(6000)});
   if(!identity.ok)return res.status(401).json({error:'Compte non vérifié.'});
   const {id}=await identity.json();
+  if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'});
   if(body.sessionType==='ops'){
-   if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'});
    const requestOps=async operation=>{
     const response=await fetch(COACHING_REMOTE.url+'/functions/v1/ops-live',{method:'POST',headers,
      body:JSON.stringify({operation,id:body.sessionId}),signal:AbortSignal.timeout(8000)});

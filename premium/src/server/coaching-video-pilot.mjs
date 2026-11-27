@@ -7,7 +7,7 @@ const coachingPublisher='piste-coaching-camera';
 export function videoPilotConfig(env,sessionType='coaching'){
  const key=env.LIVEKIT_API_KEY?.trim(),secret=env.LIVEKIT_API_SECRET?.trim();
  if(!['preview','production'].includes(env.VERCEL_ENV)||!['ops','coaching'].includes(sessionType)||env.PISTE_VIDEO_PILOT!=='1'||!key||!secret)return null;
- if(sessionType==='ops'&&!uuid.test(env.PISTE_VIDEO_PUBLISHER_ID||''))return null;
+ if(!uuid.test(env.PISTE_VIDEO_PUBLISHER_ID||''))return null;
  try{
   const url=new URL(env.LIVEKIT_URL);
   if(url.protocol!=='wss:'||!url.hostname.endsWith('.livekit.cloud')||url.username||url.password||url.search||url.hash||url.pathname!=='/')return null;
@@ -18,7 +18,7 @@ export function videoPilotConfig(env,sessionType='coaching'){
 export function videoPilotAccess(config,identity,{sessionId,kind,surface='live',projection,member}={}){
  if(!config||!uuid.test(identity||'')||!uuid.test(sessionId||'')||!['camera','viewer'].includes(kind))return false;
  if(projection?.id!==sessionId||!['normal','simple_blind','full_blind'].includes(projection.mode)||projection.phase!=='SEARCH_RUNNING'||projection.liveEnded||projection.ended||projection.status==='ended')return false;
- if(kind==='camera')return ['driver','coach','observer'].includes(projection.role)&&projection.readOnly!==true;
+ if(kind==='camera')return identity===config.publisher&&['driver','coach','observer'].includes(projection.role)&&projection.readOnly!==true;
  if(surface==='session')return projection.role==='traceur'&&projection.readOnly!==true;
  if(member&&member.phase!=='SEARCH_RUNNING')return false;
  if(member?.role==='driver'&&projection.mode!=='normal')return false;
