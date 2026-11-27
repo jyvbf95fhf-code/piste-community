@@ -1102,7 +1102,10 @@ function render(focus=false) {
   const {data}=await accountClient.auth.getSession();
   return data?.session?.access_token||null;
  }});
- mountFieldMedia(document,auth.assurance==='supabase-auth'?currentUser?.user_id:null,liveCameraTrack);
+ mountFieldMedia(document,auth.assurance==='supabase-auth'?currentUser?.user_id:null,liveCameraTrack,(id,type)=>{
+  const context=operationalGpsContext();
+  return type==='ops'&&context.mission?.id===id&&ownsOperationalGps(context)?opsGps.view().lastFix:null;
+ });
  const selectedDossierTab=document.querySelector('.dossier-tabs [aria-current=page]');if(selectedDossierTab){const nav=selectedDossierTab.parentElement;nav.scrollLeft=selectedDossierTab.offsetLeft-nav.offsetLeft-(nav.clientWidth-selectedDossierTab.offsetWidth)/2;}
  trackSmart.reconcile();
  mountRexMaps();
