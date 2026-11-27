@@ -48,3 +48,13 @@ test('video and capture controls are restricted to active conductors and authori
  assert.match(LiveDetailScreen({...base,map:{}}),/data-coaching-video="viewer"/);
  assert.doesNotMatch(LiveDetailScreen({...base,map:{},sessionType:'ops'}),/data-coaching-video/);
 });
+
+test('traceur can capture photos only during their own GPS pose in every Coaching mode',()=>{
+ for(const mode of ['normal','simple_blind','full_blind']){
+  const traceur={...base,mode,role:'traceur',poseRecorder:'traceur',phase:'LAYING',dog:'QA'};
+  assert.match(SharedCoachingCockpit(traceur),/data-field-capture-mode="photo"/);
+  assert.doesNotMatch(SharedCoachingCockpit(traceur),/data-coaching-video/);
+  assert.doesNotMatch(SharedCoachingCockpit({...traceur,phase:'TRACK_FINISHED'}),/data-field-capture/);
+  assert.doesNotMatch(SharedCoachingCockpit({...traceur,poseRecorder:'driver'}),/data-field-capture/);
+ }
+});

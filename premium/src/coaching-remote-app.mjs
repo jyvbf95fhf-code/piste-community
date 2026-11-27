@@ -58,7 +58,7 @@ function render(){
  renderCockpit();
  if(embedded&&root.isConnected){
   syncCoachingVideo(root,{ownerId:profile?.id,getAccessToken:videoAccessToken});
-  mountFieldMedia(root,profile?.id,liveCameraTrack,controller.localSearchFix);
+  mountFieldMedia(root,profile?.id,liveCameraTrack,controller.localMediaFix);
  }
 }
 function renderCockpit(){if(root.querySelector('.gps-touch-lock-panel:not([hidden])')){deferredRender=true;return;}deferredRender=false;const inviteRole=root.querySelector('[data-remote-form=invite] [name=role]')?.value;const focused=root.contains(document.activeElement)?{name:document.activeElement.name,form:document.activeElement.closest('[data-remote-form]')?.dataset.remoteForm,start:document.activeElement.selectionStart,end:document.activeElement.selectionEnd}:null;root.setAttribute('aria-busy',String(busy||Boolean(opening&&!opening.error)));rendering=true;const p=state.projection,previous=root.querySelector('.shared-terrain'),retainedCockpit=embedded&&!opening&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT','SEARCH_READY','SEARCH_RUNNING'].includes(p?.phase)&&previous?.dataset.remoteViewKey===cockpitKey(p)?previous:null;if(!retainedCockpit)destroyGpsMaps({preserveView:embedded});root.classList.toggle('remote-shell',!embedded||Boolean(p)&&!retainedCockpit);

@@ -1255,7 +1255,7 @@ async function openSavedOpsMission(id,{archive=false}={}) {
 function renderSessionDetail(id){
  const params=new URLSearchParams(location.search),tab=params.get('tab')||'summary',from=params.get('from'),back=from&&/^\/(?:tracks|jumolf\/progress)(?:\?|$)/.test(from)?from:'/tracks';
  const p=sharedIndex?.get(id);
- if(p)return SessionRemovalMenu(sessionPolicy(id))+SessionDossierScreen(outcomeForDossier(sharedSessionDossier(p,{training:trainingMemoryFor(p)}),'coaching',id),{tab,back,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.',media:p.role==='driver'?{id,type:'coaching'}:null});
+ if(p)return SessionRemovalMenu(sessionPolicy(id))+SessionDossierScreen(outcomeForDossier(sharedSessionDossier(p,{training:trainingMemoryFor(p)}),'coaching',id),{tab,back,error:'Cette session reste active : utilisez son cockpit depuis Mes pistes.',media:['driver','traceur'].includes(p.role)?{id,type:'coaching'}:null});
  const operational=operationalStore.get(id)||pisteCloudMission(id);
  if(operational){const menu=SessionRemovalMenu(sessionPolicy(id));const v=operationalSessionDossier(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)});return menu+opsEditAction(operational)+(v?SessionDossierScreen(outcomeForDossier(v,operationalStore.get(id)||pisteCloudMission(id)?'ops':'coaching',id),{tab,back,media:{id:operational.originalId||id,type:'ops'}}):OperationalSessionDetailScreen(operational,{weather:(operational.cloudReadOnly&&operational.weatherSnapshot)||opsWeather.snapshot(operational)}));}
  const record=sessionCatalog.get(id);

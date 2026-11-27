@@ -30,8 +30,8 @@ async function transaction(mode,operation){
  });
 }
 
-export function fieldMediaControls(sessionId,type){
- return sessionId?`<div class="field-media-controls" data-field-capture data-field-session="${e(sessionId)}" data-field-type="${e(type)}"></div>`:'';
+export function fieldMediaControls(sessionId,type,{photoOnly=false}={}){
+ return sessionId?`<div class="field-media-controls" data-field-capture data-field-capture-mode="${photoOnly?'photo':'all'}" data-field-session="${e(sessionId)}" data-field-type="${e(type)}"></div>`:'';
 }
 
 export function fieldMediaAlbum(sessionId,type){
@@ -83,7 +83,9 @@ function renderCapture(state){
  const controls=document.createElement('div');
  controls.className='field-media-actions';
  if(!state.track){
-  for(const [mode,label] of [['photo','Photo'],['video','Vidéo locale']]){
+  const actions=[['photo','Photo']];
+  if(!state.photoOnly)actions.push(['video','Vidéo locale']);
+  for(const [mode,label] of actions){
    const control=button(label,()=>void preview(state,mode));
    control.disabled=state.opening;
    controls.append(control);
@@ -319,11 +321,11 @@ export function mountFieldMedia(root,owner,liveTrack,getFix){
   shownMedia.delete(media);
  }
  const slot=owner&&root.querySelector('[data-field-capture]');
- const key=slot&&[owner,slot.dataset.fieldType,slot.dataset.fieldSession].join(':');
+ const key=slot&&[owner,slot.dataset.fieldType,slot.dataset.fieldSession,slot.dataset.fieldCaptureMode].join(':');
  if(capture?.key!==key&&capture&&root.contains(capture.slot)===false&&capture.slot.isConnected)return;
  if(capture&&capture.key!==key){stopPreview(capture);capture=null;}
  if(slot&&capture?.slot!==slot){
-  capture??={key,owner,type:slot.dataset.fieldType,sessionId:slot.dataset.fieldSession,liveTrack,getFix};
+  capture??={key,owner,type:slot.dataset.fieldType,sessionId:slot.dataset.fieldSession,photoOnly:slot.dataset.fieldCaptureMode==='photo',liveTrack,getFix};
   capture.slot=slot;
   renderCapture(capture);
  }
