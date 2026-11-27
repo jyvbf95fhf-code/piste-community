@@ -36,3 +36,15 @@ test('OPS wall display separates a declared pause from stale GPS and shows the s
  assert.doesNotMatch(LiveDetailScreen({...base,ended:true}),/Résultat en attente/);
  assert.doesNotMatch(LiveDetailScreen({sessionType:'coaching'},{wide:true}),/live-observer-wide/);
 });
+
+test('Coaching mode badges are explicit in the Live directory and detail, with no OPS badge',()=>{
+ const modes=[['normal','Normal'],['simple_blind','Simple aveugle'],['full_blind','Double aveugle']];
+ const sessions=modes.map(([mode])=>({sessionId:mode,sessionType:'coaching',mode}));
+ const directory=LiveScreen({contactSessions:[...sessions,{sessionId:'ops',sessionType:'ops',mode:'normal'}]});
+ assert.equal((directory.match(/data-live-coaching-mode/g)||[]).length,3);
+ for(const [mode,label] of modes){
+  assert.match(directory,new RegExp('data-live-coaching-mode><span class="badge neutral">'+label+'</span>'));
+  assert.match(LiveDetailScreen({sessionType:'coaching',mode,map:{}}),new RegExp('data-live-coaching-mode><span class="badge neutral">'+label+'</span>'));
+ }
+ assert.doesNotMatch(LiveDetailScreen({sessionType:'ops',mode:'normal'}),/data-live-coaching-mode/);
+});

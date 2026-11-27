@@ -207,3 +207,5 @@ body:has([data-shared-review]){overflow:hidden}
  max-width:min(420px,calc(100vw - 24px));padding:12px;border-radius:12px;
  background:#102438;color:#fff;box-shadow:0 6px 24px #0007;
 }
+
+.gps-tracer-marker .gps-conductor-badge{border-color:#ff667d}

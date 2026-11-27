@@ -31,3 +31,12 @@ test('shared HUD advances active time locally and freezes the paused clock',()=>
  assert.match(api.SharedCoachingCockpit({...p,trackingState:'paused'},state,{now:105000}),/01:05/);
  assert.match(api.SharedCoachingCockpit({...p,searchActiveMs:null,role:'coach',search:null},state,{now:105000}),/data-gps-clock>—/);
 });
+
+test('Coach in double blind can see the recorded pose before the search starts',()=>{
+ const pose={...createGpsPose('real-session','tracer'),segments:[[{latitude:48,longitude:7}]]};
+ const html=api.SharedCoachingCockpit(projection({mode:'full_blind',role:'coach',phase:'SEARCH_READY',pose,search:null}),{});
+ assert.match(html,/data-gps-reference=/);
+ assert.match(html,/data-gps-tracer-marker="reference"/);
+ assert.match(html,/data-gps-corridor-allowed="false"/);
+ assert.doesNotMatch(html,/data-remote="start-search"/);
+});

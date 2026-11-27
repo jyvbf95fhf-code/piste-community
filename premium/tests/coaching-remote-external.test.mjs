@@ -17,7 +17,7 @@ for(const mode of ['normal','simple_blind','full_blind'])test(`external without 
  s=command(s,'driver','start-search',{fix:fix(now+1000),segmentId:'search'},now+1000);
  for(const role of ['driver','coach','observer']){
   const p=projectRemoteSession(s,role,now+1000);assert.equal(p.pose,null);assert.equal(p.poseStatus,'unavailable');assert.equal(p.poseRecorder,null);
-  assert.equal(p.search!==null,mode!=='full_blind'||role==='driver');
+  assert.equal(p.search!==null,mode!=='full_blind'||['driver','coach'].includes(role));
  }
  assert.throws(()=>command(s,'observer','pause-search'));
  s=command(s,'coach','pause-search',{},now+2000);s=command(s,'driver','resume-search',{},now+3000);

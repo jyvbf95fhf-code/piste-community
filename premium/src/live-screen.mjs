@@ -3,8 +3,14 @@ import {escapeHTML as e,EmptyState,StatusBadge} from './components.mjs';
 
 const hrefFor=session=>`/live/${session.sessionType==='ops'?'ops':'coaching'}/${encodeURIComponent(session.sessionId)}`;
 const stateLabel=value=>({PREPARATION:'Préparation',LAYING:'Pose en cours',TRACK_FINISHED:'Pose terminée',LAYING_WAIT:'En attente',SEARCH_READY:'Recherche prête',SEARCH_RUNNING:'Recherche en cours',DEBRIEF:'Débrief',ARCHIVED:'Terminée'})[value]||value;
+const coachingModes={normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'};
+const coachingModeBadge=session=>{
+ if(session.sessionType==='ops')return '';
+ const label=Object.hasOwn(coachingModes,session.mode)?coachingModes[session.mode]:session.modeLabel;
+ return label?`<span data-live-coaching-mode>${StatusBadge(label,'neutral')}</span>`:'';
+};
 const typeLabel=session=>session.sessionType==='ops'?'OPS · Observateur de trace':'Coaching · Observateur';
-function sessionCard(session){return `<article class="card live-session-card" data-live-session-type="${e(session.sessionType)}"><div>${StatusBadge(session.sessionType==='ops'?'OPS LIVE':'COACHING LIVE',session.sessionType==='ops'?'terrain':'cyan')}<span class="live-role-label">${e(typeLabel(session))}</span></div><h3>${e(session.title||session.dogName||'Session en cours')}</h3><p>${e(session.ownerDisplayName||'Session partagée')}${session.state?` · ${e(stateLabel(session.state))}`:''}${session.activity?` · ${e(session.activity.label)}`:''}${session.startedAt?` · ${e(session.startedAt)}`:''}</p><a class="button button-gold" href="${e(hrefFor(session))}">Voir le Live</a></article>`;}
+function sessionCard(session){return `<article class="card live-session-card" data-live-session-type="${e(session.sessionType)}"><div>${StatusBadge(session.sessionType==='ops'?'OPS LIVE':'COACHING LIVE',session.sessionType==='ops'?'terrain':'cyan')}${coachingModeBadge(session)}<span class="live-role-label">${e(typeLabel(session))}</span></div><h3>${e(session.title||session.dogName||'Session en cours')}</h3><p>${e(session.ownerDisplayName||'Session partagée')}${session.state?` · ${e(stateLabel(session.state))}`:''}${session.activity?` · ${e(session.activity.label)}`:''}${session.startedAt?` · ${e(session.startedAt)}`:''}</p><a class="button button-gold" href="${e(hrefFor(session))}">Voir le Live</a></article>`;}
 function group(title,items,empty){return `<section class="live-list-group"><h2>${title}</h2>${items.length?`<div class="live-session-list">${items.map(sessionCard).join('')}</div>`:`<p class="live-empty">${empty} · Les sessions autorisées apparaîtront ici.</p>`}</section>`;}
 export function LiveScreen({ownSessions=[],contactSessions=[],invitations=[],refreshing=false,error=''}={}){
  const unique=items=>[...new Map(items.filter(s=>!s.isOwner&&!s.ended).map(s=>[s.sessionType+':'+s.sessionId,s])).values()];const contacts=unique(contactSessions),pending=unique(invitations),active=contacts.filter(s=>s.activity?.state!=='disconnected'),offline=contacts.filter(s=>s.activity?.state==='disconnected');
@@ -45,15 +51,14 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
   ['Durée',Number.isFinite(seconds)?`${Math.floor(seconds/60)} min ${seconds%60} s`:null],
   ['Âge de piste',ops?projection.trackAge:null]
  ].filter(([,value])=>value!==null&&value!==undefined&&value!=='Non renseigné');
- const modes={normal:'Normal',simple_blind:'Simple aveugle',full_blind:'Double aveugle'};
- const details=ops?projection.handlerName:projection.modeLabel||modes[projection.mode];
+ const details=ops?projection.handlerName:null;
  return `<section class="live-page live-detail live-observer-view${expanded?' live-observer-wide live-observer-map-fullscreen':''}" data-live-role="${ops?'ops_trace_observer':'observer'}">
   <header class="live-observer-header">
    <div class="live-observer-navigation">
     <a class="back-link" href="/live">← Live</a><span class="live-observer-chip">Lecture seule</span>
     ${ops?`<a class="button button-dark" href="${expanded?'?ecran=0':'?ecran=1'}">${expanded?'Fermer la carte':'Grand écran'}</a><button type="button" class="button button-dark" data-copy-ops-screen>Copier le lien grand écran</button>`:''}
    </div>
-   <div class="live-observer-title"><h1>${e(dog||`Live ${type}`)}</h1>${dog?StatusBadge(type,ops?'terrain':'cyan'):''}</div>
+   <div class="live-observer-title"><h1>${e(dog||`Live ${type}`)}</h1>${dog?StatusBadge(type,ops?'terrain':'cyan'):''}${coachingModeBadge(projection)}</div>
    ${details?`<p>${e(details)}</p>`:''}
   </header>
   ${resultScreen?`<div class="live-observer-result" role="status"><span>Mission terminée</span><strong>${e(outcome||'Résultat en attente')}</strong></div>`:''}
