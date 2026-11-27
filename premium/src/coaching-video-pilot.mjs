@@ -12,7 +12,15 @@ function paint(state){
  const slot=state.slot;
  if(!slot?.isConnected)return;
  slot.replaceChildren();
- if(!state.allowed)return;
+ if(!state.allowed){
+  if(state.message){
+   const status=document.createElement('small');
+   status.setAttribute('role','status');
+   status.textContent=state.message;
+   slot.append(status);
+  }
+  return;
+ }
  const button=document.createElement('button');
  button.type='button';
  button.className='button button-dark';
@@ -112,9 +120,18 @@ export function syncCoachingVideo(document,{ownerId,getAccessToken}={}){
  const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,sessionType:slot.dataset.videoType,attempt:0,allowed:false};
  current=state;
  void request(state,'check').then(response=>{
-  if(current!==state||!response.ok)return;
-  state.allowed=true;paint(state);
- }).catch(()=>{});
+  if(current!==state)return;
+  state.allowed=response.ok;
+  if(!response.ok&&state.sessionType==='ops'&&state.kind==='camera'){
+   state.message=response.status===403?'Caméra OPS indisponible pour ce compte ou cette mission.'
+    :'Caméra OPS indisponible · contrôle vidéo HTTP '+response.status+'.';
+  }
+  paint(state);
+ }).catch(()=>{
+  if(current!==state||state.sessionType!=='ops'||state.kind!=='camera')return;
+  state.message='Caméra OPS indisponible · connexion au service vidéo impossible.';
+  paint(state);
+ });
 }
 
 if(typeof window!=='undefined')window.addEventListener('pagehide',()=>{
