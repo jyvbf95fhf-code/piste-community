@@ -3,9 +3,9 @@ import {createHmac} from 'node:crypto';
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const encode=value=>Buffer.from(JSON.stringify(value)).toString('base64url');
 
-export function videoPilotConfig(env){
+export function videoPilotConfig(env,sessionType='coaching'){
  const key=env.LIVEKIT_API_KEY?.trim(),secret=env.LIVEKIT_API_SECRET?.trim();
- if(env.VERCEL_ENV!=='preview'||env.PISTE_VIDEO_PILOT!=='1'||!uuid.test(env.PISTE_VIDEO_PUBLISHER_ID||'')||!key||!secret)return null;
+ if(!(env.VERCEL_ENV==='preview'||(env.VERCEL_ENV==='production'&&sessionType==='ops'))||env.PISTE_VIDEO_PILOT!=='1'||!uuid.test(env.PISTE_VIDEO_PUBLISHER_ID||'')||!key||!secret)return null;
  try{
   const url=new URL(env.LIVEKIT_URL);
   if(url.protocol!=='wss:'||!url.hostname.endsWith('.livekit.cloud')||url.username||url.password||url.search||url.hash||url.pathname!=='/')return null;

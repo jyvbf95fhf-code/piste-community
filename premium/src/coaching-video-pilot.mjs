@@ -1,7 +1,7 @@
 import {escapeHTML as e} from './components.mjs';
 
 export function coachingVideoSlot(sessionId,kind,sessionType='coaching'){
- return sessionId?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId)}" data-video-type="${e(sessionType)}"></div>`:'';
+ return sessionId||(kind==='camera'&&sessionType==='ops')?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId||'')}" data-video-type="${e(sessionType)}"></div>`:'';
 }
 
 // Load the pinned SDK only when the user opens a video room.
@@ -12,7 +12,9 @@ function paint(state){
  const slot=state.slot;
  if(!slot?.isConnected)return;
  slot.replaceChildren();
- if(!state.allowed){
+ const camera=state.kind==='camera';
+ const placeholder=camera&&state.sessionType==='ops'&&(!state.sessionId||state.unavailable);
+ if(!state.allowed&&!placeholder){
   if(state.message){
    const status=document.createElement('small');
    status.setAttribute('role','status');
@@ -30,8 +32,7 @@ function paint(state){
  const button=document.createElement('button');
  button.type='button';
  button.className='button button-dark';
- const camera=state.kind==='camera';
- const label=state.busy?'Connexion vidéo…':state.room?camera?'Couper la vidéo':'Fermer la vidéo':camera?'Activer la caméra':'Ouvrir la vidéo';
+ const label=placeholder?'Caméra':state.busy?'Connexion vidéo…':state.room?camera?'Couper la vidéo':'Fermer la vidéo':camera?'Activer la caméra':'Ouvrir la vidéo';
  if(camera){
   button.classList.add('video-camera-toggle');
   button.setAttribute('aria-label',label);
@@ -41,7 +42,14 @@ function paint(state){
   button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 5-3v10l-5-3"/>'+stopIcon+'</svg>';
  }else button.textContent=label;
  button.disabled=state.busy;
- button.addEventListener('click',()=>state.room?void close(state,camera?'Caméra coupée · la vidéo n’est plus diffusée.':''):void join(state));
+ button.addEventListener('click',()=>{
+  if(placeholder){
+   state.message='Caméra pas encore disponible';
+   paint(state);
+   slot.querySelector('.video-camera-toggle')?.focus();
+  }else if(state.room)void close(state,camera?'Caméra coupée · la vidéo n’est plus diffusée.':'');
+  else void join(state);
+ });
  slot.append(button);
  if(state.message){
   const status=document.createElement('small');status.setAttribute('role','status');
@@ -166,7 +174,8 @@ export function syncCoachingVideo(document,{ownerId,getAccessToken}={}){
  if(!slot)return;
  const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,sessionType:slot.dataset.videoType,attempt:0,allowed:false};
  current=state;
- void checkAccess(state);
+ if(state.sessionId)void checkAccess(state);
+ else paint(state);
 }
 
 async function checkAccess(state){
@@ -177,7 +186,8 @@ async function checkAccess(state){
   const error=response.ok?null:await response.json().catch(()=>null);
   if(current!==state)return;
   state.allowed=response.ok;
-  state.message=!response.ok&&state.sessionType==='ops'&&state.kind==='camera'
+  state.unavailable=error?.code==='publisher-unavailable';
+  state.message=!response.ok&&!state.unavailable&&state.sessionType==='ops'&&state.kind==='camera'
    ?error?.error||'Caméra OPS indisponible · HTTP '+response.status+'.':'';
   paint(state);
  }catch{

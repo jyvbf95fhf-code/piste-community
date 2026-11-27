@@ -4,9 +4,10 @@ import {validVideoPilotRequest,videoPilotAccess,videoPilotConfig,videoPilotToken
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');
  if(req.method!=='POST')return res.status(405).json({error:'Méthode invalide.'});
- const pilot=videoPilotConfig(process.env);
+ const body=req.body;
+ const pilot=videoPilotConfig(process.env,body?.sessionType);
  if(!pilot)return res.status(503).json({error:'Vidéo de test non configurée.'});
- const token=/^Bearer (.+)$/i.exec(req.headers.authorization||'')?.[1],body=req.body;
+ const token=/^Bearer (.+)$/i.exec(req.headers.authorization||'')?.[1];
  if(!token)return res.status(401).json({error:'Connexion requise.'});
  if(!validVideoPilotRequest(body))return res.status(400).json({error:'Demande vidéo invalide.'});
  const headers={apikey:COACHING_REMOTE.publishableKey,Authorization:'Bearer '+token,'Content-Type':'application/json'};
@@ -14,7 +15,7 @@ export default async function handler(req,res){
   const identity=await fetch(COACHING_REMOTE.url+'/auth/v1/user',{headers,signal:AbortSignal.timeout(6000)});
   if(!identity.ok)return res.status(401).json({error:'Compte non vérifié.'});
   const {id}=await identity.json();
-  if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.'});
+  if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.',code:'publisher-unavailable'});
   if(body.sessionType==='ops'){
    const requestOps=async operation=>{
     const response=await fetch(COACHING_REMOTE.url+'/functions/v1/ops-live',{method:'POST',headers,
@@ -29,7 +30,7 @@ export default async function handler(req,res){
    // OPS returns ownership relative to the authenticated caller, never the owner's ID.
    const permitted=active&&(body.kind==='camera'
     ?(await requestOps('list'))?.some(row=>row.id===head.id&&row.isOwner===true&&row.generation===head.generation&&!row.closed)
-    :id!==pilot.publisher);
+    :id!==pilot.publisher&&await isPilotOpsPublication(head,pilot.publisher));
    if(!permitted)return res.status(403).json({error:'Droits du propriétaire de la mission OPS non confirmés.'});
    return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id,generation:head.generation})});
   }
@@ -44,4 +45,14 @@ export default async function handler(req,res){
   if(error?.opsStatus)return res.status(503).json({error:'Vérification Live OPS indisponible ('+error.operation+' · HTTP '+error.opsStatus+').'});
   return res.status(503).json({error:'Service vidéo indisponible.'});
  }
+}
+
+async function isPilotOpsPublication(head,publisher){
+ const secret=process.env.SUPABASE_V2_SERVICE_ROLE_KEY;
+ if(!secret)return false;
+ const url=new URL('/rest/v1/ops_live_publications',COACHING_REMOTE.url);
+ url.search=new URLSearchParams({select:'id',id:'eq.'+head.id,owner_id:'eq.'+publisher,
+  generation:'eq.'+head.generation,sharing:'eq.true',closed_at:'is.null',limit:'1'});
+ const response=await fetch(url,{headers:{apikey:secret,Authorization:'Bearer '+secret},signal:AbortSignal.timeout(6000)});
+ return response.ok&&(await response.json()).length===1;
 }
