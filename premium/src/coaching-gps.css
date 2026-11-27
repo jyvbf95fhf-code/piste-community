@@ -282,3 +282,20 @@ body:has([data-shared-review]){overflow:hidden}
 .field-media-controls strong{color:#ffb6bd}
 .field-media-album img,.field-media-album video{display:block;max-width:100%;max-height:55dvh;margin-top:8px}
 .field-media-album article{margin-top:12px}
+
+.field-media-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px}
+.gps-actions .field-media-actions>.button{flex:0 0 auto;width:auto;min-width:76px}
+.ops-live-camera-caption{
+ position:absolute;
+ top:100%;
+ right:0;
+ width:48px;
+ text-align:center;
+ color:#f4f9fb;
+ font-size:11px;
+ line-height:1.4;
+ background:#081a27ed;
+ border-radius:0 0 7px 7px;
+ pointer-events:none;
+}
+.field-media-album [data-field-items]{display:grid;gap:18px}

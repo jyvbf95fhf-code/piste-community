@@ -31,7 +31,7 @@ export function fieldMediaControls(sessionId,type){
 }
 
 export function fieldMediaAlbum(sessionId,type){
- return sessionId?`<details class="card field-media-album" data-field-album data-field-session="${e(sessionId)}" data-field-type="${e(type)}"><summary>Photos et vidéos</summary><p>Enregistrées sur cet appareil.</p><div data-field-items></div></details>`:'';
+ return sessionId?`<div class="field-media-album" data-field-album data-field-session="${e(sessionId)}" data-field-type="${e(type)}"><h2>Photos et vidéos</h2><p>Enregistrées sur cet appareil.</p><div data-field-items></div></div>`:'';
 }
 
 export function fieldMediaTrack(sessionId,type){
@@ -72,15 +72,26 @@ function renderCapture(state){
  const slot=state.slot;
  if(!slot?.isConnected)return;
  const recording=state.recorder?.state==='recording';
- const camera=button(state.track?'Fermer l’aperçu':'Photos et vidéos',()=>void preview(state));
- camera.disabled=!!recording||state.opening;
- slot.replaceChildren(camera);
- if(state.track){
-  slot.append(button('Photo',()=>void photo(state)),button(recording?'Arrêter l’enregistrement':'● Enregistrer',()=>record(state)));
-  slot.append(state.preview);
+ const controls=document.createElement('div');
+ controls.className='field-media-actions';
+ if(!state.track){
+  for(const [mode,label] of [['photo','Photo'],['video','Vidéo locale']]){
+   const control=button(label,()=>void preview(state,mode));
+   control.disabled=state.opening;
+   controls.append(control);
+  }
+  slot.replaceChildren(controls);
+ }else{
+  const close=button('Fermer l’aperçu',()=>{stopPreview(state);report(state,'');renderCapture(state);});
+  close.disabled=!!recording;
+  const shutter=state.mode==='photo'
+   ?button('Prendre la photo',()=>void photo(state))
+   :button(recording?'Arrêter la vidéo':'● Enregistrer la vidéo',()=>record(state));
+  controls.append(shutter,close);
+  slot.replaceChildren(controls,state.preview);
   if(recording){
    const badge=document.createElement('strong');
-   badge.textContent='● Enregistrement en cours';
+   badge.textContent='● Enregistrement local en cours';
    slot.append(badge);
   }
  }
@@ -90,8 +101,9 @@ function renderCapture(state){
  slot.append(status);
 }
 
-async function preview(state){
- if(state.track){stopPreview(state);renderCapture(state);return;}
+async function preview(state,mode){
+ if(state.track||state.opening)return;
+ state.mode=mode;
  state.opening=true;
  renderCapture(state);
  try{
@@ -109,7 +121,7 @@ async function preview(state){
   state.preview=video;
   renderCapture(state);
   await video.play();
-  report(state,'Caméra prête');
+  report(state,mode==='photo'?'Photo locale':'Vidéo locale · micro coupé');
  }catch{
   stopPreview(state);
   report(state,'Impossible d’ouvrir la caméra. Vérifie son autorisation dans le navigateur.');
@@ -144,7 +156,7 @@ function record(state){
     if(!failed){
      await save(state,new Blob(chunks,{type:recorder.mimeType||chunks[0]?.type}));
      report(state,'Vidéo enregistrée sur cet appareil.');
-     const album=document.querySelector('[data-field-album][open]');
+     const album=document.querySelector('[data-field-album]');
      if(album?.dataset.fieldSession===state.sessionId&&album.dataset.fieldType===state.type)void loadAlbum(album,state.owner);
     }
    }catch{report(state,'Vidéo non enregistrée. Vérifie l’espace disponible.');}
@@ -167,6 +179,7 @@ async function loadAlbum(album,owner){
   const rows=await transaction('readonly',files=>files.index('session').getAll([owner,album.dataset.fieldType,album.dataset.fieldSession]));
   if(!album.isConnected)return;
   items.textContent=rows.length?'':'Aucun média enregistré sur cet appareil.';
+  const groups=new Map();
   for(const row of rows.sort((a,b)=>a.createdAt-b.createdAt)){
    const article=document.createElement('article');
    const title=document.createElement('p');
@@ -193,7 +206,15 @@ async function loadAlbum(album,owner){
     link.click();
     setTimeout(()=>URL.revokeObjectURL(url),30000);
    }));
-   items.append(article);
+   if(!groups.has(kind)){
+    const section=document.createElement('section');
+    const heading=document.createElement('h3');
+    heading.textContent=kind==='Photo'?'Photos':'Vidéos';
+    section.append(heading);
+    items.append(section);
+    groups.set(kind,section);
+   }
+   groups.get(kind).append(article);
   }
  }catch{items.textContent='Les médias locaux sont indisponibles.';}
 }
@@ -217,7 +238,7 @@ export function mountFieldMedia(root,owner,liveTrack){
  for(const album of root.querySelectorAll('[data-field-album]')){
   if(albums.has(album))continue;
   albums.add(album);
-  album.addEventListener('toggle',()=>{if(album.open)void loadAlbum(album,owner);});
+  void loadAlbum(album,owner);
  }
 }
 

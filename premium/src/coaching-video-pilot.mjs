@@ -56,6 +56,13 @@ function paint(state){
   else void join(state);
  });
  slot.append(button);
+ if(camera&&state.sessionType==='ops'){
+  const caption=document.createElement('span');
+  caption.className='ops-live-camera-caption';
+  caption.textContent='Direct';
+  caption.setAttribute('aria-hidden','true');
+  slot.append(caption);
+ }
  if(state.message){
   const status=document.createElement('small');status.setAttribute('role','status');
   status.textContent=state.message;slot.append(status);
