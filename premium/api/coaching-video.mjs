@@ -15,6 +15,20 @@ export default async function handler(req,res){
   if(!identity.ok)return res.status(401).json({error:'Compte non vérifié.'});
   const {id}=await identity.json();
   if(body.kind==='camera'&&id!==pilot.publisher)return res.status(403).json({error:'Diffusion vidéo non autorisée.'});
+  if(body.sessionType==='ops'){
+   const requestOps=async operation=>{
+    const response=await fetch(COACHING_REMOTE.url+'/functions/v1/ops-live',{method:'POST',headers,
+     body:JSON.stringify({operation,id:body.sessionId}),signal:AbortSignal.timeout(8000)});
+    return response.ok?(await response.json()).result:null;
+   };
+   const head=await requestOps('head');
+   const active=head?.id===body.sessionId&&head.closed===false&&head.missionFinished!==true&&
+    ['En cours','Pause'].includes(head.metadata?.state)&&Number.isSafeInteger(head.generation);
+   const pilotMission=active&&(await requestOps('list'))?.some(row=>
+    row.id===head.id&&row.ownerId===pilot.publisher&&row.generation===head.generation&&!row.closed);
+   if(!pilotMission||(body.kind==='viewer'&&id===pilot.publisher))return res.status(403).json({error:'Vidéo non autorisée pour ce Live OPS.'});
+   return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id,generation:head.generation})});
+  }
   const access=await fetch(COACHING_REMOTE.endpoint,{method:'POST',headers,body:JSON.stringify({
    operation:body.kind==='camera'?'read':'community-live-read',sessionId:body.sessionId
   }),signal:AbortSignal.timeout(8000)});

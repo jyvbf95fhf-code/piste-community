@@ -1,7 +1,7 @@
 import {escapeHTML as e} from './components.mjs';
 
-export function coachingVideoSlot(sessionId,kind){
- return sessionId?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId)}"></div>`:'';
+export function coachingVideoSlot(sessionId,kind,sessionType='coaching'){
+ return sessionId?`<div class="coaching-video-pilot" data-coaching-video="${e(kind)}" data-video-session="${e(sessionId)}" data-video-type="${e(sessionType)}"></div>`:'';
 }
 
 // Load the pinned SDK only when the user opens a video room.
@@ -32,7 +32,7 @@ async function request(state,action){
  const accessToken=await state.getAccessToken();
  if(!accessToken)throw Error('Connexion requise.');
  return fetch('/api/coaching-video',{method:'POST',headers:{Authorization:'Bearer '+accessToken,'Content-Type':'application/json'},
-  body:JSON.stringify({sessionId:state.sessionId,kind:state.kind,action}),signal:AbortSignal.timeout(18000)});
+  body:JSON.stringify({sessionId:state.sessionId,kind:state.kind,sessionType:state.sessionType,action}),signal:AbortSignal.timeout(18000)});
 }
 
 async function close(state,message=''){
@@ -102,14 +102,14 @@ async function join(state){
 
 export function syncCoachingVideo(document,{ownerId,getAccessToken}={}){
  const slot=ownerId&&document.querySelector('[data-coaching-video]');
- const key=slot&&[ownerId,slot.dataset.videoSession,slot.dataset.coachingVideo].join(':');
+ const key=slot&&[ownerId,slot.dataset.videoSession,slot.dataset.coachingVideo,slot.dataset.videoType].join(':');
  if(current?.key===key&&key){
   if(current.slot!==slot){current.slot=slot;paint(current);}
   return;
  }
  if(current){const previous=current;current=null;void close(previous);}
  if(!slot)return;
- const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,attempt:0,allowed:false};
+ const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,sessionType:slot.dataset.videoType,attempt:0,allowed:false};
  current=state;
  void request(state,'check').then(response=>{
   if(current!==state||!response.ok)return;

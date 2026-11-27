@@ -19,14 +19,14 @@ export function videoPilotAccess(config,identity,{sessionId,kind,projection}={})
  return identity!==config.publisher&&projection.readOnly===true&&projection.role==='observer';
 }
 
-export function videoPilotToken(config,{identity,sessionId,kind,now=Date.now()}){
+export function videoPilotToken(config,{identity,sessionId,kind,sessionType='coaching',generation,now=Date.now()}){
  const camera=kind==='camera';
  const timestamp=Math.floor(now/1000);
- const grants={room:'piste-coaching-pilot-'+sessionId,roomJoin:true,canPublish:camera,canSubscribe:!camera,canPublishData:false,...(camera?{canPublishSources:['camera']}:{}),hidden:!camera};
+ const grants={room:sessionType==='ops'?'piste-ops-pilot-'+sessionId+'-'+generation:'piste-coaching-pilot-'+sessionId,roomJoin:true,canPublish:camera,canSubscribe:!camera,canPublishData:false,...(camera?{canPublishSources:['camera']}:{}),hidden:!camera};
  const body=encode({alg:'HS256',typ:'JWT'})+'.'+encode({iss:config.key,sub:identity,nbf:timestamp-5,exp:timestamp+60,video:grants});
  return body+'.'+createHmac('sha256',config.secret).update(body).digest('base64url');
 }
 
 export function validVideoPilotRequest(body){
- return uuid.test(body?.sessionId||'')&&['camera','viewer'].includes(body.kind)&&['check','join'].includes(body.action);
+ return uuid.test(body?.sessionId||'')&&['camera','viewer'].includes(body.kind)&&['check','join'].includes(body.action)&&(body.sessionType===undefined||['coaching','ops'].includes(body.sessionType));
 }
