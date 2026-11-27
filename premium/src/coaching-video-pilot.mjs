@@ -31,7 +31,14 @@ function paint(state){
  button.type='button';
  button.className='button button-dark';
  const camera=state.kind==='camera';
- button.textContent=state.busy?'Connexion vidéo…':state.room?camera?'Couper la vidéo':'Fermer la vidéo':camera?'Activer la caméra':'Ouvrir la vidéo';
+ const label=state.busy?'Connexion vidéo…':state.room?camera?'Couper la vidéo':'Fermer la vidéo':camera?'Activer la caméra':'Ouvrir la vidéo';
+ if(camera){
+  button.classList.add('video-camera-toggle');
+  button.setAttribute('aria-label',label);
+  button.setAttribute('aria-pressed',String(!!state.media));
+  button.title=label;
+  button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 5-3v10l-5-3"/></svg>';
+ }else button.textContent=label;
  button.disabled=state.busy;
  button.addEventListener('click',()=>state.room?void close(state):void join(state));
  slot.append(button);
@@ -39,7 +46,31 @@ function paint(state){
   const status=document.createElement('small');status.setAttribute('role','status');
   status.textContent=state.message;slot.append(status);
  }
- if(state.media)slot.append(state.media);
+ if(!state.media)return;
+ if(camera||state.sessionType!=='ops'){
+  slot.append(state.media);
+  return;
+ }
+ const resize=document.createElement('button');
+ resize.type='button';
+ resize.className='button button-dark';
+ resize.textContent=state.expanded?'Revenir à la carte':'Agrandir';
+ const toggleSize=()=>{
+  state.expanded=!state.expanded;
+  paint(state);
+  slot.querySelector('.video-resize')?.focus();
+ };
+ resize.classList.add('video-resize');
+ resize.addEventListener('click',toggleSize);
+ if(state.expanded){
+  const dialog=document.createElement('dialog');
+  dialog.className='ops-video-fullscreen';
+  dialog.setAttribute('aria-label','Vidéo OPS en direct');
+  dialog.addEventListener('cancel',event=>{event.preventDefault();toggleSize();});
+  dialog.append(resize,state.media);
+  slot.append(dialog);
+  dialog.showModal();
+ }else slot.append(state.media,resize);
 }
 
 async function request(state,action){
@@ -57,6 +88,7 @@ async function close(state,message=''){
  state.room=null;
  state.media?.remove();
  state.media=null;
+ state.expanded=false;
  state.busy=false;
  state.message=message;
  if(room)await room.disconnect().catch(()=>{});
@@ -92,7 +124,7 @@ async function join(state){
   room.on(RoomEvent.TrackSubscribed,track=>showTrack(state,track));
   room.on(RoomEvent.TrackUnsubscribed,track=>{
    if(state.room!==room||track.kind!=='video')return;
-   state.media?.remove();state.media=null;state.message='En attente de la caméra du Conducteur.';paint(state);
+   state.media?.remove();state.media=null;state.expanded=false;state.message='En attente de la caméra du Conducteur.';paint(state);
   });
   room.on(RoomEvent.Disconnected,reason=>{
    if(state.room===room&&!state.busy)void close(state,'Vidéo interrompue'+(Number.isInteger(reason)?' · code LiveKit '+reason:'')+'.');

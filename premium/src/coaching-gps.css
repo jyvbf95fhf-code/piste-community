@@ -215,3 +215,48 @@ body:has([data-shared-review]){overflow:hidden}
 .coaching-video-pilot small { padding:5px 8px; border-radius:8px; background:#0b2433; color:#d5e9f2; }
 .coaching-video-pilot video { width:min(100%,36rem); max-height:42dvh; border-radius:10px; background:#071720; }
 .gps-actions .coaching-video-pilot video { width:125px; max-height:88px; object-fit:cover; }
+
+.coaching-video-pilot .video-camera-toggle{
+ flex:0 0 48px;
+ width:48px;
+ min-width:48px;
+ height:48px;
+ min-height:48px;
+ padding:0;
+ display:grid;
+ place-items:center;
+ border-radius:50%;
+}
+.video-camera-toggle svg{width:24px;height:24px}
+.video-camera-toggle[aria-pressed="true"]{color:#ffd4d4;background:#712d3c}
+.live-observer-map>[data-coaching-video="viewer"][data-video-type="ops"]{
+ position:absolute;
+ z-index:6;
+ top:52px;
+ right:8px;
+ display:flex;
+ flex-direction:column;
+ align-items:stretch;
+ width:min(42%,12rem);
+ padding:6px;
+ border-radius:12px;
+ background:#081a27ed;
+}
+.live-observer-map>[data-coaching-video="viewer"][data-video-type="ops"]:empty{display:none}
+.live-observer-map>[data-coaching-video="viewer"][data-video-type="ops"] video{width:100%;aspect-ratio:4/3;object-fit:contain}
+.ops-video-fullscreen{
+ position:fixed;
+ inset:0;
+ width:100%;
+ height:100%;
+ max-width:none;
+ max-height:none;
+ margin:0;
+ border:0;
+ padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));
+ box-sizing:border-box;
+ background:#071720;
+ color:#f0f7fa;
+}
+.ops-video-fullscreen[open]{display:flex;flex-direction:column;align-items:center;gap:12px}
+.live-observer-map .ops-video-fullscreen video{flex:1;min-height:0;max-height:none;object-fit:contain}

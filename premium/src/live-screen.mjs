@@ -63,7 +63,6 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
    ${details?`<p>${e(details)}</p>`:''}
   </header>
   ${resultScreen?`<div class="live-observer-result" role="status"><span>Mission terminée</span><strong>${e(outcome||'Résultat en attente')}</strong></div>`:''}
-  ${ops&&!resultScreen&&projection.isOwner===false&&['En cours','Pause'].includes(projection.state)?coachingVideoSlot(projection.sessionId,'viewer','ops'):''}
   ${!ops&&projection.mode==='normal'&&projection.phase==='SEARCH_RUNNING'?coachingVideoSlot(projection.id,'viewer'):''}
   <div class="live-observer-map">
    ${expanded?`<div class="live-map-overlay-top"><strong>${e(dog||'Live OPS')}</strong><span>Lecture seule</span><a href="?ecran=0" class="live-map-close" aria-label="Fermer la carte">✕ Fermer la carte</a></div>`:''}
@@ -72,6 +71,7 @@ export function LiveDetailScreen(projection,{wide=false,now=Date.now()}={}){
     ${gps?`<span role="status">${e(gps)}</span>`:''}
    </div>
    ${ReadOnlyRealMap(map,{label:`Carte Live ${type} · lecture seule`,followSessionId:expanded?projection.sessionId:null,conductorMarker:ops})}
+  ${ops&&!resultScreen&&projection.isOwner===false&&['En cours','Pause'].includes(projection.state)?coachingVideoSlot(projection.sessionId,'viewer','ops'):''}
    ${metrics.length?`<dl class="live-observer-metrics">${metrics.map(([label,value])=>`<div><dt>${label}</dt><dd>${e(value)}</dd></div>`).join('')}</dl>`:''}
   </div>
   ${ops&&projection.corridor?`<p class="live-estimated-corridor">${e(projection.corridor.label)} · couche estimée autour de la trace</p>`:''}
