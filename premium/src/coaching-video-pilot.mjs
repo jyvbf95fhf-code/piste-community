@@ -37,10 +37,11 @@ function paint(state){
   button.setAttribute('aria-label',label);
   button.setAttribute('aria-pressed',String(!!state.media));
   button.title=label;
-  button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 5-3v10l-5-3"/></svg>';
+  const stopIcon=state.media?'<path d="m3 3 18 18" stroke-width="2.5"/>':'';
+  button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 5-3v10l-5-3"/>'+stopIcon+'</svg>';
  }else button.textContent=label;
  button.disabled=state.busy;
- button.addEventListener('click',()=>state.room?void close(state):void join(state));
+ button.addEventListener('click',()=>state.room?void close(state,camera?'Caméra coupée · la vidéo n’est plus diffusée.':''):void join(state));
  slot.append(button);
  if(state.message){
   const status=document.createElement('small');status.setAttribute('role','status');
@@ -103,7 +104,7 @@ function showTrack(state,track){
  video.playsInline=true;
  video.autoplay=true;
  state.media=video;
- state.message=state.kind==='camera'?'Caméra en direct · micro coupé':'Vidéo en direct';
+ state.message=state.kind==='camera'?'Caméra active · vidéo diffusée, micro coupé':'Vidéo en direct';
  paint(state);
  void video.play().catch(()=>{video.controls=true;});
 }
