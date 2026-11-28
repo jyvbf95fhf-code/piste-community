@@ -68,8 +68,10 @@ function report(state,text){
 
 async function save(state,blob,{createdAt=Date.now(),point=null}={}){
  if(!blob?.size)throw new Error('Fichier vidéo vide.');
- await transaction('readwrite',files=>files.add({id:crypto.randomUUID(),owner:state.owner,
+ const id=crypto.randomUUID();
+ await transaction('readwrite',files=>files.add({id,owner:state.owner,
   sessionId:state.sessionId,type:state.type,createdAt,point,blob}));
+ return id;
 }
 
 function stopPreview(state){
@@ -153,8 +155,12 @@ async function photo(state){
   canvas.width=videoWidth;
   canvas.height=videoHeight;
   canvas.getContext('2d').drawImage(state.preview,0,0);
-  await save(state,await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.85)),{createdAt,point});
+  const id=await save(state,await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.85)),{createdAt,point});
   report(state,point?'Photo enregistrée avec un repère GPS.':'Photo enregistrée · position GPS indisponible.');
+  if(point&&state.onPhoto){
+   try{if(await state.onPhoto(state.sessionId,{id,createdAt,point}))report(state,'Photo enregistrée · repère partagé avec le conducteur.');}
+   catch{report(state,'Photo enregistrée sur cet appareil · repère non partagé.');}
+  }
  }catch{report(state,'Photo non enregistrée. Vérifie la caméra et l’espace disponible.');}
 }
 
@@ -318,7 +324,7 @@ async function loadAlbum(album,owner){
  }catch{items.textContent='Les médias locaux sont indisponibles.';}
 }
 
-export function mountFieldMedia(root,owner,liveTrack,getFix){
+export function mountFieldMedia(root,owner,liveTrack,getFix,onPhoto){
  for(const media of shownMedia){
   if(media.isConnected)continue;
   URL.revokeObjectURL(media.dataset.objectUrl);
@@ -329,7 +335,7 @@ export function mountFieldMedia(root,owner,liveTrack,getFix){
  if(capture?.key!==key&&capture&&root.contains(capture.slot)===false&&capture.slot.isConnected)return;
  if(capture&&capture.key!==key){stopPreview(capture);capture=null;}
  if(slot&&capture?.slot!==slot){
-  capture??={key,owner,type:slot.dataset.fieldType,sessionId:slot.dataset.fieldSession,photoOnly:slot.dataset.fieldCaptureMode==='photo',liveTrack,getFix};
+  capture??={key,owner,type:slot.dataset.fieldType,sessionId:slot.dataset.fieldSession,photoOnly:slot.dataset.fieldCaptureMode==='photo',liveTrack,getFix,onPhoto};
   capture.slot=slot;
   renderCapture(capture);
  }

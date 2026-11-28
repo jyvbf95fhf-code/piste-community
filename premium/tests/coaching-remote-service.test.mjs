@@ -25,3 +25,24 @@ for(const mode of ['normal','simple_blind','full_blind'])test(`${mode}: owner en
  const repeated=command(ended,'tracer','end-live',{},now+1000);assert.deepEqual(repeated,{...ended,version:ended.version+1});assert.throws(()=>command(ended,'driver','end-live'),{status:403});
  const continued=command(ended,'tracer','gps-batch',{kind:'pose',points:[{...fix(now+1000),sequence:1,segmentId:'start'}]},now+1000);assert.equal(continued.search.phase,'LAYING');assert.equal(continued.liveEndedAt,now);assert.equal(continued.tracer.gpsPose.segments.flat().length,2);
 });
+
+test('Coach Normal shares only the GPS photo marker with the driver',()=>{
+ const photo={id:crypto.randomUUID(),createdAt:now,point:{...fix().coords,timestamp:now},blob:'never stored'};
+ assert.throws(()=>command(setup(),'tracer','mark-traceur-photo',photo));
+ let state=command(setup(),'tracer','start-pose',{fix:fix()});
+ assert.throws(()=>command(state,'driver','mark-traceur-photo',photo),{status:403});
+ assert.throws(()=>command(state,'tracer','mark-traceur-photo',{...photo,point:{...photo.point,latitude:91}}));
+ state=command(state,'tracer','mark-traceur-photo',photo);
+ state=command(state,'tracer','mark-traceur-photo',photo);
+ state=command(state,'tracer','finish-pose');
+ const [marker,...duplicates]=api.projectRemoteSession(state,'driver').traceurPhotoMarkers;
+ assert.deepEqual(marker,{id:photo.id,type:'traceur-photo',createdAt:now,point:{space:'wgs84',...fix().coords}});
+ assert.deepEqual(duplicates,[]);
+ for(const actor of ['coach','observer'])assert.deepEqual(api.projectRemoteSession(state,actor).traceurPhotoMarkers,[]);
+ for(const mode of ['simple_blind','full_blind']){
+  const blind=command(setup(mode),'tracer','start-pose',{fix:fix()});
+  assert.throws(()=>command(blind,'tracer','mark-traceur-photo',photo));
+  blind.traceurPhotoMarkers=[marker];
+  assert.deepEqual(api.projectRemoteSession(blind,'driver').traceurPhotoMarkers,[]);
+ }
+});
