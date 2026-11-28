@@ -45,8 +45,8 @@ function reuseCockpit(previous,next){
   if(after.dataset[name]===undefined)delete before.dataset[name];else before.dataset[name]=after.dataset[name];
  }
  const stage=previous.querySelector('.gps-map-stage'),lock=previous.querySelector('.gps-touch-lock-panel');
- const oldCamera=stage.querySelector('[data-video-surface="session"]');
- const nextCamera=next.querySelector('[data-video-surface="session"]');
+ const oldCamera=stage.querySelector('.gps-map-controls>[data-coaching-video]');
+ const nextCamera=next.querySelector('.gps-map-controls>[data-coaching-video]');
  if(oldCamera&&!nextCamera)oldCamera.remove();
  if(!oldCamera&&nextCamera)stage.querySelector('.gps-map-controls').append(nextCamera);
  const children=[...next.childNodes].map(node=>node.matches?.('.gps-map-stage')?stage:node.matches?.('.gps-touch-lock-panel')?lock:node);

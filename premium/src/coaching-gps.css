@@ -324,10 +324,10 @@ body:has([data-shared-review]){overflow:hidden}
 
 .gps-action-messages,.video-camera-toggle{position:relative}
 .coaching-unread-dot{position:absolute;top:3px;right:3px;width:12px;height:12px;border-radius:50%;background:#ff485e;border:2px solid #122a42;pointer-events:none}
-.gps-map-controls>[data-video-surface="session"]{position:relative}
-.gps-map-controls>[data-video-surface="session"]>.video-camera-toggle{width:42px;height:42px;min-width:42px;min-height:42px;flex-basis:42px}
-.gps-map-controls>[data-video-surface="session"]>video{position:absolute;right:50px;top:0;width:min(40vw,180px);max-width:none}
-.gps-map-controls>[data-video-surface="session"]>small,
-.gps-map-controls>[data-video-surface="session"]>.video-resize{position:absolute;right:50px;top:calc(min(30vw,135px) + 6px);max-width:65vw;width:max-content}
-.gps-map-controls>[data-video-surface="session"]:has(>video)>small{display:none}
-.gps-map-controls>[data-video-surface="session"]>small{top:0}
+.shared-terrain .gps-map-controls>[data-coaching-video]{position:relative}
+.shared-terrain .gps-map-controls>[data-coaching-video]>.video-camera-toggle{width:42px;height:42px;min-width:42px;min-height:42px;flex-basis:42px}
+.shared-terrain .gps-map-controls>[data-coaching-video]>video{position:absolute;right:50px;top:0;width:min(40vw,180px);max-width:none}
+.shared-terrain .gps-map-controls>[data-coaching-video]>small,
+.shared-terrain .gps-map-controls>[data-coaching-video]>.video-resize{position:absolute;right:50px;top:calc(min(30vw,135px) + 6px);max-width:65vw;width:max-content}
+.shared-terrain .gps-map-controls>[data-coaching-video]:has(>video)>small{display:none}
+.shared-terrain .gps-map-controls>[data-coaching-video]>small{top:0}
