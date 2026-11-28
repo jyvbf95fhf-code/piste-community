@@ -127,6 +127,10 @@ function renderCockpit(){if(root.querySelector('.gps-touch-lock-panel:not([hidde
    cockpit.dataset.coachingHeading=active?'active':'standby';
    cockpit.querySelector('[data-gps-center]')?.insertAdjacentHTML('afterend',CoachingHeadingButton);
   }
+  if(mediaPremium&&p.role==='traceur'&&p.role===poseRecorder&&['LAYING','TRACK_FINISHED','LAYING_WAIT'].includes(p.phase)){
+   const stage=(retainedCockpit||cockpit).querySelector('.gps-map-stage');
+   if(stage)Object.assign(stage.dataset,{fieldMap:'',fieldLive:'',fieldSession:p.id,fieldType:'coaching'});
+  }
   const panel=document.createElement('section');panel.className='tracer-sheet shared-session-sheet remote-shell';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',sharedSheet==='messages'?'Messages de la session':'Options de la session');panel.classList.toggle('shared-message-sheet',sharedSheet==='messages'&&p.role==='traceur');panel.hidden=!sharedSheet;
   panel.innerHTML='<button type="button" class="button button-dark shared-close" data-remote="close-session">Fermer</button>';
   if(sharedSheet==='preparation')panel.insertAdjacentHTML('beforeend',TraceurPreparationSheet(p,tracks(true),{busy:busy||state.pending}));

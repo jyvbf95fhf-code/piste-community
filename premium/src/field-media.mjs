@@ -6,6 +6,7 @@ let database;
 let capture;
 const albums=new WeakSet();
 const photoMaps=new WeakSet();
+const photoMarkerIds=new WeakMap();
 let selectedPhoto;
 const shownMedia=new Set();
 
@@ -157,6 +158,8 @@ async function photo(state){
   canvas.getContext('2d').drawImage(state.preview,0,0);
   const id=await save(state,await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',0.85)),{createdAt,point});
   report(state,point?'Photo enregistrée avec un repère GPS.':'Photo enregistrée · position GPS indisponible.');
+  const liveMap=state.slot?.closest('[data-gps-live]')?.querySelector('[data-field-map][data-field-live]');
+  if(point&&liveMap)void addPhotoMarkers(liveMap,state.owner);
   if(point&&state.onPhoto){
    try{if(await state.onPhoto(state.sessionId,{id,createdAt,point}))report(state,'Photo enregistrée · repère partagé avec le conducteur.');}
    catch{report(state,'Photo enregistrée sur cet appareil · repère non partagé.');}
@@ -237,8 +240,12 @@ async function addPhotoMarkers(container,owner){
   }
   const view=mountedGpsMap(element);
   if(!view)return;
-  const selected=takeSelection(container,owner,'map');
+  const live=container.hasAttribute('data-field-live');
+  const selected=live?null:takeSelection(container,owner,'map');
+  let ids=photoMarkerIds.get(view);
+  if(!ids)photoMarkerIds.set(view,ids=new Set());
   for(const row of photos){
+   if(ids.has(row.id))continue;
    const {latitude,longitude,accuracy}=row.point;
    const coordinates=[latitude,longitude];
    const content=document.createElement('div');
@@ -246,11 +253,13 @@ async function addPhotoMarkers(container,owner){
    const details=document.createElement('p');
    const time=new Date(row.createdAt).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
    details.textContent=`Photo · ${time} · précision GPS ± ${Math.round(accuracy)} m`;
-   content.append(details,button('Voir la photo',()=>goToPhoto(container,owner,row.id,'media')));
+   content.append(details);
+   if(!live)content.append(button('Voir la photo',()=>goToPhoto(container,owner,row.id,'media')));
    const marker=view.L.marker(coordinates,{
     icon:view.L.divIcon({className:'field-photo-pin',html:'<span aria-hidden="true">📷</span>',iconSize:[34,34],iconAnchor:[17,17]}),
     title:`Photo prise à ${time}`,keyboard:true,zIndexOffset:1200
    }).bindPopup(content).addTo(view.map);
+   ids.add(row.id);
    let thumbnail;
    marker.on('popupopen',()=>{
     thumbnail=photoElement(row,'Miniature de la photo de piste');
