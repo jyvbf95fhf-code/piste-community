@@ -120,3 +120,7 @@
 .jumolf-question-thread li{overflow-wrap:anywhere}
 .jumolf-question-thread>li{padding:10px 14px;border:1px solid #537187;border-radius:12px;background:#0d2133}
 .jumolf-question-thread a{color:#a7e4f0;text-decoration:underline}
+.jumolf-question-evidence summary{cursor:pointer;color:#a7e4f0}
+.jumolf-question-evidence ul{padding-inline-start:1rem;margin-bottom:0}
+.jumolf-question-evidence li+li{margin-top:.65rem}
+.jumolf-question-evidence li span{display:block;font-size:.9em;color:#cfdeeb}

@@ -4,6 +4,13 @@ export const QUESTION_MIN_SESSIONS=5;
 const finished=new Set(['DEBRIEF','ARCHIVED','Terminée','Archivée']);
 const suggestions=['Que devrais-je travailler ?', 'Sur quelles pistes tu te bases ?', 'Adapte à 20 minutes'];
 const sessionTime=s=>Date.parse(s.finishedAt||s.startedAt)||0;
+const meters=new Intl.NumberFormat('fr-FR',{style:'unit',unit:'meter',maximumFractionDigits:1});
+const dateTime=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'});
+const distanceLabels={
+ reference_point_mean_m:'Écart moyen',reference_point_max_m:'Écart maximal',
+ average_lateral_offset_m:'Écart latéral moyen',max_lateral_offset_m:'Écart latéral maximal',
+ traveled_distance_m:'Distance parcourue'
+};
 
 export function jumolfQuestionSessions(sessions,dogId){
  const eligible=sessions.filter(s=>s.id&&s.dogId===dogId&&s.kind==='coaching'&&s.dataOrigin==='account'&&!s.demo&&!s.synthetic&&finished.has(s.status));
@@ -22,11 +29,14 @@ export function jumolfQuestionIntent(question){
 function answer(intent,recommendation,dogName){
  switch(intent.type){
  case 'recommendation':
+  if(recommendation?.key==='reference'){
+   return {text:`Pour la prochaine piste de ${dogName}, choisis un parcours court avec un virage bien repérable. Au débrief, repère sur la carte où la recherche s’écarte du tracé de pose. Si tu as observé un écart sur le terrain, note à quel endroit ${dogName} a repris la piste. Un écart GPS seul ne suffit pas pour juger le travail du chien.`,recommendation};
+  }
   return {text:recommendation
    ? `${recommendation.title}. ${recommendation.objective}`
    : `Je te propose une piste familière avec ${dogName}. Note un événement précis et les conditions du moment pour que les prochaines pistes puissent éclairer ton choix d’exercice.`,recommendation};
  case 'evidence':
-  return {text:recommendation?'Voici les observations qui motivent la proposition.':'Je n’ai pas assez d’observations pour justifier une recommandation personnalisée.',evidence:recommendation?.evidence};
+  return {text:recommendation?'Voici les observations qui motivent la proposition.':'Je n’ai pas assez d’observations pour justifier une recommandation personnalisée.',evidence:recommendation?.evidence,showEvidence:true};
  case 'duration':{
   const {minutes}=intent;
   if(minutes<10||minutes>90)return {text:'Pour cet essai, indique une durée entre 10 et 90 minutes.'};
@@ -43,8 +53,24 @@ export function jumolfQuestionAnswers(questions,report,dogName){
  return questions.map(question=>({question,...answer(jumolfQuestionIntent(question),recommendation,dogName)}));
 }
 
-function evidenceList(evidence){
- return evidence?.length?`<ul>${evidence.map(s=>`<li><a href="/jumolf/session/${encodeURIComponent(s.sessionId)}">${e(s.title)}</a> · ${e(s.observations.map(o=>o.label+' : '+o.value).join(' · '))}</li>`).join('')}</ul>`:'';
+function observationText({key,label,value}){
+ if(Object.hasOwn(distanceLabels,key)&&Number.isFinite(value)){
+  return distanceLabels[key]+' : '+(value>0&&value<1?'moins de 1 m':meters.format(value));
+ }
+ if((key==='duration_seconds'||key==='track_age')&&Number.isFinite(value)){
+  return label+' : '+Math.round(value/60)+' min';
+ }
+ return label+' : '+value;
+}
+
+function evidenceList(evidence,open){
+ if(!evidence?.length)return '';
+ const label=evidence.length===1?'Voir la piste utilisée':`Voir les ${evidence.length} pistes utilisées`;
+ return `<details class="jumolf-question-evidence" ${open?'open':''}><summary>${label}</summary><ul>${evidence.map(s=>{
+  const at=Date.parse(s.date),stamp=Number.isFinite(at)?dateTime.format(at):'';
+  return `<li><a href="/jumolf/session/${encodeURIComponent(s.sessionId)}">${e(s.title)}${stamp?' · '+e(stamp):''}</a>
+   <span>${e(s.observations.map(observationText).join(' · '))}</span></li>`;
+ }).join('')}</ul></details>`;
 }
 
 export function JumolfQuestionsScreen({dog,dogs=[],count=0,consents={},answers=[],canPrepare=false}={}){
@@ -61,7 +87,7 @@ export function JumolfQuestionsScreen({dog,dogs=[],count=0,consents={},answers=[
  }else{
   const latest=answers.at(-1);
   content=`<p>Pose une question sur les 5 dernières pistes Coaching de ${e(dog.name)}. Tes questions sont traitées sur cet appareil.</p>
-  <ol class="jumolf-question-thread" aria-live="polite">${answers.map(a=>`<li><p><strong>Toi</strong> · ${e(a.question)}</p><p><strong>JUMOLF</strong> · ${e(a.text)}</p>${evidenceList(a.evidence||a.recommendation?.evidence)}</li>`).join('')}</ol>
+  <ol class="jumolf-question-thread" aria-live="polite">${answers.map(a=>`<li><p><strong>Toi</strong> · ${e(a.question)}</p><p><strong>JUMOLF</strong> · ${e(a.text)}</p>${evidenceList(a.evidence||a.recommendation?.evidence,a.showEvidence)}</li>`).join('')}</ol>
   <form class="jumolf-question-form" data-jumolf-question="ask" data-dog="${e(dog.id)}">
    <label for="jumolf-question">Ta question</label><textarea id="jumolf-question" name="question" maxlength="240" rows="2" placeholder="Que devrais-je travailler avec ${e(dog.name)} ?"></textarea>
    <button type="submit" class="jumolf-button primary">Envoyer</button>

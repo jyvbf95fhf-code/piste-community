@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createJumolfController} from '../src/jumolf-controller.mjs';
 import {createJumolfStore} from '../src/jumolf-store.mjs';
 import {buildRealJumolfLearning} from '../src/jumolf-real-learning.mjs';
-import {jumolfQuestionAnswers,jumolfQuestionIntent,jumolfQuestionSessions} from '../src/jumolf-questions.mjs';
+import {JumolfQuestionsScreen,jumolfQuestionAnswers,jumolfQuestionIntent,jumolfQuestionSessions} from '../src/jumolf-questions.mjs';
 
 const consents={gps:true,weather:true,dog_history:true,ai_analysis:true,session_comparison:true};
 const dog={id:'bobby',name:'Bobby'};
@@ -35,6 +35,22 @@ test('answers use local Coaching evidence and adapt a 20-minute exercise with ex
  assert.ok(why.evidence.every(row=>row.sessionId!=='coaching:1'));
  assert.match(adapt.text,/3 min .*13 min .*4 min/);
  assert.match(unknown.text,/Je peux proposer/);
+});
+test('GPS evidence is compact, dated and rounded for the user',()=>{
+ const evidence=[{sessionId:'coaching:6',title:'Coaching · Bobby',date:'2026-11-06T10:00:00Z',observations:[
+  {key:'reference_point_mean_m',value:0.015184102423308072},{key:'reference_point_max_m',value:18.082545077403513}
+ ]}];
+ const report={recommendations:[{key:'reference',personalized:true,evidence}]};
+ const [rec,why]=jumolfQuestionAnswers(['Que devrais-je travailler ?', 'Pourquoi ?'],report,dog.name);
+ const html=JumolfQuestionsScreen({dog,consents,count:5,answers:[rec,why]});
+ assert.match(html,/virage bien repérable/);
+ assert.match(html,/Écart moyen : moins de 1 m/);
+ assert.match(html,/Écart maximal : 18,1\s+m/);
+ assert.match(html,/Coaching · Bobby · 6 nov\. 2026/);
+ assert.match(html,/href="\/jumolf\/session\/coaching%3A6"/);
+ assert.match(html,/class="jumolf-question-evidence" ><summary>/);
+ assert.match(html,/class="jumolf-question-evidence" open><summary>/);
+ assert.doesNotMatch(html,/0\.015184|18\.082545/);
 });
 test('the real JUMOLF route requires five approved pistes and the relevant consents',()=>{
  const store=createJumolfStore({entitlement:'premium'});
