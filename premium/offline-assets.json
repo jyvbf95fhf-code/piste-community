@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "revision": "e02dc8afcea3277d",
+  "revision": "cc381e8b88c41db9",
   "files": [
     "/index.html",
     "/src/account-analysis-sources.mjs",
@@ -78,6 +78,7 @@
     "/src/coaching-live-exit.mjs",
     "/src/coaching-live-projection.mjs",
     "/src/coaching-live-weather.mjs",
+    "/src/coaching-map-heading.mjs",
     "/src/coaching-pictograms.mjs",
     "/src/coaching-pose-handoff.mjs",
     "/src/coaching-preparation-screen.mjs",
@@ -361,11 +362,12 @@
     "/src/track-smart-screen.mjs",
     "/src/track-smart-service.mjs",
     "/src/tracks-screen.mjs",
+    "/src/vendor/leaflet-rotate.js",
     "/src/vendor/leaflet.css",
     "/src/vendor/leaflet.js",
     "/src/vendor/sax.js",
     "/src/vendor/supabase-client.mjs",
     "/src/web-push-client.mjs"
   ],
-  "bytes": 6996041
+  "bytes": 7027718
 }

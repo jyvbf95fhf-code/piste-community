@@ -1,5 +1,5 @@
 /* Static shell only. Never cache account API responses, GPS, reports or tokens. */
-const CACHE='piste-v2-static-e02dc8afcea3277d';
+const CACHE='piste-v2-static-cc381e8b88c41db9';
 self.addEventListener('install',event=>event.waitUntil((async()=>{const response=await fetch('/offline-assets.json',{cache:'no-store'});if(!response.ok)throw Error('Offline asset list unavailable.');const manifest=await response.json();if(manifest.version!==1||!Array.isArray(manifest.files)||manifest.files.some(url=>typeof url!=='string'||!url.startsWith('/')||url.startsWith('//')||url.includes('?')||url.includes('/api/')))throw Error('Invalid static asset list.');const cache=await caches.open(CACHE);await cache.addAll(manifest.files);})()));
 // An open terrain session keeps its worker until the user requests the update.
 self.addEventListener('message',event=>{

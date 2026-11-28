@@ -1,3 +1,4 @@
+import {CoachingHeadingButton} from './coaching-map-heading.mjs';
 import {mountFieldMedia} from './field-media.mjs';
 import {resolvePremiumAccess} from './premium-access-policy.mjs';
 import {liveCameraTrack,syncCoachingVideo} from './coaching-video-pilot.mjs';
@@ -22,7 +23,7 @@ import {createCoachingRemoteAuth} from './coaching-remote-auth.mjs';
 import {bindRemotePageLifecycle,remoteIdentityInvalidated} from './coaching-remote-lifecycle.mjs';
 import {createCoachingRemoteController} from './coaching-remote-controller.mjs';
 import {escapeHTML as e} from './components.mjs';
-import {GpsMapMarkup,mountGpsMaps,destroyGpsMaps} from './coaching-gps-screen.mjs';
+import {GpsMapMarkup,mountGpsMaps,destroyGpsMaps,mountedGpsMap} from './coaching-gps-screen.mjs';
 import {GpsMapStage,GpsButton,GpsTouchLockMarkup} from './coaching-gps-ui.mjs';
 export function mountRemoteCoaching({root,client=createClient(config.url,config.publishableKey),preferList=false,embedded=false,dogs=[],getTracks=null,primaryDogId=null,resumeStoredSession=true,entry='create',sessionId=null,initialTab='summary',initialWizardState=null,onWizardChange=()=>{},onProjection=()=>{},onSessions=()=>{},onCreated=()=>{},onDogLink=()=>{},associationMarkup=()=>'',resolveJumolfPreparation=p=>p}={}){
 const auth=createCoachingRemoteAuth({client,allowedProjectRef:config.projectRef});
@@ -34,7 +35,10 @@ let wizard=null,teamCatalogue=null,teamRefresh=null,sharedSheet=null,sharedDebri
 let opening=(sessionId||(resumeStoredSession&&!preferList&&sessionStorage.getItem('piste.remote.session')))?{id:sessionId||sessionStorage.getItem('piste.remote.session'),error:''}:null;
 let initializing=true;
 let profile=null,state={projection:null,status:'',pending:false,gpsRunning:false},sessions=[],invitation=null,notice='',busy=false,rendering=false;
-const controller=createCoachingRemoteController({client,weatherService:createCorridorWeatherService(),onChange:view=>{onProjection(view.projection,state?.projection?.id);state={...view,projectionAt:view.projection?.version===state.projection?.version?state.projectionAt:Date.now()};const editing=!busy&&root.contains(document.activeElement)&&document.activeElement.closest('[data-remote-form]');if(pointerActive||editing)deferredRender=true;else if(!rendering)render();}});
+const controller=createCoachingRemoteController({client,weatherService:createCorridorWeatherService(),onWalkingFix:(sessionId,fix,heading,speed)=>{
+ const cockpit=root.querySelector('.shared-terrain[data-coaching-heading="active"]');
+ if(cockpit?.dataset.gpsSessionId===sessionId)mountedGpsMap(cockpit.querySelector('[data-gps-map]'))?.heading?.onFix(fix,heading,speed);
+},onChange:view=>{onProjection(view.projection,state?.projection?.id);state={...view,projectionAt:view.projection?.version===state.projection?.version?state.projectionAt:Date.now()};const editing=!busy&&root.contains(document.activeElement)&&document.activeElement.closest('[data-remote-form]');if(pointerActive||editing)deferredRender=true;else if(!rendering)render();}});
 const button=(id,label)=>GpsButton('remote',id,label,busy||state.pending?'disabled':'');
 const cockpitKey=p=>p&&[profile?.id,p.id,p.role,p.mode,p.poseRecorder,p.role===p.poseRecorder&&['PREPARATION','LAYING','TRACK_FINISHED','LAYING_WAIT'].includes(p.phase)?'pose':'search'].join(':');
 function reuseCockpit(previous,next){
@@ -118,6 +122,11 @@ function renderCockpit(){if(root.querySelector('.gps-touch-lock-panel:not([hidde
   }).premium;
   const wrapper=document.createElement('div');wrapper.innerHTML=SharedCoachingCockpit(p,state,{actions,notice,mediaPremium});
   let cockpit=wrapper.firstElementChild;cockpit.classList.add('shared-terrain');cockpit.dataset.remoteViewKey=cockpitKey(p);
+  if(p.role==='driver'||p.role==='traceur'&&p.role===poseRecorder){
+   const active=p.phase==='LAYING'&&p.role===poseRecorder||p.phase==='SEARCH_RUNNING'&&p.role==='driver';
+   cockpit.dataset.coachingHeading=active?'active':'standby';
+   cockpit.querySelector('[data-gps-center]')?.insertAdjacentHTML('afterend',CoachingHeadingButton);
+  }
   const panel=document.createElement('section');panel.className='tracer-sheet shared-session-sheet remote-shell';panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label',sharedSheet==='messages'?'Messages de la session':'Options de la session');panel.classList.toggle('shared-message-sheet',sharedSheet==='messages'&&p.role==='traceur');panel.hidden=!sharedSheet;
   panel.innerHTML='<button type="button" class="button button-dark shared-close" data-remote="close-session">Fermer</button>';
   if(sharedSheet==='preparation')panel.insertAdjacentHTML('beforeend',TraceurPreparationSheet(p,tracks(true),{busy:busy||state.pending}));

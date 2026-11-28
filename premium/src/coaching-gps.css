@@ -331,3 +331,9 @@ body:has([data-shared-review]){overflow:hidden}
 .shared-terrain .gps-map-controls>[data-coaching-video]>.video-resize{position:absolute;right:50px;top:calc(min(30vw,135px) + 6px);max-width:65vw;width:max-content}
 .shared-terrain .gps-map-controls>[data-coaching-video]:has(>video)>small{display:none}
 .shared-terrain .gps-map-controls>[data-coaching-video]>small{top:0}
+
+.leaflet-rotate-pane,.leaflet-norotate-pane{position:absolute;top:0;left:0}
+.leaflet-rotate-pane{will-change:transform}
+.leaflet-norotate-pane{z-index:600}
+.gps-map-control[data-coaching-heading][hidden]{display:none}
+.gps-map-control[data-coaching-heading][aria-pressed="true"]{color:#9de9f7;border-color:#9de9f7}
