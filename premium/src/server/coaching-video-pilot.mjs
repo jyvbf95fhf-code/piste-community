@@ -40,7 +40,7 @@ export function videoPilotToken(config,{identity,sessionId,kind,sessionType='coa
  return signedToken(config,{iss:config.key,sub:participant,nbf:timestamp-5,exp:timestamp+60,video:grants});
 }
 
-export async function coachingCameraInUse(config,sessionId,{request=fetch,now=Date.now()}={}){
+export async function coachingCameraInUse(config,sessionId,{request=fetch,now=Date.now(),publishedOnly=false}={}){
  const room=coachingRoom(sessionId);
  const timestamp=Math.floor(now/1000);
  const token=signedToken(config,{iss:config.key,nbf:timestamp-5,exp:timestamp+30,video:{room,roomAdmin:true}});
@@ -51,7 +51,9 @@ export async function coachingCameraInUse(config,sessionId,{request=fetch,now=Da
  if(response.status===404&&(await response.json()).code==='not_found')return false;
  if(!response.ok)throw Error('État de la caméra Coaching indisponible.');
  const {participants=[]}=await response.json();
- return participants.some(p=>p.identity===coachingPublisher||p.permission?.canPublish===true);
+ return participants.some(p=>(p.identity===coachingPublisher||p.permission?.canPublish===true)&&
+  (!publishedOnly||p.tracks?.some(track=>!track.muted&&(track.type==='VIDEO'||track.type===1))));
+
 }
 
 export function validVideoPilotRequest(body){

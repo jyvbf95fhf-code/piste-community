@@ -38,13 +38,14 @@ function paint(state){
  button.type='button';
  button.className='button button-dark';
  const label=placeholder?'Caméra':state.busy?'Connexion vidéo…':state.room?camera?'Couper la vidéo':'Fermer la vidéo':camera?'Activer la caméra':'Ouvrir la vidéo';
- if(camera){
+ if(camera||state.surface==='session'){
   button.classList.add('video-camera-toggle');
-  button.setAttribute('aria-label',label);
+  button.setAttribute('aria-label',label+(state.surface==='session'&&state.broadcasting?' · caméra en direct':''));
   button.setAttribute('aria-pressed',String(!!state.media));
   button.title=label;
-  const stopIcon=state.media?'<path d="m3 3 18 18" stroke-width="2.5"/>':'';
+  const stopIcon=camera&&state.media?'<path d="m3 3 18 18" stroke-width="2.5"/>':'';
   button.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="12" height="12" rx="2"/><path d="m15 10 5-3v10l-5-3"/>'+stopIcon+'</svg>';
+  if(state.surface==='session'&&state.broadcasting)button.insertAdjacentHTML('beforeend','<span class="coaching-unread-dot" aria-hidden="true"></span>');
  }else button.textContent=label;
  button.disabled=state.busy;
  button.addEventListener('click',()=>{
@@ -125,6 +126,7 @@ function showTrack(state,track){
  video.playsInline=true;
  video.autoplay=true;
  state.media=video;
+ if(state.surface==='session')state.broadcasting=true;
  state.message=state.kind==='camera'?'Caméra active · vidéo diffusée, micro coupé':'Vidéo en direct';
  paint(state);
  void video.play().catch(()=>{video.controls=true;});
@@ -150,7 +152,7 @@ async function join(state){
   room.on(RoomEvent.TrackSubscribed,track=>showTrack(state,track));
   room.on(RoomEvent.TrackUnsubscribed,track=>{
    if(state.room!==room||track.kind!=='video')return;
-   state.media?.remove();state.media=null;state.expanded=false;state.message='En attente d’une caméra en direct.';paint(state);
+   state.media?.remove();state.media=null;state.expanded=false;state.broadcasting=false;state.message='En attente d’une caméra en direct.';paint(state);
   });
   room.on(RoomEvent.Disconnected,reason=>{
    if(state.room===room&&!state.busy)void close(state,'Vidéo interrompue'+(Number.isInteger(reason)?' · code LiveKit '+reason:'')+'.');
@@ -198,10 +200,13 @@ export function syncCoachingVideo(document,{ownerId,getAccessToken}={}){
   if(current.slot!==slot){current.slot=slot;paint(current);}
   return;
  }
- if(current){const previous=current;current=null;void close(previous);}
+ if(current){const previous=current;current=null;clearInterval(previous.statusTimer);void close(previous);}
  if(!slot)return;
  const state={key,slot,getAccessToken,kind:slot.dataset.coachingVideo,sessionId:slot.dataset.videoSession,sessionType:slot.dataset.videoType,surface:slot.dataset.videoSurface,attempt:0,allowed:false};
  current=state;
+ if(state.surface==='session')state.statusTimer=setInterval(()=>{
+  if(!state.room&&!state.busy&&globalThis.document?.visibilityState!=='hidden')void checkAccess(state);
+ },15000);
  if(state.sessionId)void checkAccess(state);
  else paint(state);
 }
@@ -211,9 +216,13 @@ async function checkAccess(state){
  state.checking=true;
  try{
   const response=await request(state,'check');
-  const error=response.ok?null:await response.json().catch(()=>null);
+  const result=response.ok&&state.surface!=='session'?null:await response.json().catch(()=>null);
+  const error=response.ok?null:result;
   if(current!==state)return;
+  const broadcasting=response.ok&&result?.broadcasting===true;
+  if(state.surface==='session'&&state.allowed===response.ok&&state.broadcasting===broadcasting)return;
   state.allowed=response.ok;
+  state.broadcasting=broadcasting;
   state.unavailable=error?.code==='publisher-unavailable';
   state.message=!response.ok&&!state.unavailable&&state.kind==='camera'
    ?error?.error||'Caméra indisponible · HTTP '+response.status+'.':'';
@@ -226,5 +235,5 @@ async function checkAccess(state){
 }
 
 if(typeof window!=='undefined')window.addEventListener('pagehide',()=>{
- if(current){const previous=current;current=null;void close(previous);}
+ if(current){const previous=current;current=null;clearInterval(previous.statusTimer);void close(previous);}
 });

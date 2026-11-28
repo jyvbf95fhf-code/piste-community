@@ -53,6 +53,10 @@ export default async function handler(req,res){
   if(body.kind==='camera'&&body.action==='join'&&await coachingCameraInUse(pilot,body.sessionId)){
    return res.status(409).json({error:'Une caméra diffuse déjà dans cette séance.'});
   }
+  if(body.action==='check'&&body.surface==='session'){
+   const broadcasting=await coachingCameraInUse(pilot,body.sessionId,{publishedOnly:true}).catch(()=>false);
+   return res.json({available:true,broadcasting});
+  }
   return res.json(body.action==='check'?{available:true}:{url:pilot.url,token:videoPilotToken(pilot,{...body,identity:id})});
  }catch(error){
   if(error?.opsStatus)return res.status(503).json({error:'Vérification Live OPS indisponible ('+error.operation+' · HTTP '+error.opsStatus+').'});

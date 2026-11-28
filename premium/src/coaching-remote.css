@@ -29,3 +29,10 @@
 .app-shell[data-module-theme="coaching"] .shared-terrain[data-gps-live]>.gps-actions :is(.gps-action-in-place,.gps-action-return-later) .gps-action-label{position:static;font-size:12px;line-height:1.25;text-shadow:none}
 .gps-actions>.pose-handoff-notice{order:4;flex-basis:100%;box-sizing:border-box;margin:8px 0 0;padding:12px 14px;border:1px solid #74bab5;border-radius:14px;background:#102e36;color:#d7f3ed;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
 .shared-terrain>.gps-actions>.gps-start-status{order:3;flex-basis:100%}
+
+.shared-message-sheet .remote-message-card{padding:14px}
+.shared-message-sheet [data-remote-messages]{display:grid;gap:8px;max-height:40dvh}
+.shared-message-sheet .remote-message{background:#172d40;border:1px solid #39546b;border-radius:12px;padding:8px 10px}
+.shared-message-sheet .remote-message-own{margin-inline-start:12%;background:#23445e}
+.shared-message-sheet .remote-message header{display:flex;justify-content:space-between;gap:8px}
+.shared-message-sheet .remote-message p{margin:4px 0 0;white-space:pre-wrap}

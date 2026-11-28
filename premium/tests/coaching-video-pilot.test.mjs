@@ -74,6 +74,9 @@ test('Coaching cameras share one publisher identity while OPS keeps its separate
  assert.equal(await coachingCameraInUse(config,id,{request:response({participants:[{identity:guest,permission:{canPublish:false}}]})}),false);
  assert.equal(await coachingCameraInUse(config,id,{request:response({participants:[{identity:camera.sub}]})}),true);
  assert.equal(await coachingCameraInUse(config,id,{request:response({participants:[{identity:owner,permission:{canPublish:true}}]})}),true);
+ const publication=tracks=>response({participants:[{identity:camera.sub,tracks}]});
+ assert.equal(await coachingCameraInUse(config,id,{publishedOnly:true,request:publication([{type:'VIDEO'}])}),true);
+ assert.equal(await coachingCameraInUse(config,id,{publishedOnly:true,request:publication([{type:'VIDEO',muted:true},{type:'AUDIO'}])}),false);
  await assert.rejects(coachingCameraInUse(config,id,{request:response({error:'unauthorized'},{status:401})}));
 });
 test('Coaching shows camera and viewer controls for their corresponding roles',()=>{
@@ -89,6 +92,9 @@ test('Coaching shows camera and viewer controls for their corresponding roles',(
   }
   const traceur=premiumCockpit({...p,mode,role:'traceur'});
   assert.match(traceur,/data-coaching-video="viewer".*data-video-surface="session"/);
+  assert.ok(traceur.indexOf('data-video-surface="session"')<traceur.indexOf('class="gps-actions"'));
+  assert.match(SharedCoachingCockpit({...p,role:'traceur',unread:2}),/Messages, 2 non lu\(s\).*coaching-unread-dot/);
+  assert.doesNotMatch(SharedCoachingCockpit({...p,role:'traceur',unread:0}),/coaching-unread-dot/);
   assert.doesNotMatch(traceur,/data-coaching-video="camera"/);
  }
  assert.doesNotMatch(premiumCockpit({...p,liveEnded:true}),/data-coaching-video/);
@@ -181,6 +187,8 @@ test('the endpoint distinguishes Coaching team roles from read-only Live contact
  liveAllowed=false;
  assert.equal((await request('viewer','session')).status,200);
  assert.deepEqual(calls,['authorize-feature','read']);
+ assert.deepEqual((await request('viewer','session','check')).body,{available:true,broadcasting:false});
+ assert.deepEqual(calls,['authorize-feature','read','/twirp/livekit.RoomService/ListParticipants']);
  premiumActive=false;
  assert.equal((await request('viewer','session')).status,403);
  assert.deepEqual(calls,['authorize-feature']);
